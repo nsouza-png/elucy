@@ -917,12 +917,15 @@ async function loadDealsFromSupabase(email){
     {name:'tier_da_oportunidade'},{name:'delta_t'},{name:'qualificador_name'},
     {name:'proprietario_name'},{name:'linha_de_receita_vigente'},{name:'grupo_de_receita'},
     {name:'created_at_crm'},{name:'event_skipped'},{name:'email_lead'},{name:'cargo'},
-    {name:'canal_de_marketing'},{name:'utm_medium'},{name:'status_do_deal'}
+    {name:'canal_de_marketing'},{name:'utm_medium'},{name:'status_do_deal'},
+    {name:'revenue'},{name:'contact_name'}
   ].map((c,i)=>({name:c.name,position:i}));
   // Transforma objetos em arrays (formato esperado pelo cockpit)
   const colNames=cols.map(c=>c.name);
   const rows=data.map(row=>colNames.map(k=>{
     if(k==='email_lead') return row.email_lead||'';
+    if(k==='revenue') return row.revenue!=null?String(row.revenue):'0';
+    if(k==='contact_name') return row.contact_name||'';
     return row[k]!=null?String(row[k]):'';
   }));
   renderLiveDeals(rows,cols);
@@ -1487,7 +1490,7 @@ function renderLiveDeals(rows,cols){
     const elucyValor=calcElucyValor({tier,cargo,etapa,delta,skipped:String(g(row,'event_skipped')).toLowerCase()==='true'});
     // Forecast delta: divergência entre modelo de dados e modelo Elucy
     const forecastDelta=revenueRaw>0?elucyValor-revenueRaw:null;
-    const dealObj={nome,empresa:emailLead||empresa,cargo,fase,etapa,tier,delta,canal,deal_id,temp,tc,tl,dd,emailLead,
+    const dealObj={nome,empresa,cargo,fase,etapa,tier,delta,canal,deal_id,temp,tc,tl,dd,emailLead,
       linhaReceita,revenueRaw,elucyValor,forecastDelta,
       _fase:fase,_etapa:etapa,_tier:tier,_delta:delta,_temp:temp};
     // Sinal automático
@@ -1895,7 +1898,7 @@ function selectLiveDeal(id,d){
         <div class="dca">${(d.emailLead||d.nome)[0].toUpperCase()}</div>
         <div class="dci">
           <div class="dcn">${d.nome}</div>
-          <div class="dcs">${d.cargo||'—'} · ${d.emailLead||d.empresa}</div>
+          <div class="dcs">${d.cargo||'—'} · ${d.empresa}</div>
           <div class="tags-row">
             <span class="tag t-gray">${d.tier||'—'}</span>
             <span class="tag t-gray">${d.etapa||d.fase}</span>
