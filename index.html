@@ -789,12 +789,16 @@ async function checkApproval(user){
     return;
   }
   // Verifica se está aprovado na tabela operators
-  const {data}=await sb.from('operators').select('approved').eq('email',user.email).single();
+  const {data}=await sb.from('operators').select('approved,email').eq('email',user.email).maybeSingle();
   if(data&&data.approved){
     showCockpit(user);
   } else {
-    // Coloca na fila de pendentes
-    await sb.rpc('request_access',{p_email:user.email,p_name:user.user_metadata&&user.user_metadata.full_name||user.email});
+    // Registra na fila (upsert) sem depender de RPC
+    const nome=(user.user_metadata&&user.user_metadata.full_name)||user.email.split('@')[0];
+    await sb.from('operators').upsert(
+      {email:user.email,name:nome,qualificador_name:nome,role:'sdr',approved:false},
+      {onConflict:'email',ignoreDuplicates:false}
+    );
     showPendingScreen(user.email);
   }
 }
