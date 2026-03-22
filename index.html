@@ -826,6 +826,91 @@ input,textarea,select{font-family:inherit;font-size:inherit}
   box-shadow:var(--shadow-lg);font-size:12px;color:var(--text);
 }
 .dm-toast.show{display:flex}
+
+/* ── Logo slogan ─────────────────────────────────────────── */
+.logo-slogan{display:none;font-size:9px;color:var(--text4);letter-spacing:.4px;text-transform:uppercase;margin-left:4px;align-self:center;white-space:nowrap}
+@media(min-width:1100px){.logo-slogan{display:block}}
+
+/* ── Reports sidebar: Nível / Score / Streak / Metas ─────── */
+.rps{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-md);padding:12px 14px;margin-bottom:10px}
+.rps-t{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:8px}
+.lvl-n{font-size:15px;font-weight:800;color:var(--accent2);margin-bottom:2px}
+.lvl-s{font-size:10px;color:var(--text3);margin-bottom:8px}
+.lvl-bar{height:4px;background:var(--bg5);border-radius:99px;overflow:hidden;margin-bottom:4px}
+.lvl-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;box-shadow:0 0 6px rgba(99,102,241,.4)}
+.lvl-xp{font-size:9px;color:var(--text4)}
+.score-big{font-size:28px;font-weight:900;color:var(--accent2);line-height:1}
+.score-l{font-size:9px;color:var(--text3);margin-top:2px}
+.sk-n{font-size:24px;font-weight:900;color:var(--green);line-height:1}
+.sk-l{font-size:9px;color:var(--text3);margin-top:2px}
+.tr{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
+.tr-l{font-size:9px;color:var(--text3)}
+.tr-v{font-size:10px;font-weight:600;color:var(--text)}
+.meta-bar-bg{height:3px;background:var(--bg5);border-radius:99px;overflow:hidden;margin-bottom:4px}
+.meta-bar-fill{height:100%;background:var(--accent);border-radius:99px;transition:width .4s ease}
+.meta-bar-fill.done{background:var(--green)}
+
+/* ── Badge grid ─────────────────────────────────────────── */
+.bg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px}
+.bgi{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;border-radius:var(--r-sm);border:1px solid var(--border)}
+.bgi.on{background:var(--adim);border-color:rgba(99,102,241,.3)}
+.bgi.off{background:var(--bg4);opacity:.35}
+.bgi-ic{font-size:16px;line-height:1}
+.bgi-n{font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;text-align:center}
+
+/* ── OKR Banner ─────────────────────────────────────────── */
+.okr-banner{background:linear-gradient(135deg,var(--adim2) 0%,rgba(16,185,129,.08) 100%);border:1px solid rgba(99,102,241,.25);border-radius:var(--r-lg);padding:16px 20px;margin-bottom:16px}
+.okr-banner-hdr{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.okr-banner-tag{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;padding:2px 8px;border-radius:99px;background:var(--adim);color:var(--accent2);border:1px solid rgba(99,102,241,.2)}
+.okr-banner-title{font-size:11px;font-weight:700;color:var(--text)}
+.okr-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.okr-kpi{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;text-align:center}
+.okr-kpi-val{font-size:18px;font-weight:900;color:var(--accent2);line-height:1}
+.okr-kpi-lbl{font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-top:3px}
+.okr-kpi-arrow{font-size:10px;margin-top:2px}
+.okr-kpi-arrow.up{color:var(--green)}
+.okr-kpi-arrow.dn{color:var(--red)}
+.okr-progress-wrap{display:flex;align-items:center;gap:10px}
+.okr-progress-bg{flex:1;height:6px;background:var(--bg5);border-radius:99px;overflow:hidden}
+.okr-progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:99px;transition:width .6s ease}
+.okr-progress-label{font-size:9px;font-weight:700;color:var(--text3);white-space:nowrap}
+
+/* ── Visual funnel ──────────────────────────────────────── */
+.funnel-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;margin-bottom:12px}
+.funnel-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:14px}
+.funnel-bars{display:flex;align-items:flex-end;gap:6px;height:90px;margin-bottom:8px}
+.funnel-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.funnel-bar{width:100%;border-radius:var(--r-sm) var(--r-sm) 0 0;background:linear-gradient(180deg,var(--accent) 0%,var(--adim2) 100%);min-height:4px;transition:height .5s ease}
+.funnel-bar.mql{background:linear-gradient(180deg,var(--blue) 0%,rgba(59,130,246,.15) 100%)}
+.funnel-bar.opp{background:linear-gradient(180deg,var(--green) 0%,rgba(34,197,94,.15) 100%)}
+.funnel-bar.won{background:linear-gradient(180deg,#f59e0b 0%,rgba(245,158,11,.15) 100%)}
+.funnel-bar-val{font-size:10px;font-weight:700;color:var(--text)}
+.funnel-bar-lbl{font-size:8px;color:var(--text4);text-transform:uppercase;letter-spacing:.3px;text-align:center;line-height:1.3}
+.funnel-dividers{display:flex;gap:6px;padding:0 4px}
+.funnel-rate{flex:1;text-align:center;font-size:8px;color:var(--text4)}
+.funnel-rate-arrow{color:var(--accent2);font-size:9px;margin-right:2px}
+
+/* ── Efficiency by revenue line ─────────────────────────── */
+.eff-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;margin-bottom:12px}
+.eff-section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.eff-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3)}
+.eff-row{display:grid;grid-template-columns:1fr 2fr 80px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.eff-row:last-child{border-bottom:none}
+.eff-row-name{font-size:11px;font-weight:600;color:var(--text)}
+.eff-row-ticket{font-size:9px;color:var(--text4);margin-top:1px}
+.eff-bar-wrap{display:flex;flex-direction:column;gap:3px}
+.eff-bar-bg{height:5px;background:var(--bg5);border-radius:99px;overflow:hidden}
+.eff-bar-fill{height:100%;border-radius:99px;transition:width .5s ease}
+.eff-bar-fill.high{background:var(--green)}
+.eff-bar-fill.mid{background:var(--yellow)}
+.eff-bar-fill.low{background:var(--red)}
+.eff-bar-pct{font-size:8px;color:var(--text4)}
+.eff-row-rev{text-align:right}
+.eff-row-rev-val{font-size:12px;font-weight:700;color:var(--text)}
+.eff-row-rev-delta{font-size:9px;margin-top:1px}
+.eff-row-rev-delta.pos{color:var(--green)}
+.eff-row-rev-delta.neg{color:var(--red)}
+
 </style>
 </head>
 <body>
@@ -863,6 +948,7 @@ input,textarea,select{font-family:inherit;font-size:inherit}
 </div>
 <div id="topbar">
   <div class="logo">ELUCY <span>by G4</span></div>
+  <div class="logo-slogan">Eluciando intelig&ecirc;ncia conversacional para elevar o n&iacute;vel de qualifica&ccedil;&atilde;o do G4</div>
   <button class="ntab on" onclick="setScreen('home',this)">PIPELINE</button>
   <button class="ntab" onclick="setScreen('reports',this)">RELAT&Oacute;RIOS</button>
   <button class="ntab" onclick="setScreen('dm',this)">DM WAR ROOM</button>
@@ -954,28 +1040,305 @@ input,textarea,select{font-family:inherit;font-size:inherit}
       </div>
       <!-- Deal cards inseridos dinamicamente por selectLiveDeal() -->
     </div>
-    <div class="screen" id="screen-reports"><div style="display:flex;gap:16px;align-items:flex-start"><div style="flex:1;min-width:0"><div style="margin-bottom:16px"><div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:3px">Relatórios</div><div style="font-size:12px;color:var(--text2)">Nathan Souza · Março 2026</div></div><div class="ftabs"><div class="ft on" onclick="rp('mar',this)">Mar 2026</div><div class="ft" onclick="rp('fev',this)">Fev 2026</div><div class="ft" onclick="rp('jan',this)">Jan 2026</div><div class="ft" onclick="rp('dez',this)">Dez 2025</div></div><div class="kpi-g"><div class="kpi"><div class="kpi-l">FUPs Enviados</div><div class="kpi-v" id="kv-fups">147</div><div class="kd kd-p">+23% vs anterior</div></div><div class="kpi"><div class="kpi-l">Qualificados</div><div class="kpi-v" id="kv-qual">38</div><div class="kd kd-p">+12% vs anterior</div></div><div class="kpi"><div class="kpi-l">MQLs Gerados</div><div class="kpi-v" id="kv-mql">14</div><div class="kd kd-n">-5% vs anterior</div></div><div class="kpi"><div class="kpi-l">Receita Atribuída</div><div class="kpi-v" id="kv-rev">R$ 182k</div><div class="kd kd-p">+34% vs anterior</div></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px"><div class="ch"><div class="ch-t">Funil SDR — Março 2026</div><div class="fr"><div class="fl">Abordados</div><div class="fb-bg"><div class="fb-f" style="width:100%"><span class="fb-v">215</span></div></div><div class="fp">100%</div></div><div class="fr"><div class="fl">Responderam</div><div class="fb-bg"><div class="fb-f" style="width:62%"><span class="fb-v">133</span></div></div><div class="fp">62%</div></div><div class="fr"><div class="fl">Qualificados</div><div class="fb-bg"><div class="fb-f" style="width:18%"><span class="fb-v">38</span></div></div><div class="fp">18%</div></div><div class="fr"><div class="fl">MQLs</div><div class="fb-bg"><div class="fb-f" style="width:7%"><span class="fb-v">14</span></div></div><div class="fp">7%</div></div><div class="fr"><div class="fl">Fechados</div><div class="fb-bg"><div class="fb-f" style="width:3%"><span class="fb-v">6</span></div></div><div class="fp">3%</div></div></div><div class="ch"><div class="ch-t">Receita por Linha</div><div class="fr"><div class="fl">Imersão Presencial</div><div class="fb-bg"><div class="fb-f" style="width:85%"><span class="fb-v">R$154k</span></div></div><div class="fp">85%</div></div><div class="fr"><div class="fl">Club</div><div class="fb-bg"><div class="fb-f" style="width:10%"><span class="fb-v">R$18k</span></div></div><div class="fp">10%</div></div><div class="fr"><div class="fl">Field Sales</div><div class="fb-bg"><div class="fb-f" style="width:4%"><span class="fb-v">R$7k</span></div></div><div class="fp">4%</div></div><div class="fr"><div class="fl">Digital</div><div class="fb-bg"><div class="fb-f" style="width:1%"><span class="fb-v">R$3k</span></div></div><div class="fp">1%</div></div></div></div><div class="ch"><div class="ch-t">Conversão por Linha de Receita</div><table class="tbl"><thead><tr><th>Linha</th><th>Abordados</th><th>Qualificados</th><th>MQL</th><th>Taxa</th></tr></thead><tbody><tr><td>Imersões Presenciais</td><td>98</td><td>21</td><td>8</td><td class="pg">8.2%</td></tr><tr><td>Club</td><td>42</td><td>9</td><td>3</td><td class="pm">7.1%</td></tr><tr><td>Field Sales</td><td>35</td><td>5</td><td>2</td><td class="pm">5.7%</td></tr><tr><td>Eventos</td><td>28</td><td>2</td><td>1</td><td class="pl">3.6%</td></tr><tr><td>Digital</td><td>12</td><td>1</td><td>0</td><td class="pl">0%</td></tr></tbody></table></div><div class="ch"><div class="ch-t">Atividades — Março 2026</div><table class="tbl"><thead><tr><th>Atividade</th><th>Realizado</th><th>Meta</th><th>%</th></tr></thead><tbody><tr><td>FUPs WhatsApp</td><td>147</td><td>150</td><td class="pm">98%</td></tr><tr><td>DMs Instagram</td><td>31</td><td>30</td><td class="pg">103%</td></tr><tr><td>Qualificações</td><td>38</td><td>40</td><td class="pm">95%</td></tr><tr><td>Hot handoffs</td><td>14</td><td>12</td><td class="pg">117%</td></tr><tr><td>Notas CRM</td><td>89</td><td>100</td><td class="pm">89%</td></tr></tbody></table></div></div>
-  </div></div><!-- /col-reports -->
-<div id="rp" style="width:220px;flex-shrink:0">
-  <div class="rps"><div class="rps-t">Nível SDR</div><div class="lvl-n">Hunter</div><div class="lvl-s">Nível 3 de 5</div><div class="lvl-bar"><div class="lvl-fill" style="width:68%"></div></div><div class="lvl-xp">2.340 / 3.500 XP</div></div>
-  <div class="rps"><div class="rps-t">Score</div><div class="score-big">847</div><div class="score-l">pontos hoje</div></div>
-  <div class="rps"><div class="rps-t">Streak</div><div class="sk-n">7</div><div class="sk-l">dias seguidos</div></div>
-  <div class="rps">
-    <div class="rps-t">Meta Diária</div>
-    <div class="tr" style="margin-bottom:2px"><span class="tr-l">FUPs</span><span class="tr-v" id="meta-fups-v">12 / 15</span></div>
-    <div class="meta-bar-bg"><div class="meta-bar-fill" id="meta-fups-bar" style="width:80%"></div></div>
-    <div class="tr" style="margin-bottom:2px;margin-top:5px"><span class="tr-l">Qualificações</span><span class="tr-v" id="meta-qual-v">2 / 5</span></div>
-    <div class="meta-bar-bg"><div class="meta-bar-fill" id="meta-qual-bar" style="width:40%"></div></div>
-    <div class="tr" style="margin-bottom:2px;margin-top:5px"><span class="tr-l">Handoffs</span><span class="tr-v" id="meta-hand-v">1 / 2</span></div>
-    <div class="meta-bar-bg"><div class="meta-bar-fill done" id="meta-hand-bar" style="width:50%"></div></div>
-  </div>
-  <div class="rps">
-    <div class="rps-t">Foco Diário — Top 5</div>
-    <div id="focus-list"><div style="font-size:11px;color:var(--text2);padding:4px 0">Carregando...</div></div>
-  </div>
-  <div class="rps"><div class="rps-t">Badges</div><div class="bg-grid"><div class="bgi on"><div class="bgi-ic">🤝</div><div class="bgi-n">Handoff</div></div><div class="bgi on"><div class="bgi-ic">🔥</div><div class="bgi-n">Streak 7</div></div><div class="bgi on"><div class="bgi-ic">⚡</div><div class="bgi-n">Qualifier</div></div><div class="bgi off"><div class="bgi-ic">📨</div><div class="bgi-n">50 FUPs</div></div><div class="bgi off"><div class="bgi-ic">💰</div><div class="bgi-n">Closer</div></div><div class="bgi off"><div class="bgi-ic">🛡️</div><div class="bgi-n">Iron Dome</div></div></div></div>
-  <div class="rps"><div class="rps-t">Hoje</div><div class="tr"><span class="tr-l">FUPs</span><span class="tr-v" id="hoje-fups">12</span></div><div class="tr"><span class="tr-l">Deals</span><span class="tr-v" id="hoje-deals">5</span></div><div class="tr"><span class="tr-l">Qualif.</span><span class="tr-v" id="hoje-qual">2</span></div><div class="tr"><span class="tr-l">Handoffs</span><span class="tr-v" id="hoje-hand">1</span></div></div>
-</div></div><!-- /flex-wrap screen-reports -->
+    <div class="screen" id="screen-reports">
+  <div style="display:flex;gap:16px;align-items:flex-start;height:100%;overflow:hidden">
+
+    <!-- ── MAIN COLUMN ─────────────────────────────────────── -->
+    <div style="flex:1;min-width:0;overflow-y:auto;padding-right:4px">
+
+      <!-- Header + tabs -->
+      <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:2px">Efici&ecirc;ncia do Operador</div>
+          <div style="font-size:11px;color:var(--text3)" id="rp-period-label">Nathan Souza &middot; Mar&ccedil;o 2026</div>
+        </div>
+        <div class="ftabs">
+          <div class="ft on" onclick="rp('mar',this)">Mar 2026</div>
+          <div class="ft" onclick="rp('fev',this)">Fev 2026</div>
+          <div class="ft" onclick="rp('jan',this)">Jan 2026</div>
+          <div class="ft" onclick="rp('dez',this)">Dez 2025</div>
+        </div>
+      </div>
+
+      <!-- OKR Banner: SAL → Oportunidade -->
+      <div class="okr-banner">
+        <div class="okr-banner-hdr">
+          <span class="okr-banner-tag">&#127919; OKR MONITOR</span>
+          <span class="okr-banner-title">Elevar convers&atilde;o SAL &rarr; Oportunidade por efici&ecirc;ncia das linhas de receita</span>
+        </div>
+        <div class="okr-kpis">
+          <div class="okr-kpi">
+            <div class="okr-kpi-val" id="okr-sal-con">34%</div>
+            <div class="okr-kpi-lbl">SAL &rarr; Conectado</div>
+            <div class="okr-kpi-arrow up">&#8679; +4pp</div>
+          </div>
+          <div class="okr-kpi">
+            <div class="okr-kpi-val" id="okr-con-age">61%</div>
+            <div class="okr-kpi-lbl">Conectado &rarr; Agendado</div>
+            <div class="okr-kpi-arrow up">&#8679; +7pp</div>
+          </div>
+          <div class="okr-kpi">
+            <div class="okr-kpi-val" id="okr-age-opp">52%</div>
+            <div class="okr-kpi-lbl">Agendado &rarr; Opp</div>
+            <div class="okr-kpi-arrow dn">&#8681; -2pp</div>
+          </div>
+        </div>
+        <div class="okr-progress-wrap">
+          <div class="okr-progress-bg"><div class="okr-progress-fill" style="width:54%"></div></div>
+          <div class="okr-progress-label">54% da meta trimestral &middot; Meta: SAL&rarr;Opp 25%</div>
+        </div>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="kpi-g" style="margin-bottom:14px">
+        <div class="kpi">
+          <div class="kpi-l">FUPs Enviados</div>
+          <div class="kpi-v" id="kv-fups">147</div>
+          <div class="kd kd-p">+23% vs anterior</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-l">Qualificados</div>
+          <div class="kpi-v" id="kv-qual">38</div>
+          <div class="kd kd-p">+12% vs anterior</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-l">MQLs Gerados</div>
+          <div class="kpi-v" id="kv-mql">14</div>
+          <div class="kd kd-n">-5% vs anterior</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-l">Receita Atribu&iacute;da</div>
+          <div class="kpi-v" id="kv-rev">R$ 182k</div>
+          <div class="kd kd-p">+34% vs anterior</div>
+        </div>
+      </div>
+
+      <!-- 2-col grid: Funnel + Eficiência por Linha -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+
+        <!-- Funil Visual -->
+        <div class="funnel-wrap">
+          <div class="funnel-title">&#128200; Funil SDR &mdash; Mar&ccedil;o 2026</div>
+          <div class="funnel-bars">
+            <div class="funnel-bar-col">
+              <div class="funnel-bar-val">215</div>
+              <div class="funnel-bar" style="height:90px"></div>
+              <div class="funnel-bar-lbl">Abord.</div>
+            </div>
+            <div class="funnel-bar-col">
+              <div class="funnel-bar-val">133</div>
+              <div class="funnel-bar" style="height:56px"></div>
+              <div class="funnel-bar-lbl">Resp.</div>
+            </div>
+            <div class="funnel-bar-col">
+              <div class="funnel-bar-val">72</div>
+              <div class="funnel-bar mql" style="height:30px"></div>
+              <div class="funnel-bar-lbl">SAL</div>
+            </div>
+            <div class="funnel-bar-col">
+              <div class="funnel-bar-val">38</div>
+              <div class="funnel-bar opp" style="height:16px"></div>
+              <div class="funnel-bar-lbl">MQL</div>
+            </div>
+            <div class="funnel-bar-col">
+              <div class="funnel-bar-val">14</div>
+              <div class="funnel-bar opp" style="height:8px"></div>
+              <div class="funnel-bar-lbl">Opp</div>
+            </div>
+            <div class="funnel-bar-col">
+              <div class="funnel-bar-val">6</div>
+              <div class="funnel-bar won" style="height:4px"></div>
+              <div class="funnel-bar-lbl">Ganho</div>
+            </div>
+          </div>
+          <div class="funnel-dividers">
+            <div class="funnel-rate"><span class="funnel-rate-arrow">&#8594;</span>62%</div>
+            <div class="funnel-rate"><span class="funnel-rate-arrow">&#8594;</span>54%</div>
+            <div class="funnel-rate"><span class="funnel-rate-arrow">&#8594;</span>53%</div>
+            <div class="funnel-rate"><span class="funnel-rate-arrow">&#8594;</span>37%</div>
+            <div class="funnel-rate"><span class="funnel-rate-arrow">&#8594;</span>43%</div>
+          </div>
+        </div>
+
+        <!-- Eficiência por Linha de Receita -->
+        <div class="eff-section">
+          <div class="eff-section-hdr">
+            <div class="eff-section-title">&#9889; Efici&ecirc;ncia por Linha</div>
+          </div>
+          <div class="eff-row">
+            <div>
+              <div class="eff-row-name">Imers&atilde;o</div>
+              <div class="eff-row-ticket">Presencial &middot; R$15k+</div>
+            </div>
+            <div class="eff-bar-wrap">
+              <div class="eff-bar-bg"><div class="eff-bar-fill high" style="width:82%"></div></div>
+              <div class="eff-bar-pct">82% de convers&atilde;o SAL&rarr;Opp</div>
+            </div>
+            <div class="eff-row-rev">
+              <div class="eff-row-rev-val">R$154k</div>
+              <div class="eff-row-rev-delta pos">+18%</div>
+            </div>
+          </div>
+          <div class="eff-row">
+            <div>
+              <div class="eff-row-name">Club</div>
+              <div class="eff-row-ticket">Recorrente &middot; R$3-8k</div>
+            </div>
+            <div class="eff-bar-wrap">
+              <div class="eff-bar-bg"><div class="eff-bar-fill mid" style="width:58%"></div></div>
+              <div class="eff-bar-pct">58% de convers&atilde;o SAL&rarr;Opp</div>
+            </div>
+            <div class="eff-row-rev">
+              <div class="eff-row-rev-val">R$18k</div>
+              <div class="eff-row-rev-delta pos">+5%</div>
+            </div>
+          </div>
+          <div class="eff-row">
+            <div>
+              <div class="eff-row-name">Field Sales</div>
+              <div class="eff-row-ticket">Enterprise &middot; R$50k+</div>
+            </div>
+            <div class="eff-bar-wrap">
+              <div class="eff-bar-bg"><div class="eff-bar-fill low" style="width:31%"></div></div>
+              <div class="eff-bar-pct">31% de convers&atilde;o SAL&rarr;Opp</div>
+            </div>
+            <div class="eff-row-rev">
+              <div class="eff-row-rev-val">R$7k</div>
+              <div class="eff-row-rev-delta neg">-3%</div>
+            </div>
+          </div>
+          <div class="eff-row">
+            <div>
+              <div class="eff-row-name">Eventos</div>
+              <div class="eff-row-ticket">Pontual &middot; R$5-12k</div>
+            </div>
+            <div class="eff-bar-wrap">
+              <div class="eff-bar-bg"><div class="eff-bar-fill low" style="width:24%"></div></div>
+              <div class="eff-bar-pct">24% de convers&atilde;o SAL&rarr;Opp</div>
+            </div>
+            <div class="eff-row-rev">
+              <div class="eff-row-rev-val">R$5k</div>
+              <div class="eff-row-rev-delta neg">-8%</div>
+            </div>
+          </div>
+          <div class="eff-row">
+            <div>
+              <div class="eff-row-name">Digital</div>
+              <div class="eff-row-ticket">Online &middot; R$1-3k</div>
+            </div>
+            <div class="eff-bar-wrap">
+              <div class="eff-bar-bg"><div class="eff-bar-fill low" style="width:12%"></div></div>
+              <div class="eff-bar-pct">12% de convers&atilde;o SAL&rarr;Opp</div>
+            </div>
+            <div class="eff-row-rev">
+              <div class="eff-row-rev-val">R$3k</div>
+              <div class="eff-row-rev-delta pos">+1%</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /2-col grid -->
+
+      <!-- 2-col grid: Convers&atilde;o por Linha + Atividades -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="ch">
+          <div class="ch-t">Convers&atilde;o por Linha de Receita</div>
+          <table class="tbl">
+            <thead><tr><th>Linha</th><th>Abord.</th><th>SAL</th><th>MQL</th><th>Taxa</th></tr></thead>
+            <tbody>
+              <tr><td>Imers&otilde;es</td><td>98</td><td>42</td><td>8</td><td class="pg">8.2%</td></tr>
+              <tr><td>Club</td><td>42</td><td>18</td><td>3</td><td class="pm">7.1%</td></tr>
+              <tr><td>Field Sales</td><td>35</td><td>7</td><td>2</td><td class="pm">5.7%</td></tr>
+              <tr><td>Eventos</td><td>28</td><td>4</td><td>1</td><td class="pl">3.6%</td></tr>
+              <tr><td>Digital</td><td>12</td><td>1</td><td>0</td><td class="pl">0%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="ch">
+          <div class="ch-t">Atividades &mdash; Mar&ccedil;o 2026</div>
+          <table class="tbl">
+            <thead><tr><th>Atividade</th><th>Real.</th><th>Meta</th><th>%</th></tr></thead>
+            <tbody>
+              <tr><td>FUPs WhatsApp</td><td>147</td><td>150</td><td class="pm">98%</td></tr>
+              <tr><td>DMs Instagram</td><td>31</td><td>30</td><td class="pg">103%</td></tr>
+              <tr><td>Qualifica&ccedil;&otilde;es</td><td>38</td><td>40</td><td class="pm">95%</td></tr>
+              <tr><td>Hot handoffs</td><td>14</td><td>12</td><td class="pg">117%</td></tr>
+              <tr><td>Notas CRM</td><td>89</td><td>100</td><td class="pm">89%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /main col -->
+
+    <!-- ── SIDEBAR ──────────────────────────────────────────── -->
+    <div style="width:220px;flex-shrink:0;overflow-y:auto">
+
+      <!-- N&iacute;vel SDR -->
+      <div class="rps">
+        <div class="rps-t">N&iacute;vel SDR</div>
+        <div class="lvl-n">Hunter</div>
+        <div class="lvl-s">N&iacute;vel 3 de 5</div>
+        <div class="lvl-bar"><div class="lvl-fill" style="width:68%"></div></div>
+        <div class="lvl-xp">2.340 / 3.500 XP</div>
+      </div>
+
+      <!-- Score -->
+      <div class="rps">
+        <div class="rps-t">Score</div>
+        <div class="score-big">847</div>
+        <div class="score-l">pontos hoje</div>
+      </div>
+
+      <!-- Streak -->
+      <div class="rps">
+        <div class="rps-t">Streak</div>
+        <div class="sk-n">7</div>
+        <div class="sk-l">dias seguidos</div>
+      </div>
+
+      <!-- Meta Di&aacute;ria -->
+      <div class="rps">
+        <div class="rps-t">Meta Di&aacute;ria</div>
+        <div class="tr" style="margin-bottom:2px"><span class="tr-l">FUPs</span><span class="tr-v" id="meta-fups-v">12 / 15</span></div>
+        <div class="meta-bar-bg"><div class="meta-bar-fill" id="meta-fups-bar" style="width:80%"></div></div>
+        <div class="tr" style="margin-bottom:2px;margin-top:5px"><span class="tr-l">Qualifica&ccedil;&otilde;es</span><span class="tr-v" id="meta-qual-v">2 / 5</span></div>
+        <div class="meta-bar-bg"><div class="meta-bar-fill" id="meta-qual-bar" style="width:40%"></div></div>
+        <div class="tr" style="margin-bottom:2px;margin-top:5px"><span class="tr-l">Handoffs</span><span class="tr-v" id="meta-hand-v">1 / 2</span></div>
+        <div class="meta-bar-bg"><div class="meta-bar-fill done" id="meta-hand-bar" style="width:50%"></div></div>
+      </div>
+
+      <!-- Foco Di&aacute;rio -->
+      <div class="rps">
+        <div class="rps-t">Foco Di&aacute;rio &mdash; Top 5</div>
+        <div id="focus-list"><div style="font-size:11px;color:var(--text2);padding:4px 0">Carregando...</div></div>
+      </div>
+
+      <!-- Badges -->
+      <div class="rps">
+        <div class="rps-t">Badges</div>
+        <div class="bg-grid">
+          <div class="bgi on"><div class="bgi-ic">&#129309;</div><div class="bgi-n">Handoff</div></div>
+          <div class="bgi on"><div class="bgi-ic">&#128293;</div><div class="bgi-n">Streak 7</div></div>
+          <div class="bgi on"><div class="bgi-ic">&#9889;</div><div class="bgi-n">Qualifier</div></div>
+          <div class="bgi off"><div class="bgi-ic">&#128232;</div><div class="bgi-n">50 FUPs</div></div>
+          <div class="bgi off"><div class="bgi-ic">&#128176;</div><div class="bgi-n">Closer</div></div>
+          <div class="bgi off"><div class="bgi-ic">&#128737;&#65039;</div><div class="bgi-n">Iron Dome</div></div>
+        </div>
+      </div>
+
+      <!-- Hoje -->
+      <div class="rps">
+        <div class="rps-t">Hoje</div>
+        <div class="tr"><span class="tr-l">FUPs</span><span class="tr-v" id="hoje-fups">12</span></div>
+        <div class="tr"><span class="tr-l">Deals</span><span class="tr-v" id="hoje-deals">5</span></div>
+        <div class="tr"><span class="tr-l">Qualif.</span><span class="tr-v" id="hoje-qual">2</span></div>
+        <div class="tr"><span class="tr-l">Handoffs</span><span class="tr-v" id="hoje-hand">1</span></div>
+      </div>
+
+    </div><!-- /sidebar -->
+
+  </div><!-- /flex-wrap -->
 </div><!-- /screen-reports -->
 
 <!-- ── SCREEN: DM WAR ROOM ────────────────────────────────────────── -->
