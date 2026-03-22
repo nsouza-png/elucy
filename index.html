@@ -1092,7 +1092,9 @@ async function callSyncDeals(emailHint){
 
 // ── OPERADOR / CRM SYNC ──────────────────────────────────────────────
 
-const DB_ENDPOINT='https://dbc-8acefaf9-a170.cloud.databricks.com/api/2.0/sql/statements';
+// Proxy via Supabase Edge Function — resolve CORS do Databricks no browser
+const DB_PROXY='https://tnbbsjvzwleeoqnxtafp.supabase.co/functions/v1/db-proxy';
+const DB_ENDPOINT=DB_PROXY;
 const DB_WAREHOUSE='bbae754ea44f67e0';
 
 // Query canônica do pipeline — única fonte de verdade (browser + sync-deals-now.js usam o mesmo shape)
@@ -1299,7 +1301,7 @@ function fetchPipeline(email,token,btn){
   const lookupQuery=`SELECT DISTINCT qualificador_name FROM production.diamond.funil_comercial WHERE (${likeParts}) AND qualificador_name IS NOT NULL LIMIT 20`;
   fetch(DB_ENDPOINT,{
     method:'POST',
-    headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+    headers:{'x-db-token':token,'apikey':SUPABASE_ANON,'Content-Type':'application/json'},
     body:JSON.stringify({statement:lookupQuery,warehouse_id:DB_WAREHOUSE,wait_timeout:'30s',on_wait_timeout:'CONTINUE'})
   })
   .then(r=>r.json())
@@ -1351,7 +1353,7 @@ function fetchPipelineByName(nome,token,btn){
 
   fetch(DB_ENDPOINT,{
     method:'POST',
-    headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+    headers:{'x-db-token':token,'apikey':SUPABASE_ANON,'Content-Type':'application/json'},
     body:JSON.stringify({statement:query,warehouse_id:DB_WAREHOUSE,wait_timeout:'30s',on_wait_timeout:'CONTINUE'})
   })
   .then(r=>{if(!r.ok) throw new Error('HTTP '+r.status);return r.json();})
@@ -1397,8 +1399,8 @@ function pollStatement(stmtId,nome,attempts){
   attempts=attempts||0;
   if(attempts>12){showSyncToast('err','Timeout ao aguardar query. Tente novamente.');return;}
   const token=localStorage.getItem('elucy_db_token');
-  fetch('https://dbc-8acefaf9-a170.cloud.databricks.com/api/2.0/sql/statements/'+stmtId,{
-    headers:{'Authorization':'Bearer '+token}
+  fetch(DB_PROXY+'?stmt_id='+stmtId,{
+    headers:{'x-db-token':token,'apikey':SUPABASE_ANON}
   })
   .then(r=>r.json())
   .then(data=>{
