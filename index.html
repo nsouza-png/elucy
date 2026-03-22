@@ -1,0 +1,1619 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Elucy Sales Engagement Cockpit</title>
+<!-- Supabase JS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<!-- cockpit-data.js carregado após auth, apenas em ambiente local G4 OS -->
+<script>
+// Detecta se está rodando em GitHub Pages ou localmente
+window.IS_REMOTE = location.hostname !== '' && !location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1') && location.protocol !== 'file:';
+</script>
+<script>
+// Só carrega cockpit-data.js em ambiente local (G4 OS)
+if(!window.IS_REMOTE){
+  const s=document.createElement('script');
+  s.src='cockpit-data.js';
+  document.head.appendChild(s);
+}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a26;--bg4:#22222f;--border:#2a2a3d;--border2:#3a3a55;--accent:#6c63ff;--accent2:#8b85ff;--adim:rgba(108,99,255,.13);--green:#22c55e;--gdim:rgba(34,197,94,.13);--yellow:#f59e0b;--ydim:rgba(245,158,11,.13);--red:#ef4444;--rdim:rgba(239,68,68,.13);--blue:#3b82f6;--bdim:rgba(59,130,246,.13);--text:#e2e2f0;--text2:#9090b0;--r:8px;--r2:12px}
+body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:14px}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+#topbar{height:50px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:10px;flex-shrink:0;z-index:10}
+.logo{font-size:14px;font-weight:800;color:var(--accent2);margin-right:6px}.logo em{color:var(--text2);font-style:normal;font-weight:400}
+.ntab{padding:6px 13px;border-radius:6px;font-size:12px;color:var(--text2);cursor:pointer;transition:.15s;border:none;background:none;font-family:inherit}.ntab:hover{color:var(--text);background:var(--bg3)}.ntab.on{color:var(--accent2);background:var(--adim);font-weight:600}
+.tbr{margin-left:auto;display:flex;align-items:center;gap:10px}
+.chip{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:3px 11px 3px 5px;font-size:12px}.av{width:24px;height:24px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff}.chip-name{font-weight:600}.chip-lvl{color:var(--accent2);font-size:11px}
+.streak-badge{background:var(--ydim);border:1px solid var(--yellow);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--yellow);font-weight:700}
+#main{display:flex;flex:1;overflow:hidden}
+#sb{width:292px;min-width:292px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sb-h{padding:12px 14px 8px;border-bottom:1px solid var(--border);flex-shrink:0}.sb-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}.sb-title{font-size:12px;font-weight:700}.sb-date{font-size:11px;color:var(--text2)}
+.sb-stats{display:flex;gap:5px}.sbs{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 7px;text-align:center}.sbs-n{font-size:15px;font-weight:800}.sbs-l{font-size:10px;color:var(--text2)}
+.sb-search{padding:8px 14px;border-bottom:1px solid var(--border);flex-shrink:0}.srch{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:12px;color:var(--text);outline:none;font-family:inherit}.srch::placeholder{color:var(--text2)}.srch:focus{border-color:var(--accent)}
+.deal-list{flex:1;overflow-y:auto;padding:8px}
+.di{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:5px;cursor:pointer;transition:.15s;border-left:3px solid transparent}.di:hover{border-color:var(--border2);background:var(--bg4)}.di.on{border-color:var(--accent)!important;background:var(--adim)}.di.sla{border-left-color:var(--red)}.di.dome{border-left-color:var(--yellow)}
+.di-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:1px}.di-co{font-size:11px;color:var(--text2);margin-bottom:6px}.di-meta{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.tb{display:inline-flex;align-items:center;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700}.th{background:var(--gdim);color:var(--green);border:1px solid var(--green)}.tw{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}.tc{background:var(--rdim);color:var(--red);border:1px solid var(--red)}
+.fc{background:var(--bg4);border:1px solid var(--border);border-radius:4px;padding:2px 5px;font-size:10px;color:var(--text2)}.cc{font-size:10px;padding:2px 5px;border-radius:4px;font-weight:600}.cwa{background:rgba(37,211,102,.12);color:#25d366;border:1px solid #25d366}.cig{background:rgba(225,48,108,.12);color:#e1306c;border:1px solid #e1306c}.ccl{background:var(--bdim);color:var(--blue);border:1px solid var(--blue)}.di-day{font-size:10px;color:var(--text2);margin-left:auto}
+#ct{flex:1;overflow-y:auto;padding:18px 20px}.screen{display:none}.screen.on{display:block}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:17px;margin-bottom:13px}
+.sec-t{font-size:13px;font-weight:700;color:var(--text)}
+.btn{padding:8px 14px;border-radius:var(--r);font-size:12px;font-weight:600;cursor:pointer;border:none;transition:.15s;display:inline-flex;align-items:center;gap:5px;font-family:inherit;text-decoration:none}
+.bp{background:var(--accent);color:#fff}.bp:hover{background:var(--accent2)}.bs{background:var(--bg3);color:var(--text);border:1px solid var(--border)}.bs:hover{border-color:var(--border2);background:var(--bg4)}.bsuc{background:var(--gdim);color:var(--green);border:1px solid var(--green)}.bsuc:hover{background:var(--green);color:#fff}.bwrn{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}.bwa{background:rgba(37,211,102,.15);color:#25d366;border:1px solid #25d366}.bwa:hover{background:#25d366;color:#fff}.big2{background:rgba(225,48,108,.15);color:#e1306c;border:1px solid #e1306c}.big2:hover{background:#e1306c;color:#fff}.btn-sm{padding:5px 9px;font-size:11px}
+.tag{padding:3px 7px;border-radius:4px;font-size:11px;font-weight:600;display:inline-block}.t-elite{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}.t-builder{background:var(--adim);color:var(--accent2);border:1px solid var(--accent)}.t-exec{background:var(--bdim);color:var(--blue);border:1px solid var(--blue)}.t-gray{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}.t-buy{background:var(--gdim);color:var(--green);border:1px solid var(--green)}.t-risk{background:var(--rdim);color:var(--red);border:1px solid var(--red)}.t-stall{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}.t-champ{background:rgba(139,133,255,.15);color:var(--accent2);border:1px solid var(--accent2)}
+.dch{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}.dca{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;flex-shrink:0}.dci{flex:1}.dcn{font-size:16px;font-weight:800;margin-bottom:1px}.dcs{font-size:12px;color:var(--text2);margin-bottom:7px}.tags-row{display:flex;gap:5px;flex-wrap:wrap}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:13px}.ic{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px 11px}.ic-l{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}.ic-v{font-size:13px;font-weight:600}.ic-s{font-size:11px;color:var(--text2);margin-top:2px}
+.tg{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:13px 15px;margin-bottom:13px}.tg-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.tg-lbl{font-size:12px;color:var(--text2)}.tg-sub{font-size:11px;color:var(--text2);margin-top:5px}.tgv{font-size:26px;font-weight:900}.tgv-h{color:var(--green)}.tgv-w{color:var(--yellow)}.tgv-c{color:var(--red)}
+.bar{background:var(--bg4);border-radius:4px;height:6px;overflow:hidden}.bf{height:100%;border-radius:4px}.bf-h{background:linear-gradient(90deg,#f59e0b,#22c55e)}.bf-w{background:linear-gradient(90deg,#ef4444,#f59e0b)}.bf-c{background:#ef4444}
+.recom{background:var(--adim);border:1px solid var(--accent);border-radius:var(--r);padding:12px 14px;margin-bottom:13px}.recom-l{font-size:10px;color:var(--accent2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}.recom-t{font-size:13px;line-height:1.55}
+.alrt{padding:10px 13px;border-radius:var(--r);font-size:12px;margin-bottom:11px;line-height:1.5}.al-w{background:var(--ydim);border:1px solid var(--yellow);color:var(--yellow)}.al-d{background:var(--rdim);border:1px solid var(--red);color:var(--red)}.al-i{background:var(--adim);border:1px solid var(--accent);color:var(--accent2)}
+.row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.er{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:13px}.er-h{background:linear-gradient(135deg,#16162a,#0d0d1f);padding:13px 17px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}.er-badge{background:var(--accent);color:#fff;font-size:9px;font-weight:900;padding:3px 7px;border-radius:4px;letter-spacing:1.5px}.er-htitle{font-size:13px;font-weight:700}.er-dqi{margin-left:auto;font-size:12px;font-weight:800;color:var(--accent2)}
+.er-b{padding:12px 17px;border-bottom:1px solid var(--border)}.er-b:last-child{border-bottom:none}.er-bl{font-size:10px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;display:flex;align-items:center;gap:5px}.er-bl::before{content:"";width:3px;height:10px;background:var(--accent);border-radius:2px;display:inline-block;flex-shrink:0}.er-bt{font-size:12px;line-height:1.65}.er-bt p{margin-bottom:4px}.er-bt p:last-child{margin-bottom:0}
+.ef{display:inline-flex;align-items:center;border-radius:4px;padding:2px 6px;font-size:11px;font-weight:600;margin:2px 2px 2px 0}.ef-w{background:var(--ydim);border:1px solid var(--yellow);color:var(--yellow)}.ef-g{background:var(--gdim);border:1px solid var(--green);color:var(--green)}.ef-r{background:var(--rdim);border:1px solid var(--red);color:var(--red)}
+.er-v{background:var(--bg3);padding:13px 17px;display:flex;align-items:center;gap:13px}.ev-s{font-size:28px;font-weight:900;color:var(--accent2)}.ev-t{font-size:12px;line-height:1.55}
+.mo{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;margin-bottom:7px;cursor:pointer;transition:.15s}.mo:hover{border-color:var(--border2);background:var(--bg3)}.mo.on{border-color:var(--accent);background:var(--adim)}.mo.rec{border-color:var(--green)}.mo-top{display:flex;align-items:center;gap:6px;margin-bottom:3px}.mo-rb{background:var(--gdim);color:var(--green);border:1px solid var(--green);font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px}.mo-t{font-size:12px;font-weight:700}.mo-d{font-size:11px;color:var(--text2)}
+.bl-sec{margin-top:10px}.bl-l{font-size:11px;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}.bli{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;opacity:.45}.bli-n{font-size:12px;color:var(--text2)}.bli-w{font-size:10px;color:var(--text2);background:var(--bg4);padding:2px 6px;border-radius:4px}
+.dvl{background:var(--bg2);border:1px solid var(--yellow);border-radius:var(--r2);padding:15px;margin-bottom:13px}.dvl-t{font-size:13px;font-weight:700;color:var(--yellow);margin-bottom:3px}.dvl-s{font-size:11px;color:var(--text2);margin-bottom:12px}.dvl-g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.dvl-f{display:flex;flex-direction:column;gap:3px}.dvl-l{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}.dvl-i{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 9px;font-size:12px;color:var(--text);outline:none;width:100%;font-family:inherit}.dvl-i:focus{border-color:var(--accent)}
+.co{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:13px}.co-h{padding:11px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}.co-chan{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}.co-tabs{display:flex;gap:3px}.cotab{padding:5px 11px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:none;color:var(--text2);transition:.15s;font-family:inherit}.cotab:hover{color:var(--text);background:var(--bg3)}.cotab.on{color:var(--accent2);background:var(--adim)}.co-b{padding:14px}.co-txt{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px;font-size:13px;line-height:1.7;white-space:pre-wrap;min-height:90px;margin-bottom:11px;font-family:inherit}.co-note{font-size:11px;color:var(--text2);margin-left:auto}
+.ftabs{display:flex;gap:5px;margin-bottom:17px;flex-wrap:wrap}.ft{padding:6px 13px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg2);color:var(--text2);transition:.15s}.ft:hover{color:var(--text);border-color:var(--border2)}.ft.on{color:var(--accent2);background:var(--adim);border-color:var(--accent)}
+.kpi-g{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:17px}.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px}.kpi-l{font-size:11px;color:var(--text2);margin-bottom:7px}.kpi-v{font-size:22px;font-weight:800;margin-bottom:3px}.kd{font-size:12px}.kd-p{color:var(--green)}.kd-n{color:var(--red)}
+.ch{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px;margin-bottom:13px}.ch-t{font-size:12px;font-weight:700;margin-bottom:12px}.fr{display:flex;align-items:center;gap:8px;margin-bottom:7px}.fl{font-size:12px;color:var(--text2);width:130px;flex-shrink:0}.fb-bg{flex:1;background:var(--bg3);border-radius:4px;height:18px;overflow:hidden}.fb-f{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:flex-end;padding-right:6px;min-width:20px}.fb-v{font-size:10px;font-weight:700;color:#fff}.fp{font-size:11px;color:var(--text2);width:34px;text-align:right;flex-shrink:0}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}.tbl th{padding:7px 10px;text-align:left;color:var(--text2);font-weight:600;border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.5px}.tbl td{padding:8px 10px;border-bottom:1px solid var(--border)}.tbl tr:hover td{background:var(--bg3)}.tbl tr:last-child td{border-bottom:none}.pg{color:var(--green);font-weight:700}.pm{color:var(--yellow);font-weight:700}.pl{color:var(--red);font-weight:700}
+#rp{width:205px;min-width:205px;background:var(--bg2);border-left:1px solid var(--border);padding:11px;overflow-y:auto;display:flex;flex-direction:column;gap:9px}
+.rps{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px}.rps-t{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.lvl-n{font-size:14px;font-weight:800;color:var(--accent2);text-align:center;margin-bottom:1px}.lvl-s{font-size:10px;color:var(--text2);text-align:center}.lvl-bar{background:var(--bg4);border-radius:4px;height:5px;margin:7px 0;overflow:hidden}.lvl-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--accent2))}.lvl-xp{font-size:10px;color:var(--text2);text-align:center}
+.score-big{font-size:28px;font-weight:900;color:var(--accent2);text-align:center;line-height:1;margin:3px 0}.score-l{font-size:10px;color:var(--text2);text-align:center}.sk-n{font-size:24px;font-weight:900;color:var(--yellow);text-align:center;line-height:1;margin:3px 0}.sk-l{font-size:10px;color:var(--text2);text-align:center}
+.bg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.bgi{background:var(--bg4);border:1px solid var(--border);border-radius:6px;padding:5px 3px;text-align:center;cursor:pointer;transition:.15s}.bgi:hover{border-color:var(--border2)}.bgi.on{border-color:var(--accent);background:var(--adim)}.bgi.off{opacity:.3}.bgi-ic{font-size:15px;margin-bottom:1px}.bgi-n{font-size:9px;color:var(--text2);line-height:1.2}
+.tr{display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:4px}.tr:last-child{margin-bottom:0}.tr-l{color:var(--text2)}.tr-v{font-weight:700}
+.dma{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:13px}.dma-h{background:linear-gradient(135deg,#1a0d2a,#0d0d1f);padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}.dma-badge{background:#e1306c;color:#fff;font-size:9px;font-weight:900;padding:3px 7px;border-radius:4px;letter-spacing:1.5px}.dma-t{font-size:13px;font-weight:700}.dma-st{margin-left:auto;font-size:11px;color:var(--text2)}.dma-st.on{color:var(--green)}.dma-b{padding:14px}
+.fbr{display:flex;gap:6px;margin-bottom:12px}.fbb{flex:1;padding:7px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;text-align:center;transition:.15s}.fbb:hover{border-color:var(--border2)}.fbb.on{border-color:var(--accent);background:var(--adim);color:var(--accent2)}
+.cap-area{background:var(--bg3);border:2px dashed var(--border2);border-radius:var(--r);padding:20px;text-align:center;cursor:pointer;transition:.15s;margin-bottom:12px}.cap-area:hover{border-color:var(--accent);background:var(--adim)}.cap-icon{font-size:26px;margin-bottom:5px;opacity:.6}.cap-l{font-size:13px;color:var(--text2);font-weight:600;margin-bottom:3px}.cap-s{font-size:11px;color:var(--text2)}
+.anlz{display:none;align-items:center;gap:8px;padding:10px;background:var(--adim);border-radius:var(--r);margin-bottom:12px}.anlz.show{display:flex}.spin{width:14px;height:14px;border:2px solid rgba(108,99,255,.2);border-top-color:var(--accent2);border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}@keyframes spin{to{transform:rotate(360deg)}}.anlz-t{font-size:12px;color:var(--accent2)}
+.dm-res{display:none}.dm-res.show{display:block}.dm-ctx{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:8px;font-size:12px;color:var(--text2);line-height:1.6}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:340px;gap:10px;text-align:center;padding:40px}.e-ic{font-size:36px;opacity:.4}.e-t{font-size:15px;font-weight:600}.e-s{font-size:12px;color:var(--text2);line-height:1.6;max-width:250px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}.screen.on,.er,.card{animation:fadeIn .2s ease}
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);padding:24px;width:420px;max-width:90vw}
+.modal-t{font-size:16px;font-weight:800;margin-bottom:4px}.modal-s{font-size:12px;color:var(--text2);margin-bottom:20px;line-height:1.5}
+.modal-f{display:flex;flex-direction:column;gap:4px;margin-bottom:14px}.modal-l{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.modal-i{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);outline:none;width:100%;font-family:inherit;transition:.15s}.modal-i:focus{border-color:var(--accent)}
+.modal-note{font-size:11px;color:var(--text2);margin-top:-6px;margin-bottom:8px;line-height:1.5}
+.sync-status{font-size:11px;display:flex;align-items:center;gap:5px;padding:7px 10px;border-radius:6px;margin-bottom:14px}
+.sync-ok{background:var(--gdim);border:1px solid var(--green);color:var(--green)}
+.sync-err{background:var(--rdim);border:1px solid var(--red);color:var(--red)}
+.sync-load{background:var(--adim);border:1px solid var(--accent);color:var(--accent2)}
+.btn-refresh{padding:5px 11px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);transition:.15s;display:flex;align-items:center;gap:5px}
+.btn-refresh:hover{border-color:var(--accent);color:var(--accent2);background:var(--adim)}
+.btn-refresh.spin-active svg{animation:spin .7s linear infinite;transform-origin:center}
+.btn-settings{padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);transition:.15s}
+.btn-settings:hover{border-color:var(--border2);color:var(--text)}
+.op-pill{background:var(--gdim);border:1px solid var(--green);border-radius:4px;padding:2px 7px;font-size:10px;color:var(--green);font-weight:700;display:none}
+.op-pill.show{display:inline-block}
+/* Elucy motor styles */
+.elucy-badge{background:var(--adim);border:1px solid var(--accent);border-radius:3px;padding:1px 6px;font-size:9px;font-weight:800;color:var(--accent2);margin-left:6px;vertical-align:middle}
+.elucy-live{background:var(--gdim)!important;border-color:var(--green)!important;color:var(--green)!important}
+.er-loading{padding:16px;text-align:center}
+.elucy-pulse{font-size:12px;color:var(--accent2);font-weight:600;animation:elucy-blink 1.2s ease-in-out infinite}
+@keyframes elucy-blink{0%,100%{opacity:1}50%{opacity:.35}}
+/* Filtros e ordenação */
+.sb-filters{padding:6px 14px 8px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:5px}
+.filter-row{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.filter-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;width:100%}
+.fchip{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.12s}
+.fchip:hover{border-color:var(--border2);color:var(--text)}
+.fchip.on{background:var(--adim);border-color:var(--accent);color:var(--accent2)}
+.fchip.on-green{background:var(--gdim);border-color:var(--green);color:var(--green)}
+.fchip.on-red{background:var(--rdim);border-color:var(--red);color:var(--red)}
+.fchip.on-yellow{background:var(--ydim);border-color:var(--yellow);color:var(--yellow)}
+.sort-row{display:flex;align-items:center;gap:4px}
+.sort-sel{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 7px;font-size:10px;color:var(--text2);outline:none;cursor:pointer;font-family:inherit}
+.sort-sel:focus{border-color:var(--accent)}
+/* Sinal badges */
+.sig-buy{background:var(--gdim);color:var(--green);border:1px solid var(--green)}
+.sig-risk{background:var(--rdim);color:var(--red);border:1px solid var(--red)}
+.sig-stall{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}
+.sig-champ{background:rgba(139,133,255,.15);color:var(--accent2);border:1px solid var(--accent2)}
+.sig-dome{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}
+/* Urgency score badge */
+.urg-badge{margin-left:auto;font-size:10px;font-weight:800;padding:2px 6px;border-radius:4px}
+.urg-crit{background:var(--rdim);color:var(--red);border:1px solid var(--red)}
+.urg-high{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}
+.urg-med{background:var(--adim);color:var(--accent2);border:1px solid var(--accent)}
+.urg-low{background:var(--bg4);color:var(--text2);border:1px solid var(--border)}
+/* Focus panel */
+.focus-panel{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:7px}
+.focus-title{font-size:10px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.focus-item{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:.12s}
+.focus-item:last-child{border-bottom:none}
+.focus-item:hover{color:var(--accent2)}
+.focus-pos{font-size:10px;font-weight:800;color:var(--text2);width:14px;text-align:center;flex-shrink:0}
+.focus-name{font-size:11px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.focus-why{font-size:10px;color:var(--text2)}
+/* Meta diária */
+.meta-bar-bg{background:var(--bg4);border-radius:3px;height:5px;margin:4px 0;overflow:hidden}
+.meta-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.meta-bar-fill.done{background:linear-gradient(90deg,#22c55e,#16a34a)}
+/* Copy editor */
+.co-txt[contenteditable]{outline:none;cursor:text}
+.co-txt[contenteditable]:focus{border-color:var(--accent)}
+.copy-actions{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:8px}
+/* Quick action buttons on deal items */
+.di-qa{display:none;gap:3px;margin-top:5px}
+.di:hover .di-qa,.di.on .di-qa{display:flex}
+.qa-btn{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg4);color:var(--text2);cursor:pointer;transition:.12s}
+.qa-btn:hover{border-color:var(--accent);color:var(--accent2);background:var(--adim)}
+/* Auth screens */
+#auth-screen,#pending-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:0}
+#auth-screen.hidden,#pending-screen.hidden{display:none}
+.auth-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:40px;max-width:380px;width:90%;text-align:center}
+.auth-logo{font-size:22px;font-weight:900;color:var(--accent2);margin-bottom:4px}.auth-logo em{color:var(--text2);font-style:normal;font-weight:400}
+.auth-sub{font-size:13px;color:var(--text2);margin-bottom:28px;line-height:1.5}
+.auth-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;background:white;color:#1a1a1a;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:.15s}
+.auth-btn:hover{background:#f0f0f0;transform:translateY(-1px)}
+.auth-btn svg{width:20px;height:20px;flex-shrink:0}
+.auth-note{font-size:11px;color:var(--text2);margin-top:16px;line-height:1.4}
+.auth-err{background:var(--rdim);border:1px solid var(--red);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--red);margin-top:12px;display:none}
+.pending-icon{font-size:40px;margin-bottom:16px}
+.pending-title{font-size:18px;font-weight:700;margin-bottom:8px}
+.pending-msg{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:20px}
+.pending-email{background:var(--adim);border:1px solid var(--accent);border-radius:6px;padding:6px 12px;font-size:12px;color:var(--accent2);font-weight:600;margin-bottom:20px;display:inline-block}
+.auth-logout{background:none;border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:11px;color:var(--text2);cursor:pointer;margin-top:12px;transition:.15s}
+.auth-logout:hover{border-color:var(--red);color:var(--red)}
+</style>
+</head>
+<body>
+<!-- ── AUTH: Login Google ─────────────────────────────────── -->
+<div id="auth-screen" class="hidden">
+  <div class="auth-card">
+    <div class="auth-logo">Elucy <em>Cockpit</em></div>
+    <div class="auth-sub">Sales Engagement System — G4 Educação<br>Entre com sua conta G4 para acessar.</div>
+    <button class="auth-btn" id="btn-google-login">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+      Entrar com Google G4
+    </button>
+    <div class="auth-note">Apenas contas @g4educacao.com. Acesso sujeito à aprovação do administrador.</div>
+    <div class="auth-err" id="auth-error"></div>
+  </div>
+</div>
+<!-- ── AUTH: Aguardando aprovação ────────────────────────── -->
+<div id="pending-screen" class="hidden">
+  <div class="auth-card">
+    <div class="pending-icon">⏳</div>
+    <div class="pending-title">Acesso pendente</div>
+    <div class="pending-msg">Sua conta está na fila de aprovação.<br>O administrador irá liberar em breve.</div>
+    <div class="pending-email" id="pending-email-label">—</div>
+    <div class="pending-msg" style="font-size:11px">Não precisa fazer nada — assim que aprovado, basta entrar novamente.</div>
+    <button class="auth-logout" onclick="supabaseSignOut()">Sair e trocar de conta</button>
+  </div>
+</div>
+<div id="topbar">
+  <span class="logo">Elucy <em>Cockpit</em></span>
+  <button class="ntab on" onclick="setScreen('home',this)">Pipeline</button>
+  <button class="ntab" onclick="setScreen('reports',this)">Relatórios</button>
+  <div class="tbr">
+    <span class="op-pill" id="op-pill">CRM Sincronizado</span>
+    <span class="streak-badge">🔥 7 dias</span>
+    <div class="chip">
+      <div class="av" id="av-init">N</div>
+      <span class="chip-name" id="chip-name">Nathan</span>
+      <span class="chip-lvl">Hunter Lv3</span>
+    </div>
+    <button class="btn-settings" onclick="openSettings()" title="Configurar operador">⚙</button>
+  </div>
+</div>
+<div id="main">
+  <div id="sb">
+    <div class="sb-h">
+      <div class="sb-top">
+        <span class="sb-title">Meu Pipeline</span>
+        <button class="btn-refresh" id="btn-refresh" onclick="refreshPipeline()" title="Sincronizar com funil_comercial">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+          Atualizar
+        </button>
+      </div>
+      <div class="sb-date" id="sbdate" style="font-size:11px;color:var(--text2);padding-bottom:6px">Dom, 22 Mar 2026</div>
+      <div class="sb-stats">
+        <div class="sbs"><div class="sbs-n">6</div><div class="sbs-l">Ativos</div></div>
+        <div class="sbs"><div class="sbs-n">3</div><div class="sbs-l">Ação hoje</div></div>
+        <div class="sbs"><div class="sbs-n">2</div><div class="sbs-l">SLA risco</div></div>
+      </div>
+    </div>
+    <div class="sb-search">
+      <input class="srch" id="srch-input" placeholder="Buscar lead..." oninput="applyFilters()">
+    </div>
+    <div class="sb-filters">
+      <div class="filter-row">
+        <span class="filter-label">Fase</span>
+        <span class="fchip on" data-filter="fase" data-val="todos" onclick="toggleFilter(this,'fase')">Todos</span>
+        <span class="fchip" data-filter="fase" data-val="MQL" onclick="toggleFilter(this,'fase')">MQL</span>
+        <span class="fchip" data-filter="fase" data-val="SAL" onclick="toggleFilter(this,'fase')">SAL</span>
+        <span class="fchip" data-filter="fase" data-val="Conectado" onclick="toggleFilter(this,'fase')">Conect.</span>
+        <span class="fchip" data-filter="fase" data-val="Agendado" onclick="toggleFilter(this,'fase')">Agend.</span>
+        <span class="fchip" data-filter="fase" data-val="Negociacao" onclick="toggleFilter(this,'fase')">Negoc.</span>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">Sinal</span>
+        <span class="fchip on" data-filter="sinal" data-val="todos" onclick="toggleFilter(this,'sinal')">Todos</span>
+        <span class="fchip" data-filter="sinal" data-val="BUY" onclick="toggleFilter(this,'sinal')">BUY</span>
+        <span class="fchip" data-filter="sinal" data-val="RISK" onclick="toggleFilter(this,'sinal')">RISK</span>
+        <span class="fchip" data-filter="sinal" data-val="STALL" onclick="toggleFilter(this,'sinal')">STALL</span>
+        <span class="fchip" data-filter="sinal" data-val="CHAMP" onclick="toggleFilter(this,'sinal')">CHAMP</span>
+        <span class="fchip" data-filter="sinal" data-val="DOME" onclick="toggleFilter(this,'sinal')">DOME</span>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">Tier</span>
+        <span class="fchip on" data-filter="tier" data-val="todos" onclick="toggleFilter(this,'tier')">Todos</span>
+        <span class="fchip" data-filter="tier" data-val="diamond" onclick="toggleFilter(this,'tier')">Diamond</span>
+        <span class="fchip" data-filter="tier" data-val="gold" onclick="toggleFilter(this,'tier')">Gold</span>
+        <span class="fchip" data-filter="tier" data-val="silver" onclick="toggleFilter(this,'tier')">Silver</span>
+        <span class="fchip" data-filter="tier" data-val="bronze" onclick="toggleFilter(this,'tier')">Bronze</span>
+      </div>
+      <div class="sort-row">
+        <span style="font-size:10px;color:var(--text2)">Ordenar:</span>
+        <select class="sort-sel" id="sort-sel" onchange="applyFilters()">
+          <option value="urgencia">Urgência</option>
+          <option value="temp_desc">Temperatura ↓</option>
+          <option value="temp_asc">Temperatura ↑</option>
+          <option value="delta_desc">Dias ↓</option>
+          <option value="delta_asc">Dias ↑</option>
+          <option value="fase">Fase</option>
+          <option value="tier">Tier</option>
+        </select>
+      </div>
+    </div>
+    <div class="deal-list" id="deal-list">
+      <div class="di" onclick="selectDeal('d1')" id="di-d1"><div class="di-name">Ricardo Almeida</div><div class="di-co">Construtora Almeida · CEO</div><div class="di-meta"><span class="tb th">Quente 82</span><span class="fc">Proposta Enviada</span><span class="cc cwa">WhatsApp</span><span class="di-day">D3</span></div></div><div class="di" onclick="selectDeal('d2')" id="di-d2"><div class="di-name">Carla Mendonça</div><div class="di-co">Grupo Mendonça · Diretora Comercial</div><div class="di-meta"><span class="tb tw">Morno 61</span><span class="fc">Qualificado</span><span class="cc cwa">WhatsApp</span><span class="di-day">D2</span></div></div><div class="di" onclick="selectDeal('d3')" id="di-d3"><div class="di-name">Marcos Ferreira</div><div class="di-co">Ferreira e Cia · Sócio-fundador</div><div class="di-meta"><span class="tb th">Quente 74</span><span class="fc">Negociação</span><span class="cc cig">Instagram</span><span class="di-day">D4</span></div></div><div class="di sla" onclick="selectDeal('d4')" id="di-d4"><div class="di-name">Juliana Santos</div><div class="di-co">JMS Engenharia · Presidente</div><div class="di-meta"><span class="tb tw">Morno 45</span><span class="fc">Conectado</span><span class="cc cwa">WhatsApp</span><span class="di-day">D1</span></div></div><div class="di sla dome" onclick="selectDeal('d5')" id="di-d5"><div class="di-name">Bruno Cavalcante</div><div class="di-co">BC Investimentos · CEO</div><div class="di-meta"><span class="tb tc">Frio 28</span><span class="fc">Proposta Enviada</span><span class="cc cwa">WhatsApp</span><span class="di-day">D6</span></div></div><div class="di" onclick="selectDeal('d6')" id="di-d6"><div class="di-name">Ana Paula Rocha</div><div class="di-co">Rocha Varejo · Diretora Geral</div><div class="di-meta"><span class="tb tw">Morno 53</span><span class="fc">Qualificado</span><span class="cc ccl">Ligação</span><span class="di-day">D2</span></div></div>
+    </div>
+  </div>
+  <div id="ct">
+    <div class="screen on" id="screen-home">
+      <div class="empty" id="empty-state">
+        <div class="e-ic">📋</div>
+        <div class="e-t">Selecione um deal</div>
+        <div class="e-s">Clique em qualquer lead na lista ao lado para ver o contexto completo e gerar a copy.</div>
+      </div>
+      <div class="screen" id="deal-d1"><div class="card"><div class="dch"><div class="dca">R</div><div class="dci"><div class="dcn">Ricardo Almeida</div><div class="dcs">CEO · Construtora Almeida</div><div class="tags-row"><span class="tag t-elite">Elite</span><span class="tag t-gray">Titan</span><span class="tag t-buy">BUY</span></div></div></div><div class="tg"><div class="tg-row"><span class="tg-lbl">Temperatura do Deal</span><span class="tgv tgv-h">82</span></div><div class="bar"><div class="bf bf-h" style="width:82%"></div></div><div class="tg-sub">Quente — ação imediata</div></div><div class="info-grid"><div class="ic"><div class="ic-l">Fase</div><div class="ic-v">Proposta Enviada</div><div class="ic-s">8 dias</div></div><div class="ic"><div class="ic-l">Produto</div><div class="ic-v">Imersão Presencial</div></div><div class="ic"><div class="ic-l">Closer</div><div class="ic-v">Felipe Nardon</div></div><div class="ic"><div class="ic-l">Canal</div><div class="ic-v">WhatsApp</div></div><div class="ic"><div class="ic-l">Dia FUP</div><div class="ic-v">D3</div></div><div class="ic"><div class="ic-l">SDR</div><div class="ic-v">Nathan S.</div></div></div><div class="recom"><div class="recom-l">Recomendação Elucy</div><div class="recom-t">Sinal de compra detectado. Execute FUP de Fechamento agora — janela de 48h.</div></div><div class="row"><button class="btn bp" onclick="showCopy('d1')">Gerar Copy</button><button class="btn bs" onclick="toggleER('d1')">Análise de Negócio</button></div></div><div class="er" id="er-d1" style="display:none"><div class="er-h"><span class="er-badge">ELUCI REPORT</span><span class="er-htitle">Ricardo Almeida · Construtora Almeida</span><span class="er-dqi">DQI 4.2/5</span></div><div class="er-b"><div class="er-bl">ELUCI CONTEXT</div><div class="er-bt"><p><strong>Ricardo Almeida</strong> — CEO na Construtora Almeida. Persona <strong>Titan</strong>, Tier <strong>elite</strong>.</p><p>Fase: <strong>Proposta Enviada</strong> · 8 dias · Temp: 82/100 · Closer: Felipe Nardon</p><p>Sinal: <strong>BUY</strong> · Canal: WhatsApp</p></div></div><div class="er-b"><div class="er-bl">DIAGNOSTIC CORE</div><div class="er-bt"><p><strong>Framework: Challenger</strong></p><p>Decisor de alto nível. Motivador: resultado de negócio. Tensão: custo de inação vs. janela de oportunidade.</p></div></div><div class="er-b"><div class="er-bl">STRATEGIC DIRECTIVE</div><div class="er-bt"><p>Sinal de compra ativo. Não qualifique mais. Execute fechamento agora.</p></div></div><div class="er-b"><div class="er-bl">NEXT BEST ACTION</div><div class="er-bt"><p><strong>Ação:</strong> FUP de Fechamento</p><p><strong>Canal:</strong> WhatsApp · <strong>Quando:</strong> Hoje, período comercial</p></div></div><div class="er-b"><div class="er-bl">GOVERNANCE FLAGS</div><div class="er-bt"><span class="ef ef-g">Tier Elite — elegível todos produtos</span><span class="ef ef-w">SPICED BLOQUEADO — Titan usa Challenger only</span><span class="ef ef-g">Sem bloqueios ativos</span></div></div><div class="er-v"><div class="ev-s">B+</div><div class="ev-t"><strong>ELUCI VERDICT</strong><br>Deal quente. Avançar para fechamento agora.</div></div></div><div class="dvl" id="dvl-d1" style="display:none"><div class="dvl-t">DVL Gate — Confirmar antes de gerar</div><div class="dvl-s">Verifique os dados carregados do CRM. Edite se necessário.</div><div class="dvl-g"><div class="dvl-f"><div class="dvl-l">Nome</div><input class="dvl-i" value="Ricardo Almeida"></div><div class="dvl-f"><div class="dvl-l">Empresa</div><input class="dvl-i" value="Construtora Almeida"></div><div class="dvl-f"><div class="dvl-l">Fase</div><input class="dvl-i" value="Proposta Enviada"></div><div class="dvl-f"><div class="dvl-l">Produto</div><input class="dvl-i" value="Imersão Presencial"></div><div class="dvl-f"><div class="dvl-l">Canal</div><input class="dvl-i" value="WhatsApp"></div><div class="dvl-f"><div class="dvl-l">Dias no CRM</div><input class="dvl-i" value="8 dias"></div></div><div class="row"><button class="btn bsuc" onclick="confirmDVL('d1')">Confirmar e gerar copy</button><button class="btn bs btn-sm" onclick="document.getElementById('dvl-d1').style.display='none'">Cancelar</button></div></div><div id="menu-d1" style="display:none"><div class="sec-t" style="margin-bottom:10px">Escolha o tipo de mensagem</div><div class="mo rec on" onclick="pickOpt('d1',this)"><div class="mo-top"><span class="mo-rb">Recomendado</span><span class="mo-t">FUP de Decisão</span></div><div class="mo-d">Tensão de custo de inação — deal em 8 dias sem resposta</div></div><div class="bl-sec"><div class="bl-l">Bloqueadas</div><div class="bli"><span class="bli-n">FUP SPICED</span><span class="bli-w">Titan — Challenger only</span></div></div><div style="margin-top:12px"><button class="btn bs btn-sm" onclick="cancelMenu('d1')">Cancelar</button></div></div><div class="co" id="co-d1" style="display:none"><div class="co-h"><span class="co-chan">Copy gerada</span><div class="co-tabs"><button class="cotab on" data-ch="wa" onclick="swTab('d1','wa',this)">WhatsApp</button><button class="cotab" data-ch="ig" onclick="swTab('d1','ig',this)">Instagram</button><button class="cotab" data-ch="crm" onclick="swTab('d1','crm',this)">Nota CRM</button></div></div><div class="co-b"><div class="co-txt" id="ct-d1-wa">Ricardo,
+
+Já 8 dias desde que enviamos a proposta.
+
+Empresas no mesmo estágio que a Construtora Almeida que esperaram mais 30 dias perderam a janela deste trimestre — o custo não é o investimento, é o semestre inteiro.
+
+Você quer travar a entrada agora?
+
+Nathan</div><div class="co-txt" id="ct-d1-ig" style="display:none">Ricardo, vi que você esteve por aqui.
+
+A decisão que você está segurando — o custo real não é o que você investe, é o que você deixa de capturar enquanto opera sem o método certo.
+
+Como você quer resolver isso?</div><div class="co-txt" id="ct-d1-crm" style="display:none">[ELUCI NOTE] 22/03/2026
+
+Deal: d1 | Fase: Proposta Enviada | Temp: 82/100
+Produto: Imersão Presencial | Closer: Felipe Nardon
+
+Sinal: BUY | Persona: Titan | Tier: elite
+
+Ação: FUP D3 via WhatsApp
+Status: Aguardando resposta.</div><div class="row" style="margin-top:10px"><a class="btn bwa" href="https://api.whatsapp.com/send?phone=5511999999999&text=Ricardo%2C%0A%0AJ%C3%A1%208%20dias%20desde%20que%20enviamos%20a%20proposta.%0A%0AEmpresas%20no%20mesmo%20est%C3%A1gio%20que%20a%20Construtora%20Almeida%20que%20esperaram%20mais%2030%20dias%20perderam%20a%20janela%20deste%20trimestre%20%E2%80%94%20o%20custo%20n%C3%A3o%20%C3%A9%20o%20investimento%2C%20%C3%A9%20o%20semestre%20inteiro.%0A%0AVoc%C3%AA%20quer%20travar%20a%20entrada%20agora%3F%0A%0ANathan" target="_blank">Enviar WhatsApp</a><button class="btn big2" onclick="clip('ct-d1-ig')">Copiar DM Instagram</button><button class="btn bs" onclick="clip('ct-d1-wa')">Copiar</button><span class="co-note">SDR só aperta enviar</span></div></div></div><div class="dma" id="dma-d1" style="display:none"><div class="dma-h"><span class="dma-badge">DM ASSIST</span><span class="dma-t">Social DM Coach</span><span class="dma-st on" id="dst-d1">Ativo</span></div><div class="dma-b"><div class="fbr"><div class="fbb on" onclick="sfnd(this)">Tallis</div><div class="fbb" onclick="sfnd(this)">Nardon</div><div class="fbb" onclick="sfnd(this)">Alfredo</div></div><div class="cap-area" onclick="startCap('d1')"><div class="cap-icon">📸</div><div class="cap-l">Analisar conversa</div><div class="cap-s">Clique para capturar — Elucy lê e gera a resposta ideal</div></div><div class="anlz" id="anlz-d1"><div class="spin"></div><span class="anlz-t">Analisando conversa...</span></div><div class="dm-res" id="dmr-d1"><div class="dm-ctx"><strong>Contexto:</strong> Lead em objeção velada — parou de engajar. Última mensagem lida há 18h. Tom founder: direto, tensão de custo de inação.</div><div class="co-txt" id="dmc-d1">Você sumiu justo quando a conversa ficou interessante.
+
+O que mudou do seu lado?</div><div class="row" style="margin-top:8px"><button class="btn big2" onclick="clip('dmc-d1')">Copiar DM</button><button class="btn bs btn-sm" onclick="resetDMA('d1')">Analisar novamente</button></div></div></div></div></div><div class="screen" id="deal-d2"><div class="card"><div class="dch"><div class="dca">C</div><div class="dci"><div class="dcn">Carla Mendonça</div><div class="dcs">Diretora Comercial · Grupo Mendonça</div><div class="tags-row"><span class="tag t-builder">Builder</span><span class="tag t-gray">Builder</span><span class="tag t-stall">STALL</span></div></div></div><div class="tg"><div class="tg-row"><span class="tg-lbl">Temperatura do Deal</span><span class="tgv tgv-w">61</span></div><div class="bar"><div class="bf bf-w" style="width:61%"></div></div><div class="tg-sub">Morno — reengajamento</div></div><div class="info-grid"><div class="ic"><div class="ic-l">Fase</div><div class="ic-v">Qualificado</div><div class="ic-s">4 dias</div></div><div class="ic"><div class="ic-l">Produto</div><div class="ic-v">Field Sales</div></div><div class="ic"><div class="ic-l">Closer</div><div class="ic-v">Tallis Costa</div></div><div class="ic"><div class="ic-l">Canal</div><div class="ic-v">WhatsApp</div></div><div class="ic"><div class="ic-l">Dia FUP</div><div class="ic-v">D2</div></div><div class="ic"><div class="ic-l">SDR</div><div class="ic-v">Nathan S.</div></div></div><div class="recom"><div class="recom-l">Recomendação Elucy</div><div class="recom-t">Deal travado. Use Challenger Reframe para forçar posicionamento.</div></div><div class="row"><button class="btn bp" onclick="showCopy('d2')">Gerar Copy</button><button class="btn bs" onclick="toggleER('d2')">Análise de Negócio</button></div></div><div class="er" id="er-d2" style="display:none"><div class="er-h"><span class="er-badge">ELUCI REPORT</span><span class="er-htitle">Carla Mendonça · Grupo Mendonça</span><span class="er-dqi">DQI 3.1/5</span></div><div class="er-b"><div class="er-bl">ELUCI CONTEXT</div><div class="er-bt"><p><strong>Carla Mendonça</strong> — Diretora Comercial na Grupo Mendonça. Persona <strong>Builder</strong>, Tier <strong>builder</strong>.</p><p>Fase: <strong>Qualificado</strong> · 4 dias · Temp: 61/100 · Closer: Tallis Costa</p><p>Sinal: <strong>STALL</strong> · Canal: WhatsApp</p></div></div><div class="er-b"><div class="er-bl">DIAGNOSTIC CORE</div><div class="er-bt"><p><strong>Framework: SPICED</strong></p><p>S: Escalonamento. P: Processo atual não sustenta crescimento. I: Custo do status quo supera o investimento.</p></div></div><div class="er-b"><div class="er-bl">STRATEGIC DIRECTIVE</div><div class="er-bt"><p>Deal travado. Objeção não explicitada. Challenger Reframe para forçar posicionamento.</p></div></div><div class="er-b"><div class="er-bl">NEXT BEST ACTION</div><div class="er-bt"><p><strong>Ação:</strong> Challenger Reframe</p><p><strong>Canal:</strong> WhatsApp · <strong>Quando:</strong> Hoje, período comercial</p></div></div><div class="er-b"><div class="er-bl">GOVERNANCE FLAGS</div><div class="er-bt"><span class="ef ef-w">Tier Builder — validar Imersão</span><span class="ef ef-g">Sem bloqueios ativos</span></div></div><div class="er-v"><div class="ev-s">C+</div><div class="ev-t"><strong>ELUCI VERDICT</strong><br>Deal morno. Reengajamento estruturado necessário.</div></div></div><div class="dvl" id="dvl-d2" style="display:none"><div class="dvl-t">DVL Gate — Confirmar antes de gerar</div><div class="dvl-s">Verifique os dados carregados do CRM. Edite se necessário.</div><div class="dvl-g"><div class="dvl-f"><div class="dvl-l">Nome</div><input class="dvl-i" value="Carla Mendonça"></div><div class="dvl-f"><div class="dvl-l">Empresa</div><input class="dvl-i" value="Grupo Mendonça"></div><div class="dvl-f"><div class="dvl-l">Fase</div><input class="dvl-i" value="Qualificado"></div><div class="dvl-f"><div class="dvl-l">Produto</div><input class="dvl-i" value="Field Sales"></div><div class="dvl-f"><div class="dvl-l">Canal</div><input class="dvl-i" value="WhatsApp"></div><div class="dvl-f"><div class="dvl-l">Dias no CRM</div><input class="dvl-i" value="4 dias"></div></div><div class="row"><button class="btn bsuc" onclick="confirmDVL('d2')">Confirmar e gerar copy</button><button class="btn bs btn-sm" onclick="document.getElementById('dvl-d2').style.display='none'">Cancelar</button></div></div><div id="menu-d2" style="display:none"><div class="sec-t" style="margin-bottom:10px">Escolha o tipo de mensagem</div><div class="mo rec on" onclick="pickOpt('d2',this)"><div class="mo-top"><span class="mo-rb">Recomendado</span><span class="mo-t">FUP de Continuidade</span></div><div class="mo-d">Manter temperatura do deal ativa</div></div><div class="bl-sec"><div class="bl-l">Bloqueadas</div><div class="bli"><span class="bli-n">Imersão Presencial</span><span class="bli-w">Tier insuficiente</span></div></div><div style="margin-top:12px"><button class="btn bs btn-sm" onclick="cancelMenu('d2')">Cancelar</button></div></div><div class="co" id="co-d2" style="display:none"><div class="co-h"><span class="co-chan">Copy gerada</span><div class="co-tabs"><button class="cotab on" data-ch="wa" onclick="swTab('d2','wa',this)">WhatsApp</button><button class="cotab" data-ch="ig" onclick="swTab('d2','ig',this)">Instagram</button><button class="cotab" data-ch="crm" onclick="swTab('d2','crm',this)">Nota CRM</button></div></div><div class="co-b"><div class="co-txt" id="ct-d2-wa">Carla,
+
+Já 4 dias desde que enviamos a proposta.
+
+Empresas no mesmo estágio que a Grupo Mendonça que esperaram mais 30 dias perderam a janela deste trimestre — o custo não é o investimento, é o semestre inteiro.
+
+Você quer travar a entrada agora?
+
+Nathan</div><div class="co-txt" id="ct-d2-ig" style="display:none">Carla, vi que você esteve por aqui.
+
+A decisão que você está segurando — o custo real não é o que você investe, é o que você deixa de capturar enquanto opera sem o método certo.
+
+Como você quer resolver isso?</div><div class="co-txt" id="ct-d2-crm" style="display:none">[ELUCI NOTE] 22/03/2026
+
+Deal: d2 | Fase: Qualificado | Temp: 61/100
+Produto: Field Sales | Closer: Tallis Costa
+
+Sinal: STALL | Persona: Builder | Tier: builder
+
+Ação: FUP D2 via WhatsApp
+Status: Aguardando resposta.</div><div class="row" style="margin-top:10px"><a class="btn bwa" href="https://api.whatsapp.com/send?phone=5511999999999&text=Carla%2C%0A%0AJ%C3%A1%204%20dias%20desde%20que%20enviamos%20a%20proposta.%0A%0AEmpresas%20no%20mesmo%20est%C3%A1gio%20que%20a%20Grupo%20Mendon%C3%A7a%20que%20esperaram%20mais%2030%20dias%20perderam%20a%20janela%20deste%20trimestre%20%E2%80%94%20o%20custo%20n%C3%A3o%20%C3%A9%20o%20investimento%2C%20%C3%A9%20o%20semestre%20inteiro.%0A%0AVoc%C3%AA%20quer%20travar%20a%20entrada%20agora%3F%0A%0ANathan" target="_blank">Enviar WhatsApp</a><button class="btn big2" onclick="clip('ct-d2-ig')">Copiar DM Instagram</button><button class="btn bs" onclick="clip('ct-d2-wa')">Copiar</button><span class="co-note">SDR só aperta enviar</span></div></div></div><div class="dma" id="dma-d2" style="display:none"><div class="dma-h"><span class="dma-badge">DM ASSIST</span><span class="dma-t">Social DM Coach</span><span class="dma-st on" id="dst-d2">Ativo</span></div><div class="dma-b"><div class="fbr"><div class="fbb on" onclick="sfnd(this)">Tallis</div><div class="fbb" onclick="sfnd(this)">Nardon</div><div class="fbb" onclick="sfnd(this)">Alfredo</div></div><div class="cap-area" onclick="startCap('d2')"><div class="cap-icon">📸</div><div class="cap-l">Analisar conversa</div><div class="cap-s">Clique para capturar — Elucy lê e gera a resposta ideal</div></div><div class="anlz" id="anlz-d2"><div class="spin"></div><span class="anlz-t">Analisando conversa...</span></div><div class="dm-res" id="dmr-d2"><div class="dm-ctx"><strong>Contexto:</strong> Lead em objeção velada — parou de engajar. Última mensagem lida há 18h. Tom founder: direto, tensão de custo de inação.</div><div class="co-txt" id="dmc-d2">Você sumiu justo quando a conversa ficou interessante.
+
+O que mudou do seu lado?</div><div class="row" style="margin-top:8px"><button class="btn big2" onclick="clip('dmc-d2')">Copiar DM</button><button class="btn bs btn-sm" onclick="resetDMA('d2')">Analisar novamente</button></div></div></div></div></div><div class="screen" id="deal-d3"><div class="card"><div class="dch"><div class="dca">M</div><div class="dci"><div class="dcn">Marcos Ferreira</div><div class="dcs">Sócio-fundador · Ferreira e Cia</div><div class="tags-row"><span class="tag t-elite">Elite</span><span class="tag t-gray">Executor</span><span class="tag t-champ">CHAMPION</span></div></div></div><div class="tg"><div class="tg-row"><span class="tg-lbl">Temperatura do Deal</span><span class="tgv tgv-h">74</span></div><div class="bar"><div class="bf bf-h" style="width:74%"></div></div><div class="tg-sub">Quente — ação imediata</div></div><div class="info-grid"><div class="ic"><div class="ic-l">Fase</div><div class="ic-v">Negociação</div><div class="ic-s">14 dias</div></div><div class="ic"><div class="ic-l">Produto</div><div class="ic-v">Club</div></div><div class="ic"><div class="ic-l">Closer</div><div class="ic-v">Alfredo Lima</div></div><div class="ic"><div class="ic-l">Canal</div><div class="ic-v">Instagram DM</div></div><div class="ic"><div class="ic-l">Dia FUP</div><div class="ic-v">D4</div></div><div class="ic"><div class="ic-l">SDR</div><div class="ic-v">Nathan S.</div></div></div><div class="recom"><div class="recom-l">Recomendação Elucy</div><div class="recom-t">Champion ativo. Prepare Hot Handoff para Closer.</div></div><div class="row"><button class="btn bp" onclick="showCopy('d3')">Gerar Copy</button><button class="btn bs" onclick="toggleER('d3')">Análise de Negócio</button><button class="btn bs" onclick="toggleDMA('d3')">DM Assist</button></div></div><div class="er" id="er-d3" style="display:none"><div class="er-h"><span class="er-badge">ELUCI REPORT</span><span class="er-htitle">Marcos Ferreira · Ferreira e Cia</span><span class="er-dqi">DQI 4.2/5</span></div><div class="er-b"><div class="er-bl">ELUCI CONTEXT</div><div class="er-bt"><p><strong>Marcos Ferreira</strong> — Sócio-fundador na Ferreira e Cia. Persona <strong>Executor</strong>, Tier <strong>elite</strong>.</p><p>Fase: <strong>Negociação</strong> · 14 dias · Temp: 74/100 · Closer: Alfredo Lima</p><p>Sinal: <strong>CHAMPION</strong> · Canal: Instagram DM</p></div></div><div class="er-b"><div class="er-bl">DIAGNOSTIC CORE</div><div class="er-bt"><p><strong>Framework: SPIN</strong></p><p>S: Time ativo, meta definida. P: Falta de framework. I: Deal perdido = receita direta não capturada.</p></div></div><div class="er-b"><div class="er-bl">STRATEGIC DIRECTIVE</div><div class="er-bt"><p>Champion ativo. Prepare handoff qualificado para Closer.</p></div></div><div class="er-b"><div class="er-bl">NEXT BEST ACTION</div><div class="er-bt"><p><strong>Ação:</strong> FUP de Continuidade</p><p><strong>Canal:</strong> Instagram DM · <strong>Quando:</strong> Hoje, período comercial</p></div></div><div class="er-b"><div class="er-bl">GOVERNANCE FLAGS</div><div class="er-bt"><span class="ef ef-g">Tier Elite — elegível todos produtos</span><span class="ef ef-g">Sem bloqueios ativos</span></div></div><div class="er-v"><div class="ev-s">B+</div><div class="ev-t"><strong>ELUCI VERDICT</strong><br>Deal quente. Avançar para fechamento agora.</div></div></div><div class="dvl" id="dvl-d3" style="display:none"><div class="dvl-t">DVL Gate — Confirmar antes de gerar</div><div class="dvl-s">Verifique os dados carregados do CRM. Edite se necessário.</div><div class="dvl-g"><div class="dvl-f"><div class="dvl-l">Nome</div><input class="dvl-i" value="Marcos Ferreira"></div><div class="dvl-f"><div class="dvl-l">Empresa</div><input class="dvl-i" value="Ferreira e Cia"></div><div class="dvl-f"><div class="dvl-l">Fase</div><input class="dvl-i" value="Negociação"></div><div class="dvl-f"><div class="dvl-l">Produto</div><input class="dvl-i" value="Club"></div><div class="dvl-f"><div class="dvl-l">Canal</div><input class="dvl-i" value="Instagram DM"></div><div class="dvl-f"><div class="dvl-l">Dias no CRM</div><input class="dvl-i" value="14 dias"></div></div><div class="row"><button class="btn bsuc" onclick="confirmDVL('d3')">Confirmar e gerar copy</button><button class="btn bs btn-sm" onclick="document.getElementById('dvl-d3').style.display='none'">Cancelar</button></div></div><div id="menu-d3" style="display:none"><div class="sec-t" style="margin-bottom:10px">Escolha o tipo de mensagem</div><div class="mo rec on" onclick="pickOpt('d3',this)"><div class="mo-top"><span class="mo-rb">Recomendado</span><span class="mo-t">Hot Handoff para Closer</span></div><div class="mo-d">Sinal de compra interno detectado — preparar passagem</div></div><div style="margin-top:12px"><button class="btn bs btn-sm" onclick="cancelMenu('d3')">Cancelar</button></div></div><div class="co" id="co-d3" style="display:none"><div class="co-h"><span class="co-chan">Copy gerada</span><div class="co-tabs"><button class="cotab on" data-ch="wa" onclick="swTab('d3','wa',this)">WhatsApp</button><button class="cotab" data-ch="ig" onclick="swTab('d3','ig',this)">Instagram</button><button class="cotab" data-ch="crm" onclick="swTab('d3','crm',this)">Nota CRM</button></div></div><div class="co-b"><div class="co-txt" id="ct-d3-wa">Marcos,
+
+Já 14 dias desde que enviamos a proposta.
+
+Empresas no mesmo estágio que a Ferreira e Cia que esperaram mais 30 dias perderam a janela deste trimestre — o custo não é o investimento, é o semestre inteiro.
+
+Você quer travar a entrada agora?
+
+Nathan</div><div class="co-txt" id="ct-d3-ig" style="display:none">Marcos, vi que você esteve por aqui.
+
+A decisão que você está segurando — o custo real não é o que você investe, é o que você deixa de capturar enquanto opera sem o método certo.
+
+Como você quer resolver isso?</div><div class="co-txt" id="ct-d3-crm" style="display:none">[ELUCI NOTE] 22/03/2026
+
+Deal: d3 | Fase: Negociação | Temp: 74/100
+Produto: Club | Closer: Alfredo Lima
+
+Sinal: CHAMPION | Persona: Executor | Tier: elite
+
+Ação: FUP D4 via Instagram
+Status: Aguardando resposta.</div><div class="row" style="margin-top:10px"><a class="btn bwa" href="https://api.whatsapp.com/send?phone=5511999999999&text=Marcos%2C%0A%0AJ%C3%A1%2014%20dias%20desde%20que%20enviamos%20a%20proposta.%0A%0AEmpresas%20no%20mesmo%20est%C3%A1gio%20que%20a%20Ferreira%20e%20Cia%20que%20esperaram%20mais%2030%20dias%20perderam%20a%20janela%20deste%20trimestre%20%E2%80%94%20o%20custo%20n%C3%A3o%20%C3%A9%20o%20investimento%2C%20%C3%A9%20o%20semestre%20inteiro.%0A%0AVoc%C3%AA%20quer%20travar%20a%20entrada%20agora%3F%0A%0ANathan" target="_blank">Enviar WhatsApp</a><button class="btn big2" onclick="clip('ct-d3-ig')">Copiar DM Instagram</button><button class="btn bs" onclick="clip('ct-d3-wa')">Copiar</button><span class="co-note">SDR só aperta enviar</span></div></div></div><div class="dma" id="dma-d3" style="display:none"><div class="dma-h"><span class="dma-badge">DM ASSIST</span><span class="dma-t">Social DM Coach</span><span class="dma-st on" id="dst-d3">Ativo</span></div><div class="dma-b"><div class="fbr"><div class="fbb on" onclick="sfnd(this)">Tallis</div><div class="fbb" onclick="sfnd(this)">Nardon</div><div class="fbb" onclick="sfnd(this)">Alfredo</div></div><div class="cap-area" onclick="startCap('d3')"><div class="cap-icon">📸</div><div class="cap-l">Analisar conversa</div><div class="cap-s">Clique para capturar — Elucy lê e gera a resposta ideal</div></div><div class="anlz" id="anlz-d3"><div class="spin"></div><span class="anlz-t">Analisando conversa...</span></div><div class="dm-res" id="dmr-d3"><div class="dm-ctx"><strong>Contexto:</strong> Lead em objeção velada — parou de engajar. Última mensagem lida há 18h. Tom founder: direto, tensão de custo de inação.</div><div class="co-txt" id="dmc-d3">Você sumiu justo quando a conversa ficou interessante.
+
+O que mudou do seu lado?</div><div class="row" style="margin-top:8px"><button class="btn big2" onclick="clip('dmc-d3')">Copiar DM</button><button class="btn bs btn-sm" onclick="resetDMA('d3')">Analisar novamente</button></div></div></div></div></div><div class="screen" id="deal-d4"><div class="card"><div class="dch"><div class="dca">J</div><div class="dci"><div class="dcn">Juliana Santos</div><div class="dcs">Presidente · JMS Engenharia</div><div class="tags-row"><span class="tag t-elite">Elite</span><span class="tag t-gray">Titan</span><span class="tag t-risk">RISK</span><span class="tag t-risk">SLA RISCO</span></div></div></div><div class="tg"><div class="tg-row"><span class="tg-lbl">Temperatura do Deal</span><span class="tgv tgv-w">45</span></div><div class="bar"><div class="bf bf-w" style="width:45%"></div></div><div class="tg-sub">Morno — reengajamento</div></div><div class="info-grid"><div class="ic"><div class="ic-l">Fase</div><div class="ic-v">Conectado</div><div class="ic-s">2 dias</div></div><div class="ic"><div class="ic-l">Produto</div><div class="ic-v">Consulting</div></div><div class="ic"><div class="ic-l">Closer</div><div class="ic-v">Felipe Nardon</div></div><div class="ic"><div class="ic-l">Canal</div><div class="ic-v">WhatsApp</div></div><div class="ic"><div class="ic-l">Dia FUP</div><div class="ic-v">D1</div></div><div class="ic"><div class="ic-l">SDR</div><div class="ic-v">Nathan S.</div></div></div><div class="recom"><div class="recom-l">Recomendação Elucy</div><div class="recom-t">Risco de perda. Mude de canal — acione Reativação via Founder.</div></div><div class="alrt al-d">SLA em risco — lead sem atividade por período crítico.</div><div class="row"><button class="btn bp" onclick="showCopy('d4')">Gerar Copy</button><button class="btn bs" onclick="toggleER('d4')">Análise de Negócio</button></div></div><div class="er" id="er-d4" style="display:none"><div class="er-h"><span class="er-badge">ELUCI REPORT</span><span class="er-htitle">Juliana Santos · JMS Engenharia</span><span class="er-dqi">DQI 3.1/5</span></div><div class="er-b"><div class="er-bl">ELUCI CONTEXT</div><div class="er-bt"><p><strong>Juliana Santos</strong> — Presidente na JMS Engenharia. Persona <strong>Titan</strong>, Tier <strong>elite</strong>.</p><p>Fase: <strong>Conectado</strong> · 2 dias · Temp: 45/100 · Closer: Felipe Nardon</p><p>Sinal: <strong>RISK</strong> · Canal: WhatsApp</p></div></div><div class="er-b"><div class="er-bl">DIAGNOSTIC CORE</div><div class="er-bt"><p><strong>Framework: Challenger</strong></p><p>Decisor de alto nível. Motivador: resultado de negócio. Tensão: custo de inação vs. janela de oportunidade.</p></div></div><div class="er-b"><div class="er-bl">STRATEGIC DIRECTIVE</div><div class="er-bt"><p>Risco detectado. Mude canal, aumente autoridade. Acione Founder Proxy se 4+ contatos.</p></div></div><div class="er-b"><div class="er-bl">NEXT BEST ACTION</div><div class="er-bt"><p><strong>Ação:</strong> Reativação via Founder</p><p><strong>Canal:</strong> WhatsApp · <strong>Quando:</strong> Hoje, período comercial</p></div></div><div class="er-b"><div class="er-bl">GOVERNANCE FLAGS</div><div class="er-bt"><span class="ef ef-g">Tier Elite — elegível todos produtos</span><span class="ef ef-w">SPICED BLOQUEADO — Titan usa Challenger only</span><span class="ef ef-r">SLA CRÍTICO</span></div></div><div class="er-v"><div class="ev-s">C+</div><div class="ev-t"><strong>ELUCI VERDICT</strong><br>Deal morno. Reengajamento estruturado necessário.</div></div></div><div class="dvl" id="dvl-d4" style="display:none"><div class="dvl-t">DVL Gate — Confirmar antes de gerar</div><div class="dvl-s">Verifique os dados carregados do CRM. Edite se necessário.</div><div class="dvl-g"><div class="dvl-f"><div class="dvl-l">Nome</div><input class="dvl-i" value="Juliana Santos"></div><div class="dvl-f"><div class="dvl-l">Empresa</div><input class="dvl-i" value="JMS Engenharia"></div><div class="dvl-f"><div class="dvl-l">Fase</div><input class="dvl-i" value="Conectado"></div><div class="dvl-f"><div class="dvl-l">Produto</div><input class="dvl-i" value="Consulting"></div><div class="dvl-f"><div class="dvl-l">Canal</div><input class="dvl-i" value="WhatsApp"></div><div class="dvl-f"><div class="dvl-l">Dias no CRM</div><input class="dvl-i" value="2 dias"></div></div><div class="row"><button class="btn bsuc" onclick="confirmDVL('d4')">Confirmar e gerar copy</button><button class="btn bs btn-sm" onclick="document.getElementById('dvl-d4').style.display='none'">Cancelar</button></div></div><div id="menu-d4" style="display:none"><div class="sec-t" style="margin-bottom:10px">Escolha o tipo de mensagem</div><div class="mo rec on" onclick="pickOpt('d4',this)"><div class="mo-top"><span class="mo-rb">Recomendado</span><span class="mo-t">Reativação via Founder</span></div><div class="mo-d">DM Instagram no tom do founder — muda canal e autoridade</div></div><div class="bl-sec"><div class="bl-l">Bloqueadas</div><div class="bli"><span class="bli-n">FUP SPICED</span><span class="bli-w">Titan — Challenger only</span></div></div><div style="margin-top:12px"><button class="btn bs btn-sm" onclick="cancelMenu('d4')">Cancelar</button></div></div><div class="co" id="co-d4" style="display:none"><div class="co-h"><span class="co-chan">Copy gerada</span><div class="co-tabs"><button class="cotab on" data-ch="wa" onclick="swTab('d4','wa',this)">WhatsApp</button><button class="cotab" data-ch="ig" onclick="swTab('d4','ig',this)">Instagram</button><button class="cotab" data-ch="crm" onclick="swTab('d4','crm',this)">Nota CRM</button></div></div><div class="co-b"><div class="co-txt" id="ct-d4-wa">Juliana,
+
+Já 2 dias desde que enviamos a proposta.
+
+Empresas no mesmo estágio que a JMS Engenharia que esperaram mais 30 dias perderam a janela deste trimestre — o custo não é o investimento, é o semestre inteiro.
+
+Você quer travar a entrada agora?
+
+Nathan</div><div class="co-txt" id="ct-d4-ig" style="display:none">Juliana, vi que você esteve por aqui.
+
+A decisão que você está segurando — o custo real não é o que você investe, é o que você deixa de capturar enquanto opera sem o método certo.
+
+Como você quer resolver isso?</div><div class="co-txt" id="ct-d4-crm" style="display:none">[ELUCI NOTE] 22/03/2026
+
+Deal: d4 | Fase: Conectado | Temp: 45/100
+Produto: Consulting | Closer: Felipe Nardon
+
+Sinal: RISK | Persona: Titan | Tier: elite
+
+Ação: FUP D1 via WhatsApp
+Status: Aguardando resposta.</div><div class="row" style="margin-top:10px"><a class="btn bwa" href="https://api.whatsapp.com/send?phone=5511999999999&text=Juliana%2C%0A%0AJ%C3%A1%202%20dias%20desde%20que%20enviamos%20a%20proposta.%0A%0AEmpresas%20no%20mesmo%20est%C3%A1gio%20que%20a%20JMS%20Engenharia%20que%20esperaram%20mais%2030%20dias%20perderam%20a%20janela%20deste%20trimestre%20%E2%80%94%20o%20custo%20n%C3%A3o%20%C3%A9%20o%20investimento%2C%20%C3%A9%20o%20semestre%20inteiro.%0A%0AVoc%C3%AA%20quer%20travar%20a%20entrada%20agora%3F%0A%0ANathan" target="_blank">Enviar WhatsApp</a><button class="btn big2" onclick="clip('ct-d4-ig')">Copiar DM Instagram</button><button class="btn bs" onclick="clip('ct-d4-wa')">Copiar</button><span class="co-note">SDR só aperta enviar</span></div></div></div><div class="dma" id="dma-d4" style="display:none"><div class="dma-h"><span class="dma-badge">DM ASSIST</span><span class="dma-t">Social DM Coach</span><span class="dma-st on" id="dst-d4">Ativo</span></div><div class="dma-b"><div class="fbr"><div class="fbb on" onclick="sfnd(this)">Tallis</div><div class="fbb" onclick="sfnd(this)">Nardon</div><div class="fbb" onclick="sfnd(this)">Alfredo</div></div><div class="cap-area" onclick="startCap('d4')"><div class="cap-icon">📸</div><div class="cap-l">Analisar conversa</div><div class="cap-s">Clique para capturar — Elucy lê e gera a resposta ideal</div></div><div class="anlz" id="anlz-d4"><div class="spin"></div><span class="anlz-t">Analisando conversa...</span></div><div class="dm-res" id="dmr-d4"><div class="dm-ctx"><strong>Contexto:</strong> Lead em objeção velada — parou de engajar. Última mensagem lida há 18h. Tom founder: direto, tensão de custo de inação.</div><div class="co-txt" id="dmc-d4">Você sumiu justo quando a conversa ficou interessante.
+
+O que mudou do seu lado?</div><div class="row" style="margin-top:8px"><button class="btn big2" onclick="clip('dmc-d4')">Copiar DM</button><button class="btn bs btn-sm" onclick="resetDMA('d4')">Analisar novamente</button></div></div></div></div></div><div class="screen" id="deal-d5"><div class="card"><div class="dch"><div class="dca">B</div><div class="dci"><div class="dcn">Bruno Cavalcante</div><div class="dcs">CEO · BC Investimentos</div><div class="tags-row"><span class="tag t-builder">Builder</span><span class="tag t-gray">Builder</span><span class="tag t-stall">STALL</span><span class="tag t-risk">SLA RISCO</span><span class="tag t-stall">IRON DOME</span></div></div></div><div class="tg"><div class="tg-row"><span class="tg-lbl">Temperatura do Deal</span><span class="tgv tgv-c">28</span></div><div class="bar"><div class="bf bf-c" style="width:28%"></div></div><div class="tg-sub">Frio — risco de perda</div></div><div class="info-grid"><div class="ic"><div class="ic-l">Fase</div><div class="ic-v">Proposta Enviada</div><div class="ic-s">22 dias</div></div><div class="ic"><div class="ic-l">Produto</div><div class="ic-v">Imersão Presencial</div></div><div class="ic"><div class="ic-l">Closer</div><div class="ic-v">Tallis Costa</div></div><div class="ic"><div class="ic-l">Canal</div><div class="ic-v">WhatsApp</div></div><div class="ic"><div class="ic-l">Dia FUP</div><div class="ic-v">D6</div></div><div class="ic"><div class="ic-l">SDR</div><div class="ic-v">Nathan S.</div></div></div><div class="recom"><div class="recom-l">Recomendação Elucy</div><div class="recom-t">Deal travado. Use Challenger Reframe para forçar posicionamento.</div></div><div class="alrt al-w">Iron Dome ativo — +7 contatos sem conversão. Copy bloqueada até revisão manual.</div><div class="alrt al-d">SLA em risco — lead sem atividade por período crítico.</div><div class="row"><button class="btn bp" onclick="showCopy('d5')">Gerar Copy</button><button class="btn bs" onclick="toggleER('d5')">Análise de Negócio</button></div></div><div class="er" id="er-d5" style="display:none"><div class="er-h"><span class="er-badge">ELUCI REPORT</span><span class="er-htitle">Bruno Cavalcante · BC Investimentos</span><span class="er-dqi">DQI 1.8/5</span></div><div class="er-b"><div class="er-bl">ELUCI CONTEXT</div><div class="er-bt"><p><strong>Bruno Cavalcante</strong> — CEO na BC Investimentos. Persona <strong>Builder</strong>, Tier <strong>builder</strong>.</p><p>Fase: <strong>Proposta Enviada</strong> · 22 dias · Temp: 28/100 · Closer: Tallis Costa</p><p>Sinal: <strong>STALL</strong> · Canal: WhatsApp</p></div></div><div class="er-b"><div class="er-bl">DIAGNOSTIC CORE</div><div class="er-bt"><p><strong>Framework: SPICED</strong></p><p>S: Escalonamento. P: Processo atual não sustenta crescimento. I: Custo do status quo supera o investimento.</p></div></div><div class="er-b"><div class="er-bl">STRATEGIC DIRECTIVE</div><div class="er-bt"><p>Deal travado. Objeção não explicitada. Challenger Reframe para forçar posicionamento.</p></div></div><div class="er-b"><div class="er-bl">NEXT BEST ACTION</div><div class="er-bt"><p><strong>Ação:</strong> Challenger Reframe</p><p><strong>Canal:</strong> WhatsApp · <strong>Quando:</strong> Hoje, período comercial</p></div></div><div class="er-b"><div class="er-bl">GOVERNANCE FLAGS</div><div class="er-bt"><span class="ef ef-w">Tier Builder — validar Imersão</span><span class="ef ef-r">IRON DOME ATIVO</span><span class="ef ef-r">SLA CRÍTICO</span></div></div><div class="er-v"><div class="ev-s">D</div><div class="ev-t"><strong>ELUCI VERDICT</strong><br>Deal frio. Revisar estratégia completa.</div></div></div><div class="dvl" id="dvl-d5" style="display:none"><div class="dvl-t">DVL Gate — Confirmar antes de gerar</div><div class="dvl-s">Verifique os dados carregados do CRM. Edite se necessário.</div><div class="dvl-g"><div class="dvl-f"><div class="dvl-l">Nome</div><input class="dvl-i" value="Bruno Cavalcante"></div><div class="dvl-f"><div class="dvl-l">Empresa</div><input class="dvl-i" value="BC Investimentos"></div><div class="dvl-f"><div class="dvl-l">Fase</div><input class="dvl-i" value="Proposta Enviada"></div><div class="dvl-f"><div class="dvl-l">Produto</div><input class="dvl-i" value="Imersão Presencial"></div><div class="dvl-f"><div class="dvl-l">Canal</div><input class="dvl-i" value="WhatsApp"></div><div class="dvl-f"><div class="dvl-l">Dias no CRM</div><input class="dvl-i" value="22 dias"></div></div><div class="row"><button class="btn bsuc" onclick="confirmDVL('d5')">Confirmar e gerar copy</button><button class="btn bs btn-sm" onclick="document.getElementById('dvl-d5').style.display='none'">Cancelar</button></div></div><div id="menu-d5" style="display:none"><div class="sec-t" style="margin-bottom:10px">Escolha o tipo de mensagem</div><div class="mo rec on" onclick="pickOpt('d5',this)"><div class="mo-top"><span class="mo-rb">Recomendado</span><span class="mo-t">FUP de Decisão</span></div><div class="mo-d">Tensão de custo de inação — deal em 22 dias sem resposta</div></div><div class="mo" onclick="pickOpt('d5',this)"><div class="mo-top"><span class="mo-t">Reativação via Founder</span></div><div class="mo-d">DM Instagram no tom do founder — muda canal e autoridade</div></div><div class="bl-sec"><div class="bl-l">Bloqueadas</div><div class="bli"><span class="bli-n">Imersão Presencial</span><span class="bli-w">Tier insuficiente</span></div></div><div style="margin-top:12px"><button class="btn bs btn-sm" onclick="cancelMenu('d5')">Cancelar</button></div></div><div class="co" id="co-d5" style="display:none"><div class="co-h"><span class="co-chan">Copy gerada</span><div class="co-tabs"><button class="cotab on" data-ch="wa" onclick="swTab('d5','wa',this)">WhatsApp</button><button class="cotab" data-ch="ig" onclick="swTab('d5','ig',this)">Instagram</button><button class="cotab" data-ch="crm" onclick="swTab('d5','crm',this)">Nota CRM</button></div></div><div class="co-b"><div class="co-txt" id="ct-d5-wa">Bruno,
+
+Já 22 dias desde que enviamos a proposta.
+
+Empresas no mesmo estágio que a BC Investimentos que esperaram mais 30 dias perderam a janela deste trimestre — o custo não é o investimento, é o semestre inteiro.
+
+Você quer travar a entrada agora?
+
+Nathan</div><div class="co-txt" id="ct-d5-ig" style="display:none">Bruno, vi que você esteve por aqui.
+
+A decisão que você está segurando — o custo real não é o que você investe, é o que você deixa de capturar enquanto opera sem o método certo.
+
+Como você quer resolver isso?</div><div class="co-txt" id="ct-d5-crm" style="display:none">[ELUCI NOTE] 22/03/2026
+
+Deal: d5 | Fase: Proposta Enviada | Temp: 28/100
+Produto: Imersão Presencial | Closer: Tallis Costa
+
+Sinal: STALL | Persona: Builder | Tier: builder
+
+Ação: FUP D6 via WhatsApp
+Status: Aguardando resposta.</div><div class="row" style="margin-top:10px"><a class="btn bwa" href="https://api.whatsapp.com/send?phone=5511999999999&text=Bruno%2C%0A%0AJ%C3%A1%2022%20dias%20desde%20que%20enviamos%20a%20proposta.%0A%0AEmpresas%20no%20mesmo%20est%C3%A1gio%20que%20a%20BC%20Investimentos%20que%20esperaram%20mais%2030%20dias%20perderam%20a%20janela%20deste%20trimestre%20%E2%80%94%20o%20custo%20n%C3%A3o%20%C3%A9%20o%20investimento%2C%20%C3%A9%20o%20semestre%20inteiro.%0A%0AVoc%C3%AA%20quer%20travar%20a%20entrada%20agora%3F%0A%0ANathan" target="_blank">Enviar WhatsApp</a><button class="btn big2" onclick="clip('ct-d5-ig')">Copiar DM Instagram</button><button class="btn bs" onclick="clip('ct-d5-wa')">Copiar</button><span class="co-note">SDR só aperta enviar</span></div></div></div><div class="dma" id="dma-d5" style="display:none"><div class="dma-h"><span class="dma-badge">DM ASSIST</span><span class="dma-t">Social DM Coach</span><span class="dma-st on" id="dst-d5">Ativo</span></div><div class="dma-b"><div class="fbr"><div class="fbb on" onclick="sfnd(this)">Tallis</div><div class="fbb" onclick="sfnd(this)">Nardon</div><div class="fbb" onclick="sfnd(this)">Alfredo</div></div><div class="cap-area" onclick="startCap('d5')"><div class="cap-icon">📸</div><div class="cap-l">Analisar conversa</div><div class="cap-s">Clique para capturar — Elucy lê e gera a resposta ideal</div></div><div class="anlz" id="anlz-d5"><div class="spin"></div><span class="anlz-t">Analisando conversa...</span></div><div class="dm-res" id="dmr-d5"><div class="dm-ctx"><strong>Contexto:</strong> Lead em objeção velada — parou de engajar. Última mensagem lida há 18h. Tom founder: direto, tensão de custo de inação.</div><div class="co-txt" id="dmc-d5">Você sumiu justo quando a conversa ficou interessante.
+
+O que mudou do seu lado?</div><div class="row" style="margin-top:8px"><button class="btn big2" onclick="clip('dmc-d5')">Copiar DM</button><button class="btn bs btn-sm" onclick="resetDMA('d5')">Analisar novamente</button></div></div></div></div></div><div class="screen" id="deal-d6"><div class="card"><div class="dch"><div class="dca">A</div><div class="dci"><div class="dcn">Ana Paula Rocha</div><div class="dcs">Diretora Geral · Rocha Varejo</div><div class="tags-row"><span class="tag t-exec">Executor</span><span class="tag t-gray">Executor</span><span class="tag t-buy">BUY</span></div></div></div><div class="tg"><div class="tg-row"><span class="tg-lbl">Temperatura do Deal</span><span class="tgv tgv-w">53</span></div><div class="bar"><div class="bf bf-w" style="width:53%"></div></div><div class="tg-sub">Morno — reengajamento</div></div><div class="info-grid"><div class="ic"><div class="ic-l">Fase</div><div class="ic-v">Qualificado</div><div class="ic-s">6 dias</div></div><div class="ic"><div class="ic-l">Produto</div><div class="ic-v">Digital Online</div></div><div class="ic"><div class="ic-l">Closer</div><div class="ic-v">Alfredo Lima</div></div><div class="ic"><div class="ic-l">Canal</div><div class="ic-v">Ligação</div></div><div class="ic"><div class="ic-l">Dia FUP</div><div class="ic-v">D2</div></div><div class="ic"><div class="ic-l">SDR</div><div class="ic-v">Nathan S.</div></div></div><div class="recom"><div class="recom-l">Recomendação Elucy</div><div class="recom-t">Sinal de compra detectado. Execute FUP de Fechamento agora — janela de 48h.</div></div><div class="row"><button class="btn bp" onclick="showCopy('d6')">Gerar Copy</button><button class="btn bs" onclick="toggleER('d6')">Análise de Negócio</button></div></div><div class="er" id="er-d6" style="display:none"><div class="er-h"><span class="er-badge">ELUCI REPORT</span><span class="er-htitle">Ana Paula Rocha · Rocha Varejo</span><span class="er-dqi">DQI 3.1/5</span></div><div class="er-b"><div class="er-bl">ELUCI CONTEXT</div><div class="er-bt"><p><strong>Ana Paula Rocha</strong> — Diretora Geral na Rocha Varejo. Persona <strong>Executor</strong>, Tier <strong>executor</strong>.</p><p>Fase: <strong>Qualificado</strong> · 6 dias · Temp: 53/100 · Closer: Alfredo Lima</p><p>Sinal: <strong>BUY</strong> · Canal: Ligação</p></div></div><div class="er-b"><div class="er-bl">DIAGNOSTIC CORE</div><div class="er-bt"><p><strong>Framework: SPIN</strong></p><p>S: Time ativo, meta definida. P: Falta de framework. I: Deal perdido = receita direta não capturada.</p></div></div><div class="er-b"><div class="er-bl">STRATEGIC DIRECTIVE</div><div class="er-bt"><p>Sinal de compra ativo. Não qualifique mais. Execute fechamento agora.</p></div></div><div class="er-b"><div class="er-bl">NEXT BEST ACTION</div><div class="er-bt"><p><strong>Ação:</strong> FUP de Fechamento</p><p><strong>Canal:</strong> Ligação · <strong>Quando:</strong> Hoje, período comercial</p></div></div><div class="er-b"><div class="er-bl">GOVERNANCE FLAGS</div><div class="er-bt"><span class="ef ef-w">Tier Executor — Imersão bloqueada</span><span class="ef ef-g">Sem bloqueios ativos</span></div></div><div class="er-v"><div class="ev-s">C+</div><div class="ev-t"><strong>ELUCI VERDICT</strong><br>Deal morno. Reengajamento estruturado necessário.</div></div></div><div class="dvl" id="dvl-d6" style="display:none"><div class="dvl-t">DVL Gate — Confirmar antes de gerar</div><div class="dvl-s">Verifique os dados carregados do CRM. Edite se necessário.</div><div class="dvl-g"><div class="dvl-f"><div class="dvl-l">Nome</div><input class="dvl-i" value="Ana Paula Rocha"></div><div class="dvl-f"><div class="dvl-l">Empresa</div><input class="dvl-i" value="Rocha Varejo"></div><div class="dvl-f"><div class="dvl-l">Fase</div><input class="dvl-i" value="Qualificado"></div><div class="dvl-f"><div class="dvl-l">Produto</div><input class="dvl-i" value="Digital Online"></div><div class="dvl-f"><div class="dvl-l">Canal</div><input class="dvl-i" value="Ligação"></div><div class="dvl-f"><div class="dvl-l">Dias no CRM</div><input class="dvl-i" value="6 dias"></div></div><div class="row"><button class="btn bsuc" onclick="confirmDVL('d6')">Confirmar e gerar copy</button><button class="btn bs btn-sm" onclick="document.getElementById('dvl-d6').style.display='none'">Cancelar</button></div></div><div id="menu-d6" style="display:none"><div class="sec-t" style="margin-bottom:10px">Escolha o tipo de mensagem</div><div class="mo rec on" onclick="pickOpt('d6',this)"><div class="mo-top"><span class="mo-rb">Recomendado</span><span class="mo-t">FUP de Decisão</span></div><div class="mo-d">Tensão de custo de inação — deal em 6 dias sem resposta</div></div><div class="bl-sec"><div class="bl-l">Bloqueadas</div><div class="bli"><span class="bli-n">Imersão Presencial</span><span class="bli-w">Tier insuficiente</span></div></div><div style="margin-top:12px"><button class="btn bs btn-sm" onclick="cancelMenu('d6')">Cancelar</button></div></div><div class="co" id="co-d6" style="display:none"><div class="co-h"><span class="co-chan">Copy gerada</span><div class="co-tabs"><button class="cotab on" data-ch="wa" onclick="swTab('d6','wa',this)">WhatsApp</button><button class="cotab" data-ch="ig" onclick="swTab('d6','ig',this)">Instagram</button><button class="cotab" data-ch="crm" onclick="swTab('d6','crm',this)">Nota CRM</button></div></div><div class="co-b"><div class="co-txt" id="ct-d6-wa">Ana,
+
+Já 6 dias desde que enviamos a proposta.
+
+Empresas no mesmo estágio que a Rocha Varejo que esperaram mais 30 dias perderam a janela deste trimestre — o custo não é o investimento, é o semestre inteiro.
+
+Você quer travar a entrada agora?
+
+Nathan</div><div class="co-txt" id="ct-d6-ig" style="display:none">Ana, vi que você esteve por aqui.
+
+A decisão que você está segurando — o custo real não é o que você investe, é o que você deixa de capturar enquanto opera sem o método certo.
+
+Como você quer resolver isso?</div><div class="co-txt" id="ct-d6-crm" style="display:none">[ELUCI NOTE] 22/03/2026
+
+Deal: d6 | Fase: Qualificado | Temp: 53/100
+Produto: Digital Online | Closer: Alfredo Lima
+
+Sinal: BUY | Persona: Executor | Tier: executor
+
+Ação: FUP D2 via Ligação
+Status: Aguardando resposta.</div><div class="row" style="margin-top:10px"><a class="btn bwa" href="https://api.whatsapp.com/send?phone=5511999999999&text=Ana%2C%0A%0AJ%C3%A1%206%20dias%20desde%20que%20enviamos%20a%20proposta.%0A%0AEmpresas%20no%20mesmo%20est%C3%A1gio%20que%20a%20Rocha%20Varejo%20que%20esperaram%20mais%2030%20dias%20perderam%20a%20janela%20deste%20trimestre%20%E2%80%94%20o%20custo%20n%C3%A3o%20%C3%A9%20o%20investimento%2C%20%C3%A9%20o%20semestre%20inteiro.%0A%0AVoc%C3%AA%20quer%20travar%20a%20entrada%20agora%3F%0A%0ANathan" target="_blank">Enviar WhatsApp</a><button class="btn big2" onclick="clip('ct-d6-ig')">Copiar DM Instagram</button><button class="btn bs" onclick="clip('ct-d6-wa')">Copiar</button><span class="co-note">SDR só aperta enviar</span></div></div></div><div class="dma" id="dma-d6" style="display:none"><div class="dma-h"><span class="dma-badge">DM ASSIST</span><span class="dma-t">Social DM Coach</span><span class="dma-st on" id="dst-d6">Ativo</span></div><div class="dma-b"><div class="fbr"><div class="fbb on" onclick="sfnd(this)">Tallis</div><div class="fbb" onclick="sfnd(this)">Nardon</div><div class="fbb" onclick="sfnd(this)">Alfredo</div></div><div class="cap-area" onclick="startCap('d6')"><div class="cap-icon">📸</div><div class="cap-l">Analisar conversa</div><div class="cap-s">Clique para capturar — Elucy lê e gera a resposta ideal</div></div><div class="anlz" id="anlz-d6"><div class="spin"></div><span class="anlz-t">Analisando conversa...</span></div><div class="dm-res" id="dmr-d6"><div class="dm-ctx"><strong>Contexto:</strong> Lead em objeção velada — parou de engajar. Última mensagem lida há 18h. Tom founder: direto, tensão de custo de inação.</div><div class="co-txt" id="dmc-d6">Você sumiu justo quando a conversa ficou interessante.
+
+O que mudou do seu lado?</div><div class="row" style="margin-top:8px"><button class="btn big2" onclick="clip('dmc-d6')">Copiar DM</button><button class="btn bs btn-sm" onclick="resetDMA('d6')">Analisar novamente</button></div></div></div></div></div>
+    </div>
+    <div class="screen" id="screen-reports"><div style="margin-bottom:16px"><div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:3px">Relatórios</div><div style="font-size:12px;color:var(--text2)">Nathan Souza · Março 2026</div></div><div class="ftabs"><div class="ft on" onclick="rp('mar',this)">Mar 2026</div><div class="ft" onclick="rp('fev',this)">Fev 2026</div><div class="ft" onclick="rp('jan',this)">Jan 2026</div><div class="ft" onclick="rp('dez',this)">Dez 2025</div></div><div class="kpi-g"><div class="kpi"><div class="kpi-l">FUPs Enviados</div><div class="kpi-v" id="kv-fups">147</div><div class="kd kd-p">+23% vs anterior</div></div><div class="kpi"><div class="kpi-l">Qualificados</div><div class="kpi-v" id="kv-qual">38</div><div class="kd kd-p">+12% vs anterior</div></div><div class="kpi"><div class="kpi-l">MQLs Gerados</div><div class="kpi-v" id="kv-mql">14</div><div class="kd kd-n">-5% vs anterior</div></div><div class="kpi"><div class="kpi-l">Receita Atribuída</div><div class="kpi-v" id="kv-rev">R$ 182k</div><div class="kd kd-p">+34% vs anterior</div></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px"><div class="ch"><div class="ch-t">Funil SDR — Março 2026</div><div class="fr"><div class="fl">Abordados</div><div class="fb-bg"><div class="fb-f" style="width:100%"><span class="fb-v">215</span></div></div><div class="fp">100%</div></div><div class="fr"><div class="fl">Responderam</div><div class="fb-bg"><div class="fb-f" style="width:62%"><span class="fb-v">133</span></div></div><div class="fp">62%</div></div><div class="fr"><div class="fl">Qualificados</div><div class="fb-bg"><div class="fb-f" style="width:18%"><span class="fb-v">38</span></div></div><div class="fp">18%</div></div><div class="fr"><div class="fl">MQLs</div><div class="fb-bg"><div class="fb-f" style="width:7%"><span class="fb-v">14</span></div></div><div class="fp">7%</div></div><div class="fr"><div class="fl">Fechados</div><div class="fb-bg"><div class="fb-f" style="width:3%"><span class="fb-v">6</span></div></div><div class="fp">3%</div></div></div><div class="ch"><div class="ch-t">Receita por Linha</div><div class="fr"><div class="fl">Imersão Presencial</div><div class="fb-bg"><div class="fb-f" style="width:85%"><span class="fb-v">R$154k</span></div></div><div class="fp">85%</div></div><div class="fr"><div class="fl">Club</div><div class="fb-bg"><div class="fb-f" style="width:10%"><span class="fb-v">R$18k</span></div></div><div class="fp">10%</div></div><div class="fr"><div class="fl">Field Sales</div><div class="fb-bg"><div class="fb-f" style="width:4%"><span class="fb-v">R$7k</span></div></div><div class="fp">4%</div></div><div class="fr"><div class="fl">Digital</div><div class="fb-bg"><div class="fb-f" style="width:1%"><span class="fb-v">R$3k</span></div></div><div class="fp">1%</div></div></div></div><div class="ch"><div class="ch-t">Conversão por Linha de Receita</div><table class="tbl"><thead><tr><th>Linha</th><th>Abordados</th><th>Qualificados</th><th>MQL</th><th>Taxa</th></tr></thead><tbody><tr><td>Imersões Presenciais</td><td>98</td><td>21</td><td>8</td><td class="pg">8.2%</td></tr><tr><td>Club</td><td>42</td><td>9</td><td>3</td><td class="pm">7.1%</td></tr><tr><td>Field Sales</td><td>35</td><td>5</td><td>2</td><td class="pm">5.7%</td></tr><tr><td>Eventos</td><td>28</td><td>2</td><td>1</td><td class="pl">3.6%</td></tr><tr><td>Digital</td><td>12</td><td>1</td><td>0</td><td class="pl">0%</td></tr></tbody></table></div><div class="ch"><div class="ch-t">Atividades — Março 2026</div><table class="tbl"><thead><tr><th>Atividade</th><th>Realizado</th><th>Meta</th><th>%</th></tr></thead><tbody><tr><td>FUPs WhatsApp</td><td>147</td><td>150</td><td class="pm">98%</td></tr><tr><td>DMs Instagram</td><td>31</td><td>30</td><td class="pg">103%</td></tr><tr><td>Qualificações</td><td>38</td><td>40</td><td class="pm">95%</td></tr><tr><td>Hot handoffs</td><td>14</td><td>12</td><td class="pg">117%</td></tr><tr><td>Notas CRM</td><td>89</td><td>100</td><td class="pm">89%</td></tr></tbody></table></div></div>
+  </div>
+  <div id="rp">
+  <div class="rps"><div class="rps-t">Nível SDR</div><div class="lvl-n">Hunter</div><div class="lvl-s">Nível 3 de 5</div><div class="lvl-bar"><div class="lvl-fill" style="width:68%"></div></div><div class="lvl-xp">2.340 / 3.500 XP</div></div>
+  <div class="rps"><div class="rps-t">Score</div><div class="score-big">847</div><div class="score-l">pontos hoje</div></div>
+  <div class="rps"><div class="rps-t">Streak</div><div class="sk-n">7</div><div class="sk-l">dias seguidos</div></div>
+  <div class="rps">
+    <div class="rps-t">Meta Diária</div>
+    <div class="tr" style="margin-bottom:2px"><span class="tr-l">FUPs</span><span class="tr-v" id="meta-fups-v">12 / 15</span></div>
+    <div class="meta-bar-bg"><div class="meta-bar-fill" id="meta-fups-bar" style="width:80%"></div></div>
+    <div class="tr" style="margin-bottom:2px;margin-top:5px"><span class="tr-l">Qualificações</span><span class="tr-v" id="meta-qual-v">2 / 5</span></div>
+    <div class="meta-bar-bg"><div class="meta-bar-fill" id="meta-qual-bar" style="width:40%"></div></div>
+    <div class="tr" style="margin-bottom:2px;margin-top:5px"><span class="tr-l">Handoffs</span><span class="tr-v" id="meta-hand-v">1 / 2</span></div>
+    <div class="meta-bar-bg"><div class="meta-bar-fill done" id="meta-hand-bar" style="width:50%"></div></div>
+  </div>
+  <div class="rps">
+    <div class="rps-t">Foco Diario — Top 5</div>
+    <div id="focus-list"><div style="font-size:11px;color:var(--text2);padding:4px 0">Carregando...</div></div>
+  </div>
+  <div class="rps"><div class="rps-t">Badges</div><div class="bg-grid"><div class="bgi on"><div class="bgi-ic">🤝</div><div class="bgi-n">Handoff</div></div><div class="bgi on"><div class="bgi-ic">🔥</div><div class="bgi-n">Streak 7</div></div><div class="bgi on"><div class="bgi-ic">⚡</div><div class="bgi-n">Qualifier</div></div><div class="bgi off"><div class="bgi-ic">📨</div><div class="bgi-n">50 FUPs</div></div><div class="bgi off"><div class="bgi-ic">💰</div><div class="bgi-n">Closer</div></div><div class="bgi off"><div class="bgi-ic">🛡️</div><div class="bgi-n">Iron Dome</div></div></div></div>
+  <div class="rps"><div class="rps-t">Hoje</div><div class="tr"><span class="tr-l">FUPs</span><span class="tr-v" id="hoje-fups">12</span></div><div class="tr"><span class="tr-l">Deals</span><span class="tr-v" id="hoje-deals">5</span></div><div class="tr"><span class="tr-l">Qualif.</span><span class="tr-v" id="hoje-qual">2</span></div><div class="tr"><span class="tr-l">Handoffs</span><span class="tr-v" id="hoje-hand">1</span></div></div>
+</div>
+</div>
+<script>
+
+let cur=null;
+
+function setScreen(n,el){
+  document.querySelectorAll('#ct > .screen').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
+  document.getElementById(n==='home'?'screen-home':'screen-reports').classList.add('on');
+  if(el) el.classList.add('on');
+}
+
+function selectDeal(id){
+  cur=id;
+  document.querySelectorAll('.di').forEach(d=>d.classList.remove('on'));
+  const di=document.getElementById('di-'+id);
+  if(di) di.classList.add('on');
+  document.getElementById('empty-state').style.display='none';
+  document.querySelectorAll('#screen-home > .screen').forEach(s=>s.classList.remove('on'));
+  const ds=document.getElementById('deal-'+id);
+  if(ds) ds.classList.add('on');
+  // reset sub-panels
+  document.querySelectorAll('[id^="er-"],[id^="dvl-"],[id^="menu-"],[id^="co-"],[id^="dma-"]').forEach(e=>e.style.display='none');
+  // ensure home tab active
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
+  document.querySelector('.ntab').classList.add('on');
+  document.getElementById('screen-home').classList.add('on');
+  document.getElementById('screen-reports').classList.remove('on');
+}
+
+function toggleER(id){
+  const r=document.getElementById('er-'+id);
+  if(!r) return;
+  const isHidden=r.style.display==='none'||r.style.display==='';
+  r.style.display=isHidden?'block':'none';
+  if(isHidden){
+    // Dispara análise Elucy se ainda não tiver conteúdo real
+    const hasContent=r.querySelector('.er-h')||r.querySelector('.er-loading[style*="block"]');
+    if(!hasContent){
+      const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
+      if(deal&&deal.deal_id){
+        requestElucyAnalysis(deal.deal_id, deal, id);
+      } else {
+        r.innerHTML='<div class="er-b"><div class="er-bl">MOTOR ELUCY</div><div class="er-bt" style="color:var(--text2);font-size:12px">Deal sem deal_id — análise não disponível.</div></div>';
+        r.style.display='block';
+      }
+    }
+  }
+}
+
+function showCopy(id){
+  const dvl=document.getElementById('dvl-'+id);
+  if(!dvl) return;
+  document.getElementById('menu-'+id).style.display='none';
+  document.getElementById('co-'+id).style.display='none';
+  dvl.style.display='block';
+  dvl.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function confirmDVL(id){
+  document.getElementById('dvl-'+id).style.display='none';
+  // DVL aprovado — roteia para Elucy gerar copy com dados validados
+  const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
+  // Captura campos editados pelo SDR no DVL Gate
+  const inputs=document.querySelectorAll('#dvl-'+id+' .dvl-i');
+  const dvlData={};
+  ['nome','empresa','fase','canal','delta','deal_id'].forEach((k,i)=>{ if(inputs[i]) dvlData[k]=inputs[i].value; });
+  const mergedDeal=Object.assign({},deal||{},dvlData);
+  if(mergedDeal.deal_id&&mergedDeal.deal_id!=='—'){
+    // Mostra copy pré-preenchida enquanto Elucy processa
+    const co=document.getElementById('co-'+id);
+    const wa=document.getElementById('ct-'+id+'-wa');
+    if(co) co.style.display='block';
+    if(wa) wa.textContent='Elucy gerando copy calibrada pelo motor…';
+    requestElucyCopy(mergedDeal.deal_id, mergedDeal, id, mergedDeal.canal||'WhatsApp');
+    co&&co.scrollIntoView({behavior:'smooth',block:'start'});
+  } else {
+    // Fallback: menu contextual estático
+    document.getElementById('menu-'+id).style.display='block';
+    document.getElementById('menu-'+id).scrollIntoView({behavior:'smooth',block:'start'});
+  }
+}
+
+function cancelMenu(id){
+  document.getElementById('menu-'+id).style.display='none';
+}
+
+function pickOpt(id,el){
+  document.querySelectorAll('#menu-'+id+' .mo').forEach(m=>m.classList.remove('on'));
+  el.classList.add('on');
+  setTimeout(()=>{
+    document.getElementById('menu-'+id).style.display='none';
+    const co=document.getElementById('co-'+id);
+    co.style.display='block';
+    co.scrollIntoView({behavior:'smooth',block:'start'});
+  },350);
+}
+
+function swTab(id,ch,el){
+  el.closest('.co-tabs').querySelectorAll('.cotab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  ['wa','ig','crm'].forEach(c=>{
+    const e=document.getElementById('ct-'+id+'-'+c);
+    if(e) e.style.display=c===ch?'block':'none';
+  });
+}
+
+function clip(elId){
+  const el=document.getElementById(elId);
+  if(!el) return;
+  navigator.clipboard.writeText(el.textContent||el.innerText).then(()=>{
+    const ob=el.style.borderColor;
+    el.style.borderColor='var(--green)';
+    setTimeout(()=>el.style.borderColor=ob,1200);
+  }).catch(()=>{
+    const r=document.createRange();
+    r.selectNode(el);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(r);
+    document.execCommand('copy');
+    window.getSelection().removeAllRanges();
+  });
+}
+
+function toggleDMA(id){
+  const d=document.getElementById('dma-'+id);
+  if(!d) return;
+  d.style.display=d.style.display==='none'?'block':'none';
+}
+
+function sfnd(el){
+  el.closest('.fbr').querySelectorAll('.fbb').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+}
+
+function startCap(id){
+  const a=document.getElementById('anlz-'+id);
+  const r=document.getElementById('dmr-'+id);
+  a.classList.add('show');
+  r.classList.remove('show');
+  setTimeout(()=>{a.classList.remove('show');r.classList.add('show');document.getElementById('dst-'+id).textContent='Análise pronta';},2800);
+}
+
+function resetDMA(id){
+  document.getElementById('dmr-'+id).classList.remove('show');
+  document.getElementById('dst-'+id).textContent='Ativo';
+}
+
+// ── FILTROS, ORDENAÇÃO, SINAIS ───────────────────────────────────────
+
+const ACTIVE_FILTERS={fase:'todos',sinal:'todos',tier:'todos'};
+
+function toggleFilter(el,group){
+  document.querySelectorAll(`.fchip[data-filter="${group}"]`).forEach(c=>{
+    c.classList.remove('on','on-green','on-red','on-yellow');
+  });
+  const val=el.dataset.val;
+  if(val==='BUY') el.classList.add('on-green');
+  else if(val==='RISK') el.classList.add('on-red');
+  else if(val==='STALL'||val==='DOME') el.classList.add('on-yellow');
+  else el.classList.add('on');
+  ACTIVE_FILTERS[group]=val;
+  applyFilters();
+}
+
+function calcSignal(deal){
+  const delta=deal._delta||0;
+  const etapa=(deal._etapa||'').toLowerCase();
+  const tier=(deal._tier||'').toLowerCase();
+  if(delta>10) return 'DOME';
+  if(delta>6) return 'STALL';
+  if(etapa.includes('agend')||etapa.includes('entrevista')) return 'BUY';
+  if(delta<=2&&!etapa.includes('novo')) return 'CHAMP';
+  if(delta>4) return 'RISK';
+  return 'BUY';
+}
+
+function calcUrgency(deal){
+  let score=0;
+  const delta=deal._delta||0;
+  const temp=deal._temp||0;
+  const sig=deal._signal;
+  if(sig==='DOME') score+=40;
+  else if(sig==='STALL') score+=30;
+  else if(sig==='RISK') score+=25;
+  else if(sig==='BUY') score+=10;
+  score+=Math.max(0,delta*2);
+  score+=Math.max(0,100-temp)*0.3;
+  return Math.round(score);
+}
+
+function urgClass(u){
+  if(u>=60) return 'urg-crit';
+  if(u>=35) return 'urg-high';
+  if(u>=15) return 'urg-med';
+  return 'urg-low';
+}
+
+function applyFilters(){
+  const q=(document.getElementById('srch-input')||{}).value||'';
+  const ql=q.toLowerCase();
+  const fFase=ACTIVE_FILTERS.fase;
+  const fSinal=ACTIVE_FILTERS.sinal;
+  const fTier=ACTIVE_FILTERS.tier;
+  const sortBy=(document.getElementById('sort-sel')||{}).value||'urgencia';
+
+  const map=window._COCKPIT_DEAL_MAP||{};
+  const items=document.querySelectorAll('.di[data-live="1"]');
+  const visible=[];
+
+  items.forEach(di=>{
+    const id=di.id.replace('di-','');
+    const deal=map[id];
+    if(!deal){di.style.display='none';return;}
+    // texto search
+    const txt=(di.textContent||'').toLowerCase();
+    if(ql&&!txt.includes(ql)){di.style.display='none';return;}
+    // filtro fase
+    if(fFase!=='todos'){
+      const fase=(deal._fase||deal.fase||'').toLowerCase();
+      const etapa=(deal._etapa||deal.etapa||'').toLowerCase();
+      const faseMap={mql:'mql',sal:'sal',conectado:'conect',agendado:'agend',negociacao:'negoc'};
+      const needle=(faseMap[fFase.toLowerCase()]||fFase.toLowerCase());
+      if(!fase.includes(needle)&&!etapa.includes(needle)){di.style.display='none';return;}
+    }
+    // filtro sinal
+    if(fSinal!=='todos'){
+      if(deal._signal!==fSinal){di.style.display='none';return;}
+    }
+    // filtro tier
+    if(fTier!=='todos'){
+      const t=(deal._tier||deal.tier||'').toLowerCase();
+      if(!t.includes(fTier.toLowerCase())){di.style.display='none';return;}
+    }
+    di.style.display='';
+    visible.push({el:di,deal,id});
+  });
+
+  // Ordenação
+  const list=document.getElementById('deal-list');
+  if(!list) return;
+  const faseOrder={mql:1,sal:2,conectados:3,agendamento:3,reagendamento:3,'entrevista agendada':3,'novo lead':4,'dia 01':5,'dia 02':6,'dia 03':7,'dia 04':8,'dia 05':9,'dia 06':10};
+  const tierOrder={diamond:1,gold:2,silver:3,bronze:4};
+
+  visible.sort((a,b)=>{
+    switch(sortBy){
+      case 'urgencia': return (b.deal._urgency||0)-(a.deal._urgency||0);
+      case 'temp_desc': return (b.deal._temp||0)-(a.deal._temp||0);
+      case 'temp_asc':  return (a.deal._temp||0)-(b.deal._temp||0);
+      case 'delta_desc': return (b.deal._delta||0)-(a.deal._delta||0);
+      case 'delta_asc':  return (a.deal._delta||0)-(b.deal._delta||0);
+      case 'fase': return ((faseOrder[(a.deal._etapa||'').toLowerCase()]||99)-(faseOrder[(b.deal._etapa||'').toLowerCase()]||99));
+      case 'tier': return ((tierOrder[(a.deal._tier||'').toLowerCase()]||99)-(tierOrder[(b.deal._tier||'').toLowerCase()]||99));
+      default: return 0;
+    }
+  });
+  visible.forEach(({el})=>list.appendChild(el));
+}
+
+function filterDeals(q){applyFilters();}
+
+const RPD={mar:{fups:147,qual:38,mql:14,rev:'R$ 182k'},fev:{fups:119,qual:34,mql:15,rev:'R$ 135k'},jan:{fups:98,qual:29,mql:11,rev:'R$ 98k'},dez:{fups:87,qual:24,mql:9,rev:'R$ 76k'}};
+
+function rp(p,el){
+  document.querySelectorAll('.ft').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  const d=RPD[p];
+  if(!d) return;
+  document.getElementById('kv-fups').textContent=d.fups;
+  document.getElementById('kv-qual').textContent=d.qual;
+  document.getElementById('kv-mql').textContent=d.mql;
+  document.getElementById('kv-rev').textContent=d.rev;
+}
+// ── SUPABASE AUTH ─────────────────────────────────────────────────────
+
+const SUPABASE_URL='https://tnbbsjvzwleeoqnxtafp.supabase.co';
+const SUPABASE_ANON='sb_publishable_bh1m8U-gNbrBtA9WSCDWrA_V-RXZU15';
+let _sb=null;
+let _currentUser=null;
+
+function getSB(){
+  if(!_sb && window.supabase){
+    _sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
+  }
+  return _sb;
+}
+
+async function supabaseSignOut(){
+  const sb=getSB(); if(sb) await sb.auth.signOut();
+  _currentUser=null;
+  showAuthScreen();
+}
+
+function showAuthScreen(){
+  document.getElementById('auth-screen').classList.remove('hidden');
+  document.getElementById('pending-screen').classList.add('hidden');
+  document.getElementById('topbar').style.display='none';
+  document.getElementById('main').style.display='none';
+}
+
+function showPendingScreen(email){
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('pending-screen').classList.remove('hidden');
+  document.getElementById('topbar').style.display='none';
+  document.getElementById('main').style.display='none';
+  document.getElementById('pending-email-label').textContent=email||'—';
+}
+
+function showCockpit(user){
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('pending-screen').classList.add('hidden');
+  document.getElementById('topbar').style.display='';
+  document.getElementById('main').style.display='';
+  _currentUser=user;
+  // Aplica nome do usuário logado no chip
+  const nome=user.user_metadata&&user.user_metadata.full_name||user.email.split('@')[0];
+  const init=nome.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('chip-name').textContent=nome.split(' ')[0];
+  document.getElementById('av-init').textContent=init;
+  document.getElementById('op-pill').classList.add('show');
+  // Em modo remoto, puxa deals do Supabase; em modo local, usa cockpit-data.js
+  if(window.IS_REMOTE){
+    loadDealsFromSupabase(user.email);
+  }
+}
+
+async function checkApproval(user){
+  const sb=getSB();
+  if(!sb) return showCockpit(user); // fallback sem SDK
+  // Verifica se email é @g4educacao.com
+  if(!user.email.endsWith('@g4educacao.com')){
+    const err=document.getElementById('auth-error');
+    if(err){err.textContent='Acesso restrito a contas @g4educacao.com.';err.style.display='block';}
+    await sb.auth.signOut();
+    return;
+  }
+  // Verifica se está aprovado na tabela operators
+  const {data}=await sb.from('operators').select('approved').eq('email',user.email).single();
+  if(data&&data.approved){
+    showCockpit(user);
+  } else {
+    // Coloca na fila de pendentes
+    await sb.rpc('request_access',{p_email:user.email,p_name:user.user_metadata&&user.user_metadata.full_name||user.email});
+    showPendingScreen(user.email);
+  }
+}
+
+async function loadDealsFromSupabase(email){
+  const sb=getSB(); if(!sb) return;
+  showSyncToast('ok','Carregando pipeline do Supabase…');
+  const {data,error}=await sb.from('deals')
+    .select('*')
+    .eq('operator_email',email)
+    .order('delta_t',{ascending:false})
+    .limit(200);
+  if(error||!data||!data.length){
+    showSyncToast('err','Nenhum deal encontrado. Aguarde o sync diário ou contate o admin.');
+    return;
+  }
+  // Converte formato Supabase para o formato esperado pelo renderLiveDeals
+  const cols=[
+    {name:'deal_id'},{name:'fase_atual_no_processo'},{name:'etapa_atual_no_pipeline'},
+    {name:'tier_da_oportunidade'},{name:'delta_t'},{name:'qualificador_name'},
+    {name:'proprietario_name'},{name:'linha_de_receita_vigente'},{name:'grupo_de_receita'},
+    {name:'created_at_crm'},{name:'event_skipped'},{name:'email_lead'},{name:'cargo'},
+    {name:'canal_de_marketing'},{name:'utm_medium'},{name:'status_do_deal'}
+  ].map((c,i)=>({name:c.name,position:i}));
+  // Transforma objetos em arrays (formato esperado pelo cockpit)
+  const colNames=cols.map(c=>c.name);
+  const rows=data.map(row=>colNames.map(k=>{
+    if(k==='email_lead') return row.email_lead||'';
+    return row[k]!=null?String(row[k]):'';
+  }));
+  renderLiveDeals(rows,cols);
+  showSyncToast('ok',`Pipeline carregado — ${rows.length} deals ativos.`);
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const d=new Date();
+  const opts={weekday:'short',day:'numeric',month:'short',year:'numeric'};
+  const el=document.getElementById('sbdate');
+  if(el) el.textContent=d.toLocaleDateString('pt-BR',opts);
+
+  // Inicializa auth Supabase
+  const sb=getSB();
+  if(sb&&window.IS_REMOTE){
+    // Modo remoto (GitHub Pages): exige login
+    document.getElementById('topbar').style.display='none';
+    document.getElementById('main').style.display='none';
+    // Handler do botão Google
+    document.getElementById('btn-google-login').addEventListener('click',async()=>{
+      const{error}=await sb.auth.signInWithOAuth({
+        provider:'google',
+        options:{redirectTo:location.href,queryParams:{hd:'g4educacao.com'}}
+      });
+      if(error){
+        const err=document.getElementById('auth-error');
+        if(err){err.textContent=error.message;err.style.display='block';}
+      }
+    });
+    // Checa sessão atual
+    sb.auth.getSession().then(({data:{session}})=>{
+      if(session&&session.user) checkApproval(session.user);
+      else showAuthScreen();
+    });
+    // Ouve mudanças de auth (ex: retorno do OAuth redirect)
+    sb.auth.onAuthStateChange((_event,session)=>{
+      if(session&&session.user) checkApproval(session.user);
+    });
+  } else {
+    // Modo local (G4 OS): carrega cockpit-data.js diretamente
+    if(window.COCKPIT_DEALS&&window.COCKPIT_DEALS.length){
+      const cols=(window.COCKPIT_COLS||[]).map((name,i)=>({name,position:i}));
+      renderLiveDeals(window.COCKPIT_DEALS,cols);
+      if(window.COCKPIT_OPERATOR){
+        const nome=window.COCKPIT_OPERATOR;
+        const init=nome.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
+        document.getElementById('chip-name').textContent=nome.split(' ')[0];
+        document.getElementById('av-init').textContent=init;
+        document.getElementById('op-pill').classList.add('show');
+      }
+      if(window.COCKPIT_UPDATED_AT){
+        const sb2=document.getElementById('sbdate');
+        if(sb2) sb2.textContent='Atualizado: '+window.COCKPIT_UPDATED_AT;
+      }
+    }
+  }
+});
+
+// ── GROWTH LOOP — Auto-refresh via G4 OS postMessage ─────────────────
+
+(function initGrowthLoop(){
+  const STALE_MINUTES=15;
+  const POLL_MS=5*60*1000; // a cada 5 minutos
+
+  function isStale(){
+    const ts=window.COCKPIT_UPDATED_AT||'';
+    if(!ts) return true;
+    try{
+      const [datePart,timePart]=(ts+' ').split(' ');
+      const [d,m,y]=datePart.split('/');
+      const [h,min]=(timePart||'00:00').split(':');
+      const age=(Date.now()-new Date(y,m-1,d,h||0,min||0).getTime())/60000;
+      return age>STALE_MINUTES;
+    }catch(e){ return true; }
+  }
+
+  function requestRefresh(){
+    if(!isStale()) return;
+    // Solicita ao G4 OS host (iframe parent) para executar /atualizar-cockpit
+    try{
+      window.parent.postMessage({type:'g4os:skill:run',skill:'atualizar-cockpit'},'*');
+    }catch(e){}
+    // Fallback: dispara também no próprio window (quando aberto direto no browser)
+    window.postMessage({type:'g4os:skill:run',skill:'atualizar-cockpit'},'*');
+  }
+
+  // Ouve resposta do G4 OS quando cockpit-data.js for regenerado
+  window.addEventListener('message',function(e){
+    if(!e.data||e.data.type!=='g4os:skill:complete'||e.data.skill!=='atualizar-cockpit') return;
+    // Remove script antigo e recarrega com cache-bust
+    const old=document.querySelector('script[src^="cockpit-data.js"]');
+    if(old) old.remove();
+    // Limpa variáveis globais para forçar re-leitura
+    window.COCKPIT_DEALS=null;
+    window.COCKPIT_COLS=null;
+    window.COCKPIT_UPDATED_AT=null;
+    const ns=document.createElement('script');
+    ns.src='cockpit-data.js?t='+Date.now();
+    ns.onload=function(){
+      if(!window.COCKPIT_DEALS||!window.COCKPIT_DEALS.length) return;
+      const cols=(window.COCKPIT_COLS||[]).map((name,i)=>({name,position:i}));
+      renderLiveDeals(window.COCKPIT_DEALS,cols);
+      if(window.COCKPIT_OPERATOR){
+        const nome=window.COCKPIT_OPERATOR;
+        const init=nome.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
+        document.getElementById('chip-name').textContent=nome.split(' ')[0];
+        document.getElementById('av-init').textContent=init;
+        document.getElementById('op-pill').classList.add('show');
+      }
+      if(window.COCKPIT_UPDATED_AT){
+        const sb=document.getElementById('sbdate');
+        if(sb) sb.textContent='Atualizado: '+window.COCKPIT_UPDATED_AT;
+      }
+      showSyncToast('ok','Pipeline atualizado — '+window.COCKPIT_DEALS.length+' deals');
+    };
+    document.head.appendChild(ns);
+  });
+
+  // Checa ao abrir (aguarda 3s para o DOM estabilizar)
+  setTimeout(requestRefresh,3000);
+  // Polling a cada 5 min
+  setInterval(requestRefresh,POLL_MS);
+})();
+
+// ── OPERADOR / CRM SYNC ──────────────────────────────────────────────
+
+const DB_ENDPOINT='https://dbc-8acefaf9-a170.cloud.databricks.com/api/2.0/sql/statements';
+const DB_WAREHOUSE='bbae754ea44f67e0';
+
+function initOperator(){
+  const email=localStorage.getItem('elucy_operator_email');
+  if(email) applyOperator(email);
+}
+
+function applyOperator(email){
+  localStorage.setItem('elucy_operator_email',email);
+  const name=email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+  const init=name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('chip-name').textContent=name.split(' ')[0];
+  document.getElementById('av-init').textContent=init;
+  document.getElementById('op-pill').classList.add('show');
+}
+
+function openSettings(){
+  const saved=localStorage.getItem('elucy_operator_email')||'';
+  const ov=document.createElement('div');
+  ov.className='modal-ov';
+  ov.id='settings-modal';
+  ov.innerHTML=`
+    <div class="modal">
+      <div class="modal-t">Configurar Operador</div>
+      <div class="modal-s">Insira seu e-mail corporativo para sincronizar o Cockpit com o <strong>funil_comercial</strong> do Databricks, filtrando apenas os deals do seu qualificador.</div>
+      <div class="modal-f">
+        <label class="modal-l">E-mail do operador</label>
+        <input class="modal-i" id="op-email-input" type="email" placeholder="nathan.souza@g4educacao.com" value="${saved}" autocomplete="email">
+      </div>
+      <div class="modal-note">O e-mail é usado como filtro em <code>qualificador_name</code> no funil_comercial. Nunca é enviado a terceiros.</div>
+      <div id="modal-sync-status"></div>
+      <div class="row" style="justify-content:flex-end;gap:8px">
+        <button class="btn bs btn-sm" onclick="closeSettings()">Cancelar</button>
+        <button class="btn bp btn-sm" onclick="saveOperator()">Salvar e sincronizar</button>
+      </div>
+    </div>`;
+  ov.addEventListener('click',e=>{if(e.target===ov) closeSettings();});
+  document.body.appendChild(ov);
+  setTimeout(()=>document.getElementById('op-email-input').focus(),80);
+}
+
+function closeSettings(){
+  const m=document.getElementById('settings-modal');
+  if(m) m.remove();
+}
+
+function saveOperator(){
+  const input=document.getElementById('op-email-input');
+  const email=(input?input.value:'').trim();
+  if(!email||!email.includes('@')){
+    showModalStatus('err','E-mail inválido. Use o formato nome@domínio.com');
+    return;
+  }
+  // Limpa cache de nome se o email mudou (força novo lookup)
+  const prev=localStorage.getItem('elucy_operator_email');
+  if(prev!==email) localStorage.removeItem('elucy_qualificador_name');
+  applyOperator(email);
+  showModalStatus('ok','Operador salvo. Sincronizando pipeline...');
+  setTimeout(()=>{
+    closeSettings();
+    refreshPipeline();
+  },900);
+}
+
+function showModalStatus(type,msg){
+  const el=document.getElementById('modal-sync-status');
+  if(!el) return;
+  const cls=type==='ok'?'sync-ok':type==='err'?'sync-err':'sync-load';
+  el.innerHTML=`<div class="sync-status ${cls}">${msg}</div>`;
+}
+
+// ── REFRESH / DATABRICKS SYNC ────────────────────────────────────────
+
+function refreshPipeline(){
+  // Arquitetura: G4 OS gera cockpit-data.js com dados frescos do Databricks
+  // O Cockpit carrega esse arquivo — sem CORS, sem token exposto ao SDR
+  showSyncToast('ok','Para atualizar o pipeline, diga "atualizar cockpit" no G4 OS. Os dados serão injetados automaticamente.');
+}
+
+function promptDbToken(email){
+  const ov=document.createElement('div');
+  ov.className='modal-ov';
+  ov.id='token-modal';
+  ov.innerHTML=`
+    <div class="modal">
+      <div class="modal-t">Conectar Databricks</div>
+      <div class="modal-s">Insira seu Personal Access Token do Databricks para sincronizar o pipeline. Salvo apenas localmente no seu browser.</div>
+      <div class="modal-f">
+        <label class="modal-l">Personal Access Token</label>
+        <input class="modal-i" id="db-token-input" type="password" placeholder="dapi...">
+      </div>
+      <div class="modal-note">Gere em: Databricks → Settings → Developer → Access Tokens.</div>
+      <div id="token-sync-status"></div>
+      <div class="row" style="justify-content:flex-end;gap:8px">
+        <button class="btn bs btn-sm" onclick="closeTokenModal()">Cancelar</button>
+        <button class="btn bp btn-sm" onclick="saveToken('${email}')">Conectar</button>
+      </div>
+    </div>`;
+  ov.addEventListener('click',e=>{if(e.target===ov) closeTokenModal();});
+  document.body.appendChild(ov);
+  setTimeout(()=>document.getElementById('db-token-input').focus(),80);
+}
+
+function closeTokenModal(){
+  const m=document.getElementById('token-modal');
+  if(m) m.remove();
+}
+
+function saveToken(email){
+  const input=document.getElementById('db-token-input');
+  const token=(input?input.value:'').trim();
+  if(!token||token.length<10){
+    const s=document.getElementById('token-sync-status');
+    if(s) s.innerHTML='<div class="sync-status sync-err">Token inválido. Cole o Personal Access Token completo.</div>';
+    return;
+  }
+  localStorage.setItem('elucy_db_token',token);
+  const s=document.getElementById('token-sync-status');
+  if(s) s.innerHTML='<div class="sync-status sync-ok">Conectado. Carregando pipeline...</div>';
+  setTimeout(()=>{
+    closeTokenModal();
+    const btn=document.getElementById('btn-refresh');
+    if(btn) btn.classList.add('spin-active');
+    fetchPipeline(email,token,btn);
+  },700);
+}
+
+function fetchPipeline(email,token,btn){
+  // Passo 1: resolve o nome exato do qualificador a partir do email
+  // Estratégia: busca DISTINCT qualificador_name WHERE email do operador está nos deals (via campo email do lead não serve)
+  // Usa cache em localStorage para evitar lookup repetido
+  const cachedName=localStorage.getItem('elucy_qualificador_name');
+  if(cachedName){
+    fetchPipelineByName(cachedName,token,btn);
+    return;
+  }
+  // Lookup: pega o nome do qualificador pelo prefixo do email com 4+ chars
+  const prefix=email.split('@')[0].toLowerCase();
+  const segments=prefix.replace(/[._]/g,' ').trim().split(' ').filter(s=>s.length>=4);
+  if(!segments.length){
+    showSyncToast('err','Email inválido para lookup. Use o email corporativo completo.');
+    if(btn) btn.classList.remove('spin-active');
+    return;
+  }
+  const likeParts=segments.map(s=>`LOWER(qualificador_name) LIKE '%${s}%'`).join(' OR ');
+  const lookupQuery=`SELECT DISTINCT qualificador_name FROM production.diamond.funil_comercial WHERE (${likeParts}) AND qualificador_name IS NOT NULL LIMIT 20`;
+  fetch(DB_ENDPOINT,{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+    body:JSON.stringify({statement:lookupQuery,warehouse_id:DB_WAREHOUSE,wait_timeout:'30s',on_wait_timeout:'CONTINUE'})
+  })
+  .then(r=>r.json())
+  .then(data=>{
+    const rows=(data.result&&data.result.data_array)||[];
+    if(!rows.length){
+      showSyncToast('err','Operador não encontrado no CRM. Verifique o email inserido.');
+      if(btn) btn.classList.remove('spin-active');
+      return;
+    }
+    // Se retornou um único nome, usa direto. Se múltiplos, pede escolha
+    if(rows.length===1){
+      const nome=rows[0][0];
+      localStorage.setItem('elucy_qualificador_name',nome);
+      fetchPipelineByName(nome,token,btn);
+    } else {
+      // Mostra seletor de nome
+      showNamePicker(rows.map(r=>r[0]),token,btn);
+    }
+  })
+  .catch(err=>{
+    if(btn) btn.classList.remove('spin-active');
+    showSyncToast('err','Erro no lookup: '+err.message);
+  });
+}
+
+function showNamePicker(names,token,btn){
+  if(btn) btn.classList.remove('spin-active');
+  const ov=document.createElement('div');
+  ov.className='modal-ov';
+  ov.id='picker-modal';
+  const opts=names.map(n=>`<button class="btn bs" style="width:100%;text-align:left;margin-bottom:6px" onclick="pickName('${n.replace(/'/g,"\\'")}','${encodeURIComponent(JSON.stringify(names))}')">${n}</button>`).join('');
+  ov.innerHTML=`<div class="modal"><div class="modal-t">Confirmar operador</div><div class="modal-s">Encontrei mais de um match. Qual é você?</div>${opts}<button class="btn bs btn-sm" style="margin-top:4px" onclick="document.getElementById('picker-modal').remove()">Cancelar</button></div>`;
+  document.body.appendChild(ov);
+}
+
+function pickName(nome,_){
+  document.getElementById('picker-modal').remove();
+  localStorage.setItem('elucy_qualificador_name',nome);
+  const token=localStorage.getItem('elucy_db_token');
+  const btn=document.getElementById('btn-refresh');
+  if(btn) btn.classList.add('spin-active');
+  fetchPipelineByName(nome,token,btn);
+}
+
+function fetchPipelineByName(nome,token,btn){
+  // Etapas exatas do HubSpot (filtro avançado confirmado): 92 deals
+  const anoAtual=new Date().getFullYear();
+  const query=`SELECT deal_id, fase_atual_no_processo, etapa_atual_no_pipeline, tier_da_oportunidade, delta_t, qualificador_name, proprietario_name, linha_de_receita_vigente, grupo_de_receita, created_at, event_skipped, email, cargo, canal_de_marketing, utm_medium, status_do_deal FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY deal_id ORDER BY event_timestamp DESC) as rn FROM production.diamond.funil_comercial WHERE qualificador_name = '${nome}' AND etapa_atual_no_pipeline IN ('Novo lead','Novo Lead ','Dia 01','Dia 02','Dia 03','Dia 04','Dia 05','Dia 06','Conectados','Agendamento','Reagendamento','Entrevista Agendada') AND status_do_deal = 'Aberto' AND pipeline_name = 'Comercial' AND created_at >= '${anoAtual}-01-01') WHERE rn = 1 ORDER BY delta_t DESC LIMIT 200`;
+
+  fetch(DB_ENDPOINT,{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+    body:JSON.stringify({statement:query,warehouse_id:DB_WAREHOUSE,wait_timeout:'30s',on_wait_timeout:'CONTINUE'})
+  })
+  .then(r=>{if(!r.ok) throw new Error('HTTP '+r.status);return r.json();})
+  .then(data=>{
+    if(btn) btn.classList.remove('spin-active');
+    handlePipelineData(data,nome);
+  })
+  .catch(err=>{
+    if(btn) btn.classList.remove('spin-active');
+    showSyncToast('err','Erro ao sincronizar: '+err.message);
+    console.error('[Elucy] Databricks error:',err);
+  });
+}
+
+function handlePipelineData(data,nome){
+  const status=data.status&&data.status.state;
+  if(status==='FAILED'||status==='CANCELED'){
+    showSyncToast('err','Query falhou: '+(data.status.error&&data.status.error.message||status));
+    return;
+  }
+  if(status==='PENDING'||status==='RUNNING'){
+    pollStatement(data.statement_id,nome);
+    return;
+  }
+  const rows=(data.result&&data.result.data_array)||[];
+  const cols=(data.manifest&&data.manifest.schema&&data.manifest.schema.columns)||[];
+  if(!rows.length){
+    showSyncToast('ok','Pipeline atualizado — 0 deals ativos encontrados para este operador.');
+    return;
+  }
+  renderLiveDeals(rows,cols);
+  showSyncToast('ok',`Pipeline sincronizado — ${rows.length} deal(s) carregado(s) do Databricks.`);
+}
+
+function pollStatement(stmtId,nome,attempts){
+  attempts=attempts||0;
+  if(attempts>12){showSyncToast('err','Timeout ao aguardar query. Tente novamente.');return;}
+  const token=localStorage.getItem('elucy_db_token');
+  fetch('https://dbc-8acefaf9-a170.cloud.databricks.com/api/2.0/sql/statements/'+stmtId,{
+    headers:{'Authorization':'Bearer '+token}
+  })
+  .then(r=>r.json())
+  .then(data=>{
+    const s=data.status&&data.status.state;
+    if(s==='SUCCEEDED') handlePipelineData(data,nome);
+    else if(s==='FAILED'||s==='CANCELED') showSyncToast('err','Query falhou no Databricks.');
+    else setTimeout(()=>pollStatement(stmtId,nome,attempts+1),2500);
+  })
+  .catch(()=>showSyncToast('err','Erro ao verificar status da query.'));
+}
+
+const COL={};
+function renderLiveDeals(rows,cols){
+  cols.forEach((c,i)=>COL[c.name]=i);
+  function g(row,name){const i=COL[name];return i!=null?row[i]||'':'';}
+  function tempClass(score){return score>=70?'th':score>=40?'tw':'tc';}
+  function tempLabel(score){return score>=70?'Quente':score>=40?'Morno':'Frio';}
+  function calcTemp(row){
+    const etapa=g(row,'etapa_atual_no_pipeline')||'';
+    const delta=parseInt(g(row,'delta_t'))||0;
+    const skipped=String(g(row,'event_skipped')).toLowerCase()==='true';
+    // Base por etapa
+    let t=50;
+    if(etapa.includes('Agendamento')||etapa==='Reagendamento'||etapa==='Entrevista Agendada') t=75;
+    else if(etapa==='Conectados') t=60;
+    else if(etapa==='Dia 01') t=55;
+    else if(etapa==='Dia 02') t=48;
+    else if(etapa==='Dia 03') t=42;
+    else if(etapa==='Dia 04'||etapa==='Dia 05'||etapa==='Dia 06') t=35;
+    else if(etapa==='Novo lead'||etapa==='Novo Lead ') t=30;
+    // Penalidades por delta
+    if(delta>5) t-=10;
+    if(delta>10) t-=10;
+    if(delta>20) t-=10;
+    // Bônus por event_skipped=false (sem gaps)
+    if(!skipped) t+=8;
+    return Math.max(10,Math.min(100,t));
+  }
+  function canalClass(canal){
+    const c=(canal||'').toLowerCase();
+    if(c.includes('social')||c.includes('instagram')||c.includes('dm')||c.includes(' ig')||c.includes('tallis')||c.includes('nardon')||c.includes('alfredo')||c.includes('perfil k')) return 'cig';
+    if(c.includes('whats')||c.includes('wp')) return 'cwa';
+    return 'ccl';
+  }
+  function canalLabel(canal){
+    const c=(canal||'').toLowerCase();
+    if(c.includes('social')||c.includes('instagram')||c.includes('dm')||c.includes('tallis')||c.includes('nardon')||c.includes('alfredo')||c.includes('perfil k')) return 'Instagram';
+    if(c.includes('whats')||c.includes('wp')) return 'WhatsApp';
+    if(c.includes('google')||c.includes('form')) return 'Form';
+    if(!canal) return 'Direto';
+    return canal.length>18?canal.slice(0,18)+'…':canal;
+  }
+  function dDay(delta){
+    const d=parseInt(delta)||0;
+    if(d<=1) return 'D1';
+    if(d<=3) return 'D2';
+    if(d<=5) return 'D3';
+    if(d<=7) return 'D4';
+    if(d<=10) return 'D5';
+    return 'D6+';
+  }
+
+  const list=document.getElementById('deal-list');
+  if(!list) return;
+  list.innerHTML='';
+
+  rows.forEach((row,idx)=>{
+    const id='live-'+idx;
+    // Campos reais da funil_comercial (confirmados via DESCRIBE TABLE)
+    const emailLead=g(row,'email')||'';
+    const nome=emailLead?emailLead.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,c=>c.toUpperCase()):'Lead '+(idx+1);
+    const empresa=emailLead?emailLead.split('@')[1]||'—':'—';
+    const cargo=g(row,'cargo')||'';
+    const fase=g(row,'fase_atual_no_processo')||'Ativo';
+    const etapa=g(row,'etapa_atual_no_pipeline')||'';
+    const tier=(g(row,'tier_da_oportunidade')||'').toLowerCase();
+    const delta=parseInt(g(row,'delta_t'))||0;
+    // Canal: usa canal_de_marketing ou utm_medium para inferir o canal de contato
+    const canalRaw=g(row,'canal_de_marketing')||g(row,'utm_medium')||'';
+    const canal=canalRaw;
+    const deal_id=g(row,'deal_id');
+    const temp=calcTemp(row);
+    const tc=tempClass(temp);
+    const tl=tempLabel(temp);
+    const cc=canalClass(canal);
+    const cl=canalLabel(canal);
+    const dd=dDay(delta);
+    const slaRisk=delta>7;
+    const irondome=delta>10;
+    const classes='di'+(slaRisk?' sla':'')+(irondome?' dome':'');
+
+    const dealObj={nome,empresa:emailLead||empresa,cargo,fase,etapa,tier,delta,canal,deal_id,temp,tc,tl,dd,emailLead,
+      _fase:fase,_etapa:etapa,_tier:tier,_delta:delta,_temp:temp};
+    // Sinal automático
+    const signal=calcSignal(dealObj);
+    dealObj._signal=signal;
+    // Urgency score
+    const urgency=calcUrgency(dealObj);
+    dealObj._urgency=urgency;
+    const uc=urgClass(urgency);
+
+    const sigLabels={BUY:'BUY',RISK:'RISK',STALL:'STALL',CHAMP:'CHAMP',DOME:'DOME'};
+    const sigCls={BUY:'sig-buy',RISK:'sig-risk',STALL:'sig-stall',CHAMP:'sig-champ',DOME:'sig-dome'};
+
+    const di=document.createElement('div');
+    di.className=classes;
+    di.id='di-'+id;
+    di.setAttribute('data-live','1');
+    di.innerHTML=`
+      <div class="di-name">${nome}</div>
+      <div class="di-co">${emailLead||empresa}${cargo?' · '+cargo:''}</div>
+      <div class="di-meta">
+        <span class="tb ${tc}">${tl} ${temp}</span>
+        <span class="fc">${etapa||fase}</span>
+        <span class="cc ${cc}">${cl}</span>
+        <span class="tb ${sigCls[signal]||'sig-buy'}" style="margin-left:2px">${sigLabels[signal]||signal}</span>
+        <span class="urg-badge ${uc}" title="Score urgência">${urgency}</span>
+      </div>
+      <div class="di-qa">
+        <button class="qa-btn" onclick="event.stopPropagation();quickFUP('${id}')">Gerar FUP</button>
+        <button class="qa-btn" onclick="event.stopPropagation();quickNote('${id}')">Nota CRM</button>
+      </div>`;
+    if(!window._COCKPIT_DEAL_MAP) window._COCKPIT_DEAL_MAP={};
+    window._COCKPIT_DEAL_MAP[id]=dealObj;
+    di.onclick=()=>selectLiveDeal(id,dealObj);
+    list.appendChild(di);
+  });
+
+  // Update stats
+  const ativos=rows.length;
+  const slaCount=rows.filter(r=>(parseInt(g(r,'delta_t'))||0)>7).length;
+  const acaoHoje=rows.filter(r=>(parseInt(g(r,'delta_t'))||0)<=3).length;
+  const stats=document.querySelectorAll('.sbs-n');
+  if(stats[0]) stats[0].textContent=ativos;
+  if(stats[1]) stats[1].textContent=acaoHoje;
+  if(stats[2]) stats[2].textContent=slaCount;
+
+  // Aplica filtros/ordenação iniciais
+  applyFilters();
+
+  // Focus panel — top 5 por urgência
+  renderFocusPanel();
+}
+
+function renderFocusPanel(){
+  const map=window._COCKPIT_DEAL_MAP;
+  if(!map) return;
+  const fl=document.getElementById('focus-list');
+  if(!fl) return;
+  const all=Object.entries(map)
+    .map(([id,d])=>({id,...d}))
+    .sort((a,b)=>(b._urgency||0)-(a._urgency||0))
+    .slice(0,5);
+  if(!all.length){fl.innerHTML='<div style="font-size:11px;color:var(--text2);padding:4px 0">Sem deals ativos</div>';return;}
+  const sigWhy={BUY:'Sinal de compra',RISK:'Risco de perda',STALL:'Deal travado',CHAMP:'Champion ativo',DOME:'Iron Dome ativo'};
+  fl.innerHTML=all.map((d,i)=>`
+    <div class="focus-item" onclick="selectLiveDeal('${d.id}',window._COCKPIT_DEAL_MAP['${d.id}'])">
+      <span class="focus-pos">${i+1}</span>
+      <span class="focus-name">${d.emailLead||d.nome}</span>
+      <span class="focus-why">${sigWhy[d._signal]||d._signal}</span>
+    </div>`).join('');
+}
+
+// ── ELUCY ENGINE — postMessage bridge ────────────────────────────────
+
+// Cache de análises Elucy por deal_id (evita re-query na mesma sessão)
+const ELUCY_CACHE={};
+
+function requestElucyAnalysis(deal_id, dealData, targetId){
+  if(ELUCY_CACHE[deal_id]){
+    injectElucyReport(targetId, ELUCY_CACHE[deal_id]);
+    return;
+  }
+  // Marca o card como carregando análise
+  const reportEl=document.getElementById('er-'+targetId);
+  if(reportEl){
+    reportEl.innerHTML=`<div class="er-loading"><span class="elucy-pulse">Elucy analisando deal ${deal_id}…</span></div>`;
+    reportEl.style.display='block';
+  }
+  // Solicita análise ao G4 OS host
+  const payload={
+    type:'g4os:elucy:analyze',
+    deal_id: deal_id,
+    deal_data: dealData,
+    target_id: targetId,
+    prompt: `analise ${deal_id}`
+  };
+  try{ window.parent.postMessage(payload,'*'); }catch(e){}
+  window.postMessage(payload,'*');
+}
+
+function requestElucyCopy(deal_id, dealData, targetId, canal){
+  const copyEl=document.getElementById('co-'+targetId);
+  if(copyEl){
+    const wa=document.getElementById('ct-'+targetId+'-wa');
+    if(wa) wa.textContent='Elucy gerando copy…';
+  }
+  const payload={
+    type:'g4os:elucy:copy',
+    deal_id: deal_id,
+    deal_data: dealData,
+    target_id: targetId,
+    canal: canal||'WhatsApp',
+    prompt: `proxima mensagem — deal_id ${deal_id} — canal ${canal||'WhatsApp'}`
+  };
+  try{ window.parent.postMessage(payload,'*'); }catch(e){}
+  window.postMessage(payload,'*');
+}
+
+function injectElucyReport(targetId, report){
+  const reportEl=document.getElementById('er-'+targetId);
+  if(!reportEl) return;
+  // Detecta seções canônicas do ELUCI REPORT e renderiza
+  const context=extractSection(report,'ELUCI CONTEXT');
+  const directive=extractSection(report,'STRATEGIC DIRECTIVE');
+  const nba=extractSection(report,'NEXT BEST ACTION');
+  const verdict=extractSection(report,'ELUCI VERDICT');
+  const gov=extractSection(report,'GOVERNANCE FLAGS');
+  reportEl.innerHTML=`
+    <div class="er-h"><span class="er-badge">ELUCI REPORT</span><span class="er-htitle">Deal Analisado pelo Motor Elucy</span><span class="er-dqi elucy-live">LIVE</span></div>
+    ${context?`<div class="er-b"><div class="er-bl">ELUCI CONTEXT</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(context)}</pre></div></div>`:''}
+    ${directive?`<div class="er-b"><div class="er-bl">STRATEGIC DIRECTIVE</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(directive)}</pre></div></div>`:''}
+    ${nba?`<div class="er-b"><div class="er-bl">NEXT BEST ACTION</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(nba)}</pre></div></div>`:''}
+    ${gov?`<div class="er-b"><div class="er-bl">GOVERNANCE FLAGS</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(gov)}</pre></div></div>`:''}
+    ${verdict?`<div class="er-v"><div class="ev-s">V</div><div class="ev-t"><strong>ELUCI VERDICT</strong><br>${escHtml(verdict)}</div></div>`:''}
+    ${!context&&!directive?`<div class="er-b"><div class="er-bl">ANÁLISE COMPLETA</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(report)}</pre></div></div>`:''}
+  `;
+  reportEl.style.display='block';
+}
+
+function injectElucyCopy(targetId, copyWA, copyCRM){
+  const wa=document.getElementById('ct-'+targetId+'-wa');
+  const crm=document.getElementById('ct-'+targetId+'-crm');
+  const co=document.getElementById('co-'+targetId);
+  if(wa&&copyWA) wa.textContent=copyWA;
+  if(crm&&copyCRM) crm.textContent=copyCRM;
+  if(co) co.style.display='block';
+}
+
+function extractSection(text, sectionName){
+  const re=new RegExp('\\['+sectionName+'\\]\\s*([\\s\\S]*?)(?=\\[\\w|━|$)','i');
+  const m=text.match(re);
+  return m?m[1].trim():'';
+}
+
+function escHtml(s){
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Ouve respostas do Elucy vindas do G4 OS
+window.addEventListener('message',function(ev){
+  const d=ev.data;
+  if(!d||!d.type) return;
+  if(d.type==='g4os:elucy:analysis_result'&&d.target_id&&d.report){
+    if(d.deal_id) ELUCY_CACHE[d.deal_id]=d.report;
+    injectElucyReport(d.target_id, d.report);
+  }
+  if(d.type==='g4os:elucy:copy_result'&&d.target_id){
+    injectElucyCopy(d.target_id, d.copy_wa||d.copy, d.copy_crm||'');
+  }
+});
+
+function selectLiveDeal(id,d){
+  cur=id;
+  document.querySelectorAll('.di').forEach(x=>x.classList.remove('on'));
+  const di=document.getElementById('di-'+id);
+  if(di) di.classList.add('on');
+  document.getElementById('empty-state').style.display='none';
+  document.querySelectorAll('#screen-home > .screen').forEach(s=>s.classList.remove('on'));
+  // Remove previous live card if exists
+  const old=document.getElementById('deal-'+id);
+  if(old) old.remove();
+  // Build live card
+  const barClass=d.tc==='th'?'bf-h':d.tc==='tw'?'bf-w':'bf-c';
+  const tgvClass=d.tc==='th'?'tgv-h':d.tc==='tw'?'tgv-w':'tgv-c';
+  const tempSub=d.tc==='th'?'Quente — ação imediata':d.tc==='tw'?'Morno — reengajamento':'Frio — risco de perda';
+  const dealCard=document.createElement('div');
+  dealCard.className='screen on';
+  dealCard.id='deal-'+id;
+  dealCard.innerHTML=`
+    <div class="card">
+      <div class="dch">
+        <div class="dca">${(d.emailLead||d.nome)[0].toUpperCase()}</div>
+        <div class="dci">
+          <div class="dcn">${d.emailLead||d.nome}</div>
+          <div class="dcs">${d.cargo||'—'} · Deal ID: ${d.deal_id||'—'}</div>
+          <div class="tags-row">
+            <span class="tag t-gray">${d.tier||'—'}</span>
+            <span class="tag t-gray">${d.etapa||d.fase}</span>
+            ${d._signal==='BUY'?'<span class="tag t-buy">BUY</span>':d._signal==='RISK'?'<span class="tag t-risk">RISK</span>':d._signal==='STALL'?'<span class="tag t-stall">STALL</span>':d._signal==='CHAMP'?'<span class="tag t-champ">CHAMP</span>':d._signal==='DOME'?'<span class="tag t-stall">IRON DOME</span>':''}
+            ${(d._urgency||0)>=60?'<span class="tag t-risk">SLA RISCO</span>':''}
+          </div>
+        </div>
+      </div>
+      <div class="tg">
+        <div class="tg-row"><span class="tg-lbl">Temperatura do Deal</span><span class="tgv ${tgvClass}">${d.temp}</span></div>
+        <div class="bar"><div class="bf ${barClass}" style="width:${d.temp}%"></div></div>
+        <div class="tg-sub">${tempSub}</div>
+      </div>
+      <div class="info-grid">
+        <div class="ic"><div class="ic-l">Fase</div><div class="ic-v">${d.fase}</div><div class="ic-s">${d.delta} dias no CRM</div></div>
+        <div class="ic"><div class="ic-l">Canal</div><div class="ic-v">${d.canal}</div></div>
+        <div class="ic"><div class="ic-l">Dia FUP</div><div class="ic-v">${d.dd}</div></div>
+        <div class="ic"><div class="ic-l">Deal ID</div><div class="ic-v" style="font-size:11px">${d.deal_id||'—'}</div></div>
+      </div>
+      <div class="recom">
+        <div class="recom-l">Recomendação Elucy <span class="elucy-badge">MOTOR ATIVO</span></div>
+        <div class="recom-t" id="recom-${id}">${buildRecomText(d)}</div>
+      </div>
+      ${(d._urgency||0)>=60?`<div class="alrt al-d">SLA em risco — deal sem avanço por ${d._delta||d.delta||0} dias.</div>`:''}
+      ${d._signal==='DOME'?`<div class="alrt al-w">Iron Dome ativo — +10 dias sem resposta. Copy bloqueada até revisão manual.</div>`:''}
+      <div class="row">
+        <button class="btn bp" onclick="showCopy('${id}')">Gerar Copy via Elucy</button>
+        <button class="btn bs" onclick="toggleER('${id}')">Análise de Negócio</button>
+      </div>
+    </div>
+    <div class="er" id="er-${id}" style="display:none">
+      <div class="er-loading" style="display:none"></div>
+    </div>
+    <div class="dvl" id="dvl-${id}" style="display:none">
+      <div class="dvl-t">DVL Gate — Confirmar antes de gerar</div>
+      <div class="dvl-s">Dados do funil_comercial. Edite se necessário.</div>
+      <div class="dvl-g">
+        <div class="dvl-f"><div class="dvl-l">Nome</div><input class="dvl-i" value="${d.nome}"></div>
+        <div class="dvl-f"><div class="dvl-l">Empresa</div><input class="dvl-i" value="${d.empresa}"></div>
+        <div class="dvl-f"><div class="dvl-l">Fase</div><input class="dvl-i" value="${d.fase}"></div>
+        <div class="dvl-f"><div class="dvl-l">Canal</div><input class="dvl-i" value="${d.canal}"></div>
+        <div class="dvl-f"><div class="dvl-l">Dias no CRM</div><input class="dvl-i" value="${d.delta} dias"></div>
+        <div class="dvl-f"><div class="dvl-l">Deal ID</div><input class="dvl-i" value="${d.deal_id||'—'}"></div>
+      </div>
+      <div class="row">
+        <button class="btn bsuc" onclick="confirmDVL('${id}')">Confirmar e gerar copy</button>
+        <button class="btn bs btn-sm" onclick="document.getElementById('dvl-${id}').style.display='none'">Cancelar</button>
+      </div>
+    </div>
+    <div id="menu-${id}" style="display:none">
+      <div class="sec-t" style="margin-bottom:10px">Escolha o tipo de mensagem</div>
+      <div class="mo rec on" onclick="pickOpt('${id}',this)">
+        <div class="mo-top"><span class="mo-rb">Recomendado</span><span class="mo-t">${d.delta<=3?'FUP de Continuidade':d.delta<=7?'FUP de Acompanhamento':'FUP de Decisão'}</span></div>
+        <div class="mo-d">${d.delta<=3?'Manter temperatura do deal':d.delta<=7?'Acompanhar evolução':'Tensão de custo de inação — '+d.delta+' dias'}</div>
+      </div>
+      <div style="margin-top:12px"><button class="btn bs btn-sm" onclick="cancelMenu('${id}')">Cancelar</button></div>
+    </div>
+    <div class="co" id="co-${id}" style="display:none">
+      <div class="co-h"><span class="co-chan">Copy gerada</span>
+        <div class="co-tabs">
+          <button class="cotab on" onclick="swTab('${id}','wa',this)">WhatsApp</button>
+          <button class="cotab" onclick="swTab('${id}','crm',this)">Nota CRM</button>
+        </div>
+      </div>
+      <div class="co-b">
+        <div class="co-txt" id="ct-${id}-wa" contenteditable="true" spellcheck="false">${d.nome.split(' ')[0]},\n\nJá ${d.delta} dia${d.delta!==1?'s':''} desde o nosso último contato.\n\nEmpresas no mesmo estágio que a ${d.empresa} que postergaram a decisão perderam a janela deste trimestre — o custo não é o investimento, é o semestre inteiro.\n\nVocê quer avançar agora?\n\n${(localStorage.getItem('elucy_operator_email')||'').split('@')[0]}</div>
+        <div class="co-txt" id="ct-${id}-crm" contenteditable="true" spellcheck="false" style="display:none">[ELUCI NOTE] ${new Date().toLocaleDateString('pt-BR')}\n\nDeal ID: ${d.deal_id||id} | Fase: ${d.fase} | Temp: ${d.temp}/100\nCanal: ${d.canal} | Dia: ${d.dd} | Delta: ${d.delta} dias\n\nAção: FUP via ${d.canal}\nStatus: Aguardando resposta.</div>
+        <div class="copy-actions">
+          <button class="btn bs btn-sm" onclick="clip('ct-${id}-wa')">Copiar</button>
+          <button class="btn bs btn-sm" onclick="regenCopy('${id}')">Regenerar</button>
+          <button class="btn bs btn-sm" onclick="clip('ct-${id}-crm')">Copiar Nota</button>
+          <span style="margin-left:auto;font-size:10px;color:var(--text2)">Editavel</span>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('screen-home').appendChild(dealCard);
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
+  document.querySelector('.ntab').classList.add('on');
+  setScreen('home',null);
+}
+
+// ── RECOMENDAÇÃO DINÂMICA & COPY HELPERS ────────────────────────────
+
+function buildRecomText(d){
+  const sig=d._signal||calcSignal(d);
+  const canal=d.canal||'WhatsApp';
+  const delta=d._delta||d.delta||0;
+  const recomMap={
+    BUY: `Sinal de compra detectado. Execute FUP de fechamento agora via ${canal} — janela de 48h.`,
+    CHAMP: `Champion identificado. Reforce autoridade e agilize handoff para o closer.`,
+    RISK: `Risco de perda detectado. Mude de canal ou acione Reativação via Founder.`,
+    STALL: `Deal travado por ${delta} dias. Use Challenger Reframe para forçar posicionamento.`,
+    DOME: `Iron Dome ativo — ${delta} dias sem resposta. Revise estratégia antes de gerar copy.`
+  };
+  return recomMap[sig]||`${d.tl} (${d.temp}/100). Execute FUP via ${canal} agora.`;
+}
+
+function regenCopy(id){
+  const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
+  if(!deal) return;
+  const wa=document.getElementById('ct-'+id+'-wa');
+  if(wa){
+    wa.textContent='Elucy gerando nova variação…';
+    // Dispara para o motor Elucy via postMessage
+    requestElucyCopy(deal.deal_id||id, deal, id, deal.canal||'WhatsApp');
+  }
+  showSyncToast('ok','Regenerando copy via motor Elucy…');
+}
+
+// ── QUICK ACTIONS ────────────────────────────────────────────────────
+
+function quickFUP(id){
+  const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
+  if(!deal) return;
+  selectLiveDeal(id,deal);
+  setTimeout(()=>{
+    const dvl=document.getElementById('dvl-'+id);
+    if(dvl){dvl.style.display='block';dvl.scrollIntoView({behavior:'smooth',block:'start'});}
+  },200);
+}
+
+function quickNote(id){
+  const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
+  if(!deal) return;
+  selectLiveDeal(id,deal);
+  setTimeout(()=>{
+    const co=document.getElementById('co-'+id);
+    const crm=document.getElementById('ct-'+id+'-crm');
+    const wa=document.getElementById('ct-'+id+'-wa');
+    if(co){
+      co.style.display='block';
+      // Mostra aba CRM
+      co.querySelectorAll('.cotab').forEach(t=>t.classList.remove('on'));
+      const crmTab=co.querySelector('.cotab:last-child');
+      if(crmTab) crmTab.classList.add('on');
+      if(wa) wa.style.display='none';
+      if(crm) crm.style.display='block';
+      co.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+  },200);
+}
+
+function showSyncToast(type,msg){
+  const old=document.getElementById('sync-toast');
+  if(old) old.remove();
+  const t=document.createElement('div');
+  t.id='sync-toast';
+  t.style.cssText='position:fixed;bottom:20px;right:20px;z-index:200;padding:10px 15px;border-radius:8px;font-size:12px;font-weight:600;max-width:320px;line-height:1.5;animation:fadeIn .2s ease';
+  if(type==='ok') t.style.cssText+='background:rgba(34,197,94,.15);border:1px solid #22c55e;color:#22c55e';
+  else t.style.cssText+='background:rgba(239,68,68,.15);border:1px solid #ef4444;color:#ef4444';
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),5000);
+}
+</script>
+</body>
+</html>
