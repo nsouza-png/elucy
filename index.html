@@ -2351,7 +2351,30 @@ function openSettings(){
         <button class="btn bp btn-sm" style="margin-top:8px" onclick="cfgSaveOperator()">Salvar operador</button>
       </div>
 
-      <!-- SEÇÃO 3: Sessão -->
+      <!-- SEÇÃO 3: Conexão G4 OS (Bridge Local) -->
+      <div class="cfg-section">
+        <div class="cfg-section-title">
+          <span class="cfg-dot ${localStorage.getItem('elucy_bridge_active')==='true'?'cfg-dot-ok':'cfg-dot-warn'}" id="cfg-bridge-dot"></span>
+          Conexão G4 OS
+        </div>
+        <div class="cfg-section-sub" id="cfg-bridge-sub">${localStorage.getItem('elucy_bridge_active')==='true'?'Bridge conectado — análises rodam no seu G4 OS local':'Não configurado — análises rodam no worker central'}</div>
+        <div class="modal-note" style="margin-top:8px;line-height:1.5">
+          O Bridge conecta o Cockpit ao G4 OS instalado no seu computador. Com ele, análises e copies são processadas pelo LLM local — mais rápido e sem fila.
+        </div>
+        <div class="modal-f" style="margin-top:10px">
+          <label class="modal-l">Código de conexão do G4 OS</label>
+          <input class="modal-i" id="cfg-bridge-key" type="text" placeholder="BRIDGE-..." value="${localStorage.getItem('elucy_bridge_key')||''}" autocomplete="off" style="font-family:monospace;font-size:12px">
+        </div>
+        <div class="modal-note">Cole o código gerado pelo G4 OS. Rode no G4 OS: "Configurar Elucy Bridge"</div>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+          <button class="btn bp btn-sm" onclick="cfgSaveBridge()">Conectar</button>
+          <button class="btn bs btn-sm" onclick="cfgTestBridge()">Testar conexão</button>
+          ${localStorage.getItem('elucy_bridge_key')?'<button class="btn bs btn-sm" onclick="cfgClearBridge()" style="color:var(--red,#f87171)">Desconectar</button>':''}
+        </div>
+        <div id="cfg-bridge-status" style="min-height:20px;margin-top:6px"></div>
+      </div>
+
+      <!-- SEÇÃO 4: Sessão -->
       <div class="cfg-section" style="border-bottom:none;padding-bottom:0">
         <div class="cfg-section-title">
           <span class="cfg-dot cfg-dot-gray"></span>
@@ -2450,6 +2473,77 @@ function cfgClearCache(){
 function cfgLogout(){
   closeSettings();
   supabaseSignOut();
+}
+
+// ── BRIDGE G4 OS — Conexão local ──────────────────────────────────
+function _cfgBridgeStatus(type,msg){
+  const el=document.getElementById('cfg-bridge-status');
+  if(!el) return;
+  const color=type==='ok'?'var(--green,#22c55e)':type==='err'?'var(--red,#f87171)':'var(--text2)';
+  el.innerHTML='<div style="font-size:11px;color:'+color+';padding:2px 0">'+msg+'</div>';
+}
+
+function cfgSaveBridge(){
+  const inp=document.getElementById('cfg-bridge-key');
+  const val=(inp?inp.value:'').trim();
+  if(!val||!val.startsWith('BRIDGE-')){_cfgBridgeStatus('err','Código inválido — deve começar com BRIDGE-');return;}
+  if(val.length<20){_cfgBridgeStatus('err','Código muito curto');return;}
+  localStorage.setItem('elucy_bridge_key',val);
+  localStorage.setItem('elucy_bridge_active','true');
+  _cfgBridgeStatus('ok','Bridge conectado! Testando...');
+  // Atualizar indicadores visuais
+  const dot=document.getElementById('cfg-bridge-dot');
+  const sub=document.getElementById('cfg-bridge-sub');
+  if(dot){dot.className='cfg-dot cfg-dot-ok';}
+  if(sub){sub.textContent='Bridge conectado — análises rodam no seu G4 OS local';}
+  // Auto-testar
+  setTimeout(cfgTestBridge,500);
+}
+
+async function cfgTestBridge(){
+  const key=localStorage.getItem('elucy_bridge_key');
+  if(!key){_cfgBridgeStatus('err','Nenhum bridge configurado');return;}
+  _cfgBridgeStatus('','Testando conexão...');
+  const sb=getSB();
+  if(!sb){_cfgBridgeStatus('err','Supabase offline');return;}
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){_cfgBridgeStatus('err','Faça login primeiro');return;}
+  try{
+    // Insere um request de tipo "ping"
+    const {data:req,error}=await sb.from('cockpit_requests')
+      .insert({operator_id:session.user.id,deal_id:'ping-test',request_type:'ping',status:'pending',deal_data:{bridge_key:key,test:true}})
+      .select('id').single();
+    if(error){_cfgBridgeStatus('err','Erro: '+error.message);return;}
+    // Espera até 30s por resposta
+    const reqId=req.id;
+    let found=false;
+    for(let i=0;i<6;i++){
+      await new Promise(r=>setTimeout(r,5000));
+      const {data}=await sb.from('cockpit_responses').select('output').eq('request_id',reqId).maybeSingle();
+      if(data&&data.output){found=true;break;}
+    }
+    if(found){
+      _cfgBridgeStatus('ok','Bridge ativo — G4 OS respondeu em <30s');
+    } else {
+      _cfgBridgeStatus('err','G4 OS não respondeu em 30s. Verifique se o worker está rodando.');
+      localStorage.setItem('elucy_bridge_active','false');
+    }
+    // Limpa o ping test
+    sb.from('cockpit_requests').delete().eq('id',reqId).then(()=>{});
+    sb.from('cockpit_responses').delete().eq('request_id',reqId).then(()=>{});
+  }catch(e){
+    _cfgBridgeStatus('err','Erro no teste: '+e.message);
+  }
+}
+
+function cfgClearBridge(){
+  localStorage.removeItem('elucy_bridge_key');
+  localStorage.removeItem('elucy_bridge_active');
+  _cfgBridgeStatus('ok','Bridge desconectado.');
+  const dot=document.getElementById('cfg-bridge-dot');
+  const sub=document.getElementById('cfg-bridge-sub');
+  if(dot){dot.className='cfg-dot cfg-dot-warn';}
+  if(sub){sub.textContent='Não configurado — análises rodam no worker central';}
 }
 
 function showModalStatus(type,msg){
@@ -2957,8 +3051,8 @@ const ELUCY_LOADING_STATE={};
 function _setElucyLoadingState(reportEl, state, extra){
   const states={
     inserting:  {icon:'⏳', label:'Enviando para o motor Elucy…',   sub:'Gravando request no Supabase'},
-    waiting:    {icon:'🔄', label:'Aguardando o Worker G4 OS…',     sub:'Processando com 26 MCPs + Databricks. Max ~2 min.'},
-    processing: {icon:'⚡', label:'Elucy analisando o deal…',        sub:'Carregando contexto + gerando ELUCI REPORT'},
+    waiting:    {icon:'🔄', label:localStorage.getItem('elucy_bridge_active')==='true'?'Processando no seu G4 OS…':'Aguardando o Worker G4 OS…', sub:localStorage.getItem('elucy_bridge_active')==='true'?'Bridge local ativo — processando com LLM local':'Processando com 26 MCPs + Databricks. Max ~2 min.'},
+    processing: {icon:'⚡', label:'Elucy analisando o deal…',        sub:localStorage.getItem('elucy_bridge_active')==='true'?'LLM local gerando ELUCI REPORT':'Carregando contexto + gerando ELUCI REPORT'},
     done:       {icon:'✅', label:'Análise recebida',                sub:'Renderizando ELUCI REPORT…'},
     error:      {icon:'⚠',  label:'Erro no processamento',          sub: extra||'Tente novamente'},
   };
