@@ -1167,7 +1167,7 @@ function buildPipelineQuery(qualificadorName){
   CAST(COALESCE(p.pa_cliente, false) AS STRING) AS p_pa_cliente,
   COALESCE(p.primeiro_produto, '') AS p_primeiro_produto,
   COALESCE(p.ultimo_produto, '') AS p_ultimo_produto,
-  COALESCE(p.produtos_comprados, '') AS p_produtos_comprados,
+  COALESCE(CAST(p.produtos_comprados AS STRING), '') AS p_produtos_comprados,
   COALESCE(CAST(p.data_primeira_compra AS STRING), '') AS p_data_primeira_compra,
   COALESCE(CAST(p.data_ultima_compra AS STRING), '') AS p_data_ultima_compra,
   CAST(COALESCE(p.comprou_scale, false) AS STRING) AS p_comprou_scale,
