@@ -887,6 +887,13 @@ document.addEventListener('DOMContentLoaded',()=>{
       const{data,error}=await sb.auth.signUp({email,password:pass});
       setAuthLoading(false);
       if(error){showAuthErr(error.message);return;}
+      // Se email confirmation está ativo, user.identities vem vazio — avisa
+      if(data&&data.user&&data.user.identities&&data.user.identities.length===0){
+        showAuthErr('Conta já existe. Use "Entrar" com sua senha.');return;
+      }
+      if(data&&data.user&&!data.user.email_confirmed_at&&data.session===null){
+        showAuthErr('Conta criada! Verifique seu e-mail para confirmar antes de entrar. (Ou peça ao admin para desativar confirmação de e-mail no Supabase.)');return;
+      }
       if(data&&data.user) checkApproval(data.user);
     });
 
