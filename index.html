@@ -942,7 +942,7 @@ async function callSyncDeals(){
   if(_syncInProgress) return;
   const sb=getSB(); if(!sb) return;
   const {data:{session}}=await sb.auth.getSession();
-  if(!session) return; // não logado, ignora
+  if(!session) return;
   _syncInProgress=true;
   showSyncToast('load','Sincronizando pipeline...');
   try{
@@ -959,7 +959,6 @@ async function callSyncDeals(){
       return;
     }
     _lastSyncAt=Date.now();
-    // Recarrega deals do Supabase após sync
     await loadDealsFromSupabase(session.user.email);
     const el=document.getElementById('sbdate');
     const now=new Date();
@@ -1102,7 +1101,6 @@ function refreshPipeline(){
   if(window.IS_REMOTE){
     callSyncDeals();
   } else {
-    // Modo local: delega ao G4 OS via postMessage
     try{ window.parent.postMessage({type:'g4os:skill:run',skill:'atualizar-cockpit'},'*'); }catch(e){}
     window.postMessage({type:'g4os:skill:run',skill:'atualizar-cockpit'},'*');
   }
@@ -1547,15 +1545,19 @@ function injectElucyReport(targetId, report){
   if(!reportEl) return;
   // Detecta seções canônicas do ELUCI REPORT e renderiza
   const context=extractSection(report,'ELUCI CONTEXT');
+  const diagnostic=extractSection(report,'DIAGNOSTIC CORE');
   const directive=extractSection(report,'STRATEGIC DIRECTIVE');
   const nba=extractSection(report,'NEXT BEST ACTION');
-  const verdict=extractSection(report,'ELUCI VERDICT');
+  const bench=extractSection(report,'BENCHMARK CANAL');
   const gov=extractSection(report,'GOVERNANCE FLAGS');
+  const verdict=extractSection(report,'ELUCI VERDICT');
   reportEl.innerHTML=`
     <div class="er-h"><span class="er-badge">ELUCI REPORT</span><span class="er-htitle">Deal Analisado pelo Motor Elucy</span><span class="er-dqi elucy-live">LIVE</span></div>
     ${context?`<div class="er-b"><div class="er-bl">ELUCI CONTEXT</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(context)}</pre></div></div>`:''}
+    ${diagnostic?`<div class="er-b"><div class="er-bl">DIAGNOSTIC CORE</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(diagnostic)}</pre></div></div>`:''}
     ${directive?`<div class="er-b"><div class="er-bl">STRATEGIC DIRECTIVE</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(directive)}</pre></div></div>`:''}
     ${nba?`<div class="er-b"><div class="er-bl">NEXT BEST ACTION</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(nba)}</pre></div></div>`:''}
+    ${bench?`<div class="er-b" style="border-left:3px solid var(--blue)"><div class="er-bl" style="color:var(--blue)">BENCHMARK CANAL</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(bench)}</pre></div></div>`:''}
     ${gov?`<div class="er-b"><div class="er-bl">GOVERNANCE FLAGS</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(gov)}</pre></div></div>`:''}
     ${verdict?`<div class="er-v"><div class="ev-s">V</div><div class="ev-t"><strong>ELUCI VERDICT</strong><br>${escHtml(verdict)}</div></div>`:''}
     ${!context&&!directive?`<div class="er-b"><div class="er-bl">ANÁLISE COMPLETA</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(report)}</pre></div></div>`:''}
