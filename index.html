@@ -1616,6 +1616,76 @@ async function _callElucyCloud(deal_id, dealData, mode, canal){
   }catch(e){ return null; }
 }
 
+// Benchmarks + Brandbook G4 comprimidos — viajam em cada postMessage
+// Garante profundidade total independente dos MCPs instalados no G4 OS do SDR
+const _BENCH_COMPACT=`BENCHMARKS G4 2025 (utm_medium→canal, tier→perfil: diamond=A/B, gold=C/D, silver=E/F, bronze=G+):
+[IM Chat] geral: MQL→Won 5,7% | ticket R$18.500 | SAL→Won 6,5%
+[IG Tallis] A:14,6%/R$49k | B:15,7%/R$60k | C:8,4%/R$20k | geral:7,2%/R$26k
+[IG G4] A:8,7%/R$44k | B:9,0%/R$37k | C:6,6%/R$22k | geral:5,8%/R$22k
+[IG Alfredo] A:9,0%/R$34k | B:6,7%/R$108k | C:5,7%/R$25k | geral:6,5%/R$30k
+[IG Nardon] A:8,7%/R$43k | C:5,0%/R$21k | geral:5,5%/R$22k
+POSICAO: ACIMA(revenue>ticket medio) | NA_MEDIA(+-20%) | ABAIXO(<80%) | OUTLIER(>2x ticket)
+VELOCIDADE: SAL>7d Instagram=pressao; Negociacao>14d=-40% prob fechamento
+
+BRANDBOOK G4 Mar/2026 — TOM OBRIGATORIO EM TODO OUTPUT:
+PERSONALIDADE: Inconformado+Construtor+Rigoroso+Grandioso (4 arquetipos simultaneos)
+MANDAMENTOS: verbos de comando | trincas (Decida.Execute.Corrija.) | negacao inicial | precisao brutal
+PROIBIDO: amortecedores (talvez/acho que/poderia/um pouco) | adjetivos suavizadores (desafiador/complexo)
+CERTO: "O processo nao funciona." | "Ninguem entendeu." | "Nao esta bom." | "Nao. Nos vamos melhorar."
+ERRADO: "Poderia melhorar." | "Ha espaco para crescer." | "Esta um pouco desafiador."
+NOMENCLATURA: sempre "o G4" (masculino) — NUNCA "a G4"
+FOUNDER TOM: TALLIS=confrontacional/caixa-baixa | NARDON=racional/cirurgico | ALFREDO=energia/execucao`;
+
+// Monta prompt rico com contexto completo — garante profundidade mesmo sem MCPs locais
+function _buildAnalyzePrompt(deal_id, d){
+  const fase=d[1]||d.fase_atual_no_processo||'?';
+  const tier=d[3]||d.tier_da_oportunidade||'?';
+  const delta=d[4]||d.delta_t||'?';
+  const produto=d[7]||d.linha_de_receita_vigente||d[8]||d.grupo_de_receita||'?';
+  const canal=d[14]||d.utm_medium||'?';
+  const revenue=d.revenue||'?';
+  const cargo=d[11]||d.cargo||'?';
+  const fase_ant=d[1]||d.fase_anterior_no_processo||'?';
+  return `[COCKPIT→ELUCY] ANALYSIS_MODE — deal_id: ${deal_id}
+
+DADOS DO DEAL:
+- Fase atual: ${fase} | Fase anterior: ${fase_ant}
+- Tier: ${tier} | Delta-T: ${delta}d | Revenue projetado: R$${revenue}
+- Produto: ${produto} | Canal (utm_medium): ${canal}
+- Cargo/Perfil: ${cargo}
+
+${_BENCH_COMPACT}
+
+OUTPUT OBRIGATÓRIO — use exatamente estas seções:
+[ELUCI CONTEXT] situação atual do deal em 2 linhas
+[DIAGNOSTIC CORE] diagnóstico SPICED/Challenger/SPIN conforme tier e canal — 3-5 bullets
+[STRATEGIC DIRECTIVE] diretiva estratégica — o que fazer agora
+[NEXT BEST ACTION] próxima ação exata: canal + tom + timing
+[BENCHMARK CANAL] posição do deal vs. benchmark ${canal} perfil ${tier} — ACIMA/NA_MEDIA/ABAIXO/OUTLIER + dado numérico
+[GOVERNANCE FLAGS] kill switches ativos se houver (Tier2+Imersão, MEI+Authority, etc)
+[ELUCI VERDICT] score DQI 0-10 + veredito em 1 frase`;
+}
+
+function _buildCopyPrompt(deal_id, d, canal){
+  const fase=d[1]||d.fase_atual_no_processo||'?';
+  const tier=d[3]||d.tier_da_oportunidade||'?';
+  const produto=d[7]||d.linha_de_receita_vigente||d[8]||'?';
+  const utm=d[14]||d.utm_medium||'';
+  return `[COCKPIT→ELUCY] COPY_MODE — deal_id: ${deal_id} — canal: ${canal}
+
+DEAL: fase=${fase} | tier=${tier} | produto=${produto} | utm=${utm}
+
+GERAR:
+1. Copy ${canal} (WhatsApp/Instagram): máx 3 linhas, tensão de custo de inação, PROIBIDO mencionar G4/produto/preço/call anterior
+2. Nota CRM: fato + próximo passo + data
+
+Formato de resposta:
+[COPY_WA]
+<mensagem>
+[COPY_CRM]
+<nota>`;
+}
+
 function requestElucyAnalysis(deal_id, dealData, targetId){
   if(ELUCY_CACHE[deal_id]){
     injectElucyReport(targetId, ELUCY_CACHE[deal_id]);
@@ -1627,38 +1697,28 @@ function requestElucyAnalysis(deal_id, dealData, targetId){
     reportEl.style.display='block';
   }
   if(_isStandalone()){
-    // Standalone no browser (sem G4 OS): chama Edge Function — requer ANTHROPIC_API_KEY no Supabase
-    _callElucyCloud(deal_id, dealData, 'analyze', null).then(data=>{
-      if(data&&data.report){
-        ELUCY_CACHE[deal_id]=data.report;
-        injectElucyReport(targetId, data.report);
-      } else {
-        if(reportEl) reportEl.innerHTML='<div class="er-b"><div class="er-bl">ELUCY</div><div class="er-bt" style="color:var(--red);font-size:11px">Falha na analise. Tente novamente.</div></div>';
-      }
-    });
-  } else {
-    // G4 OS disponível (local ou iframe): postMessage — zero custo Anthropic
-    const payload={type:'g4os:elucy:analyze',deal_id,deal_data:dealData,target_id:targetId,prompt:`analise ${deal_id}`};
-    try{ window.parent.postMessage(payload,'*'); }catch(e){}
-    window.postMessage(payload,'*');
+    if(reportEl) reportEl.innerHTML='<div class="er-b"><div class="er-bl">ELUCY</div><div class="er-bt" style="color:var(--yellow);font-size:12px">⚠ Abra o Cockpit dentro do G4 OS para ativar o Elucy.<br><span style="color:var(--text2);font-size:11px">Análises requerem G4 OS conectado.</span></div></div>';
+    return;
   }
+  // G4 OS disponível: envia prompt rico — profundidade total independente dos MCPs locais
+  const prompt=_buildAnalyzePrompt(deal_id, dealData);
+  const payload={type:'g4os:elucy:analyze',deal_id,deal_data:dealData,target_id:targetId,prompt};
+  try{ window.parent.postMessage(payload,'*'); }catch(e){}
+  window.postMessage(payload,'*');
 }
 
 function requestElucyCopy(deal_id, dealData, targetId, canal){
   const wa=document.getElementById('ct-'+targetId+'-wa');
   if(wa) wa.textContent='Elucy gerando copy…';
   if(_isStandalone()){
-    // Standalone no browser (sem G4 OS): Edge Function
-    _callElucyCloud(deal_id, dealData, 'copy', canal||'WhatsApp').then(data=>{
-      if(data) injectElucyCopy(targetId, data.copy_wa||data.report, data.copy_crm||'');
-      else if(wa) wa.textContent='Falha ao gerar copy. Tente novamente.';
-    });
-  } else {
-    // G4 OS disponível: postMessage — zero custo
-    const payload={type:'g4os:elucy:copy',deal_id,deal_data:dealData,target_id:targetId,canal:canal||'WhatsApp',prompt:`proxima mensagem — deal_id ${deal_id} — canal ${canal||'WhatsApp'}`};
-    try{ window.parent.postMessage(payload,'*'); }catch(e){}
-    window.postMessage(payload,'*');
+    if(wa) wa.textContent='⚠ Abra o Cockpit dentro do G4 OS para gerar copies.';
+    return;
   }
+  // G4 OS disponível: prompt estruturado com contexto do deal + canal
+  const prompt=_buildCopyPrompt(deal_id, dealData, canal||'WhatsApp');
+  const payload={type:'g4os:elucy:copy',deal_id,deal_data:dealData,target_id:targetId,canal:canal||'WhatsApp',prompt};
+  try{ window.parent.postMessage(payload,'*'); }catch(e){}
+  window.postMessage(payload,'*');
 }
 
 function injectElucyReport(targetId, report){
