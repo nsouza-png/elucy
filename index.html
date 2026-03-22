@@ -8,29 +8,26 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <!-- cockpit-data.js carregado após auth, apenas em ambiente local G4 OS -->
 <script>
-// Detecta se tem G4 OS como parent (iframe dentro do G4 OS)
-// Se sim: usa postMessage independente do hostname (GitHub Pages, qualquer URL)
-// Se não: standalone no browser = IS_REMOTE = true (precisaria de Edge Function)
-window._G4OS_PARENT = false;
-try {
-  // Se parent é diferente de window, está em iframe
-  // Envia ping — G4 OS responde confirmando presença
-  if(window.parent && window.parent !== window){
-    window.parent.postMessage({type:'g4os:ping',from:'elucy-cockpit'},'*');
-    window._G4OS_PARENT = true; // otimista — assume G4 OS até prova contrária
-  }
-} catch(e) { window._G4OS_PARENT = false; }
+// ── DETECÇÃO G4 OS — via contextBridge Electron ───────────────────────────
+// O G4 OS expõe window.browserToolbar via preload em toda webview do browser integrado.
+// Essa é a assinatura confiável — funciona em Electron app, não depende de iframe/parent.
+function _detectG4OS(){
+  // Electron app: window.browserToolbar injetado pelo preload do G4 OS
+  if(typeof window.browserToolbar !== 'undefined') return true;
+  // Fallback: local direto (file: ou localhost)
+  if(location.protocol === 'file:') return true;
+  if(location.hostname === 'localhost' || location.hostname === '127.0.0.1') return true;
+  // iframe (caso futuro de embed): parent diferente
+  try{ if(window.parent && window.parent !== window) return true; }catch(e){}
+  return false;
+}
 
-// IS_REMOTE = true apenas quando NÃO há G4 OS como host
-window.IS_REMOTE = !window._G4OS_PARENT &&
-  location.hostname !== '' &&
-  !location.hostname.includes('localhost') &&
-  !location.hostname.includes('127.0.0.1') &&
-  location.protocol !== 'file:';
+window._G4OS_PARENT = _detectG4OS();
+// IS_REMOTE = está no browser comum, sem G4 OS
+window.IS_REMOTE = !window._G4OS_PARENT;
 
 // ── G4 OS CONNECTION INDICATOR ────────────────────────────────────────────
 function _setG4Status(state, label){
-  // state: 'connecting' | 'connected' | 'offline'
   window._g4osState = state;
   var el=document.getElementById('g4os-indicator');
   var lb=document.getElementById('g4os-label');
@@ -38,53 +35,33 @@ function _setG4Status(state, label){
   el.className='g4os-status '+state;
   lb.textContent=label;
   el.title = state==='connected'
-    ? 'G4 OS conectado — análises via motor local (zero custo)'
-    : state==='offline'
-    ? 'G4 OS não detectado — abra o Cockpit dentro do G4 OS'
-    : 'Aguardando G4 OS…';
+    ? 'G4 OS conectado — Elucy ativo, zero custo'
+    : 'Abra no G4 OS para ativar o Elucy';
 }
 
-// Tenta pong ao carregar — aguarda 2s; se não vier, marca offline
-window._g4osTimeout = setTimeout(function(){
-  if(!window._G4OS_PARENT){
-    _setG4Status('offline','G4 OS offline');
-  }
-}, 2000);
-
-// Ouve pong do G4 OS para confirmar (e atualiza flag se necessário)
-window.addEventListener('message', function(e){
-  if(e.data && e.data.type === 'g4os:pong'){
-    window._G4OS_PARENT = true;
-    window.IS_REMOTE = false;
-    clearTimeout(window._g4osTimeout);
-    _setG4Status('connected','G4 OS ativo');
-  }
-  // Heartbeat contínuo: G4 OS pode mandar pings periódicos
-  if(e.data && e.data.type === 'g4os:heartbeat'){
-    window._G4OS_PARENT = true;
-    window.IS_REMOTE = false;
-    _setG4Status('connected','G4 OS ativo');
-  }
-});
-
-// Aplica estado inicial logo que o DOM estiver pronto
+// Aplica estado imediatamente — sem timeout, sem handshake
 document.addEventListener('DOMContentLoaded', function(){
   if(window._G4OS_PARENT){
     _setG4Status('connected','G4 OS ativo');
-  } else if(!window.IS_REMOTE){
-    // local (file: ou localhost) — G4 OS presumido presente
-    _setG4Status('connected','G4 OS local');
   } else {
-    _setG4Status('connecting','G4 OS…');
-    // Reenvia ping caso o G4 OS carregue o iframe depois
-    try{ window.parent.postMessage({type:'g4os:ping',from:'elucy-cockpit'},'*'); }catch(e){}
+    _setG4Status('offline','G4 OS offline');
+  }
+});
+
+// Listener de postMessage mantido para compatibilidade futura
+window.addEventListener('message', function(e){
+  if(!e.data) return;
+  if(e.data.type === 'g4os:pong' || e.data.type === 'g4os:heartbeat'){
+    window._G4OS_PARENT = true;
+    window.IS_REMOTE = false;
+    _setG4Status('connected','G4 OS ativo');
   }
 });
 </script>
 <script>
-// cockpit-data.js: carrega se local (file: / localhost) OU se G4 OS parent detectado
-// No GitHub Pages standalone (sem G4 OS), não existe cockpit-data.js — dados vêm do Supabase
-if(location.protocol === 'file:' || location.hostname.includes('localhost') || location.hostname.includes('127.0.0.1') || window._G4OS_PARENT){
+// cockpit-data.js: carrega apenas se G4 OS detectado (Electron app ou local)
+// No browser standalone, dados vêm exclusivamente do Supabase
+if(window._G4OS_PARENT){
   const s=document.createElement('script');
   s.src='cockpit-data.js';
   document.head.appendChild(s);
