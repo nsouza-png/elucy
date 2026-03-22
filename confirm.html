@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Confirmando acesso — Elucy Cockpit</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0f;--bg2:#12121a;--border:#2a2a3d;--accent:#6c63ff;--accent2:#8b85ff;--adim:rgba(108,99,255,.13);--green:#22c55e;--gdim:rgba(34,197,94,.13);--red:#ef4444;--rdim:rgba(239,68,68,.13);--text:#e2e2f0;--text2:#9090b0}
+body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;height:100vh;display:flex;align-items:center;justify-content:center}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:48px 40px;max-width:400px;width:90%;text-align:center}
+.logo{font-size:22px;font-weight:900;color:var(--accent2);margin-bottom:28px}.logo em{color:var(--text2);font-style:normal;font-weight:400}
+.icon{font-size:44px;margin-bottom:16px}
+.title{font-size:18px;font-weight:700;margin-bottom:8px}
+.msg{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:24px}
+.badge{display:inline-block;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:700;margin-bottom:24px}
+.badge-ok{background:var(--gdim);border:1px solid var(--green);color:var(--green)}
+.badge-wait{background:var(--adim);border:1px solid var(--accent);color:var(--accent2)}
+.badge-err{background:var(--rdim);border:1px solid var(--red);color:var(--red)}
+.btn{display:inline-block;padding:12px 28px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;transition:.15s;font-family:inherit}
+.btn:hover{background:var(--accent2)}
+.spin{width:36px;height:36px;border:3px solid rgba(108,99,255,.2);border-top-color:var(--accent2);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 20px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">Elucy <em>Cockpit</em></div>
+  <div id="content">
+    <div class="spin"></div>
+    <div class="title">Confirmando seu acesso…</div>
+    <div class="msg">Aguarde um instante.</div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL='https://tnbbsjvzwleeoqnxtafp.supabase.co';
+const SUPABASE_ANON='sb_publishable_bh1m8U-gNbrBtA9WSCDWrA_V-RXZU15';
+const SB_SCHEMA={'Accept-Profile':'public','Content-Profile':'public'};
+const COCKPIT_URL='https://nsouza-png.github.io/elucy/';
+
+function render(icon, title, msg, badgeClass, badgeText, showBtn){
+  document.getElementById('content').innerHTML=`
+    <div class="icon">${icon}</div>
+    <div class="title">${title}</div>
+    <div class="msg">${msg}</div>
+    <div class="badge ${badgeClass}">${badgeText}</div>
+    ${showBtn?`<br><a class="btn" href="${COCKPIT_URL}">Abrir o Cockpit</a>`:''}
+  `;
+}
+
+async function handleConfirm(){
+  // Supabase envia o token no hash (#access_token=...&type=signup ou type=recovery)
+  const hash=window.location.hash.substring(1);
+  const params=new URLSearchParams(hash);
+  const accessToken=params.get('access_token');
+  const refreshToken=params.get('refresh_token');
+  const type=params.get('type'); // signup | recovery | magiclink
+
+  if(!accessToken){
+    render('❌','Link inválido','Este link de confirmação não é válido ou já foi usado.','badge-err','INVÁLIDO',false);
+    return;
+  }
+
+  const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON,{
+    db:{schema:'public'},
+    global:{headers:SB_SCHEMA}
+  });
+
+  // Seta a sessão com os tokens do link
+  const {data,error}=await sb.auth.setSession({access_token:accessToken,refresh_token:refreshToken});
+  if(error||!data||!data.user){
+    render('❌','Erro ao confirmar','Não foi possível validar seu acesso. Tente criar a conta novamente.','badge-err','ERRO',false);
+    return;
+  }
+
+  const user=data.user;
+
+  // Verifica aprovação na tabela operators
+  const {data:op}=await sb.from('operators').select('approved').eq('email',user.email).maybeSingle();
+
+  if(op&&op.approved){
+    // Aprovado — redireciona para o cockpit
+    render('✅','E-mail confirmado!',`Bem-vindo, ${user.email.split('@')[0]}. Seu acesso está liberado.`,'badge-ok','APROVADO',true);
+    setTimeout(()=>{ window.location.href=COCKPIT_URL; }, 2000);
+  } else {
+    // Registra na fila se ainda não existe
+    const nome=user.email.split('@')[0];
+    await sb.from('operators').upsert(
+      {email:user.email,name:nome,qualificador_name:nome,role:'sdr',approved:false},
+      {onConflict:'email',ignoreDuplicates:true}
+    );
+    render('⏳','Conta confirmada — acesso pendente',
+      'Seu e-mail foi verificado com sucesso.<br>Seu cadastro está na fila de aprovação. O administrador irá liberar em breve.',
+      'badge-wait','AGUARDANDO APROVAÇÃO',false);
+  }
+}
+
+handleConfirm();
+</script>
+</body>
+</html>
