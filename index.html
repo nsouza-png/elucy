@@ -1681,6 +1681,50 @@ function applyFilters(){
 
 function filterDeals(q){applyFilters();}
 
+// ── BENCHMARK DATABRICKS — dados reais para Intelligence ──
+let _benchData=null;
+let _benchLoading=false;
+
+function loadBenchmarkData(cb){
+  if(_benchData){ cb(_benchData); return; }
+  if(_benchLoading) return;
+  _benchLoading=true;
+  const token=localStorage.getItem('elucy_db_token');
+  if(!token){ _benchLoading=false; cb(null); return; }
+  const ano=new Date().getFullYear();
+  // Query 1: delta por transição × linha (top canais SDR)
+  const q1=`SELECT linha_de_receita_vigente as linha, fase_anterior_no_processo as de, fase_atual_no_processo as para, COUNT(*) as qtd, ROUND(AVG(delta_t),1) as avg_delta FROM production.diamond.funil_comercial WHERE delta_t IS NOT NULL AND delta_t > 0 AND YEAR(event_timestamp) >= ${ano} AND fase_anterior_no_processo IN ('SAL','Conectado','Agendado') AND fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') AND linha_de_receita_vigente IS NOT NULL AND linha_de_receita_vigente != '' GROUP BY linha_de_receita_vigente, fase_anterior_no_processo, fase_atual_no_processo HAVING COUNT(*) >= 5 ORDER BY linha_de_receita_vigente, qtd DESC`;
+  // Query 2: conversão + ticket por linha × perfil
+  const q2=`SELECT linha_de_receita_vigente as linha, perfil, COUNT(DISTINCT deal_id) as deals, SUM(CASE WHEN fase_atual_no_processo='Ganho' THEN 1 ELSE 0 END) as won, ROUND(SUM(CASE WHEN fase_atual_no_processo='Ganho' THEN 1 ELSE 0 END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) as conv, ROUND(AVG(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue END),0) as ticket FROM production.diamond.funil_comercial WHERE YEAR(event_timestamp) >= ${ano} AND perfil IS NOT NULL AND perfil != '' AND linha_de_receita_vigente IS NOT NULL AND linha_de_receita_vigente != '' GROUP BY linha_de_receita_vigente, perfil HAVING COUNT(DISTINCT deal_id) >= 20 ORDER BY deals DESC LIMIT 50`;
+  const hdrs={'x-db-token':token,'apikey':SUPABASE_ANON,'Content-Type':'application/json'};
+  Promise.all([
+    fetch(DB_ENDPOINT,{method:'POST',headers:hdrs,body:JSON.stringify({statement:q1,warehouse_id:DB_WAREHOUSE,wait_timeout:'30s',on_wait_timeout:'CONTINUE'})}).then(r=>r.json()),
+    fetch(DB_ENDPOINT,{method:'POST',headers:hdrs,body:JSON.stringify({statement:q2,warehouse_id:DB_WAREHOUSE,wait_timeout:'30s',on_wait_timeout:'CONTINUE'})}).then(r=>r.json())
+  ]).then(([r1,r2])=>{
+    _benchLoading=false;
+    const rows1=(r1.result&&r1.result.data_array)||[];
+    const rows2=(r2.result&&r2.result.data_array)||[];
+    if(!rows1.length&&!rows2.length){ cb(null); return; }
+    // Processar delta por transição
+    const deltaMap={};
+    rows1.forEach(r=>{
+      const linha=r[0]||'';const de=r[1];const para=r[2];const qtd=parseInt(r[3])||0;const avg=parseFloat(r[4])||0;
+      if(!deltaMap[linha]) deltaMap[linha]={};
+      const key=de+'→'+para;
+      deltaMap[linha][key]={qtd,avg};
+    });
+    // Processar conversão × perfil
+    const convMap={};
+    rows2.forEach(r=>{
+      const linha=r[0]||'';const perfil=r[1]||'';const deals=parseInt(r[2])||0;const won=parseInt(r[3])||0;const conv=parseFloat(r[4])||0;const ticket=parseInt(r[5])||0;
+      if(!convMap[linha]) convMap[linha]={};
+      convMap[linha][perfil]={deals,won,conv,ticket};
+    });
+    _benchData={deltaMap,convMap};
+    cb(_benchData);
+  }).catch(()=>{ _benchLoading=false; cb(null); });
+}
+
 // ── REPORTS DINÂMICOS — dados reais do Databricks via proxy ──
 let _rpData=null;
 let _rpLoading=false;
@@ -4209,7 +4253,128 @@ function renderIntelligence(){
           ${i.text}
         </div>`).join(''):'<div style="color:var(--text2);font-size:12px;padding:10px">Sem insights suficientes — carregue mais deals.</div>'}
     `)}
+    <div id="intel-bench-section"></div>
   `;
+
+  // Carrega benchmark Databricks e renderiza seções 6 e 7
+  loadBenchmarkData(function(bench){
+    const sec=document.getElementById('intel-bench-section');
+    if(!sec||!bench) return;
+    const {deltaMap,convMap}=bench;
+    let html='';
+
+    // ── SEÇÃO 6: Benchmark por Canal — Delta entre Etapas ──
+    const linhas=Object.keys(deltaMap).sort((a,b)=>{
+      const qa=(deltaMap[a]['SAL→Perdido']||{}).qtd||0;
+      const qb=(deltaMap[b]['SAL→Perdido']||{}).qtd||0;
+      return qb-qa;
+    }).slice(0,8);
+    if(linhas.length){
+      const transKeys=['SAL→Ganho','SAL→Perdido','Agendado→Ganho','Agendado→Perdido','Conectado→Ganho','Conectado→Perdido'];
+      let tableRows=linhas.map(l=>{
+        const d=deltaMap[l];
+        const shortName=l.length>28?l.slice(0,28)+'…':l;
+        let cells='<td title="'+l+'" style="font-weight:600;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis">'+shortName+'</td>';
+        transKeys.forEach(k=>{
+          const v=d[k];
+          if(v&&v.qtd>=5){
+            const isWon=k.includes('Ganho');
+            const cls=isWon?(v.avg<=4?'pg':v.avg<=7?'pm':'pl'):(v.avg<=7?'pg':v.avg<=12?'pm':'pl');
+            cells+='<td class="'+cls+'">'+v.avg+'d <span style="opacity:.5;font-size:9px">('+v.qtd+')</span></td>';
+          } else cells+='<td style="color:var(--text4)">—</td>';
+        });
+        return '<tr>'+cells+'</tr>';
+      }).join('');
+      html+=renderSection(6,'Benchmark por Canal — Delta entre Etapas (Databricks '+new Date().getFullYear()+')',`
+        <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Tempo médio (dias) entre transições. Verde = rápido, vermelho = lento. N = volume de transições.</div>
+        <div style="overflow-x:auto">
+        <table class="intel-table" style="min-width:600px">
+          <thead><tr><th>Canal</th><th>SAL→Ganho</th><th>SAL→Perdido</th><th>Agend.→Ganho</th><th>Agend.→Perdido</th><th>Conect.→Ganho</th><th>Conect.→Perdido</th></tr></thead>
+          <tbody>${tableRows}</tbody>
+        </table></div>
+      `);
+    }
+
+    // ── SEÇÃO 7: Conversão × Perfil por Canal ──
+    const convLinhas=Object.keys(convMap).sort((a,b)=>{
+      const da=Object.values(convMap[a]).reduce((s,v)=>s+v.deals,0);
+      const db=Object.values(convMap[b]).reduce((s,v)=>s+v.deals,0);
+      return db-da;
+    }).slice(0,8);
+    if(convLinhas.length){
+      const perfis=['A','B','C','D','E','I','J','K'];
+      let convRows=convLinhas.map(l=>{
+        const d=convMap[l];
+        const shortName=l.length>28?l.slice(0,28)+'…':l;
+        let cells='<td title="'+l+'" style="font-weight:600;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis">'+shortName+'</td>';
+        perfis.forEach(p=>{
+          const v=d[p];
+          if(v){
+            const cls=v.conv>=30?'pg':v.conv>=15?'pm':v.conv>=8?'':'pl';
+            cells+='<td class="'+cls+'">'+v.conv+'% <span style="opacity:.5;font-size:9px">R$'+(v.ticket>=1000?Math.round(v.ticket/1000)+'k':v.ticket)+'</span></td>';
+          } else cells+='<td style="color:var(--text4)">—</td>';
+        });
+        return '<tr>'+cells+'</tr>';
+      }).join('');
+      html+=renderSection(7,'Conversão × Perfil por Canal (Databricks '+new Date().getFullYear()+')',`
+        <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Taxa de conversão deal→ganho e ticket médio. Perfil A = maior faturamento.</div>
+        <div style="overflow-x:auto">
+        <table class="intel-table" style="min-width:600px">
+          <thead><tr><th>Canal</th>${perfis.map(p=>'<th>Perfil '+p+'</th>').join('')}</tr></thead>
+          <tbody>${convRows}</tbody>
+        </table></div>
+      `);
+    }
+
+    // ── SEÇÃO 8: Insights Cruzados (deals locais × benchmark global) ──
+    const crossInsights=[];
+    const localDeals=Object.values(window._COCKPIT_DEAL_MAP||{});
+    if(localDeals.length&&Object.keys(deltaMap).length){
+      // Agrupar deals locais por linha de receita
+      const localByLinha={};
+      localDeals.forEach(d=>{
+        const l=d.linhaReceita||'';
+        if(!l) return;
+        if(!localByLinha[l]) localByLinha[l]={deals:[],deltas:[],tiers:{}};
+        localByLinha[l].deals.push(d);
+        const delta=d._delta||d.delta||0;
+        if(delta>0) localByLinha[l].deltas.push(delta);
+        const tier=(d._tier||d.tier||'').toLowerCase();
+        localByLinha[l].tiers[tier]=(localByLinha[l].tiers[tier]||0)+1;
+      });
+      Object.entries(localByLinha).forEach(([linha,local])=>{
+        const benchDelta=deltaMap[linha];
+        if(!benchDelta) return;
+        const salGanho=benchDelta['SAL→Ganho'];
+        const salPerdido=benchDelta['SAL→Perdido'];
+        if(salGanho&&salPerdido&&local.deltas.length){
+          const localAvg=Math.round(local.deltas.reduce((s,v)=>s+v,0)/local.deltas.length*10)/10;
+          const shortLinha=linha.length>25?linha.slice(0,25)+'…':linha;
+          if(localAvg>salGanho.avg*1.5){
+            crossInsights.push({type:'warn',label:'Delta acima do benchmark',text:'Seus deals em "'+shortLinha+'" têm delta médio de '+localAvg+'d. Benchmark de quem ganha nesse canal: '+salGanho.avg+'d. Benchmark de quem perde: '+salPerdido.avg+'d. Acelere o FUP.'});
+          } else if(localAvg<=salGanho.avg){
+            crossInsights.push({type:'good',label:'Velocidade OK',text:'Seus deals em "'+shortLinha+'" estão com delta de '+localAvg+'d — dentro do benchmark de conversão ('+salGanho.avg+'d). Continue nessa cadência.'});
+          }
+        }
+        // Conversão por perfil — se o deal local tem perfil A mas conv% do canal é baixo
+        const benchConv=convMap[linha];
+        if(benchConv){
+          const topPerfil=Object.entries(benchConv).sort((a,b)=>b[1].conv-a[1].conv)[0];
+          if(topPerfil&&topPerfil[1].conv>=20){
+            const shortLinha=linha.length>20?linha.slice(0,20)+'…':linha;
+            crossInsights.push({type:'good',label:'Perfil forte: '+topPerfil[0],text:'No canal "'+shortLinha+'", perfil '+topPerfil[0]+' converte '+topPerfil[1].conv+'% com ticket R$'+fmtBRL(topPerfil[1].ticket)+'. Priorize leads desse perfil.'});
+          }
+        }
+      });
+    }
+    if(crossInsights.length){
+      html+=renderSection(8,'Insights Cruzados — Seus Deals vs Benchmark',`
+        ${crossInsights.slice(0,6).map(i=>'<div class="intel-insight intel-insight-'+i.type+'"><div class="intel-insight-label">'+i.label+'</div>'+i.text+'</div>').join('')}
+      `);
+    }
+
+    sec.innerHTML=html;
+  });
 }
 
 function renderSection(num,title,content){
