@@ -1503,50 +1503,71 @@ function renderFocusPanel(){
     </div>`).join('');
 }
 
-// ── ELUCY ENGINE — postMessage bridge ────────────────────────────────
+// ── ELUCY ENGINE — Cloud-first (Edge Function) com fallback G4 OS ────────
+
+const ANALYZE_URL='https://tnbbsjvzwleeoqnxtafp.supabase.co/functions/v1/analyze-deal';
 
 // Cache de análises Elucy por deal_id (evita re-query na mesma sessão)
 const ELUCY_CACHE={};
+
+async function _callElucyCloud(deal_id, dealData, mode, canal){
+  const sb=getSB(); if(!sb) return null;
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session) return null;
+  try{
+    const res=await fetch(ANALYZE_URL,{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'},
+      body:JSON.stringify({deal_id,deal_data:dealData,mode,canal})
+    });
+    if(!res.ok) return null;
+    return await res.json();
+  }catch(e){ return null; }
+}
 
 function requestElucyAnalysis(deal_id, dealData, targetId){
   if(ELUCY_CACHE[deal_id]){
     injectElucyReport(targetId, ELUCY_CACHE[deal_id]);
     return;
   }
-  // Marca o card como carregando análise
   const reportEl=document.getElementById('er-'+targetId);
   if(reportEl){
     reportEl.innerHTML=`<div class="er-loading"><span class="elucy-pulse">Elucy analisando deal ${deal_id}…</span></div>`;
     reportEl.style.display='block';
   }
-  // Solicita análise ao G4 OS host
-  const payload={
-    type:'g4os:elucy:analyze',
-    deal_id: deal_id,
-    deal_data: dealData,
-    target_id: targetId,
-    prompt: `analise ${deal_id}`
-  };
-  try{ window.parent.postMessage(payload,'*'); }catch(e){}
-  window.postMessage(payload,'*');
+  if(window.IS_REMOTE){
+    // Modo remoto (GitHub Pages): chama Edge Function diretamente — sem G4 OS
+    _callElucyCloud(deal_id, dealData, 'analyze', null).then(data=>{
+      if(data&&data.report){
+        ELUCY_CACHE[deal_id]=data.report;
+        injectElucyReport(targetId, data.report);
+      } else {
+        if(reportEl) reportEl.innerHTML='<div class="er-b"><div class="er-bl">ELUCY</div><div class="er-bt" style="color:var(--red);font-size:11px">Falha na analise. Tente novamente.</div></div>';
+      }
+    });
+  } else {
+    // Modo local (G4 OS): postMessage para o motor local
+    const payload={type:'g4os:elucy:analyze',deal_id,deal_data:dealData,target_id:targetId,prompt:`analise ${deal_id}`};
+    try{ window.parent.postMessage(payload,'*'); }catch(e){}
+    window.postMessage(payload,'*');
+  }
 }
 
 function requestElucyCopy(deal_id, dealData, targetId, canal){
-  const copyEl=document.getElementById('co-'+targetId);
-  if(copyEl){
-    const wa=document.getElementById('ct-'+targetId+'-wa');
-    if(wa) wa.textContent='Elucy gerando copy…';
+  const wa=document.getElementById('ct-'+targetId+'-wa');
+  if(wa) wa.textContent='Elucy gerando copy…';
+  if(window.IS_REMOTE){
+    // Modo remoto: Edge Function gera copy sem G4 OS
+    _callElucyCloud(deal_id, dealData, 'copy', canal||'WhatsApp').then(data=>{
+      if(data) injectElucyCopy(targetId, data.copy_wa||data.report, data.copy_crm||'');
+      else if(wa) wa.textContent='Falha ao gerar copy. Tente novamente.';
+    });
+  } else {
+    // Modo local: postMessage para G4 OS
+    const payload={type:'g4os:elucy:copy',deal_id,deal_data:dealData,target_id:targetId,canal:canal||'WhatsApp',prompt:`proxima mensagem — deal_id ${deal_id} — canal ${canal||'WhatsApp'}`};
+    try{ window.parent.postMessage(payload,'*'); }catch(e){}
+    window.postMessage(payload,'*');
   }
-  const payload={
-    type:'g4os:elucy:copy',
-    deal_id: deal_id,
-    deal_data: dealData,
-    target_id: targetId,
-    canal: canal||'WhatsApp',
-    prompt: `proxima mensagem — deal_id ${deal_id} — canal ${canal||'WhatsApp'}`
-  };
-  try{ window.parent.postMessage(payload,'*'); }catch(e){}
-  window.postMessage(payload,'*');
 }
 
 function injectElucyReport(targetId, report){
