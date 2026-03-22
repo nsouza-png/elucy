@@ -2143,7 +2143,7 @@ function selectLiveDeal(id,d){
   dealCard.innerHTML=`
     <div class="card">
       <div class="dch">
-        <div class="dca">${(d.emailLead||d.nome)[0].toUpperCase()}</div>
+        <div class="dca">${((d.emailLead||d.nome||'?')[0]||'?').toUpperCase()}</div>
         <div class="dci">
           <div class="dcn">${d.nome}</div>
           <div class="dcs">${d.cargo||'—'} · ${d.empresa}</div>
@@ -2221,6 +2221,7 @@ function selectLiveDeal(id,d){
   // Carrega enrichments existentes deste deal
   var _eid = d.deal_id||id;
   loadEnrichments(_eid, id);
+  _setEnrPlaceholder(id);
 }
 
 // ── RECOMENDAÇÃO DINÂMICA & COPY HELPERS ────────────────────────────
@@ -2319,13 +2320,27 @@ function buildEnrPanel(id, d, items){
     +listHtml
     +'<div class="enr-form">'
     +'<div class="enr-tipo-sel">'+tipoBtns+'</div>'
-    +'<textarea class="enr-ta" id="enr-ta-'+id+'" placeholder="'+ph[tipoAtual]+'" rows="3"></textarea>'
+    +'<textarea class="enr-ta" id="enr-ta-'+id+'" rows="3"></textarea>'
     +'<div class="enr-actions">'
     +'<button class="btn-enr" id="enr-btn-'+id+'" onclick="saveEnrichment(\''+id+'\')">Enriquecer + Recalcular Score</button>'
     +'<span class="enr-status" id="enr-st-'+id+'"></span>'
     +'</div>'
     +'</div>'
     +'</div>';
+}
+
+var _ENR_PH={
+  whatsapp:'Cole mensagens de WhatsApp do lead...',
+  nota:'Nota de qualificacao manual — o que voce percebeu sobre o lead...',
+  call:'Transcricao ou resumo da call com o lead...',
+  email:'Cole o email recebido do lead...'
+};
+
+function _setEnrPlaceholder(id){
+  var ta=document.getElementById('enr-ta-'+id);
+  if(!ta) return;
+  var tipo=_ENR_TIPO[id]||'nota';
+  ta.placeholder=_ENR_PH[tipo]||'Cole o contexto do lead aqui...';
 }
 
 function enrSetTipo(id, tipo){
@@ -2335,6 +2350,7 @@ function enrSetTipo(id, tipo){
   var deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
   var items=window._ENR_ITEMS&&window._ENR_ITEMS[id]||[];
   panel.innerHTML=buildEnrPanel(id, deal||{}, items);
+  _setEnrPlaceholder(id);
 }
 
 // Cache de enrichments carregados por deal_id
@@ -2356,7 +2372,7 @@ async function loadEnrichments(deal_id, cardId){
   window._ENR_ITEMS[cardId]=data;
   var deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[cardId];
   var panel=document.getElementById('enr-panel-'+cardId);
-  if(panel) panel.innerHTML=buildEnrPanel(cardId, deal||{}, data);
+  if(panel){ panel.innerHTML=buildEnrPanel(cardId, deal||{}, data); _setEnrPlaceholder(cardId); }
   // Atualiza SPICED score se tiver score processado
   var lastScore=data.find(function(x){return x.spiced_score!=null;});
   if(lastScore){
