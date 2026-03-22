@@ -4099,20 +4099,6 @@ function fmtEtapa(e){
   return map[(e||'').toLowerCase()]||e;
 }
 
-function showSyncToast(type,msg){
-  const old=document.getElementById('sync-toast');
-  if(old) old.remove();
-  const t=document.createElement('div');
-  t.id='sync-toast';
-  t.style.cssText='position:fixed;bottom:20px;right:20px;z-index:200;padding:10px 15px;border-radius:8px;font-size:12px;font-weight:600;max-width:320px;line-height:1.5;animation:fadeIn .2s ease';
-  if(type==='ok') t.style.cssText+='background:rgba(34,197,94,.15);border:1px solid #22c55e;color:#22c55e';
-  else t.style.cssText+='background:rgba(239,68,68,.15);border:1px solid #ef4444;color:#ef4444';
-  t.textContent=msg;
-  document.body.appendChild(t);
-  setTimeout(()=>t.remove(),5000);
-}
-
-</body>
 </script>
 </body>
 </html>
