@@ -935,9 +935,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   const el=document.getElementById('sbdate');
   if(el) el.textContent=d.toLocaleDateString('pt-BR',opts);
 
-  // Inicializa auth Supabase
+  // Inicializa auth Supabase — sempre, independente de G4 OS
+  // IS_REMOTE era usado para detectar contexto, mas agora o Cockpit sempre usa Supabase auth
   const sb=getSB();
-  if(sb&&window.IS_REMOTE){
+  if(sb){
     // Modo remoto (GitHub Pages): exige login
     document.getElementById('topbar').style.display='none';
     document.getElementById('main').style.display='none';
