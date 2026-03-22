@@ -1764,7 +1764,6 @@ function renderLiveDeals(rows,cols){
     const refValor=valorOportunidade||revenueRaw;
     const forecastDelta=refValor>0?elucyValor-refValor:null;
     const qualificador=g(row,'qualificador_name')||'';
-    const utm=g(row,'utm_medium')||'';
     const utmSource=g(row,'utm_source')||'';
     const utmCampaign=g(row,'utm_campaign')||'';
     const grupo=g(row,'grupo_de_receita')||'';
@@ -1784,6 +1783,8 @@ function renderLiveDeals(rows,cols){
       qualificador,utm,utmSource,utmCampaign,grupo,nomeEvento,primeiroProduto,ultimoProduto,
       perfilIcp,motivoLost,origemDeal,produtosComprados,dataPrimeiraCompra,dataUltimaCompra,
       comprouScale,comprouClub,
+      spiced_score:(g(row,'spiced_score')!==''&&g(row,'spiced_score')!=null)?parseInt(g(row,'spiced_score')):null,
+      enrichment_count:parseInt(g(row,'enrichment_count'))||0,
       _fase:fase,_etapa:etapa,_tier:tier,_delta:delta,_temp:temp};
     // Sinal automático
     const signal=calcSignal(dealObj);
@@ -2253,7 +2254,7 @@ function selectLiveDeal(id,d){
         </div>
       </div>
       <div class="co-b">
-        <div class="co-txt" id="ct-${id}-wa" contenteditable="true" spellcheck="false">${d.nome.split(' ')[0]},\n\nJá ${d.delta} dia${d.delta!==1?'s':''} desde o nosso último contato.\n\nEmpresas no mesmo estágio que a ${d.empresa} que postergaram a decisão perderam a janela deste trimestre — o custo não é o investimento, é o semestre inteiro.\n\nVocê quer avançar agora?\n\n${(localStorage.getItem('elucy_operator_email')||'').split('@')[0]}</div>
+        <div class="co-txt" id="ct-${id}-wa" contenteditable="true" spellcheck="false">${(d.nome||'').split(' ')[0]||'Olá'},\n\nJá ${d.delta} dia${d.delta!==1?'s':''} desde o nosso último contato.\n\nEmpresas no mesmo estágio que a ${d.empresa} que postergaram a decisão perderam a janela deste trimestre — o custo não é o investimento, é o semestre inteiro.\n\nVocê quer avançar agora?\n\n${(localStorage.getItem('elucy_operator_email')||'').split('@')[0]}</div>
         <div class="co-txt" id="ct-${id}-crm" contenteditable="true" spellcheck="false" style="display:none">[ELUCI NOTE] ${new Date().toLocaleDateString('pt-BR')}\n\nDeal ID: ${d.deal_id||id} | Fase: ${d.fase} | Temp: ${d.temp}/100\nCanal: ${d.canal} | Dia: ${d.dd} | Delta: ${d.delta} dias\n\nAção: FUP via ${d.canal}\nStatus: Aguardando resposta.</div>
         <div class="copy-actions">
           <button class="btn bs btn-sm" onclick="clip('ct-${id}-wa')">Copiar</button>
