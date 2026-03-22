@@ -8,12 +8,38 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <!-- cockpit-data.js carregado após auth, apenas em ambiente local G4 OS -->
 <script>
-// Detecta se está rodando em GitHub Pages ou localmente
-window.IS_REMOTE = location.hostname !== '' && !location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1') && location.protocol !== 'file:';
+// Detecta se tem G4 OS como parent (iframe dentro do G4 OS)
+// Se sim: usa postMessage independente do hostname (GitHub Pages, qualquer URL)
+// Se não: standalone no browser = IS_REMOTE = true (precisaria de Edge Function)
+window._G4OS_PARENT = false;
+try {
+  // Se parent é diferente de window, está em iframe
+  // Envia ping — G4 OS responde confirmando presença
+  if(window.parent && window.parent !== window){
+    window.parent.postMessage({type:'g4os:ping',from:'elucy-cockpit'},'*');
+    window._G4OS_PARENT = true; // otimista — assume G4 OS até prova contrária
+  }
+} catch(e) { window._G4OS_PARENT = false; }
+
+// IS_REMOTE = true apenas quando NÃO há G4 OS como host
+window.IS_REMOTE = !window._G4OS_PARENT &&
+  location.hostname !== '' &&
+  !location.hostname.includes('localhost') &&
+  !location.hostname.includes('127.0.0.1') &&
+  location.protocol !== 'file:';
+
+// Ouve pong do G4 OS para confirmar (e atualiza flag se necessário)
+window.addEventListener('message', function(e){
+  if(e.data && e.data.type === 'g4os:pong'){
+    window._G4OS_PARENT = true;
+    window.IS_REMOTE = false;
+  }
+});
 </script>
 <script>
-// Só carrega cockpit-data.js em ambiente local (G4 OS)
-if(!window.IS_REMOTE){
+// cockpit-data.js: carrega se local (file: / localhost) OU se G4 OS parent detectado
+// No GitHub Pages standalone (sem G4 OS), não existe cockpit-data.js — dados vêm do Supabase
+if(location.protocol === 'file:' || location.hostname.includes('localhost') || location.hostname.includes('127.0.0.1') || window._G4OS_PARENT){
   const s=document.createElement('script');
   s.src='cockpit-data.js';
   document.head.appendChild(s);
@@ -775,11 +801,9 @@ function showCockpit(user){
   // Exibe botão de sync na topbar
   const syncBtn=document.getElementById('btn-sync-top');
   if(syncBtn) syncBtn.style.display='';
-  // Em modo remoto: sync imediato do Databricks → Supabase → renderiza
-  // Cada SDR tem pipeline próprio isolado por operator_email + qualificador_name
-  if(window.IS_REMOTE){
-    callSyncDeals().catch(()=>loadDealsFromSupabase(user.email));
-  }
+  // Sempre carrega deals do Supabase (pipeline individual por SDR)
+  // sync-deals puxa do Databricks via token global do Supabase — não depende do G4 OS
+  callSyncDeals().catch(()=>loadDealsFromSupabase(user.email));
 }
 
 async function checkApproval(user){
@@ -991,7 +1015,7 @@ async function callSyncDeals(){
   }
 
   function requestRefresh(){
-    if(!window.IS_REMOTE) return; // modo local usa cockpit-data.js via G4OS
+    // Sempre sincroniza via Supabase — dados vêm do Databricks via secret global
     if(!isStale()) return;
     callSyncDeals();
   }
@@ -1107,11 +1131,11 @@ function showModalStatus(type,msg){
 // ── REFRESH / DATABRICKS SYNC ────────────────────────────────────────
 
 function refreshPipeline(){
-  if(window.IS_REMOTE){
-    callSyncDeals();
-  } else {
+  // Sempre usa Supabase sync (token Databricks está no Supabase como secret global)
+  // Se G4 OS disponível: também dispara atualizar-cockpit para regenerar cockpit-data.js local
+  callSyncDeals();
+  if(!_isStandalone()){
     try{ window.parent.postMessage({type:'g4os:skill:run',skill:'atualizar-cockpit'},'*'); }catch(e){}
-    window.postMessage({type:'g4os:skill:run',skill:'atualizar-cockpit'},'*');
   }
 }
 
@@ -1503,9 +1527,17 @@ function renderFocusPanel(){
     </div>`).join('');
 }
 
-// ── ELUCY ENGINE — Cloud-first (Edge Function) com fallback G4 OS ────────
+// ── ELUCY ENGINE — G4 OS-first (postMessage) com fallback Edge Function ──
+// Prioridade: G4 OS parent > Edge Function (Anthropic API paga)
+// Se o Cockpit está aberto dentro do G4 OS de qualquer SDR → usa postMessage
+// Se está standalone no browser (sem G4 OS) → usa Edge Function (requer ANTHROPIC_API_KEY)
 
 const ANALYZE_URL='https://tnbbsjvzwleeoqnxtafp.supabase.co/functions/v1/analyze-deal';
+
+// Decide em runtime: G4 OS parent disponível? → false = usa postMessage; true = standalone
+function _isStandalone(){
+  return !window._G4OS_PARENT && window.IS_REMOTE;
+}
 
 // Cache de análises Elucy por deal_id (evita re-query na mesma sessão)
 const ELUCY_CACHE={};
@@ -1535,8 +1567,8 @@ function requestElucyAnalysis(deal_id, dealData, targetId){
     reportEl.innerHTML=`<div class="er-loading"><span class="elucy-pulse">Elucy analisando deal ${deal_id}…</span></div>`;
     reportEl.style.display='block';
   }
-  if(window.IS_REMOTE){
-    // Modo remoto (GitHub Pages): chama Edge Function diretamente — sem G4 OS
+  if(_isStandalone()){
+    // Standalone no browser (sem G4 OS): chama Edge Function — requer ANTHROPIC_API_KEY no Supabase
     _callElucyCloud(deal_id, dealData, 'analyze', null).then(data=>{
       if(data&&data.report){
         ELUCY_CACHE[deal_id]=data.report;
@@ -1546,7 +1578,7 @@ function requestElucyAnalysis(deal_id, dealData, targetId){
       }
     });
   } else {
-    // Modo local (G4 OS): postMessage para o motor local
+    // G4 OS disponível (local ou iframe): postMessage — zero custo Anthropic
     const payload={type:'g4os:elucy:analyze',deal_id,deal_data:dealData,target_id:targetId,prompt:`analise ${deal_id}`};
     try{ window.parent.postMessage(payload,'*'); }catch(e){}
     window.postMessage(payload,'*');
@@ -1556,14 +1588,14 @@ function requestElucyAnalysis(deal_id, dealData, targetId){
 function requestElucyCopy(deal_id, dealData, targetId, canal){
   const wa=document.getElementById('ct-'+targetId+'-wa');
   if(wa) wa.textContent='Elucy gerando copy…';
-  if(window.IS_REMOTE){
-    // Modo remoto: Edge Function gera copy sem G4 OS
+  if(_isStandalone()){
+    // Standalone no browser (sem G4 OS): Edge Function
     _callElucyCloud(deal_id, dealData, 'copy', canal||'WhatsApp').then(data=>{
       if(data) injectElucyCopy(targetId, data.copy_wa||data.report, data.copy_crm||'');
       else if(wa) wa.textContent='Falha ao gerar copy. Tente novamente.';
     });
   } else {
-    // Modo local: postMessage para G4 OS
+    // G4 OS disponível: postMessage — zero custo
     const payload={type:'g4os:elucy:copy',deal_id,deal_data:dealData,target_id:targetId,canal:canal||'WhatsApp',prompt:`proxima mensagem — deal_id ${deal_id} — canal ${canal||'WhatsApp'}`};
     try{ window.parent.postMessage(payload,'*'); }catch(e){}
     window.postMessage(payload,'*');
