@@ -211,7 +211,7 @@ body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-ser
   <button class="ntab" onclick="setScreen('reports',this)">Relatórios</button>
   <div class="tbr">
     <span class="op-pill" id="op-pill">CRM Sincronizado</span>
-    <span class="streak-badge">🔥 7 dias</span>
+    <button class="btn-settings" id="btn-sync-top" onclick="refreshPipeline()" title="Sincronizar pipeline com Databricks" style="display:none">Atualizar Pipeline</button>
     <div class="chip">
       <div class="av" id="av-init">N</div>
       <span class="chip-name" id="chip-name">Nathan</span>
@@ -772,9 +772,13 @@ function showCockpit(user){
   document.getElementById('chip-name').textContent=nome.split(' ')[0];
   document.getElementById('av-init').textContent=init;
   document.getElementById('op-pill').classList.add('show');
-  // Em modo remoto, puxa deals do Supabase; em modo local, usa cockpit-data.js
+  // Exibe botão de sync na topbar
+  const syncBtn=document.getElementById('btn-sync-top');
+  if(syncBtn) syncBtn.style.display='';
+  // Em modo remoto: sync imediato do Databricks → Supabase → renderiza
+  // Cada SDR tem pipeline próprio isolado por operator_email + qualificador_name
   if(window.IS_REMOTE){
-    loadDealsFromSupabase(user.email);
+    callSyncDeals().catch(()=>loadDealsFromSupabase(user.email));
   }
 }
 
@@ -812,7 +816,9 @@ async function loadDealsFromSupabase(email){
     .order('delta_t',{ascending:false})
     .limit(200);
   if(error||!data||!data.length){
-    showSyncToast('err','Nenhum deal encontrado. Aguarde o sync diário ou contate o admin.');
+    // Sem deals em cache — dispara sync imediato em vez de mostrar erro
+    showSyncToast('load','Sincronizando pipeline pela primeira vez…');
+    callSyncDeals();
     return;
   }
   // Converte formato Supabase para o formato esperado pelo renderLiveDeals
@@ -944,7 +950,9 @@ async function callSyncDeals(){
   const {data:{session}}=await sb.auth.getSession();
   if(!session) return;
   _syncInProgress=true;
-  showSyncToast('load','Sincronizando pipeline...');
+  const syncBtn=document.getElementById('btn-sync-top');
+  if(syncBtn){syncBtn.disabled=true;syncBtn.textContent='Sincronizando…';}
+  showSyncToast('load','Sincronizando pipeline com Databricks…');
   try{
     const res=await fetch(EDGE_SYNC_URL,{
       method:'POST',
@@ -969,6 +977,7 @@ async function callSyncDeals(){
     showSyncToast('err','Falha na conexão com o servidor.');
   }finally{
     _syncInProgress=false;
+    if(syncBtn){syncBtn.disabled=false;syncBtn.textContent='Atualizar Pipeline';}
   }
 }
 
