@@ -1130,28 +1130,99 @@ function applyOperator(email){
 }
 
 function openSettings(){
-  const saved=localStorage.getItem('elucy_operator_email')||'';
+  const existing=document.getElementById('settings-modal');
+  if(existing) existing.remove();
+
+  const email=localStorage.getItem('elucy_operator_email')||'';
+  const qualName=localStorage.getItem('elucy_qualificador_name')||'';
+  const hasToken=!!(localStorage.getItem('elucy_db_token'));
+  const tokenMask=hasToken?'dapi••••••••••••••••••••••••••••••':'';
+
   const ov=document.createElement('div');
   ov.className='modal-ov';
   ov.id='settings-modal';
   ov.innerHTML=`
-    <div class="modal">
-      <div class="modal-t">Configurar Operador</div>
-      <div class="modal-s">Insira seu e-mail corporativo para sincronizar o Cockpit com o <strong>funil_comercial</strong> do Databricks, filtrando apenas os deals do seu qualificador.</div>
-      <div class="modal-f">
-        <label class="modal-l">E-mail do operador</label>
-        <input class="modal-i" id="op-email-input" type="email" placeholder="nathan.souza@g4educacao.com" value="${saved}" autocomplete="email">
+    <div class="modal" style="max-width:460px;max-height:90vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+        <div class="modal-t" style="margin:0;font-size:17px">Configurações</div>
+        <button class="btn bs btn-sm" onclick="closeSettings()" style="padding:4px 10px">✕</button>
       </div>
-      <div class="modal-note">O e-mail é usado como filtro em <code>qualificador_name</code> no funil_comercial. Nunca é enviado a terceiros.</div>
-      <div id="modal-sync-status"></div>
-      <div class="row" style="justify-content:flex-end;gap:8px">
-        <button class="btn bs btn-sm" onclick="closeSettings()">Cancelar</button>
-        <button class="btn bp btn-sm" onclick="saveOperator()">Salvar e sincronizar</button>
+
+      <!-- SEÇÃO 1: Conexão Databricks -->
+      <div class="cfg-section">
+        <div class="cfg-section-title">
+          <span class="cfg-dot ${hasToken?'cfg-dot-ok':'cfg-dot-warn'}"></span>
+          Conexão Databricks
+        </div>
+        <div class="cfg-section-sub">${hasToken?'Token configurado — pipeline carrega direto do CRM':'Nenhum token configurado — pipeline inativo'}</div>
+        <div class="modal-f" style="margin-top:10px">
+          <label class="modal-l">Personal Access Token</label>
+          <input class="modal-i" id="cfg-token-input" type="password" placeholder="dapi..." value="${tokenMask}" autocomplete="off" style="font-family:monospace">
+        </div>
+        <div class="modal-note">Gere em: Databricks → Settings → Developer → Access Tokens. Salvo apenas localmente.</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn bp btn-sm" onclick="cfgSaveToken()">Salvar token</button>
+          ${hasToken?'<button class="btn bs btn-sm" onclick="cfgClearToken()" style="color:var(--red,#f87171)">Remover token</button>':''}
+        </div>
       </div>
+
+      <!-- SEÇÃO 2: Operador -->
+      <div class="cfg-section">
+        <div class="cfg-section-title">
+          <span class="cfg-dot ${email?'cfg-dot-ok':'cfg-dot-warn'}"></span>
+          Operador
+        </div>
+        <div class="cfg-section-sub">Identidade usada para filtrar deals no funil_comercial</div>
+        <div class="modal-f" style="margin-top:10px">
+          <label class="modal-l">E-mail corporativo</label>
+          <input class="modal-i" id="cfg-email-input" type="email" placeholder="nome@g4educacao.com" value="${email}" autocomplete="email">
+        </div>
+        <div class="modal-f" style="margin-top:8px">
+          <label class="modal-l">Nome no CRM (qualificador_name)</label>
+          <input class="modal-i" id="cfg-qualname-input" type="text" placeholder="Detectado automaticamente pelo email" value="${qualName}">
+          <div class="modal-note" style="margin-top:4px">Deixe em branco para detectar automaticamente pelo email.</div>
+        </div>
+        <button class="btn bp btn-sm" style="margin-top:8px" onclick="cfgSaveOperator()">Salvar operador</button>
+      </div>
+
+      <!-- SEÇÃO 3: Sessão -->
+      <div class="cfg-section" style="border-bottom:none;padding-bottom:0">
+        <div class="cfg-section-title">
+          <span class="cfg-dot cfg-dot-gray"></span>
+          Sessão
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          <button class="btn bp btn-sm" onclick="cfgResync()">Forçar resync pipeline</button>
+          <button class="btn bs btn-sm" onclick="cfgClearCache()">Limpar cache local</button>
+          <button class="btn bs btn-sm" onclick="cfgLogout()" style="color:var(--red,#f87171)">Sair da conta</button>
+        </div>
+      </div>
+
+      <div id="cfg-status" style="min-height:28px;margin-top:12px"></div>
     </div>`;
+
+  // CSS das seções (injeta uma vez)
+  if(!document.getElementById('cfg-style')){
+    const st=document.createElement('style');
+    st.id='cfg-style';
+    st.textContent=`
+      .cfg-section{padding:14px 0;border-bottom:1px solid var(--border)}
+      .cfg-section-title{font-size:13px;font-weight:700;color:var(--silver);display:flex;align-items:center;gap:7px}
+      .cfg-section-sub{font-size:11px;color:var(--text2);margin-top:2px}
+      .cfg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+      .cfg-dot-ok{background:var(--green,#22c55e)}
+      .cfg-dot-warn{background:#f59e0b}
+      .cfg-dot-gray{background:var(--text2)}
+    `;
+    document.head.appendChild(st);
+  }
+
   ov.addEventListener('click',e=>{if(e.target===ov) closeSettings();});
   document.body.appendChild(ov);
-  setTimeout(()=>document.getElementById('op-email-input').focus(),80);
+  setTimeout(()=>{
+    const inp=document.getElementById(hasToken?'cfg-email-input':'cfg-token-input');
+    if(inp) inp.focus();
+  },80);
 }
 
 function closeSettings(){
@@ -1159,26 +1230,64 @@ function closeSettings(){
   if(m) m.remove();
 }
 
-function saveOperator(){
-  const input=document.getElementById('op-email-input');
-  const email=(input?input.value:'').trim();
-  if(!email||!email.includes('@')){
-    showModalStatus('err','E-mail inválido. Use o formato nome@domínio.com');
-    return;
-  }
-  // Limpa cache de nome se o email mudou (força novo lookup)
+function _cfgStatus(type,msg){
+  const el=document.getElementById('cfg-status');
+  if(!el) return;
+  const color=type==='ok'?'var(--green,#22c55e)':type==='err'?'var(--red,#f87171)':'var(--text2)';
+  el.innerHTML=`<div style="font-size:12px;color:${color};padding:4px 0">${msg}</div>`;
+}
+
+function cfgSaveToken(){
+  const inp=document.getElementById('cfg-token-input');
+  const val=(inp?inp.value:'').trim();
+  if(!val||val.startsWith('dapi••')){_cfgStatus('err','Cole um token válido (começa com dapi...)');return;}
+  if(val.length<10){_cfgStatus('err','Token inválido — muito curto');return;}
+  localStorage.setItem('elucy_db_token',val);
+  _cfgStatus('ok','Token salvo.');
+  setTimeout(()=>{closeSettings();refreshPipeline();},900);
+}
+
+function cfgClearToken(){
+  localStorage.removeItem('elucy_db_token');
+  _cfgStatus('ok','Token removido.');
+  setTimeout(closeSettings,800);
+}
+
+function cfgSaveOperator(){
+  const emailInp=document.getElementById('cfg-email-input');
+  const qualInp=document.getElementById('cfg-qualname-input');
+  const email=(emailInp?emailInp.value:'').trim();
+  const qual=(qualInp?qualInp.value:'').trim();
+  if(!email||!email.includes('@')){_cfgStatus('err','E-mail inválido');return;}
   const prev=localStorage.getItem('elucy_operator_email');
   if(prev!==email) localStorage.removeItem('elucy_qualificador_name');
+  localStorage.setItem('elucy_operator_email',email);
+  if(qual) localStorage.setItem('elucy_qualificador_name',qual);
   applyOperator(email);
-  showModalStatus('ok','Operador salvo. Sincronizando pipeline...');
-  setTimeout(()=>{
-    closeSettings();
-    refreshPipeline();
-  },900);
+  _cfgStatus('ok','Operador salvo. Sincronizando...');
+  setTimeout(()=>{closeSettings();refreshPipeline();},900);
+}
+
+function cfgResync(){
+  closeSettings();
+  // Força novo lookup apagando cache de nome
+  localStorage.removeItem('elucy_qualificador_name');
+  refreshPipeline();
+}
+
+function cfgClearCache(){
+  ['elucy_db_token','elucy_qualificador_name','elucy_operator_email'].forEach(k=>localStorage.removeItem(k));
+  _cfgStatus('ok','Cache limpo. Recarregando...');
+  setTimeout(()=>location.reload(),800);
+}
+
+function cfgLogout(){
+  closeSettings();
+  supabaseSignOut();
 }
 
 function showModalStatus(type,msg){
-  const el=document.getElementById('modal-sync-status');
+  const el=document.getElementById('modal-sync-status')||document.getElementById('cfg-status');
   if(!el) return;
   const cls=type==='ok'?'sync-ok':type==='err'?'sync-err':'sync-load';
   el.innerHTML=`<div class="sync-status ${cls}">${msg}</div>`;
