@@ -1600,8 +1600,7 @@ function renderFocusPanel(){
 // SDR abre o link, faz login, recebe análise em ~30s. Zero instalação necessária.
 
 const ELUCY_REQUEST_URL='https://tnbbsjvzwleeoqnxtafp.supabase.co/functions/v1/elucy-request';
-const SUPABASE_URL='https://tnbbsjvzwleeoqnxtafp.supabase.co';
-const SUPABASE_ANON='sb_publishable_bh1m8U-gNbrBtA9WSCDWrA_V-RXZU15';
+// SUPABASE_URL e SUPABASE_ANON já declarados na linha ~817 — não redeclarar
 
 // Cache de análises Elucy por deal_id (evita re-request na mesma sessão)
 const ELUCY_CACHE={};
