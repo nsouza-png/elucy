@@ -12,12 +12,14 @@
 // O G4 OS expõe window.browserToolbar via preload em toda webview do browser integrado.
 // Essa é a assinatura confiável — funciona em Electron app, não depende de iframe/parent.
 function _detectG4OS(){
-  // Electron app: window.browserToolbar injetado pelo preload do G4 OS
+  // 1. Electron app: window.browserToolbar injetado pelo preload do G4 OS
   if(typeof window.browserToolbar !== 'undefined') return true;
-  // Fallback: local direto (file: ou localhost)
+  // 2. User-Agent do Electron (sempre presente em qualquer webview do Electron)
+  if(/Electron\//.test(navigator.userAgent)) return true;
+  // 3. Fallback: local direto (file: ou localhost)
   if(location.protocol === 'file:') return true;
   if(location.hostname === 'localhost' || location.hostname === '127.0.0.1') return true;
-  // iframe (caso futuro de embed): parent diferente
+  // 4. iframe embed
   try{ if(window.parent && window.parent !== window) return true; }catch(e){}
   return false;
 }
@@ -41,10 +43,24 @@ function _setG4Status(state, label){
 
 // Aplica estado imediatamente — sem timeout, sem handshake
 document.addEventListener('DOMContentLoaded', function(){
+  // Debug: loga sinais de detecção no console
+  console.log('[Elucy] G4OS detect — browserToolbar:', typeof window.browserToolbar,
+    '| UA:', navigator.userAgent.slice(0,80),
+    '| protocol:', location.protocol,
+    '| _G4OS_PARENT:', window._G4OS_PARENT);
   if(window._G4OS_PARENT){
     _setG4Status('connected','G4 OS ativo');
   } else {
     _setG4Status('offline','G4 OS offline');
+    // Re-check após 500ms — segurança contra race condition de preload
+    setTimeout(function(){
+      if(typeof window.browserToolbar !== 'undefined' || /Electron\//.test(navigator.userAgent)){
+        window._G4OS_PARENT = true;
+        window.IS_REMOTE = false;
+        _setG4Status('connected','G4 OS ativo');
+        console.log('[Elucy] G4OS detectado no retry (500ms)');
+      }
+    }, 500);
   }
 });
 
