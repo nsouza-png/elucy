@@ -912,21 +912,13 @@ async function loadDealsFromSupabase(email){
     return;
   }
   // Converte formato Supabase para o formato esperado pelo renderLiveDeals
-  const cols=[
-    {name:'deal_id'},{name:'fase_atual_no_processo'},{name:'etapa_atual_no_pipeline'},
-    {name:'tier_da_oportunidade'},{name:'delta_t'},{name:'qualificador_name'},
-    {name:'proprietario_name'},{name:'linha_de_receita_vigente'},{name:'grupo_de_receita'},
-    {name:'created_at_crm'},{name:'event_skipped'},{name:'email_lead'},{name:'cargo'},
-    {name:'canal_de_marketing'},{name:'utm_medium'},{name:'status_do_deal'},
-    {name:'revenue'},{name:'contact_name'}
-  ].map((c,i)=>({name:c.name,position:i}));
-  // Transforma objetos em arrays (formato esperado pelo cockpit)
-  const colNames=cols.map(c=>c.name);
-  const rows=data.map(row=>colNames.map(k=>{
-    if(k==='email_lead') return row.email_lead||'';
-    if(k==='revenue') return row.revenue!=null?String(row.revenue):'0';
-    if(k==='contact_name') return row.contact_name||'';
-    return row[k]!=null?String(row[k]):'';
+  // Usa PIPELINE_COLS — mesma ordem da buildPipelineQuery (única fonte de verdade)
+  const cols=PIPELINE_COLS.map((name,i)=>({name,position:i}));
+  const rows=data.map(row=>PIPELINE_COLS.map(k=>{
+    // Supabase salva email como 'email_lead', Databricks retorna como 'email'
+    const v=row[k]!=null?row[k]:(k==='email'?row['email_lead']:null);
+    if(k==='revenue') return v!=null?String(v):'0';
+    return v!=null?String(v):'';
   }));
   renderLiveDeals(rows,cols);
   showSyncToast('ok',`Pipeline carregado — ${rows.length} deals ativos.`);
@@ -1097,6 +1089,24 @@ async function callSyncDeals(emailHint){
 
 const DB_ENDPOINT='https://dbc-8acefaf9-a170.cloud.databricks.com/api/2.0/sql/statements';
 const DB_WAREHOUSE='bbae754ea44f67e0';
+
+// Query canônica do pipeline — única fonte de verdade (browser + sync-deals-now.js usam o mesmo shape)
+// Colunas retornadas (ordem fixa):
+// deal_id, fase_atual_no_processo, etapa_atual_no_pipeline, tier_da_oportunidade,
+// delta_t, qualificador_name, proprietario_name, linha_de_receita_vigente, grupo_de_receita,
+// created_at_crm, event_skipped, email, cargo, canal_de_marketing, utm_medium, status_do_deal,
+// revenue, contact_name
+function buildPipelineQuery(qualificadorName){
+  const ano=new Date().getFullYear();
+  return `SELECT f.deal_id, f.fase_atual_no_processo, f.etapa_atual_no_pipeline, f.tier_da_oportunidade, f.delta_t, f.qualificador_name, f.proprietario_name, f.linha_de_receita_vigente, f.grupo_de_receita, CAST(f.created_at AS STRING) AS created_at_crm, CAST(f.event_skipped AS STRING) AS event_skipped, f.email, f.cargo, f.canal_de_marketing, f.utm_medium, f.status_do_deal, CAST(f.revenue AS DOUBLE) AS revenue, COALESCE(p.nome, '') AS contact_name FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY deal_id ORDER BY event_timestamp DESC) AS rn FROM production.diamond.funil_comercial WHERE qualificador_name = '${qualificadorName.replace(/'/g,"\\'")}' AND etapa_atual_no_pipeline IN ('Novo lead','Novo Lead ','Dia 01','Dia 02','Dia 03','Dia 04','Dia 05','Dia 06','Conectados','Agendamento','Reagendamento','Entrevista Agendada') AND status_do_deal = 'Aberto' AND pipeline_name = 'Comercial' AND created_at >= '${ano}-01-01') f LEFT JOIN (SELECT DISTINCT email, nome FROM production.diamond.persons_overview WHERE email IS NOT NULL) p ON LOWER(f.email) = LOWER(p.email) WHERE f.rn = 1 ORDER BY f.delta_t DESC LIMIT 200`;
+}
+
+// Nomes das colunas na ordem exata retornada por buildPipelineQuery
+// Usado pelo loadDealsFromSupabase para mapear objetos → arrays no mesmo formato
+const PIPELINE_COLS=['deal_id','fase_atual_no_processo','etapa_atual_no_pipeline','tier_da_oportunidade',
+  'delta_t','qualificador_name','proprietario_name','linha_de_receita_vigente','grupo_de_receita',
+  'created_at_crm','event_skipped','email','cargo','canal_de_marketing','utm_medium','status_do_deal',
+  'revenue','contact_name'];
 
 function initOperator(){
   const email=localStorage.getItem('elucy_operator_email');
@@ -1291,9 +1301,7 @@ function pickName(nome,_){
 }
 
 function fetchPipelineByName(nome,token,btn){
-  // Etapas exatas do HubSpot (filtro avançado confirmado): 92 deals
-  const anoAtual=new Date().getFullYear();
-  const query=`SELECT f.deal_id, f.fase_atual_no_processo, f.etapa_atual_no_pipeline, f.tier_da_oportunidade, f.delta_t, f.qualificador_name, f.proprietario_name, f.linha_de_receita_vigente, f.grupo_de_receita, f.created_at, f.event_skipped, f.email, f.cargo, f.canal_de_marketing, f.utm_medium, f.status_do_deal, f.revenue, COALESCE(p.nome, '') as contact_name FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY deal_id ORDER BY event_timestamp DESC) as rn FROM production.diamond.funil_comercial WHERE qualificador_name = '${nome}' AND etapa_atual_no_pipeline IN ('Novo lead','Novo Lead ','Dia 01','Dia 02','Dia 03','Dia 04','Dia 05','Dia 06','Conectados','Agendamento','Reagendamento','Entrevista Agendada') AND status_do_deal = 'Aberto' AND pipeline_name = 'Comercial' AND created_at >= '${anoAtual}-01-01') f LEFT JOIN (SELECT DISTINCT email, nome FROM production.diamond.persons_overview WHERE email IS NOT NULL) p ON LOWER(f.email) = LOWER(p.email) WHERE f.rn = 1 ORDER BY f.delta_t DESC LIMIT 200`;
+  const query=buildPipelineQuery(nome);
 
   fetch(DB_ENDPOINT,{
     method:'POST',
