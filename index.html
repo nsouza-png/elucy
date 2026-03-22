@@ -154,9 +154,16 @@ body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-ser
 .auth-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:40px;max-width:380px;width:90%;text-align:center}
 .auth-logo{font-size:22px;font-weight:900;color:var(--accent2);margin-bottom:4px}.auth-logo em{color:var(--text2);font-style:normal;font-weight:400}
 .auth-sub{font-size:13px;color:var(--text2);margin-bottom:28px;line-height:1.5}
-.auth-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;background:white;color:#1a1a1a;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:.15s}
-.auth-btn:hover{background:#f0f0f0;transform:translateY(-1px)}
-.auth-btn svg{width:20px;height:20px;flex-shrink:0}
+.auth-form{display:flex;flex-direction:column;gap:10px;margin-bottom:4px}
+.auth-field{display:flex;flex-direction:column}
+.auth-input{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:11px 14px;font-size:13px;color:var(--text);outline:none;width:100%;font-family:inherit;transition:.15s}
+.auth-input:focus{border-color:var(--accent)}
+.auth-input::placeholder{color:var(--text2)}
+.auth-btn-main{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;transition:.15s;font-family:inherit}
+.auth-btn-main:hover{background:var(--accent2);transform:translateY(-1px)}
+.auth-btn-main:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.auth-btn-sec{width:100%;padding:10px;background:none;color:var(--text2);border:1px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s;font-family:inherit}
+.auth-btn-sec:hover{border-color:var(--border2);color:var(--text)}
 .auth-note{font-size:11px;color:var(--text2);margin-top:16px;line-height:1.4}
 .auth-err{background:var(--rdim);border:1px solid var(--red);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--red);margin-top:12px;display:none}
 .pending-icon{font-size:40px;margin-bottom:16px}
@@ -168,16 +175,22 @@ body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-ser
 </style>
 </head>
 <body>
-<!-- ── AUTH: Login Google ─────────────────────────────────── -->
+<!-- ── AUTH: Login email/senha ─────────────────────────────── -->
 <div id="auth-screen" class="hidden">
   <div class="auth-card">
     <div class="auth-logo">Elucy <em>Cockpit</em></div>
-    <div class="auth-sub">Sales Engagement System — G4 Educação<br>Entre com sua conta G4 para acessar.</div>
-    <button class="auth-btn" id="btn-google-login">
-      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-      Entrar com Google G4
-    </button>
-    <div class="auth-note">Apenas contas @g4educacao.com. Acesso sujeito à aprovação do administrador.</div>
+    <div class="auth-sub">Sales Engagement System — G4 Educação<br>Entre com seu e-mail G4 para acessar.</div>
+    <div class="auth-form">
+      <div class="auth-field">
+        <input class="auth-input" id="auth-email" type="email" placeholder="seu@g4educacao.com" autocomplete="username">
+      </div>
+      <div class="auth-field">
+        <input class="auth-input" id="auth-pass" type="password" placeholder="Senha" autocomplete="current-password">
+      </div>
+      <button class="auth-btn-main" id="btn-login">Entrar</button>
+      <button class="auth-btn-sec" id="btn-signup">Criar conta</button>
+    </div>
+    <div class="auth-note">Apenas contas @g4educacao.com. Novos cadastros aguardam aprovação manual.</div>
     <div class="auth-err" id="auth-error"></div>
   </div>
 </div>
@@ -754,7 +767,7 @@ function showCockpit(user){
   document.getElementById('main').style.display='';
   _currentUser=user;
   // Aplica nome do usuário logado no chip
-  const nome=user.user_metadata&&user.user_metadata.full_name||user.email.split('@')[0];
+  const nome=(user.user_metadata&&user.user_metadata.full_name)||user.email.split('@')[0];
   const init=nome.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
   document.getElementById('chip-name').textContent=nome.split(' ')[0];
   document.getElementById('av-init').textContent=init;
@@ -828,23 +841,63 @@ document.addEventListener('DOMContentLoaded',()=>{
     // Modo remoto (GitHub Pages): exige login
     document.getElementById('topbar').style.display='none';
     document.getElementById('main').style.display='none';
-    // Handler do botão Google
-    document.getElementById('btn-google-login').addEventListener('click',async()=>{
-      const{error}=await sb.auth.signInWithOAuth({
-        provider:'google',
-        options:{redirectTo:location.href,queryParams:{hd:'g4educacao.com'}}
-      });
-      if(error){
-        const err=document.getElementById('auth-error');
-        if(err){err.textContent=error.message;err.style.display='block';}
-      }
+
+    function setAuthLoading(on){
+      const btn=document.getElementById('btn-login');
+      if(btn){btn.disabled=on;btn.textContent=on?'Aguarde…':'Entrar';}
+    }
+
+    function showAuthErr(msg){
+      const err=document.getElementById('auth-error');
+      if(err){err.textContent=msg;err.style.display='block';}
+    }
+
+    function clearAuthErr(){
+      const err=document.getElementById('auth-error');
+      if(err) err.style.display='none';
+    }
+
+    // Entrar com email + senha
+    document.getElementById('btn-login').addEventListener('click',async()=>{
+      clearAuthErr();
+      const email=(document.getElementById('auth-email').value||'').trim().toLowerCase();
+      const pass=document.getElementById('auth-pass').value||'';
+      if(!email||!pass){showAuthErr('Preencha e-mail e senha.');return;}
+      if(!email.endsWith('@g4educacao.com')){showAuthErr('Apenas contas @g4educacao.com.');return;}
+      setAuthLoading(true);
+      const{data,error}=await sb.auth.signInWithPassword({email,password:pass});
+      setAuthLoading(false);
+      if(error){showAuthErr(error.message==='Invalid login credentials'?'E-mail ou senha inválidos.':error.message);return;}
+      if(data&&data.user) checkApproval(data.user);
     });
+
+    // Criar conta (signup) — entra na fila de pendentes
+    document.getElementById('btn-signup').addEventListener('click',async()=>{
+      clearAuthErr();
+      const email=(document.getElementById('auth-email').value||'').trim().toLowerCase();
+      const pass=document.getElementById('auth-pass').value||'';
+      if(!email||!pass){showAuthErr('Preencha e-mail e senha.');return;}
+      if(!email.endsWith('@g4educacao.com')){showAuthErr('Apenas contas @g4educacao.com.');return;}
+      if(pass.length<6){showAuthErr('Senha mínima de 6 caracteres.');return;}
+      setAuthLoading(true);
+      const{data,error}=await sb.auth.signUp({email,password:pass});
+      setAuthLoading(false);
+      if(error){showAuthErr(error.message);return;}
+      if(data&&data.user) checkApproval(data.user);
+    });
+
+    // Enter nos inputs dispara login
+    ['auth-email','auth-pass'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.addEventListener('keydown',e=>{if(e.key==='Enter') document.getElementById('btn-login').click();});
+    });
+
     // Checa sessão atual
     sb.auth.getSession().then(({data:{session}})=>{
       if(session&&session.user) checkApproval(session.user);
       else showAuthScreen();
     });
-    // Ouve mudanças de auth (ex: retorno do OAuth redirect)
+    // Ouve mudanças de auth
     sb.auth.onAuthStateChange((_event,session)=>{
       if(session&&session.user) checkApproval(session.user);
     });
@@ -1134,7 +1187,7 @@ function pickName(nome,_){
 function fetchPipelineByName(nome,token,btn){
   // Etapas exatas do HubSpot (filtro avançado confirmado): 92 deals
   const anoAtual=new Date().getFullYear();
-  const query=`SELECT f.deal_id, f.fase_atual_no_processo, f.etapa_atual_no_pipeline, f.tier_da_oportunidade, f.delta_t, f.qualificador_name, f.proprietario_name, f.linha_de_receita_vigente, f.grupo_de_receita, f.created_at, f.event_skipped, f.email, f.cargo, f.canal_de_marketing, f.utm_medium, f.status_do_deal, f.revenue, COALESCE(p.firstname, '') as firstname, COALESCE(p.lastname, '') as lastname, COALESCE(p.name, '') as contact_name FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY deal_id ORDER BY event_timestamp DESC) as rn FROM production.diamond.funil_comercial WHERE qualificador_name = '${nome}' AND etapa_atual_no_pipeline IN ('Novo lead','Novo Lead ','Dia 01','Dia 02','Dia 03','Dia 04','Dia 05','Dia 06','Conectados','Agendamento','Reagendamento','Entrevista Agendada') AND status_do_deal = 'Aberto' AND pipeline_name = 'Comercial' AND created_at >= '${anoAtual}-01-01') f LEFT JOIN (SELECT DISTINCT email, firstname, lastname, CONCAT(COALESCE(firstname,''), ' ', COALESCE(lastname,'')) as name FROM production.diamond.persons_overview WHERE email IS NOT NULL) p ON LOWER(f.email) = LOWER(p.email) WHERE f.rn = 1 ORDER BY f.delta_t DESC LIMIT 200`;
+  const query=`SELECT f.deal_id, f.fase_atual_no_processo, f.etapa_atual_no_pipeline, f.tier_da_oportunidade, f.delta_t, f.qualificador_name, f.proprietario_name, f.linha_de_receita_vigente, f.grupo_de_receita, f.created_at, f.event_skipped, f.email, f.cargo, f.canal_de_marketing, f.utm_medium, f.status_do_deal, f.revenue, COALESCE(p.nome, '') as contact_name FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY deal_id ORDER BY event_timestamp DESC) as rn FROM production.diamond.funil_comercial WHERE qualificador_name = '${nome}' AND etapa_atual_no_pipeline IN ('Novo lead','Novo Lead ','Dia 01','Dia 02','Dia 03','Dia 04','Dia 05','Dia 06','Conectados','Agendamento','Reagendamento','Entrevista Agendada') AND status_do_deal = 'Aberto' AND pipeline_name = 'Comercial' AND created_at >= '${anoAtual}-01-01') f LEFT JOIN (SELECT DISTINCT email, nome FROM production.diamond.persons_overview WHERE email IS NOT NULL) p ON LOWER(f.email) = LOWER(p.email) WHERE f.rn = 1 ORDER BY f.delta_t DESC LIMIT 200`;
 
   fetch(DB_ENDPOINT,{
     method:'POST',
@@ -1298,13 +1351,10 @@ function renderLiveDeals(rows,cols){
   rows.forEach((row,idx)=>{
     const id='live-'+idx;
     const emailLead=g(row,'email')||'';
-    // Nome do contato — prioridade: firstname+lastname > contact_name > fallback email
-    const firstName=(g(row,'firstname')||'').trim();
-    const lastName=(g(row,'lastname')||'').trim();
+    // Nome do contato — persons_overview.nome via JOIN (contact_name), fallback email
     const contactName=(g(row,'contact_name')||'').trim();
     let nome='';
-    if(firstName||lastName) nome=(firstName+' '+lastName).trim();
-    else if(contactName&&contactName.trim()!=='') nome=contactName.trim();
+    if(contactName) nome=contactName;
     else if(emailLead) nome=emailLead.split('@')[0].replace(/[._-]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
     else nome='Lead '+(idx+1);
     // Empresa: domínio do email
