@@ -43,25 +43,9 @@ function _setG4Status(state, label){
 
 // Aplica estado imediatamente — sem timeout, sem handshake
 document.addEventListener('DOMContentLoaded', function(){
-  // Debug: loga sinais de detecção no console
-  console.log('[Elucy] G4OS detect — browserToolbar:', typeof window.browserToolbar,
-    '| UA:', navigator.userAgent.slice(0,80),
-    '| protocol:', location.protocol,
-    '| _G4OS_PARENT:', window._G4OS_PARENT);
-  if(window._G4OS_PARENT){
-    _setG4Status('connected','G4 OS ativo');
-  } else {
-    _setG4Status('offline','G4 OS offline');
-    // Re-check após 500ms — segurança contra race condition de preload
-    setTimeout(function(){
-      if(typeof window.browserToolbar !== 'undefined' || /Electron\//.test(navigator.userAgent)){
-        window._G4OS_PARENT = true;
-        window.IS_REMOTE = false;
-        _setG4Status('connected','G4 OS ativo');
-        console.log('[Elucy] G4OS detectado no retry (500ms)');
-      }
-    }, 500);
-  }
+  // Elucy relay: sempre conectado via Supabase — não depende do G4 OS local do SDR
+  // O worker G4 OS do admin processa todos os requests em background (a cada 2 min)
+  _setG4Status('connected','Elucy ativo');
 });
 
 // Listener de postMessage mantido para compatibilidade futura
@@ -191,13 +175,16 @@ body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-ser
 .g4os-status.connected .g4dot{background:var(--green);animation:g4pulse 2.5s ease-in-out infinite}
 .g4os-status.offline{background:var(--rdim);border-color:var(--red);color:var(--red)}
 .g4os-status.offline .g4dot{background:var(--red)}
+.g4os-status.processing{background:var(--gold-dim);border-color:var(--gold);color:var(--gold)}
+.g4os-status.processing .g4dot{background:var(--gold);animation:g4pulse .6s ease-in-out infinite}
 @keyframes g4pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
 /* Elucy motor styles */
 .elucy-badge{background:var(--gold-dim);border:1px solid var(--gold-border);border-radius:3px;padding:1px 6px;font-size:9px;font-weight:800;color:var(--gold);margin-left:6px;vertical-align:middle;letter-spacing:.5px}
 .elucy-live{background:var(--gdim)!important;border-color:var(--green)!important;color:var(--green)!important}
-.er-loading{padding:16px;text-align:center}
+.er-loading{padding:16px;text-align:left}
 .elucy-pulse{font-size:12px;color:var(--gold);font-weight:600;animation:elucy-blink 1.2s ease-in-out infinite}
 @keyframes elucy-blink{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes er-progress{0%{width:0%}80%{width:85%}100%{width:95%}}
 /* Filtros e ordenação */
 .sb-filters{padding:6px 14px 8px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:5px}
 .filter-row{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
@@ -1606,34 +1593,77 @@ function renderFocusPanel(){
     </div>`).join('');
 }
 
-// ── ELUCY ENGINE — G4 OS-first (postMessage) com fallback Edge Function ──
-// Prioridade: G4 OS parent > Edge Function (Anthropic API paga)
-// Se o Cockpit está aberto dentro do G4 OS de qualquer SDR → usa postMessage
-// Se está standalone no browser (sem G4 OS) → usa Edge Function (requer ANTHROPIC_API_KEY)
+// ── ELUCY ENGINE — Supabase Relay (zero G4 OS necessário para o SDR) ────────
+// Arquitetura: Cockpit → cockpit_requests (Supabase) → Worker G4 OS → cockpit_responses
+// Worker G4 OS processa com motor Elucy completo (26 MCPs + Databricks) e responde via Realtime
+// SDR abre o link, faz login, recebe análise em ~30s. Zero instalação necessária.
 
-const ANALYZE_URL='https://tnbbsjvzwleeoqnxtafp.supabase.co/functions/v1/analyze-deal';
+const ELUCY_REQUEST_URL='https://tnbbsjvzwleeoqnxtafp.supabase.co/functions/v1/elucy-request';
+const SUPABASE_URL='https://tnbbsjvzwleeoqnxtafp.supabase.co';
+const SUPABASE_ANON='sb_publishable_bh1m8U-gNbrBtA9WSCDWrA_V-RXZU15';
 
-// Decide em runtime: G4 OS parent disponível? → false = usa postMessage; true = standalone
-function _isStandalone(){
-  return !window._G4OS_PARENT && window.IS_REMOTE;
-}
-
-// Cache de análises Elucy por deal_id (evita re-query na mesma sessão)
+// Cache de análises Elucy por deal_id (evita re-request na mesma sessão)
 const ELUCY_CACHE={};
 
-async function _callElucyCloud(deal_id, dealData, mode, canal){
-  const sb=getSB(); if(!sb) return null;
+// Listeners Realtime ativos por request_id
+const ELUCY_LISTENERS={};
+
+// Envia request para a fila Supabase e aguarda resposta via Realtime
+async function _requestElucyRelay(deal_id, dealData, request_type, copy_mode, onResult, onError){
+  const sb=getSB(); if(!sb){ onError&&onError('Supabase offline'); return; }
   const {data:{session}}=await sb.auth.getSession();
-  if(!session) return null;
+  if(!session){ onError&&onError('Sessão expirada'); return; }
+
   try{
-    const res=await fetch(ANALYZE_URL,{
+    // 1. Envia para a fila via Edge Function
+    const res=await fetch(ELUCY_REQUEST_URL,{
       method:'POST',
       headers:{'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'},
-      body:JSON.stringify({deal_id,deal_data:dealData,mode,canal})
+      body:JSON.stringify({deal_id,deal_data:dealData,request_type,copy_mode})
     });
-    if(!res.ok) return null;
-    return await res.json();
-  }catch(e){ return null; }
+    const data=await res.json();
+    if(!res.ok){
+      onError&&onError(data.message||data.error||'Erro ao enfileirar request');
+      return;
+    }
+
+    const request_id=data.request_id;
+    _setG4Status('processing','Elucy processando…');
+
+    // 2. Escuta cockpit_responses via Realtime para esse request_id
+    const channel=sb.channel('elucy-response-'+request_id)
+      .on('postgres_changes',{
+        event:'INSERT',
+        schema:'public',
+        table:'cockpit_responses',
+        filter:'request_id=eq.'+request_id
+      }, (payload)=>{
+        const output=payload.new?.output;
+        if(output){
+          _setG4Status('connected','Elucy ativo');
+          onResult&&onResult(output, payload.new);
+          sb.removeChannel(channel);
+          delete ELUCY_LISTENERS[request_id];
+        }
+      })
+      .subscribe();
+
+    ELUCY_LISTENERS[request_id]=channel;
+
+    // 3. Timeout de 3 minutos
+    setTimeout(()=>{
+      if(ELUCY_LISTENERS[request_id]){
+        sb.removeChannel(ELUCY_LISTENERS[request_id]);
+        delete ELUCY_LISTENERS[request_id];
+        _setG4Status('connected','Elucy ativo');
+        onError&&onError('Timeout — worker não respondeu. Verifique se o G4 OS está aberto e tente novamente.');
+      }
+    }, 180000);
+
+    return request_id;
+  }catch(e){
+    onError&&onError('Erro de conexão: '+e.message);
+  }
 }
 
 // Benchmarks + Brandbook G4 comprimidos — viajam em cada postMessage
@@ -1713,32 +1743,42 @@ function requestElucyAnalysis(deal_id, dealData, targetId){
   }
   const reportEl=document.getElementById('er-'+targetId);
   if(reportEl){
-    reportEl.innerHTML=`<div class="er-loading"><span class="elucy-pulse">Elucy analisando deal ${deal_id}…</span></div>`;
+    reportEl.innerHTML=`<div class="er-loading"><div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start"><span class="elucy-pulse" style="font-size:13px;font-weight:600;color:var(--gold)">Elucy analisando deal…</span><span style="font-size:11px;color:var(--text2)">Worker G4 OS processando com 26 MCPs + Databricks. ~30s.</span><div style="width:100%;height:2px;background:var(--gold-dim);border-radius:1px;overflow:hidden"><div style="height:100%;background:var(--gold);border-radius:1px;animation:er-progress 30s linear forwards"></div></div></div></div>`;
     reportEl.style.display='block';
   }
-  if(_isStandalone()){
-    if(reportEl) reportEl.innerHTML='<div class="er-b"><div class="er-bl">ELUCY</div><div class="er-bt" style="color:var(--yellow);font-size:12px">⚠ Abra o Cockpit dentro do G4 OS para ativar o Elucy.<br><span style="color:var(--text2);font-size:11px">Análises requerem G4 OS conectado.</span></div></div>';
-    return;
-  }
-  // G4 OS disponível: envia prompt rico — profundidade total independente dos MCPs locais
-  const prompt=_buildAnalyzePrompt(deal_id, dealData);
-  const payload={type:'g4os:elucy:analyze',deal_id,deal_data:dealData,target_id:targetId,prompt};
-  try{ window.parent.postMessage(payload,'*'); }catch(e){}
-  window.postMessage(payload,'*');
+
+  _requestElucyRelay(deal_id, dealData, 'analyze', null,
+    (output)=>{
+      ELUCY_CACHE[deal_id]=output;
+      injectElucyReport(targetId, output);
+    },
+    (err)=>{
+      if(reportEl) reportEl.innerHTML=`<div class="er-b"><div class="er-bl" style="color:var(--yellow)">ELUCY OFFLINE</div><div class="er-bt" style="color:var(--yellow);font-size:12px">${escHtml(err)}</div></div>`;
+    }
+  );
 }
 
 function requestElucyCopy(deal_id, dealData, targetId, canal){
   const wa=document.getElementById('ct-'+targetId+'-wa');
+  const crmEl=document.getElementById('ct-'+targetId+'-crm');
   if(wa) wa.textContent='Elucy gerando copy…';
-  if(_isStandalone()){
-    if(wa) wa.textContent='⚠ Abra o Cockpit dentro do G4 OS para gerar copies.';
-    return;
-  }
-  // G4 OS disponível: prompt estruturado com contexto do deal + canal
-  const prompt=_buildCopyPrompt(deal_id, dealData, canal||'WhatsApp');
-  const payload={type:'g4os:elucy:copy',deal_id,deal_data:dealData,target_id:targetId,canal:canal||'WhatsApp',prompt};
-  try{ window.parent.postMessage(payload,'*'); }catch(e){}
-  window.postMessage(payload,'*');
+  if(crmEl) crmEl.textContent='';
+
+  _requestElucyRelay(deal_id, dealData, 'copy', canal||'whatsapp',
+    (output)=>{
+      // Extrai seções de copy do output
+      const copyWA=extractSection(output,'COPY SUGERIDA — WhatsApp')||extractSection(output,'COPY_WA')||extractSection(output,'COPY SUGERIDA');
+      const copyCRM=extractSection(output,'COPY SUGERIDA — CRM')||extractSection(output,'COPY_CRM');
+      if(wa) wa.textContent=copyWA||output;
+      if(crmEl) crmEl.textContent=copyCRM||'';
+      // Injeta no report também se existir
+      const cacheKey=deal_id+'_copy_'+canal;
+      ELUCY_CACHE[cacheKey]=output;
+    },
+    (err)=>{
+      if(wa) wa.textContent='Erro: '+err;
+    }
+  );
 }
 
 function injectElucyReport(targetId, report){
