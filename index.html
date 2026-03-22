@@ -711,12 +711,17 @@ function rp(p,el){
 
 const SUPABASE_URL='https://tnbbsjvzwleeoqnxtafp.supabase.co';
 const SUPABASE_ANON='sb_publishable_bh1m8U-gNbrBtA9WSCDWrA_V-RXZU15';
+// Projeto usa schema 'api' por padrão — forçar 'public' via header em todas as chamadas REST
+const SB_SCHEMA={'Accept-Profile':'public','Content-Profile':'public'};
 let _sb=null;
 let _currentUser=null;
 
 function getSB(){
   if(!_sb && window.supabase){
-    _sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
+    _sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON,{
+      db:{schema:'public'},
+      global:{headers:SB_SCHEMA}
+    });
   }
   return _sb;
 }
@@ -1129,7 +1134,7 @@ function pickName(nome,_){
 function fetchPipelineByName(nome,token,btn){
   // Etapas exatas do HubSpot (filtro avançado confirmado): 92 deals
   const anoAtual=new Date().getFullYear();
-  const query=`SELECT deal_id, fase_atual_no_processo, etapa_atual_no_pipeline, tier_da_oportunidade, delta_t, qualificador_name, proprietario_name, linha_de_receita_vigente, grupo_de_receita, created_at, event_skipped, email, cargo, canal_de_marketing, utm_medium, status_do_deal FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY deal_id ORDER BY event_timestamp DESC) as rn FROM production.diamond.funil_comercial WHERE qualificador_name = '${nome}' AND etapa_atual_no_pipeline IN ('Novo lead','Novo Lead ','Dia 01','Dia 02','Dia 03','Dia 04','Dia 05','Dia 06','Conectados','Agendamento','Reagendamento','Entrevista Agendada') AND status_do_deal = 'Aberto' AND pipeline_name = 'Comercial' AND created_at >= '${anoAtual}-01-01') WHERE rn = 1 ORDER BY delta_t DESC LIMIT 200`;
+  const query=`SELECT f.deal_id, f.fase_atual_no_processo, f.etapa_atual_no_pipeline, f.tier_da_oportunidade, f.delta_t, f.qualificador_name, f.proprietario_name, f.linha_de_receita_vigente, f.grupo_de_receita, f.created_at, f.event_skipped, f.email, f.cargo, f.canal_de_marketing, f.utm_medium, f.status_do_deal, f.revenue, COALESCE(p.firstname, '') as firstname, COALESCE(p.lastname, '') as lastname, COALESCE(p.name, '') as contact_name FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY deal_id ORDER BY event_timestamp DESC) as rn FROM production.diamond.funil_comercial WHERE qualificador_name = '${nome}' AND etapa_atual_no_pipeline IN ('Novo lead','Novo Lead ','Dia 01','Dia 02','Dia 03','Dia 04','Dia 05','Dia 06','Conectados','Agendamento','Reagendamento','Entrevista Agendada') AND status_do_deal = 'Aberto' AND pipeline_name = 'Comercial' AND created_at >= '${anoAtual}-01-01') f LEFT JOIN (SELECT DISTINCT email, firstname, lastname, CONCAT(COALESCE(firstname,''), ' ', COALESCE(lastname,'')) as name FROM production.diamond.persons_overview WHERE email IS NOT NULL) p ON LOWER(f.email) = LOWER(p.email) WHERE f.rn = 1 ORDER BY f.delta_t DESC LIMIT 200`;
 
   fetch(DB_ENDPOINT,{
     method:'POST',
@@ -1185,6 +1190,44 @@ function pollStatement(stmtId,nome,attempts){
   .catch(()=>showSyncToast('err','Erro ao verificar status da query.'));
 }
 
+// ── ELUCY VALOR — Modelo interno de oportunidade ─────────────────────
+// Inputs: tier, cargo, etapa, delta, skipped
+// Output: valor estimado em R$ (proxy de receita ponderada)
+function calcElucyValor({tier,cargo,etapa,delta,skipped}){
+  // Base por tier (ticket médio histórico G4)
+  const tierBase={diamond:38000,gold:18000,silver:9000,bronze:4000};
+  const base=tierBase[(tier||'').toLowerCase()]||6000;
+
+  // Multiplicador por cargo/authority
+  let authMult=1.0;
+  const c=(cargo||'').toLowerCase();
+  if(c.includes('ceo')||c.includes('presidente')) authMult=1.15;
+  else if(c.includes('fundador')||c.includes('sócio')||c.includes('socio')) authMult=1.10;
+  else if(c.includes('diretor')) authMult=1.0;
+  else if(c.includes('gerente')) authMult=0.85;
+
+  // Probabilidade de fechamento por etapa (conversion rate histórica)
+  const etapaProb={
+    'entrevista agendada':0.55,'agendamento':0.45,'reagendamento':0.38,
+    'conectados':0.20,'dia 01':0.12,'dia 02':0.10,'dia 03':0.08,
+    'dia 04':0.06,'dia 05':0.05,'dia 06':0.04,'novo lead':0.08
+  };
+  const prob=etapaProb[(etapa||'').toLowerCase()]||0.10;
+
+  // Penalidade por tempo parado
+  const agePenalty=delta>20?0.5:delta>10?0.7:delta>5?0.85:1.0;
+  // Bônus por sem gaps (event_skipped=false = lead respondeu fluxo normal)
+  const flowBonus=skipped?1.0:1.08;
+
+  return Math.round(base * authMult * prob * agePenalty * flowBonus);
+}
+
+function fmtBRL(v){
+  if(!v&&v!==0) return '—';
+  if(v>=1000) return 'R$'+Math.round(v/1000)+'k';
+  return 'R$'+v;
+}
+
 const COL={};
 function renderLiveDeals(rows,cols){
   cols.forEach((c,i)=>COL[c.name]=i);
@@ -1212,19 +1255,31 @@ function renderLiveDeals(rows,cols){
     if(!skipped) t+=8;
     return Math.max(10,Math.min(100,t));
   }
-  function canalClass(canal){
-    const c=(canal||'').toLowerCase();
-    if(c.includes('social')||c.includes('instagram')||c.includes('dm')||c.includes(' ig')||c.includes('tallis')||c.includes('nardon')||c.includes('alfredo')||c.includes('perfil k')) return 'cig';
-    if(c.includes('whats')||c.includes('wp')) return 'cwa';
-    return 'ccl';
+  // Canal derivado da linha_de_receita_vigente (fonte canônica)
+  function canalFromLinha(linha){
+    const l=(linha||'').toLowerCase();
+    if(l.includes('social dm')||l.includes('social media')||l.includes('[im] social')) return 'Instagram';
+    if(l.includes('whats')||l.includes('wp')) return 'WhatsApp';
+    if(l.includes('form')||l.includes('google')||l.includes('orgânico')||l.includes('organico')) return 'Form';
+    if(l.includes('field')||l.includes('outbound')) return 'Ligação';
+    if(l.includes('email')||l.includes('e-mail')) return 'E-mail';
+    return null; // sem match — fallback para utm_medium
   }
-  function canalLabel(canal){
-    const c=(canal||'').toLowerCase();
-    if(c.includes('social')||c.includes('instagram')||c.includes('dm')||c.includes('tallis')||c.includes('nardon')||c.includes('alfredo')||c.includes('perfil k')) return 'Instagram';
-    if(c.includes('whats')||c.includes('wp')) return 'WhatsApp';
-    if(c.includes('google')||c.includes('form')) return 'Form';
-    if(!canal) return 'Direto';
-    return canal.length>18?canal.slice(0,18)+'…':canal;
+  function canalFallback(utm){
+    const u=(utm||'').toLowerCase();
+    if(u==='tallis'||u==='nardon'||u==='alfredo'||u.includes('social')) return 'Instagram';
+    if(u.includes('whats')||u==='wp') return 'WhatsApp';
+    if(u==='cpc'||u.includes('google')) return 'Form';
+    if(!utm) return 'Direto';
+    return utm.length>18?utm.slice(0,18)+'…':utm;
+  }
+  function resolveCanal(linha,utm){
+    return canalFromLinha(linha)||canalFallback(utm);
+  }
+  function canalClass(canal){
+    if(canal==='Instagram') return 'cig';
+    if(canal==='WhatsApp') return 'cwa';
+    return 'ccl';
   }
   function dDay(delta){
     const d=parseInt(delta)||0;
@@ -1242,30 +1297,45 @@ function renderLiveDeals(rows,cols){
 
   rows.forEach((row,idx)=>{
     const id='live-'+idx;
-    // Campos reais da funil_comercial (confirmados via DESCRIBE TABLE)
     const emailLead=g(row,'email')||'';
-    const nome=emailLead?emailLead.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,c=>c.toUpperCase()):'Lead '+(idx+1);
+    // Nome do contato — prioridade: firstname+lastname > contact_name > fallback email
+    const firstName=(g(row,'firstname')||'').trim();
+    const lastName=(g(row,'lastname')||'').trim();
+    const contactName=(g(row,'contact_name')||'').trim();
+    let nome='';
+    if(firstName||lastName) nome=(firstName+' '+lastName).trim();
+    else if(contactName&&contactName.trim()!=='') nome=contactName.trim();
+    else if(emailLead) nome=emailLead.split('@')[0].replace(/[._-]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+    else nome='Lead '+(idx+1);
+    // Empresa: domínio do email
     const empresa=emailLead?emailLead.split('@')[1]||'—':'—';
     const cargo=g(row,'cargo')||'';
     const fase=g(row,'fase_atual_no_processo')||'Ativo';
     const etapa=g(row,'etapa_atual_no_pipeline')||'';
     const tier=(g(row,'tier_da_oportunidade')||'').toLowerCase();
     const delta=parseInt(g(row,'delta_t'))||0;
-    // Canal: usa canal_de_marketing ou utm_medium para inferir o canal de contato
-    const canalRaw=g(row,'canal_de_marketing')||g(row,'utm_medium')||'';
-    const canal=canalRaw;
+    // Canal: derivado da linha_de_receita_vigente (canônico) com fallback utm_medium
+    const linhaReceita=g(row,'linha_de_receita_vigente')||'';
+    const utm=g(row,'utm_medium')||'';
+    const canal=resolveCanal(linhaReceita,utm);
+    // Valor da oportunidade (time de dados)
+    const revenueRaw=parseFloat(g(row,'revenue'))||0;
     const deal_id=g(row,'deal_id');
     const temp=calcTemp(row);
     const tc=tempClass(temp);
     const tl=tempLabel(temp);
     const cc=canalClass(canal);
-    const cl=canalLabel(canal);
     const dd=dDay(delta);
     const slaRisk=delta>7;
     const irondome=delta>10;
     const classes='di'+(slaRisk?' sla':'')+(irondome?' dome':'');
 
+    // Valor Elucy — calculado por SPICED: tier + cargo + etapa + delta + event_skipped
+    const elucyValor=calcElucyValor({tier,cargo,etapa,delta,skipped:String(g(row,'event_skipped')).toLowerCase()==='true'});
+    // Forecast delta: divergência entre modelo de dados e modelo Elucy
+    const forecastDelta=revenueRaw>0?elucyValor-revenueRaw:null;
     const dealObj={nome,empresa:emailLead||empresa,cargo,fase,etapa,tier,delta,canal,deal_id,temp,tc,tl,dd,emailLead,
+      linhaReceita,revenueRaw,elucyValor,forecastDelta,
       _fase:fase,_etapa:etapa,_tier:tier,_delta:delta,_temp:temp};
     // Sinal automático
     const signal=calcSignal(dealObj);
@@ -1284,11 +1354,11 @@ function renderLiveDeals(rows,cols){
     di.setAttribute('data-live','1');
     di.innerHTML=`
       <div class="di-name">${nome}</div>
-      <div class="di-co">${emailLead||empresa}${cargo?' · '+cargo:''}</div>
+      <div class="di-co">${empresa}${cargo?' · '+cargo:''}</div>
       <div class="di-meta">
         <span class="tb ${tc}">${tl} ${temp}</span>
         <span class="fc">${etapa||fase}</span>
-        <span class="cc ${cc}">${cl}</span>
+        <span class="cc ${cc}">${canal}</span>
         <span class="tb ${sigCls[signal]||'sig-buy'}" style="margin-left:2px">${sigLabels[signal]||signal}</span>
         <span class="urg-badge ${uc}" title="Score urgência">${urgency}</span>
       </div>
@@ -1332,7 +1402,7 @@ function renderFocusPanel(){
   fl.innerHTML=all.map((d,i)=>`
     <div class="focus-item" onclick="selectLiveDeal('${d.id}',window._COCKPIT_DEAL_MAP['${d.id}'])">
       <span class="focus-pos">${i+1}</span>
-      <span class="focus-name">${d.emailLead||d.nome}</span>
+      <span class="focus-name">${d.nome||d.emailLead}</span>
       <span class="focus-why">${sigWhy[d._signal]||d._signal}</span>
     </div>`).join('');
 }
@@ -1458,8 +1528,8 @@ function selectLiveDeal(id,d){
       <div class="dch">
         <div class="dca">${(d.emailLead||d.nome)[0].toUpperCase()}</div>
         <div class="dci">
-          <div class="dcn">${d.emailLead||d.nome}</div>
-          <div class="dcs">${d.cargo||'—'} · Deal ID: ${d.deal_id||'—'}</div>
+          <div class="dcn">${d.nome}</div>
+          <div class="dcs">${d.cargo||'—'} · ${d.emailLead||d.empresa}</div>
           <div class="tags-row">
             <span class="tag t-gray">${d.tier||'—'}</span>
             <span class="tag t-gray">${d.etapa||d.fase}</span>
@@ -1475,9 +1545,11 @@ function selectLiveDeal(id,d){
       </div>
       <div class="info-grid">
         <div class="ic"><div class="ic-l">Fase</div><div class="ic-v">${d.fase}</div><div class="ic-s">${d.delta} dias no CRM</div></div>
-        <div class="ic"><div class="ic-l">Canal</div><div class="ic-v">${d.canal}</div></div>
+        <div class="ic"><div class="ic-l">Canal</div><div class="ic-v">${d.canal}</div><div class="ic-s">${d.linhaReceita||'—'}</div></div>
         <div class="ic"><div class="ic-l">Dia FUP</div><div class="ic-v">${d.dd}</div></div>
         <div class="ic"><div class="ic-l">Deal ID</div><div class="ic-v" style="font-size:11px">${d.deal_id||'—'}</div></div>
+        <div class="ic"><div class="ic-l">Valor G4 Dados</div><div class="ic-v" style="color:var(--green)">${fmtBRL(d.revenueRaw)}</div><div class="ic-s">Time de dados</div></div>
+        <div class="ic"><div class="ic-l">Valor Elucy</div><div class="ic-v" style="color:var(--accent2)">${fmtBRL(d.elucyValor)}</div><div class="ic-s">${d.forecastDelta!=null?(d.forecastDelta>=0?'▲ +'+fmtBRL(d.forecastDelta):'▼ '+fmtBRL(d.forecastDelta))+' vs G4 Dados':'Sem ref. dados'}</div></div>
       </div>
       <div class="recom">
         <div class="recom-l">Recomendação Elucy <span class="elucy-badge">MOTOR ATIVO</span></div>
