@@ -864,12 +864,17 @@ function showCockpit(user){
   document.getElementById('chip-name').textContent=nome.split(' ')[0];
   document.getElementById('av-init').textContent=init;
   document.getElementById('op-pill').classList.add('show');
-  // Exibe botão de sync na topbar
   const syncBtn=document.getElementById('btn-sync-top');
   if(syncBtn) syncBtn.style.display='';
-  // Carrega direto do Supabase — dados sincronizados pelo worker G4 OS (agendamento)
-  // Botão de sync manual ainda disponível para refresh forçado
-  loadDealsFromSupabase(user.email);
+  // Fluxo de carga: token salvo → Databricks direto. Sem token → modal de configuração.
+  const token=localStorage.getItem('elucy_db_token');
+  if(token){
+    const btn=document.getElementById('btn-refresh');
+    if(btn) btn.classList.add('spin-active');
+    fetchPipeline(user.email,token,btn);
+  } else {
+    promptDbToken(user.email);
+  }
 }
 
 async function checkApproval(user){
@@ -1180,33 +1185,56 @@ function showModalStatus(type,msg){
 // ── REFRESH / DATABRICKS SYNC ────────────────────────────────────────
 
 function refreshPipeline(){
-  // Carrega direto do Supabase — fonte de verdade para o Cockpit
-  // Worker G4 OS sincroniza do Databricks a cada 2 min via agendamento
-  if(_currentUser) loadDealsFromSupabase(_currentUser.email);
+  if(!_currentUser) return;
+  const token=localStorage.getItem('elucy_db_token');
+  if(!token){ promptDbToken(_currentUser.email); return; }
+  const btn=document.getElementById('btn-refresh');
+  if(btn) btn.classList.add('spin-active');
+  fetchPipeline(_currentUser.email,token,btn);
 }
 
 function promptDbToken(email){
+  const existing=document.getElementById('token-modal');
+  if(existing) existing.remove();
   const ov=document.createElement('div');
   ov.className='modal-ov';
   ov.id='token-modal';
   ov.innerHTML=`
-    <div class="modal">
-      <div class="modal-t">Conectar Databricks</div>
-      <div class="modal-s">Insira seu Personal Access Token do Databricks para sincronizar o pipeline. Salvo apenas localmente no seu browser.</div>
-      <div class="modal-f">
-        <label class="modal-l">Personal Access Token</label>
-        <input class="modal-i" id="db-token-input" type="password" placeholder="dapi...">
+    <div class="modal" style="max-width:420px">
+      <div class="modal-t" style="font-size:17px">Configurar conexão Databricks</div>
+      <div class="modal-s" style="margin-bottom:16px">Cole seu Personal Access Token para conectar o pipeline direto ao CRM. Salvo só no seu browser — nunca enviado a terceiros.</div>
+
+      <div id="token-steps" style="display:flex;gap:8px;margin-bottom:18px">
+        <div class="tstep tstep-active" id="ts1">1 Token</div>
+        <div class="tstep" id="ts2">2 Identidade</div>
+        <div class="tstep" id="ts3">3 Pipeline</div>
       </div>
-      <div class="modal-note">Gere em: Databricks → Settings → Developer → Access Tokens.</div>
-      <div id="token-sync-status"></div>
+
+      <div id="token-step-content">
+        <div class="modal-f">
+          <label class="modal-l">Personal Access Token</label>
+          <input class="modal-i" id="db-token-input" type="password" placeholder="dapi..." autocomplete="off" style="font-family:monospace;letter-spacing:1px">
+        </div>
+        <div class="modal-note" style="margin-bottom:12px">Gere em: Databricks → Settings → Developer → Access Tokens</div>
+      </div>
+
+      <div id="token-sync-status" style="min-height:32px;margin-bottom:10px"></div>
+
       <div class="row" style="justify-content:flex-end;gap:8px">
-        <button class="btn bs btn-sm" onclick="closeTokenModal()">Cancelar</button>
-        <button class="btn bp btn-sm" onclick="saveToken('${email}')">Conectar</button>
+        <button class="btn bs btn-sm" id="token-cancel-btn" onclick="closeTokenModal()">Cancelar</button>
+        <button class="btn bp btn-sm" id="token-connect-btn" onclick="saveToken('${email}')">Conectar →</button>
       </div>
     </div>`;
   ov.addEventListener('click',e=>{if(e.target===ov) closeTokenModal();});
   document.body.appendChild(ov);
-  setTimeout(()=>document.getElementById('db-token-input').focus(),80);
+  // CSS dos steps inline (evita conflito com estilos existentes)
+  if(!document.getElementById('tstep-style')){
+    const st=document.createElement('style');
+    st.id='tstep-style';
+    st.textContent=`.tstep{flex:1;text-align:center;padding:6px 4px;border-radius:8px;font-size:11px;font-weight:700;background:var(--bg3);color:var(--text2);transition:all .3s}.tstep-active{background:var(--accent);color:#000}.tstep-done{background:var(--green,#22c55e);color:#000}`;
+    document.head.appendChild(st);
+  }
+  setTimeout(()=>{const i=document.getElementById('db-token-input');if(i)i.focus();},80);
 }
 
 function closeTokenModal(){
@@ -1214,23 +1242,40 @@ function closeTokenModal(){
   if(m) m.remove();
 }
 
+function _tokenStep(step, statusHtml){
+  ['ts1','ts2','ts3'].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    if(i+1<step) el.className='tstep tstep-done';
+    else if(i+1===step) el.className='tstep tstep-active';
+    else el.className='tstep';
+  });
+  const s=document.getElementById('token-sync-status');
+  if(s&&statusHtml!==undefined) s.innerHTML=statusHtml;
+}
+
 function saveToken(email){
   const input=document.getElementById('db-token-input');
   const token=(input?input.value:'').trim();
   if(!token||token.length<10){
-    const s=document.getElementById('token-sync-status');
-    if(s) s.innerHTML='<div class="sync-status sync-err">Token inválido. Cole o Personal Access Token completo.</div>';
+    _tokenStep(1,'<div style="color:var(--red,#f87171);font-size:12px">⚠ Token inválido. Cole o Personal Access Token completo (começa com dapi...).</div>');
     return;
   }
+  // Desabilita botões durante o fluxo
+  const connectBtn=document.getElementById('token-connect-btn');
+  const cancelBtn=document.getElementById('token-cancel-btn');
+  if(connectBtn){connectBtn.disabled=true;connectBtn.textContent='Aguarde…';}
+  if(cancelBtn) cancelBtn.disabled=true;
+
   localStorage.setItem('elucy_db_token',token);
-  const s=document.getElementById('token-sync-status');
-  if(s) s.innerHTML='<div class="sync-status sync-ok">Conectado. Carregando pipeline...</div>';
-  setTimeout(()=>{
-    closeTokenModal();
-    const btn=document.getElementById('btn-refresh');
-    if(btn) btn.classList.add('spin-active');
-    fetchPipeline(email,token,btn);
-  },700);
+
+  // Passo 1 → 2: verificando identidade no CRM
+  _tokenStep(2,'<div style="color:var(--text2);font-size:12px">⏳ Verificando identidade no CRM…</div>');
+
+  // fetchPipeline vai fazer o lookup do qualificador_name e disparar o pipeline
+  // Interceptamos o sucesso via callback no handlePipelineData
+  window._tokenFlowActive=true;
+  fetchPipeline(email,token,null);
 }
 
 function fetchPipeline(email,token,btn){
@@ -1261,23 +1306,24 @@ function fetchPipeline(email,token,btn){
   .then(data=>{
     const rows=(data.result&&data.result.data_array)||[];
     if(!rows.length){
-      showSyncToast('err','Operador não encontrado no CRM. Verifique o email inserido.');
+      if(window._tokenFlowActive) _tokenStep(1,'<div style="color:var(--red,#f87171);font-size:12px">⚠ Operador não encontrado no CRM com este email. Verifique e tente novamente.</div>');
+      else showSyncToast('err','Operador não encontrado no CRM. Verifique o email inserido.');
       if(btn) btn.classList.remove('spin-active');
       return;
     }
-    // Se retornou um único nome, usa direto. Se múltiplos, pede escolha
     if(rows.length===1){
       const nome=rows[0][0];
       localStorage.setItem('elucy_qualificador_name',nome);
+      if(window._tokenFlowActive) _tokenStep(3,'<div style="color:var(--text2);font-size:12px">⚡ Carregando pipeline de <strong>'+nome+'</strong>…</div>');
       fetchPipelineByName(nome,token,btn);
     } else {
-      // Mostra seletor de nome
       showNamePicker(rows.map(r=>r[0]),token,btn);
     }
   })
   .catch(err=>{
     if(btn) btn.classList.remove('spin-active');
-    showSyncToast('err','Erro no lookup: '+err.message);
+    if(window._tokenFlowActive) _tokenStep(1,'<div style="color:var(--red,#f87171);font-size:12px">⚠ Erro de conexão: '+err.message+'</div>');
+    else showSyncToast('err','Erro no lookup: '+err.message);
   });
 }
 
@@ -1333,8 +1379,15 @@ function handlePipelineData(data,nome){
   const rows=(data.result&&data.result.data_array)||[];
   const cols=(data.manifest&&data.manifest.schema&&data.manifest.schema.columns)||[];
   if(!rows.length){
+    if(window._tokenFlowActive){ window._tokenFlowActive=false; closeTokenModal(); }
     showSyncToast('ok','Pipeline atualizado — 0 deals ativos encontrados para este operador.');
     return;
+  }
+  // Se o fluxo de token estava ativo, fecha o modal com animação de sucesso
+  if(window._tokenFlowActive){
+    window._tokenFlowActive=false;
+    _tokenStep(3,'<div style="color:var(--green,#22c55e);font-size:13px;font-weight:700">Pipeline conectado — '+rows.length+' deals carregados.</div>');
+    setTimeout(closeTokenModal, 1200);
   }
   renderLiveDeals(rows,cols);
   showSyncToast('ok',`Pipeline sincronizado — ${rows.length} deal(s) carregado(s) do Databricks.`);
