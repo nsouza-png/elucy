@@ -421,6 +421,35 @@ input,textarea,select{font-family:inherit;font-size:inherit}
   border-top:1px solid var(--border);
 }
 .deal-action-bar .btn{flex:1;text-align:center}
+/* ── DEAL PANEL SECTIONS ── */
+.dp-sec{margin-bottom:14px}
+.dp-sec-h{display:flex;align-items:center;gap:6px;margin-bottom:10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3)}
+.dp-sec-h::before{content:"";width:3px;height:10px;border-radius:2px;flex-shrink:0}
+.dp-sec-h.sec-identity::before{background:var(--accent)}
+.dp-sec-h.sec-deal::before{background:var(--green)}
+.dp-sec-h.sec-hist::before{background:var(--blue)}
+.dp-sec-h.sec-bench::before{background:var(--yellow)}
+.dp-sec-h.sec-gov::before{background:var(--red)}
+.dp-sec-h.sec-action::before{background:var(--accent2)}
+.dp-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px}
+.dp-kpi{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px}
+.dp-kpi-v{font-size:15px;font-weight:800;line-height:1.2}
+.dp-kpi-l{font-size:9px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.4px}
+.dp-kpi-s{font-size:9px;color:var(--text4);margin-top:1px}
+.dp-bench{background:linear-gradient(135deg,rgba(245,158,11,.06),rgba(245,158,11,.02));border:1px solid rgba(245,158,11,.18);border-radius:var(--r);padding:10px 14px}
+.dp-bench-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.dp-bench-row:last-child{margin-bottom:0}
+.dp-bench-l{font-size:11px;color:var(--text2)}
+.dp-bench-v{font-size:12px;font-weight:700;color:var(--text)}
+.dp-bench-v.above{color:var(--green)}
+.dp-bench-v.below{color:var(--red)}
+.dp-bench-v.avg{color:var(--yellow)}
+.dp-gov{padding:10px 14px;border-radius:var(--r);margin-bottom:6px;font-size:12px;font-weight:500;display:flex;align-items:flex-start;gap:8px;line-height:1.5}
+.dp-gov .gov-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+.dp-gov.gov-red{background:var(--rdim);border:1px solid rgba(239,68,68,.25);color:var(--red)}
+.dp-gov.gov-yellow{background:var(--ydim);border:1px solid rgba(245,158,11,.25);color:var(--yellow)}
+.dp-gov.gov-green{background:var(--gdim);border:1px solid rgba(34,197,94,.25);color:var(--green)}
+.dp-gov.gov-blue{background:var(--bdim);border:1px solid rgba(59,130,246,.25);color:var(--blue)}
 /* Intelligence dashboard */
 .intel-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
 .intel-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:15px;overflow:hidden}
@@ -1111,232 +1140,9 @@ input,textarea,select{font-family:inherit;font-size:inherit}
     <div class="screen" id="screen-reports">
   <div style="display:flex;gap:0;flex:1;min-height:0;height:100%;overflow:hidden">
 
-    <!-- ── MAIN COLUMN ─────────────────────────────────────── -->
-    <div style="flex:1;min-width:0;overflow-y:auto;padding:20px 20px 20px 20px">
-
-      <!-- Header + tabs -->
-      <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-        <div>
-          <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:2px">Efici&ecirc;ncia do Operador</div>
-          <div style="font-size:11px;color:var(--text3)" id="rp-period-label">Nathan Souza &middot; Mar&ccedil;o 2026</div>
-        </div>
-        <div class="ftabs">
-          <div class="ft on" onclick="rp('mar',this)">Mar 2026</div>
-          <div class="ft" onclick="rp('fev',this)">Fev 2026</div>
-          <div class="ft" onclick="rp('jan',this)">Jan 2026</div>
-          <div class="ft" onclick="rp('dez',this)">Dez 2025</div>
-        </div>
-      </div>
-
-      <!-- OKR Banner: SAL → Oportunidade -->
-      <div class="okr-banner">
-        <div class="okr-banner-hdr">
-          <span class="okr-banner-tag">&#127919; OKR MONITOR</span>
-          <span class="okr-banner-title">Elevar convers&atilde;o SAL &rarr; Oportunidade por efici&ecirc;ncia das linhas de receita</span>
-        </div>
-        <div class="okr-kpis">
-          <div class="okr-kpi">
-            <div class="okr-kpi-val" id="okr-sal-con">34%</div>
-            <div class="okr-kpi-lbl">SAL &rarr; Conectado</div>
-            <div class="okr-kpi-arrow up">&#8679; +4pp</div>
-          </div>
-          <div class="okr-kpi">
-            <div class="okr-kpi-val" id="okr-con-age">61%</div>
-            <div class="okr-kpi-lbl">Conectado &rarr; Agendado</div>
-            <div class="okr-kpi-arrow up">&#8679; +7pp</div>
-          </div>
-          <div class="okr-kpi">
-            <div class="okr-kpi-val" id="okr-age-opp">52%</div>
-            <div class="okr-kpi-lbl">Agendado &rarr; Opp</div>
-            <div class="okr-kpi-arrow dn">&#8681; -2pp</div>
-          </div>
-        </div>
-        <div class="okr-progress-wrap">
-          <div class="okr-progress-bg"><div class="okr-progress-fill" style="width:54%"></div></div>
-          <div class="okr-progress-label">54% da meta trimestral &middot; Meta: SAL&rarr;Opp 25%</div>
-        </div>
-      </div>
-
-      <!-- KPI Cards -->
-      <div class="kpi-g" style="margin-bottom:14px">
-        <div class="kpi">
-          <div class="kpi-l">FUPs Enviados</div>
-          <div class="kpi-v" id="kv-fups">147</div>
-          <div class="kd kd-p">+23% vs anterior</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-l">Qualificados</div>
-          <div class="kpi-v" id="kv-qual">38</div>
-          <div class="kd kd-p">+12% vs anterior</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-l">MQLs Gerados</div>
-          <div class="kpi-v" id="kv-mql">14</div>
-          <div class="kd kd-n">-5% vs anterior</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-l">Receita Atribu&iacute;da</div>
-          <div class="kpi-v" id="kv-rev">R$ 182k</div>
-          <div class="kd kd-p">+34% vs anterior</div>
-        </div>
-      </div>
-
-      <!-- 2-col grid: Funnel + Eficiência por Linha -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-
-        <!-- Funil Visual -->
-        <div class="funnel-wrap">
-          <div class="funnel-title">&#128200; Funil SDR &mdash; Mar&ccedil;o 2026</div>
-          <div class="funnel-bars">
-            <div class="funnel-bar-col">
-              <div class="funnel-bar-val">215</div>
-              <div class="funnel-bar" style="height:90px"></div>
-              <div class="funnel-bar-lbl">Abord.</div>
-            </div>
-            <div class="funnel-bar-col">
-              <div class="funnel-bar-val">133</div>
-              <div class="funnel-bar" style="height:56px"></div>
-              <div class="funnel-bar-lbl">Resp.</div>
-            </div>
-            <div class="funnel-bar-col">
-              <div class="funnel-bar-val">72</div>
-              <div class="funnel-bar mql" style="height:30px"></div>
-              <div class="funnel-bar-lbl">SAL</div>
-            </div>
-            <div class="funnel-bar-col">
-              <div class="funnel-bar-val">38</div>
-              <div class="funnel-bar opp" style="height:16px"></div>
-              <div class="funnel-bar-lbl">MQL</div>
-            </div>
-            <div class="funnel-bar-col">
-              <div class="funnel-bar-val">14</div>
-              <div class="funnel-bar opp" style="height:8px"></div>
-              <div class="funnel-bar-lbl">Opp</div>
-            </div>
-            <div class="funnel-bar-col">
-              <div class="funnel-bar-val">6</div>
-              <div class="funnel-bar won" style="height:4px"></div>
-              <div class="funnel-bar-lbl">Ganho</div>
-            </div>
-          </div>
-          <div class="funnel-dividers">
-            <div class="funnel-rate"><span class="funnel-rate-arrow">&#8594;</span>62%</div>
-            <div class="funnel-rate"><span class="funnel-rate-arrow">&#8594;</span>54%</div>
-            <div class="funnel-rate"><span class="funnel-rate-arrow">&#8594;</span>53%</div>
-            <div class="funnel-rate"><span class="funnel-rate-arrow">&#8594;</span>37%</div>
-            <div class="funnel-rate"><span class="funnel-rate-arrow">&#8594;</span>43%</div>
-          </div>
-        </div>
-
-        <!-- Eficiência por Linha de Receita -->
-        <div class="eff-section">
-          <div class="eff-section-hdr">
-            <div class="eff-section-title">&#9889; Efici&ecirc;ncia por Linha</div>
-          </div>
-          <div class="eff-row">
-            <div>
-              <div class="eff-row-name">Imers&atilde;o</div>
-              <div class="eff-row-ticket">Presencial &middot; R$15k+</div>
-            </div>
-            <div class="eff-bar-wrap">
-              <div class="eff-bar-bg"><div class="eff-bar-fill high" style="width:82%"></div></div>
-              <div class="eff-bar-pct">82% de convers&atilde;o SAL&rarr;Opp</div>
-            </div>
-            <div class="eff-row-rev">
-              <div class="eff-row-rev-val">R$154k</div>
-              <div class="eff-row-rev-delta pos">+18%</div>
-            </div>
-          </div>
-          <div class="eff-row">
-            <div>
-              <div class="eff-row-name">Club</div>
-              <div class="eff-row-ticket">Recorrente &middot; R$3-8k</div>
-            </div>
-            <div class="eff-bar-wrap">
-              <div class="eff-bar-bg"><div class="eff-bar-fill mid" style="width:58%"></div></div>
-              <div class="eff-bar-pct">58% de convers&atilde;o SAL&rarr;Opp</div>
-            </div>
-            <div class="eff-row-rev">
-              <div class="eff-row-rev-val">R$18k</div>
-              <div class="eff-row-rev-delta pos">+5%</div>
-            </div>
-          </div>
-          <div class="eff-row">
-            <div>
-              <div class="eff-row-name">Field Sales</div>
-              <div class="eff-row-ticket">Enterprise &middot; R$50k+</div>
-            </div>
-            <div class="eff-bar-wrap">
-              <div class="eff-bar-bg"><div class="eff-bar-fill low" style="width:31%"></div></div>
-              <div class="eff-bar-pct">31% de convers&atilde;o SAL&rarr;Opp</div>
-            </div>
-            <div class="eff-row-rev">
-              <div class="eff-row-rev-val">R$7k</div>
-              <div class="eff-row-rev-delta neg">-3%</div>
-            </div>
-          </div>
-          <div class="eff-row">
-            <div>
-              <div class="eff-row-name">Eventos</div>
-              <div class="eff-row-ticket">Pontual &middot; R$5-12k</div>
-            </div>
-            <div class="eff-bar-wrap">
-              <div class="eff-bar-bg"><div class="eff-bar-fill low" style="width:24%"></div></div>
-              <div class="eff-bar-pct">24% de convers&atilde;o SAL&rarr;Opp</div>
-            </div>
-            <div class="eff-row-rev">
-              <div class="eff-row-rev-val">R$5k</div>
-              <div class="eff-row-rev-delta neg">-8%</div>
-            </div>
-          </div>
-          <div class="eff-row">
-            <div>
-              <div class="eff-row-name">Digital</div>
-              <div class="eff-row-ticket">Online &middot; R$1-3k</div>
-            </div>
-            <div class="eff-bar-wrap">
-              <div class="eff-bar-bg"><div class="eff-bar-fill low" style="width:12%"></div></div>
-              <div class="eff-bar-pct">12% de convers&atilde;o SAL&rarr;Opp</div>
-            </div>
-            <div class="eff-row-rev">
-              <div class="eff-row-rev-val">R$3k</div>
-              <div class="eff-row-rev-delta pos">+1%</div>
-            </div>
-          </div>
-        </div>
-
-      </div><!-- /2-col grid -->
-
-      <!-- 2-col grid: Convers&atilde;o por Linha + Atividades -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="ch">
-          <div class="ch-t">Convers&atilde;o por Linha de Receita</div>
-          <table class="tbl">
-            <thead><tr><th>Linha</th><th>Abord.</th><th>SAL</th><th>MQL</th><th>Taxa</th></tr></thead>
-            <tbody>
-              <tr><td>Imers&otilde;es</td><td>98</td><td>42</td><td>8</td><td class="pg">8.2%</td></tr>
-              <tr><td>Club</td><td>42</td><td>18</td><td>3</td><td class="pm">7.1%</td></tr>
-              <tr><td>Field Sales</td><td>35</td><td>7</td><td>2</td><td class="pm">5.7%</td></tr>
-              <tr><td>Eventos</td><td>28</td><td>4</td><td>1</td><td class="pl">3.6%</td></tr>
-              <tr><td>Digital</td><td>12</td><td>1</td><td>0</td><td class="pl">0%</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="ch">
-          <div class="ch-t">Atividades &mdash; Mar&ccedil;o 2026</div>
-          <table class="tbl">
-            <thead><tr><th>Atividade</th><th>Real.</th><th>Meta</th><th>%</th></tr></thead>
-            <tbody>
-              <tr><td>FUPs WhatsApp</td><td>147</td><td>150</td><td class="pm">98%</td></tr>
-              <tr><td>DMs Instagram</td><td>31</td><td>30</td><td class="pg">103%</td></tr>
-              <tr><td>Qualifica&ccedil;&otilde;es</td><td>38</td><td>40</td><td class="pm">95%</td></tr>
-              <tr><td>Hot handoffs</td><td>14</td><td>12</td><td class="pg">117%</td></tr>
-              <tr><td>Notas CRM</td><td>89</td><td>100</td><td class="pm">89%</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
+    <!-- ── MAIN COLUMN — preenchido dinamicamente por renderReports() ── -->
+    <div style="flex:1;min-width:0;overflow-y:auto;padding:20px" id="rp-main">
+      <div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--text2);font-size:13px">Carregando dados reais do Databricks...</div>
     </div><!-- /main col -->
 
     <!-- ── SIDEBAR ──────────────────────────────────────────── -->
@@ -1630,6 +1436,7 @@ function setScreen(n,el){
     }
   }
   if(n==='intelligence') renderIntelligence();
+  if(n==='reports') renderReports();
 }
 
 function selectDeal(id){
@@ -1874,17 +1681,217 @@ function applyFilters(){
 
 function filterDeals(q){applyFilters();}
 
-const RPD={mar:{fups:147,qual:38,mql:14,rev:'R$ 182k'},fev:{fups:119,qual:34,mql:15,rev:'R$ 135k'},jan:{fups:98,qual:29,mql:11,rev:'R$ 98k'},dez:{fups:87,qual:24,mql:9,rev:'R$ 76k'}};
+// ── REPORTS DINÂMICOS — dados reais do Databricks via proxy ──
+let _rpData=null;
+let _rpLoading=false;
 
-function rp(p,el){
+function renderReports(){
+  if(_rpData){ _renderReportsHTML(_rpData); return; }
+  if(_rpLoading) return;
+  _rpLoading=true;
+  const token=localStorage.getItem('elucy_db_token');
+  const qualName=localStorage.getItem('elucy_qualificador_name');
+  if(!token||!qualName){ _renderReportsOffline(); _rpLoading=false; return; }
+  const ano=new Date().getFullYear();
+  const qn=qualName.replace(/'/g,"\\'");
+  const query=`SELECT
+    MONTH(created_at) as mes,
+    fase_atual_no_processo as fase,
+    status_do_deal as status,
+    tier_da_oportunidade as tier,
+    etapa_atual_no_pipeline as etapa,
+    COUNT(*) as qtd,
+    AVG(delta_t) as media_delta,
+    AVG(CAST(revenue AS DOUBLE)) as media_revenue,
+    SUM(CAST(revenue AS DOUBLE)) as total_revenue
+  FROM production.diamond.funil_comercial
+  WHERE qualificador_name = '${qn}'
+    AND pipeline_name = 'Comercial'
+    AND created_at >= '${ano}-01-01'
+  GROUP BY 1,2,3,4,5
+  ORDER BY mes DESC, qtd DESC`;
+  fetch(DB_ENDPOINT,{
+    method:'POST',
+    headers:{'x-db-token':token,'apikey':SUPABASE_ANON,'Content-Type':'application/json'},
+    body:JSON.stringify({statement:query,warehouse_id:DB_WAREHOUSE,wait_timeout:'30s',on_wait_timeout:'CONTINUE'})
+  })
+  .then(r=>r.json())
+  .then(data=>{
+    _rpLoading=false;
+    const rows=(data.result&&data.result.data_array)||[];
+    if(!rows.length){ _renderReportsOffline(); return; }
+    _rpData=_processReportsData(rows);
+    _renderReportsHTML(_rpData);
+  })
+  .catch(()=>{ _rpLoading=false; _renderReportsOffline(); });
+}
+
+function _processReportsData(rows){
+  // rows: [mes, fase, status, tier, etapa, qtd, media_delta, media_revenue, total_revenue]
+  const meses={};
+  const fases=['Ganho','Perdido','Negociação','Agendado','Conectado','SAL','Oportunidade','MQL'];
+  const tiers=['diamond','gold','silver','bronze'];
+  rows.forEach(r=>{
+    const mes=parseInt(r[0])||0;
+    if(!meses[mes]) meses[mes]={ganho:0,perdido:0,aberto:0,byFase:{},byTier:{},byEtapa:{},revGanho:0,revTotal:0};
+    const m=meses[mes];
+    const fase=(r[1]||'').trim();
+    const status=(r[2]||'').trim();
+    const tier=(r[3]||'').toLowerCase().trim();
+    const etapa=(r[4]||'').trim();
+    const qtd=parseInt(r[5])||0;
+    const avgDelta=parseFloat(r[6])||0;
+    const avgRev=parseFloat(r[7])||0;
+    const totalRev=parseFloat(r[8])||0;
+    if(status==='Ganho'){ m.ganho+=qtd; m.revGanho+=totalRev; }
+    else if(status==='Perdido') m.perdido+=qtd;
+    else m.aberto+=qtd;
+    m.revTotal+=totalRev;
+    // por fase
+    if(fase){ if(!m.byFase[fase]) m.byFase[fase]={qtd:0,rev:0}; m.byFase[fase].qtd+=qtd; m.byFase[fase].rev+=totalRev; }
+    // por tier
+    if(tier){ if(!m.byTier[tier]) m.byTier[tier]={qtd:0,rev:0,ganho:0}; m.byTier[tier].qtd+=qtd; m.byTier[tier].rev+=totalRev; if(status==='Ganho') m.byTier[tier].ganho+=qtd; }
+    // por etapa (abertos)
+    if(etapa&&status==='Aberto'){ if(!m.byEtapa[etapa]) m.byEtapa[etapa]={qtd:0,delta:0,n:0}; m.byEtapa[etapa].qtd+=qtd; m.byEtapa[etapa].delta+=avgDelta*qtd; m.byEtapa[etapa].n+=qtd; }
+  });
+  return {meses, mesesOrdem:Object.keys(meses).map(Number).sort((a,b)=>b-a)};
+}
+
+function _renderReportsHTML(data){
+  const el=document.getElementById('rp-main');
+  if(!el) return;
+  const mesNomes={1:'Janeiro',2:'Fevereiro',3:'Março',4:'Abril',5:'Maio',6:'Junho',7:'Julho',8:'Agosto',9:'Setembro',10:'Outubro',11:'Novembro',12:'Dezembro'};
+  const mesAtual=data.mesesOrdem[0]||new Date().getMonth()+1;
+  const m=data.meses[mesAtual]||{ganho:0,perdido:0,aberto:0,byFase:{},byTier:{},byEtapa:{},revGanho:0,revTotal:0};
+  const total=m.ganho+m.perdido;
+  const conv=total>0?Math.round(m.ganho/total*1000)/10:0;
+  const qualName=localStorage.getItem('elucy_qualificador_name')||'Operador';
+  // Tabs de meses
+  const tabs=data.mesesOrdem.slice(0,4).map(mes=>{
+    return '<div class="ft'+(mes===mesAtual?' on':'')+'" onclick="rpSwitchMes('+mes+',this)">'+(mesNomes[mes]||mes)+' '+new Date().getFullYear()+'</div>';
+  }).join('');
+  // KPIs principais
+  const kpis=`<div class="kpi-g" style="margin-bottom:14px">
+    <div class="kpi"><div class="kpi-l">Ganhos</div><div class="kpi-v" style="color:var(--green)">${m.ganho}</div><div class="kd">de ${total} finalizados</div></div>
+    <div class="kpi"><div class="kpi-l">Taxa de Conversão</div><div class="kpi-v" style="color:${conv>=10?'var(--green)':conv>=7?'var(--yellow)':'var(--red)'}">${conv}%</div><div class="kd">Ganho / (Ganho+Perdido)</div></div>
+    <div class="kpi"><div class="kpi-l">Receita Ganha</div><div class="kpi-v" style="color:var(--accent2)">${fmtBRL(m.revGanho)}</div><div class="kd">deals fechados</div></div>
+    <div class="kpi"><div class="kpi-l">Abertos</div><div class="kpi-v">${m.aberto}</div><div class="kd">em andamento</div></div>
+  </div>`;
+  // Funil por fase
+  const faseOrder=['Ganho','Oportunidade','Negociação','Agendado','Conectado','SAL','MQL'];
+  const faseData=faseOrder.map(f=>({name:f,qtd:(m.byFase[f]||{}).qtd||0,rev:(m.byFase[f]||{}).rev||0})).filter(f=>f.qtd>0);
+  const maxF=Math.max(...faseData.map(f=>f.qtd),1);
+  const funnel=faseData.map(f=>{
+    const pct=Math.max(5,Math.round(f.qtd/maxF*100));
+    return '<div class="intel-bar-row"><span class="intel-bar-label">'+f.name+'</span><div class="intel-bar-bg"><div class="intel-bar-fill" style="width:'+pct+'%"><span class="intel-bar-v">'+f.qtd+'</span></div></div><span class="intel-bar-pct">'+fmtBRL(f.rev)+'</span></div>';
+  }).join('');
+  // Tier performance
+  const tierOrder=['diamond','gold','silver','bronze'];
+  const tierRows=tierOrder.map(t=>{
+    const td=m.byTier[t];
+    if(!td||!td.qtd) return '';
+    const gc=td.ganho||0;
+    const tc2=td.qtd;
+    const tconv=tc2>0?Math.round(gc/tc2*1000)/10:0;
+    return '<tr><td style="text-transform:capitalize">'+t+'</td><td>'+tc2+'</td><td>'+gc+'</td><td>'+fmtBRL(td.rev)+'</td><td class="'+(tconv>=10?'pg':tconv>=5?'pm':'pl')+'">'+tconv+'%</td></tr>';
+  }).filter(Boolean).join('');
+  // Delta por etapa (abertos)
+  const etapaOrder=['Novo lead','Dia 01','Dia 02','Dia 03','Conectados','Agendamento','Reagendamento','Entrevista Agendada','Negociação','Nova Oportunidade'];
+  const etapaRows=etapaOrder.map(e=>{
+    const ed=m.byEtapa[e];
+    if(!ed||!ed.qtd) return '';
+    const avg=ed.n>0?Math.round(ed.delta/ed.n*10)/10:0;
+    return '<tr><td>'+e+'</td><td>'+ed.qtd+'</td><td class="'+(avg<=1?'pg':avg<=3?'pm':'pl')+'">'+avg+' dias</td></tr>';
+  }).filter(Boolean).join('');
+  // Meses comparados (mini tabela)
+  const mesComp=data.mesesOrdem.slice(0,4).map(ms=>{
+    const md=data.meses[ms];
+    const tt=md.ganho+md.perdido;
+    const cv=tt>0?Math.round(md.ganho/tt*1000)/10:0;
+    return '<tr'+(ms===mesAtual?' style="background:var(--adim)"':'')+'><td>'+(mesNomes[ms]||ms)+'</td><td>'+md.ganho+'</td><td>'+md.perdido+'</td><td class="'+(cv>=10?'pg':cv>=7?'pm':'pl')+'">'+cv+'%</td><td>'+fmtBRL(md.revGanho)+'</td></tr>';
+  }).join('');
+  el.innerHTML=`
+    <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:2px">Eficiência do Operador</div>
+        <div style="font-size:11px;color:var(--text3)">${qualName} · ${mesNomes[mesAtual]||''} ${new Date().getFullYear()} · Dados reais Databricks</div>
+      </div>
+      <div class="ftabs">${tabs}</div>
+    </div>
+    ${kpis}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div class="ch">
+        <div class="ch-t">Funil por Fase (${mesNomes[mesAtual]||''})</div>
+        ${funnel}
+      </div>
+      <div class="ch">
+        <div class="ch-t">Performance por Tier</div>
+        <table class="tbl">
+          <thead><tr><th>Tier</th><th>Total</th><th>Ganho</th><th>Receita</th><th>Conv.</th></tr></thead>
+          <tbody>${tierRows||'<tr><td colspan="5" style="color:var(--text3)">Sem dados</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div class="ch">
+        <div class="ch-t">Delta Médio por Etapa (Abertos)</div>
+        <table class="tbl">
+          <thead><tr><th>Etapa</th><th>Deals</th><th>Média Delta</th></tr></thead>
+          <tbody>${etapaRows||'<tr><td colspan="3" style="color:var(--text3)">Sem dados</td></tr>'}</tbody>
+        </table>
+      </div>
+      <div class="ch">
+        <div class="ch-t">Evolução Mensal</div>
+        <table class="tbl">
+          <thead><tr><th>Mês</th><th>Ganho</th><th>Perdido</th><th>Conv.</th><th>Receita</th></tr></thead>
+          <tbody>${mesComp}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function rpSwitchMes(mes,el){
+  if(!_rpData) return;
   document.querySelectorAll('.ft').forEach(t=>t.classList.remove('on'));
-  el.classList.add('on');
-  const d=RPD[p];
-  if(!d) return;
-  document.getElementById('kv-fups').textContent=d.fups;
-  document.getElementById('kv-qual').textContent=d.qual;
-  document.getElementById('kv-mql').textContent=d.mql;
-  document.getElementById('kv-rev').textContent=d.rev;
+  if(el) el.classList.add('on');
+  // Override mesAtual and re-render with that month
+  const saved=_rpData.mesesOrdem[0];
+  _rpData.mesesOrdem.sort((a,b)=>a===mes?-1:b===mes?1:b-a);
+  _renderReportsHTML(_rpData);
+  _rpData.mesesOrdem.sort((a,b)=>b-a);
+}
+
+function _renderReportsOffline(){
+  const el=document.getElementById('rp-main');
+  if(!el) return;
+  // Usa dados dos deals carregados no cockpit
+  const map=window._COCKPIT_DEAL_MAP;
+  if(map&&Object.keys(map).length){
+    const deals=Object.values(map);
+    const total=deals.length;
+    const byTier={};
+    deals.forEach(d=>{
+      const t=(d._tier||d.tier||'outros').toLowerCase();
+      if(!byTier[t]) byTier[t]={qtd:0,valSum:0};
+      byTier[t].qtd++;
+      byTier[t].valSum+=(d.elucyValor||0);
+    });
+    const tierRows=Object.entries(byTier).sort((a,b)=>b[1].qtd-a[1].qtd).map(([t,v])=>
+      '<tr><td style="text-transform:capitalize">'+t+'</td><td>'+v.qtd+'</td><td>'+fmtBRL(v.valSum)+'</td></tr>'
+    ).join('');
+    el.innerHTML=`
+      <div style="margin-bottom:14px">
+        <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:2px">Pipeline Ativo</div>
+        <div style="font-size:11px;color:var(--text3)">Baseado nos ${total} deals carregados · Configure token Databricks para dados históricos completos</div>
+      </div>
+      <div class="kpi-g" style="margin-bottom:14px">
+        <div class="kpi"><div class="kpi-l">Deals Ativos</div><div class="kpi-v">${total}</div></div>
+        <div class="kpi"><div class="kpi-l">Pipeline Elucy</div><div class="kpi-v" style="color:var(--accent2)">${fmtBRL(deals.reduce((s,d)=>s+(d.elucyValor||0),0))}</div></div>
+      </div>
+      <div class="ch"><div class="ch-t">Deals por Tier</div><table class="tbl"><thead><tr><th>Tier</th><th>Qtd</th><th>Valor</th></tr></thead><tbody>${tierRows}</tbody></table></div>`;
+  } else {
+    el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--text3);font-size:13px">Sem dados — faça login e configure o token Databricks.</div>';
+  }
 }
 // ── SUPABASE AUTH ─────────────────────────────────────────────────────
 
@@ -3238,16 +3245,51 @@ function selectLiveDeal(id,d){
         </div>
       </div>
       <div id="spiced-block-${id}">${buildSpicedBlock(id, d)}</div>
-      <div class="info-grid">${buildContextCards(d)}</div>
-      <div class="recom">
-        <div class="recom-l">Recomendação Elucy <span class="elucy-badge">MOTOR ATIVO</span></div>
-        <div class="recom-t" id="recom-${id}">${buildRecomText(d)}</div>
+
+      <!-- IDENTIDADE -->
+      <div class="dp-sec">
+        <div class="dp-sec-h sec-identity">Identidade</div>
+        <div class="dp-kpis">
+          ${d.tier?`<div class="dp-kpi"><div class="dp-kpi-v" style="color:${d.tier==='diamond'?'var(--yellow)':d.tier==='gold'?'var(--accent2)':'var(--text)'}">${(d.tier||'—').toUpperCase()}</div><div class="dp-kpi-l">Tier</div></div>`:''}
+          ${d.perfilIcp?`<div class="dp-kpi"><div class="dp-kpi-v" style="color:${d.perfilIcp==='A'?'var(--green)':d.perfilIcp==='B'?'var(--accent2)':'var(--yellow)'}">Perfil ${d.perfilIcp}</div><div class="dp-kpi-l">ICP</div></div>`:''}
+          ${d.faixaFaturamento?`<div class="dp-kpi"><div class="dp-kpi-v">${d.faixaFaturamento}</div><div class="dp-kpi-l">Faturamento</div></div>`:''}
+          ${d.segmento?`<div class="dp-kpi"><div class="dp-kpi-v">${d.segmento}</div><div class="dp-kpi-l">Segmento</div></div>`:''}
+          ${d.cargo?`<div class="dp-kpi"><div class="dp-kpi-v">${d.cargo}</div><div class="dp-kpi-l">Cargo</div></div>`:''}
+        </div>
       </div>
-      ${(d._urgency||0)>=60?`<div class="alrt al-d">SLA em risco — deal sem avanço por ${d._delta||d.delta||0} dias.</div>`:''}
-      ${d._signal==='DOME'?`<div class="alrt al-w">Iron Dome ativo — +10 dias sem resposta. Copy bloqueada até revisão manual.</div>`:''}
+
+      <!-- DEAL ATUAL -->
+      <div class="dp-sec">
+        <div class="dp-sec-h sec-deal">Deal Atual</div>
+        <div class="info-grid">${buildDealCards(d)}</div>
+      </div>
+
+      <!-- HISTORICO G4 -->
+      ${(d.jaCliente||d.negGanhas>0||d.ltv>0)?`<div class="dp-sec">
+        <div class="dp-sec-h sec-hist">Histórico G4</div>
+        <div class="info-grid">${buildHistCards(d)}</div>
+      </div>`:''}
+
+      <!-- BENCHMARK -->
+      <div class="dp-sec">
+        <div class="dp-sec-h sec-bench">Benchmark do Tier</div>
+        <div class="dp-bench" id="bench-${id}">${buildBenchBlock(d)}</div>
+      </div>
+
+      <!-- GOVERNANCE -->
+      ${buildGovAlerts(d)}
+
+      <!-- RECOMENDACAO -->
+      <div class="dp-sec">
+        <div class="dp-sec-h sec-action">Próxima Ação</div>
+        <div class="recom">
+          <div class="recom-t" id="recom-${id}">${buildRecomText(d)}</div>
+        </div>
+      </div>
+
       <div id="enr-panel-${id}">${buildEnrPanel(id, d, [])}</div>
       <div class="deal-action-bar">
-        <button class="btn bp" onclick="showCopy('${id}')">⚡ Gerar Copy via Elucy</button>
+        <button class="btn bp" onclick="showCopy('${id}')">Gerar Copy via Elucy</button>
         <button class="btn bs" onclick="toggleER('${id}')">Análise de Negócio</button>
       </div>
     </div>
@@ -3611,6 +3653,93 @@ function buildContextCards(d){
   if(d.motivoLost) cards.push(ic("Histórico de perda",d.motivoLost.slice(0,40)+(d.motivoLost.length>40?"…":""),"Deal anterior perdido","var(--yellow)"));
   return cards.join("");
 }
+
+// ── DEAL CARDS (seção Deal Atual — canal, etapa, delta, closer, produto) ──
+function buildDealCards(d){
+  var origin=classifyOrigin(d);
+  var cards=[];
+  // Canal + Delta
+  cards.push(ic("Canal",d.canal||"—",d.dd+" · "+d.delta+" dias no CRM"));
+  // Etapa
+  cards.push(ic("Etapa",d.etapa||d.fase||"—",d.closer&&d.closer!=="—"?"Closer: "+d.closer:"SDR em qualificação"));
+  // Produto / Intenção
+  if(origin==="cart_abandon"){
+    cards.push(ic("Produto",d.nomeEvento||d.linhaReceita||"—","Abandonou carrinho","var(--accent2)"));
+  } else if(d.produto&&d.produto!=="—"&&d.produto!=="Não Definido"){
+    cards.push(ic("Produto",d.produto,d.tipoEvento||d.grupo||"—"));
+  } else {
+    var intencao=d.grupo&&d.grupo!=="Não Definido"?d.grupo:(d.linhaReceita||"—");
+    cards.push(ic("Intenção",intencao,"Produto não definido",null,"ic-warn"));
+  }
+  // Valor
+  var vop=d.valorOportunidade||d.revenueRaw;
+  if(vop>0) cards.push(ic("Valor",fmtBRL(vop),d.probFechamento>0?Math.round(d.probFechamento*100)+"% prob":"—","var(--green)"));
+  // Origem UTM
+  if(d.utmSource||d.utmCampaign){
+    var utmSub=[];
+    if(d.utmSource) utmSub.push(d.utmSource);
+    if(d.utmCampaign) utmSub.push(d.utmCampaign);
+    cards.push(ic("Origem",d.utm||"Direto",utmSub.join(" · ")));
+  }
+  // SDR
+  if(d.qualificador) cards.push(ic("SDR",d.qualificador,"Qualificador"));
+  return cards.join("");
+}
+
+// ── HISTORICO G4 (seção separada — só aparece se existir dados) ──
+function buildHistCards(d){
+  var cards=[];
+  cards.push(ic("Status G4",d.jaCliente?"Cliente G4":"Prospect",d.negGanhas>0?d.negGanhas+" compra"+(d.negGanhas>1?"s":""):"Sem histórico",d.jaCliente?"var(--green)":"var(--text2)"));
+  if(d.ltv>0) cards.push(ic("LTV Total",fmtBRL(d.ltv),d.clusterRfm||"—","var(--accent2)"));
+  if(d.primeiroProduto) cards.push(ic("1º Produto",d.primeiroProduto,d.dataPrimeiraCompra?d.dataPrimeiraCompra.slice(0,10):"—"));
+  if(d.ultimoProduto&&d.ultimoProduto!==d.primeiroProduto) cards.push(ic("Último Produto",d.ultimoProduto,d.dataUltimaCompra?d.dataUltimaCompra.slice(0,10):"—"));
+  if(d.produtosComprados) cards.push(ic("Produtos",d.produtosComprados.split(',').slice(0,3).join(', '),"—"));
+  if(d.comprouScale) cards.push(ic("Scale","Ativo","Assinatura Scale","var(--green)"));
+  if(d.comprouClub) cards.push(ic("Club","Ativo","Assinatura Club","var(--green)"));
+  if(d.motivoLost) cards.push(ic("Motivo Lost",d.motivoLost.slice(0,40),"Deal anterior","var(--yellow)"));
+  return cards.join("");
+}
+
+// ── BENCHMARK INLINE (ticket médio real por tier — hardcoded a partir do Databricks) ──
+// Esses valores são atualizados mensalmente. Fonte: funil_comercial + persons_overview.
+var _TIER_BENCH={diamond:{ticket:82360,conv:7.9,delta_avg:1.4},gold:{ticket:27638,conv:8.5,delta_avg:1.3},silver:{ticket:10496,conv:7.0,delta_avg:0.5},bronze:{ticket:5000,conv:5.0,delta_avg:2.2}};
+function buildBenchBlock(d){
+  var t=(d.tier||'').toLowerCase();
+  var b=_TIER_BENCH[t];
+  if(!b) return '<div style="font-size:11px;color:var(--text3)">Tier não classificado — sem benchmark disponível</div>';
+  var vop=d.valorOportunidade||d.revenueRaw||0;
+  var posCls=vop>0?(vop>=b.ticket*1.2?'above':vop>=b.ticket*0.8?'avg':'below'):'';
+  var posLabel=vop>0?(vop>=b.ticket*1.2?'ACIMA':vop>=b.ticket*0.8?'NA MÉDIA':'ABAIXO'):'N/D';
+  return '<div class="dp-bench-row"><div class="dp-bench-l">Ticket médio '+t.toUpperCase()+'</div><div class="dp-bench-v">'+fmtBRL(b.ticket)+'</div></div>'
+    +(vop>0?'<div class="dp-bench-row"><div class="dp-bench-l">Valor deste deal</div><div class="dp-bench-v '+posCls+'">'+fmtBRL(vop)+' ('+posLabel+')</div></div>':'')
+    +'<div class="dp-bench-row"><div class="dp-bench-l">Conversão média '+t.toUpperCase()+'</div><div class="dp-bench-v">'+b.conv+'%</div></div>'
+    +'<div class="dp-bench-row"><div class="dp-bench-l">Delta médio '+t.toUpperCase()+'</div><div class="dp-bench-v">'+b.delta_avg+' dias</div></div>';
+}
+
+// ── GOVERNANCE ALERTS (Iron Dome + SLA + regras) ──
+function buildGovAlerts(d){
+  var alerts=[];
+  // Iron Dome — +10 dias sem resposta
+  if(d._signal==='DOME'||d.delta>10) alerts.push('<div class="dp-gov gov-red"><span class="gov-icon">&#9888;</span><div>Iron Dome ativo — '+d.delta+' dias sem resposta. Revise estratégia antes de gerar copy.</div></div>');
+  // SLA risco — +7 dias
+  else if(d.delta>7) alerts.push('<div class="dp-gov gov-yellow"><span class="gov-icon">&#9202;</span><div>SLA em risco — deal parado por '+d.delta+' dias. Acelere o contato.</div></div>');
+  // Tier 2 + Imersão presencial = bloqueio
+  var t=(d.tier||'').toLowerCase();
+  if((t==='silver'||t==='bronze')&&d.produto&&(d.produto.toLowerCase().includes('imersão')||d.produto.toLowerCase().includes('imersao'))){
+    alerts.push('<div class="dp-gov gov-red"><span class="gov-icon">&#128683;</span><div>BLOQUEIO: Tier '+t.toUpperCase()+' não é elegível para Imersão Presencial.</div></div>');
+  }
+  // CEO de MEI — alerta de authority
+  if(d.cargo&&d.cargo.toLowerCase().includes('ceo')&&d.faixaFaturamento&&(d.faixaFaturamento.toLowerCase().includes('mei')||d.faixaFaturamento.toLowerCase().includes('até'))){
+    alerts.push('<div class="dp-gov gov-yellow"><span class="gov-icon">&#128269;</span><div>Authority questionável — CEO de MEI tem peso de decisão reduzido.</div></div>');
+  }
+  // Sinal de compra — positivo
+  if(d._signal==='BUY') alerts.push('<div class="dp-gov gov-green"><span class="gov-icon">&#9889;</span><div>Sinal de compra ativo — janela de 48h para fechar.</div></div>');
+  // Champion ativo
+  if(d._signal==='CHAMP') alerts.push('<div class="dp-gov gov-blue"><span class="gov-icon">&#127942;</span><div>Champion identificado — reforce autoridade e agilize handoff.</div></div>');
+  if(!alerts.length) return '';
+  return '<div class="dp-sec"><div class="dp-sec-h sec-gov">Governance</div>'+alerts.join('')+'</div>';
+}
+
 function buildRecomText(d){
   const sig=d._signal||calcSignal(d);
   const canal=d.canal||'WhatsApp';
