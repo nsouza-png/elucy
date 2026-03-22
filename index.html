@@ -884,7 +884,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(!email.endsWith('@g4educacao.com')){showAuthErr('Apenas contas @g4educacao.com.');return;}
       if(pass.length<6){showAuthErr('Senha mínima de 6 caracteres.');return;}
       setAuthLoading(true);
-      const{data,error}=await sb.auth.signUp({email,password:pass});
+      const{data,error}=await sb.auth.signUp({email,password:pass,options:{emailRedirectTo:'https://nsouza-png.github.io/elucy/confirm.html'}});
       setAuthLoading(false);
       if(error){showAuthErr(error.message);return;}
       // Se email confirmation está ativo, user.identities vem vazio — avisa
