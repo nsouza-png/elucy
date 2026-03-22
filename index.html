@@ -28,11 +28,56 @@ window.IS_REMOTE = !window._G4OS_PARENT &&
   !location.hostname.includes('127.0.0.1') &&
   location.protocol !== 'file:';
 
+// ── G4 OS CONNECTION INDICATOR ────────────────────────────────────────────
+function _setG4Status(state, label){
+  // state: 'connecting' | 'connected' | 'offline'
+  window._g4osState = state;
+  var el=document.getElementById('g4os-indicator');
+  var lb=document.getElementById('g4os-label');
+  if(!el||!lb) return;
+  el.className='g4os-status '+state;
+  lb.textContent=label;
+  el.title = state==='connected'
+    ? 'G4 OS conectado — análises via motor local (zero custo)'
+    : state==='offline'
+    ? 'G4 OS não detectado — abra o Cockpit dentro do G4 OS'
+    : 'Aguardando G4 OS…';
+}
+
+// Tenta pong ao carregar — aguarda 2s; se não vier, marca offline
+window._g4osTimeout = setTimeout(function(){
+  if(!window._G4OS_PARENT){
+    _setG4Status('offline','G4 OS offline');
+  }
+}, 2000);
+
 // Ouve pong do G4 OS para confirmar (e atualiza flag se necessário)
 window.addEventListener('message', function(e){
   if(e.data && e.data.type === 'g4os:pong'){
     window._G4OS_PARENT = true;
     window.IS_REMOTE = false;
+    clearTimeout(window._g4osTimeout);
+    _setG4Status('connected','G4 OS ativo');
+  }
+  // Heartbeat contínuo: G4 OS pode mandar pings periódicos
+  if(e.data && e.data.type === 'g4os:heartbeat'){
+    window._G4OS_PARENT = true;
+    window.IS_REMOTE = false;
+    _setG4Status('connected','G4 OS ativo');
+  }
+});
+
+// Aplica estado inicial logo que o DOM estiver pronto
+document.addEventListener('DOMContentLoaded', function(){
+  if(window._G4OS_PARENT){
+    _setG4Status('connected','G4 OS ativo');
+  } else if(!window.IS_REMOTE){
+    // local (file: ou localhost) — G4 OS presumido presente
+    _setG4Status('connected','G4 OS local');
+  } else {
+    _setG4Status('connecting','G4 OS…');
+    // Reenvia ping caso o G4 OS carregue o iframe depois
+    try{ window.parent.postMessage({type:'g4os:ping',from:'elucy-cockpit'},'*'); }catch(e){}
   }
 });
 </script>
@@ -121,6 +166,16 @@ body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-ser
 .btn-settings:hover{border-color:var(--border2);color:var(--text)}
 .op-pill{background:var(--gdim);border:1px solid var(--green);border-radius:4px;padding:2px 7px;font-size:10px;color:var(--green);font-weight:700;display:none}
 .op-pill.show{display:inline-block}
+/* G4 OS connection indicator */
+.g4os-status{display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid;transition:all .4s ease;cursor:default}
+.g4os-status .g4dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:all .4s ease}
+.g4os-status.connecting{background:var(--ydim);border-color:var(--yellow);color:var(--yellow)}
+.g4os-status.connecting .g4dot{background:var(--yellow);animation:g4pulse 1s ease-in-out infinite}
+.g4os-status.connected{background:var(--gdim);border-color:var(--green);color:var(--green)}
+.g4os-status.connected .g4dot{background:var(--green);animation:g4pulse 2.5s ease-in-out infinite}
+.g4os-status.offline{background:var(--rdim);border-color:var(--red);color:var(--red)}
+.g4os-status.offline .g4dot{background:var(--red)}
+@keyframes g4pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
 /* Elucy motor styles */
 .elucy-badge{background:var(--adim);border:1px solid var(--accent);border-radius:3px;padding:1px 6px;font-size:9px;font-weight:800;color:var(--accent2);margin-left:6px;vertical-align:middle}
 .elucy-live{background:var(--gdim)!important;border-color:var(--green)!important;color:var(--green)!important}
@@ -236,6 +291,10 @@ body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-ser
   <button class="ntab on" onclick="setScreen('home',this)">Pipeline</button>
   <button class="ntab" onclick="setScreen('reports',this)">Relatórios</button>
   <div class="tbr">
+    <div class="g4os-status connecting" id="g4os-indicator" title="Status da conexão com G4 OS">
+      <span class="g4dot"></span>
+      <span id="g4os-label">G4 OS…</span>
+    </div>
     <span class="op-pill" id="op-pill">CRM Sincronizado</span>
     <button class="btn-settings" id="btn-sync-top" onclick="refreshPipeline()" title="Sincronizar pipeline com Databricks" style="display:none">Atualizar Pipeline</button>
     <div class="chip">
