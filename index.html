@@ -1036,43 +1036,10 @@ let _lastSyncAt = null;
 let _syncInProgress = false;
 
 async function callSyncDeals(emailHint){
-  if(_syncInProgress) return;
-  const sb=getSB(); if(!sb) return;
-  const {data:{session}}=await sb.auth.getSession();
-  if(!session){ if(emailHint) await loadDealsFromSupabase(emailHint); return; }
-  _syncInProgress=true;
-  const syncBtn=document.getElementById('btn-sync-top');
-  if(syncBtn){syncBtn.disabled=true;syncBtn.textContent='Sincronizando…';}
-  showSyncToast('load','Sincronizando pipeline com Databricks…');
-  try{
-    const res=await fetch(EDGE_SYNC_URL,{
-      method:'POST',
-      headers:{
-        'Authorization':'Bearer '+session.access_token,
-        'Content-Type':'application/json'
-      }
-    });
-    const json=await res.json();
-    if(!res.ok){
-      // Sync falhou (401/502) — carrega do cache Supabase que já tem dados frescos
-      await loadDealsFromSupabase(session.user.email);
-      return;
-    }
-    _lastSyncAt=Date.now();
-    await loadDealsFromSupabase(session.user.email);
-    const el=document.getElementById('sbdate');
-    const now=new Date();
-    const ts=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    if(el) el.textContent='Atualizado: '+ts;
-    showSyncToast('ok','Pipeline atualizado — '+(json.synced||0)+' deals');
-  }catch(err){
-    // Fallback: carrega do Supabase cache
-    const {data:{session:s2}}=await getSB().auth.getSession().catch(()=>({data:{session:null}}));
-    if(s2) await loadDealsFromSupabase(s2.user.email);
-  }finally{
-    _syncInProgress=false;
-    if(syncBtn){syncBtn.disabled=false;syncBtn.textContent='Atualizar Pipeline';}
-  }
+  // Redireciona para loadDealsFromSupabase — fonte de verdade para o Cockpit
+  // Worker G4 OS sincroniza Databricks→Supabase a cada 2 min via agendamento
+  const email = emailHint || (_currentUser&&_currentUser.email);
+  if(email) await loadDealsFromSupabase(email);
 }
 
 (function initGrowthLoop(){
@@ -1085,9 +1052,8 @@ async function callSyncDeals(emailHint){
   }
 
   function requestRefresh(){
-    // Sempre sincroniza via Supabase — dados vêm do Databricks via secret global
     if(!isStale()) return;
-    callSyncDeals();
+    if(_currentUser) loadDealsFromSupabase(_currentUser.email);
   }
 
   // Mantém compatibilidade com G4OS local (postMessage)
