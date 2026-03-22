@@ -1560,13 +1560,10 @@ function renderFocusPanel(){
     </div>`).join('');
 }
 
-// ── ELUCY ENGINE — Supabase Relay (zero G4 OS necessário para o SDR) ────────
-// Arquitetura: Cockpit → cockpit_requests (Supabase) → Worker G4 OS → cockpit_responses
-// Worker G4 OS processa com motor Elucy completo (26 MCPs + Databricks) e responde via Realtime
-// SDR abre o link, faz login, recebe análise em ~30s. Zero instalação necessária.
-
-const ELUCY_REQUEST_URL='https://tnbbsjvzwleeoqnxtafp.supabase.co/functions/v1/elucy-request';
-// SUPABASE_URL e SUPABASE_ANON já declarados na linha ~817 — não redeclarar
+// ── ELUCY ENGINE — SDK direto no Supabase (sem Edge Functions) ───────────────
+// Arquitetura: Cockpit → INSERT cockpit_requests → Worker G4 OS (2min) → INSERT cockpit_responses
+// Realtime subscription recebe resposta automaticamente quando worker processa
+// SDR não precisa de G4 OS instalado. Zero Edge Function no path crítico.
 
 // Cache de análises Elucy por deal_id (evita re-request na mesma sessão)
 const ELUCY_CACHE={};
@@ -1574,30 +1571,77 @@ const ELUCY_CACHE={};
 // Listeners Realtime ativos por request_id
 const ELUCY_LISTENERS={};
 
-// Envia request para a fila Supabase e aguarda resposta via Realtime
-async function _requestElucyRelay(deal_id, dealData, request_type, copy_mode, onResult, onError){
-  const sb=getSB(); if(!sb){ onError&&onError('Supabase offline'); return; }
+// Estados visuais do loading por targetId
+const ELUCY_LOADING_STATE={};
+
+// UI de loading com estados reais — mostra o que está acontecendo
+function _setElucyLoadingState(reportEl, state, extra){
+  const states={
+    inserting:  {icon:'⏳', label:'Enviando para o motor Elucy…',   sub:'Gravando request no Supabase'},
+    waiting:    {icon:'🔄', label:'Aguardando o Worker G4 OS…',     sub:'Processando com 26 MCPs + Databricks. Max ~2 min.'},
+    processing: {icon:'⚡', label:'Elucy analisando o deal…',        sub:'Carregando contexto + gerando ELUCI REPORT'},
+    done:       {icon:'✅', label:'Análise recebida',                sub:'Renderizando ELUCI REPORT…'},
+    error:      {icon:'⚠',  label:'Erro no processamento',          sub: extra||'Tente novamente'},
+  };
+  const s=states[state]||states.waiting;
+  const pct={inserting:10, waiting:35, processing:75, done:98, error:100}[state]||35;
+  if(!reportEl) return;
+  reportEl.innerHTML=`
+    <div class="er-loading" style="padding:20px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <span style="font-size:20px">${s.icon}</span>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--gold)">${s.label}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px">${s.sub}</div>
+        </div>
+      </div>
+      <div style="width:100%;height:3px;background:var(--gold-dim);border-radius:2px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:2px;transition:width .8s ease"></div>
+      </div>
+      ${state==='waiting'?'<div style="font-size:10px;color:var(--text2);margin-top:8px;text-align:right">Próxima verificação em ~2 min</div>':''}
+    </div>`;
+  reportEl.style.display='block';
+}
+
+// Insere request no Supabase e escuta resposta via Realtime
+async function _requestElucyRelay(deal_id, dealData, request_type, copy_mode, onResult, onError, reportEl){
+  const sb=getSB();
+  if(!sb){ onError&&onError('Supabase offline'); return; }
   const {data:{session}}=await sb.auth.getSession();
-  if(!session){ onError&&onError('Sessão expirada'); return; }
+  if(!session){ onError&&onError('Faça login para usar o Elucy'); return; }
 
   try{
-    // 1. Envia para a fila via Edge Function
-    const res=await fetch(ELUCY_REQUEST_URL,{
-      method:'POST',
-      headers:{'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'},
-      body:JSON.stringify({deal_id,deal_data:dealData,request_type,copy_mode})
-    });
-    const data=await res.json();
-    if(!res.ok){
-      onError&&onError(data.message||data.error||'Erro ao enfileirar request');
+    // ESTADO 1: Inserindo na fila
+    _setElucyLoadingState(reportEl, 'inserting');
+    _setG4Status('processing','Elucy processando…');
+
+    // INSERT direto via SDK — sem Edge Function
+    const {data:req, error:insertErr}=await sb
+      .from('cockpit_requests')
+      .insert({
+        operator_id: session.user.id,
+        deal_id,
+        request_type,
+        copy_mode: copy_mode||null,
+        deal_data: dealData,
+        status: 'pending'
+      })
+      .select('id')
+      .single();
+
+    if(insertErr){
+      onError&&onError('Erro ao enfileirar: '+insertErr.message);
+      _setG4Status('connected','Elucy ativo');
       return;
     }
 
-    const request_id=data.request_id;
-    _setG4Status('processing','Elucy processando…');
+    const request_id=req.id;
 
-    // 2. Escuta cockpit_responses via Realtime para esse request_id
-    const channel=sb.channel('elucy-response-'+request_id)
+    // ESTADO 2: Aguardando worker
+    _setElucyLoadingState(reportEl, 'waiting');
+
+    // Realtime: escuta INSERT em cockpit_responses filtrado pelo request_id
+    const channel=sb.channel('elucy:'+request_id)
       .on('postgres_changes',{
         event:'INSERT',
         schema:'public',
@@ -1606,29 +1650,53 @@ async function _requestElucyRelay(deal_id, dealData, request_type, copy_mode, on
       }, (payload)=>{
         const output=payload.new?.output;
         if(output){
+          _setElucyLoadingState(reportEl, 'done');
           _setG4Status('connected','Elucy ativo');
-          onResult&&onResult(output, payload.new);
+          setTimeout(()=>{ onResult&&onResult(output, payload.new); }, 400);
           sb.removeChannel(channel);
           delete ELUCY_LISTENERS[request_id];
         }
       })
-      .subscribe();
+      .subscribe((status)=>{
+        if(status==='SUBSCRIBED'){
+          // Polling de fallback: verifica a cada 15s se Realtime não chegou
+          const poll=setInterval(async()=>{
+            if(!ELUCY_LISTENERS[request_id]){ clearInterval(poll); return; }
+            const {data}=await sb.from('cockpit_responses')
+              .select('output,request_type')
+              .eq('request_id',request_id)
+              .maybeSingle();
+            if(data?.output){
+              clearInterval(poll);
+              _setElucyLoadingState(reportEl,'done');
+              _setG4Status('connected','Elucy ativo');
+              setTimeout(()=>{ onResult&&onResult(data.output, data); }, 400);
+              sb.removeChannel(channel);
+              delete ELUCY_LISTENERS[request_id];
+            }
+          }, 15000);
+          ELUCY_LISTENERS[request_id+'_poll']=poll;
+        }
+      });
 
     ELUCY_LISTENERS[request_id]=channel;
 
-    // 3. Timeout de 3 minutos
+    // Timeout de 5 minutos
     setTimeout(()=>{
       if(ELUCY_LISTENERS[request_id]){
+        if(ELUCY_LISTENERS[request_id+'_poll']) clearInterval(ELUCY_LISTENERS[request_id+'_poll']);
         sb.removeChannel(ELUCY_LISTENERS[request_id]);
         delete ELUCY_LISTENERS[request_id];
         _setG4Status('connected','Elucy ativo');
-        onError&&onError('Timeout — worker não respondeu. Verifique se o G4 OS está aberto e tente novamente.');
+        _setElucyLoadingState(reportEl,'error','Worker não respondeu em 5 min. G4 OS está ligado?');
+        onError&&onError('timeout');
       }
-    }, 180000);
+    }, 300000);
 
     return request_id;
   }catch(e){
-    onError&&onError('Erro de conexão: '+e.message);
+    _setG4Status('connected','Elucy ativo');
+    onError&&onError('Erro: '+e.message);
   }
 }
 
