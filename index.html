@@ -3149,7 +3149,7 @@ function selectLiveDeal(id,d){
       <div class="dch">
         <div class="dca">${((d.emailLead||d.nome||'?')[0]||'?').toUpperCase()}</div>
         <div class="dci">
-          <div class="dcn">${d.nome}</div>
+          <div class="dcn">${d.nome||d.emailLead||'—'}</div>
           <div class="dcs">${d.cargo||'—'} · ${d.empresa}</div>
           <div class="tags-row">
             <span class="tag t-gray">${d.tier||'—'}</span>
@@ -3180,7 +3180,7 @@ function selectLiveDeal(id,d){
       <div class="dvl-t">DVL Gate — Confirmar antes de gerar</div>
       <div class="dvl-s">Dados do funil_comercial. Edite se necessário.</div>
       <div class="dvl-g">
-        <div class="dvl-f"><div class="dvl-l">Nome</div><input class="dvl-i" value="${d.nome}"></div>
+        <div class="dvl-f"><div class="dvl-l">Nome</div><input class="dvl-i" value="${d.nome||d.emailLead||''}"></div>
         <div class="dvl-f"><div class="dvl-l">Empresa</div><input class="dvl-i" value="${d.empresa}"></div>
         <div class="dvl-f"><div class="dvl-l">Fase</div><input class="dvl-i" value="${d.fase}"></div>
         <div class="dvl-f"><div class="dvl-l">Canal</div><input class="dvl-i" value="${d.canal}"></div>
