@@ -116,6 +116,48 @@ body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-ser
 .bar{background:var(--bg4);border-radius:4px;height:6px;overflow:hidden}.bf{height:100%;border-radius:4px}.bf-h{background:linear-gradient(90deg,#f59e0b,#22c55e)}.bf-w{background:linear-gradient(90deg,#ef4444,#f59e0b)}.bf-c{background:#ef4444}
 .recom{background:var(--gold-dim);border:1px solid var(--gold-border);border-radius:var(--r);padding:12px 14px;margin-bottom:13px}.recom-l{font-size:9px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}.recom-t{font-size:13px;line-height:1.55;color:var(--silver)}
 .alrt{padding:10px 13px;border-radius:var(--r);font-size:12px;margin-bottom:11px;line-height:1.5}.al-w{background:var(--ydim);border:1px solid var(--yellow);color:var(--yellow)}.al-d{background:var(--rdim);border:1px solid var(--red);color:var(--red)}.al-i{background:var(--adim);border:1px solid var(--accent);color:var(--accent2)}
+/* ── SPICED SCORE ── */
+.spiced-block{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:13px 15px;margin-bottom:13px}
+.spiced-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.spiced-lbl{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.6px}
+.spiced-val{font-size:22px;font-weight:900}
+.spiced-val.sv-hot{color:var(--green)}.spiced-val.sv-warm{color:var(--yellow)}.spiced-val.sv-cold{color:var(--red)}
+.spiced-bar{background:var(--bg4);border-radius:4px;height:6px;overflow:hidden;margin-bottom:5px}
+.spiced-fill{height:100%;border-radius:4px;transition:width .6s ease}
+.spiced-fill.sf-hot{background:linear-gradient(90deg,#f59e0b,#22c55e)}
+.spiced-fill.sf-warm{background:linear-gradient(90deg,#ef4444,#f59e0b)}
+.spiced-fill.sf-cold{background:#ef4444}
+.spiced-sub{font-size:10px;color:var(--text2);display:flex;justify-content:space-between;align-items:center}
+.spiced-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.5px}
+.sb-calc{background:var(--adim);color:var(--accent2);border:1px solid var(--gold-border)}
+.sb-base{background:var(--bg4);color:var(--text2);border:1px solid var(--border)}
+.sb-enr{background:var(--gdim);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+/* ── ENRICHMENT PANEL ── */
+.enr-panel{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:13px 15px;margin-bottom:13px}
+.enr-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.enr-title{font-size:11px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.6px}
+.enr-count{font-size:10px;color:var(--text2);background:var(--bg4);padding:2px 7px;border-radius:10px;border:1px solid var(--border)}
+.enr-list{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.enr-item{background:var(--bg4);border:1px solid var(--border);border-radius:6px;padding:8px 10px}
+.enr-item-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.enr-tipo{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:1px 5px;border-radius:3px}
+.et-whatsapp{background:rgba(34,197,94,.15);color:#22c55e}.et-call{background:rgba(99,102,241,.15);color:#818cf8}
+.et-nota{background:rgba(185,145,91,.12);color:var(--accent2)}.et-email{background:rgba(56,189,248,.15);color:#38bdf8}
+.enr-ts{font-size:10px;color:var(--text2)}
+.enr-txt{font-size:11px;color:var(--silver);line-height:1.5;white-space:pre-wrap;max-height:60px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+.enr-score{font-size:10px;color:var(--green);margin-top:3px;font-weight:600}
+.enr-form{display:flex;flex-direction:column;gap:8px}
+.enr-tipo-sel{display:flex;gap:6px;margin-bottom:2px}
+.enr-tipo-btn{flex:1;padding:6px 4px;border-radius:5px;border:1px solid var(--border);background:var(--bg4);color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s}
+.enr-tipo-btn.on{border-color:var(--accent2);color:var(--accent2);background:var(--adim)}
+.enr-ta{width:100%;background:var(--bg4);border:1px solid var(--border);border-radius:6px;color:var(--silver);font-size:12px;padding:8px 10px;resize:vertical;min-height:70px;font-family:inherit;line-height:1.5;box-sizing:border-box}
+.enr-ta:focus{outline:none;border-color:var(--accent2)}
+.enr-ta::placeholder{color:var(--text2)}
+.enr-actions{display:flex;gap:8px;align-items:center}
+.btn-enr{background:var(--adim);border:1px solid var(--gold-border);color:var(--accent2);padding:7px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+.btn-enr:hover{background:var(--accent2);color:#000}
+.btn-enr:disabled{opacity:.4;cursor:not-allowed}
+.enr-status{font-size:10px;color:var(--text2);margin-left:auto}
 .row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .er{background:var(--bg2);border:1px solid var(--gold-border);border-radius:var(--r2);overflow:hidden;margin-bottom:13px}
 .er-h{background:linear-gradient(135deg,#031420,#041828);padding:14px 17px;border-bottom:1px solid var(--gold-border);display:flex;align-items:center;gap:9px}
@@ -1934,6 +1976,11 @@ function _buildAnalyzePrompt(deal_id, d){
   const revenue=d.revenue||'?';
   const cargo=d[11]||d.cargo||'?';
   const fase_ant=d[1]||d.fase_anterior_no_processo||'?';
+  const enrichCtx=d._enrichment_context||'';
+  const enrichCount=d._enrichment_count||0;
+  const enrichBlock=enrichCtx
+    ? `\nCONTEXTO QUALITATIVO DO LEAD (${enrichCount} fonte${enrichCount!==1?'s':''} — colado pelo SDR):\n${enrichCtx}\n`
+    : '';
   return `[COCKPIT→ELUCY] ANALYSIS_MODE — deal_id: ${deal_id}
 
 DADOS DO DEAL:
@@ -1941,17 +1988,17 @@ DADOS DO DEAL:
 - Tier: ${tier} | Delta-T: ${delta}d | Revenue projetado: R$${revenue}
 - Produto: ${produto} | Canal (utm_medium): ${canal}
 - Cargo/Perfil: ${cargo}
-
+${enrichBlock}
 ${_BENCH_COMPACT}
 
 OUTPUT OBRIGATÓRIO — use exatamente estas seções:
 [ELUCI CONTEXT] situação atual do deal em 2 linhas
-[DIAGNOSTIC CORE] diagnóstico SPICED/Challenger/SPIN conforme tier e canal — 3-5 bullets
+[DIAGNOSTIC CORE] diagnóstico SPICED/Challenger/SPIN conforme tier e canal — 3-5 bullets${enrichCtx?' (use o contexto qualitativo acima para calibrar o diagnóstico)':''}
 [STRATEGIC DIRECTIVE] diretiva estratégica — o que fazer agora
 [NEXT BEST ACTION] próxima ação exata: canal + tom + timing
 [BENCHMARK CANAL] posição do deal vs. benchmark ${canal} perfil ${tier} — ACIMA/NA_MEDIA/ABAIXO/OUTLIER + dado numérico
 [GOVERNANCE FLAGS] kill switches ativos se houver (Tier2+Imersão, MEI+Authority, etc)
-[ELUCI VERDICT] score DQI 0-10 + veredito em 1 frase`;
+[ELUCI VERDICT] score DQI 0-10 + veredito em 1 frase${enrichCtx?'\n[SPICED SCORE] score 0-100 baseado nos dados + contexto qualitativo — justificativa em 1 linha':''}`;
 }
 
 function _buildCopyPrompt(deal_id, d, canal){
@@ -2108,11 +2155,7 @@ function selectLiveDeal(id,d){
           </div>
         </div>
       </div>
-      <div class="tg">
-        <div class="tg-row"><span class="tg-lbl">Temperatura do Deal</span><span class="tgv ${tgvClass}">${d.temp}</span></div>
-        <div class="bar"><div class="bf ${barClass}" style="width:${d.temp}%"></div></div>
-        <div class="tg-sub">${tempSub}</div>
-      </div>
+      <div id="spiced-block-${id}">${buildSpicedBlock(id, d)}</div>
       <div class="info-grid">${buildContextCards(d)}</div>
       <div class="recom">
         <div class="recom-l">Recomendação Elucy <span class="elucy-badge">MOTOR ATIVO</span></div>
@@ -2120,6 +2163,7 @@ function selectLiveDeal(id,d){
       </div>
       ${(d._urgency||0)>=60?`<div class="alrt al-d">SLA em risco — deal sem avanço por ${d._delta||d.delta||0} dias.</div>`:''}
       ${d._signal==='DOME'?`<div class="alrt al-w">Iron Dome ativo — +10 dias sem resposta. Copy bloqueada até revisão manual.</div>`:''}
+      <div id="enr-panel-${id}">${buildEnrPanel(id, d, [])}</div>
       <div class="row">
         <button class="btn bp" onclick="showCopy('${id}')">Gerar Copy via Elucy</button>
         <button class="btn bs" onclick="toggleER('${id}')">Análise de Negócio</button>
@@ -2174,9 +2218,201 @@ function selectLiveDeal(id,d){
   document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
   document.querySelector('.ntab').classList.add('on');
   setScreen('home',null);
+  // Carrega enrichments existentes deste deal
+  var _eid = d.deal_id||id;
+  loadEnrichments(_eid, id);
 }
 
 // ── RECOMENDAÇÃO DINÂMICA & COPY HELPERS ────────────────────────────
+
+// ── SPICED SCORE BLOCK ────────────────────────────────────────────
+// "Valor Elucy" = temperatura SPICED calculada (0-100), não valor monetário
+// Base: heurística por tier/fase/delta. Enriquecido: score recalculado pelo worker
+// com contexto real (WhatsApp/nota/call)
+function buildSpicedBlock(id, d, score, enrichCount){
+  // score pode vir do Supabase (deals.spiced_score) ou ser calculado localmente
+  var s = (score != null ? score : d.spiced_score != null ? d.spiced_score : _calcSpicedBase(d));
+  var ec = enrichCount != null ? enrichCount : (d.enrichment_count||0);
+  var cls = s>=65 ? 'sv-hot' : s>=35 ? 'sv-warm' : 'sv-cold';
+  var fillCls = s>=65 ? 'sf-hot' : s>=35 ? 'sf-warm' : 'sf-cold';
+  var label = s>=65 ? 'Quente — alta intenção' : s>=35 ? 'Morno — qualificação em curso' : 'Frio — baixa intenção detectada';
+  var badge = ec>0
+    ? '<span class="spiced-badge sb-enr">'+ec+' enriq.</span>'
+    : '<span class="spiced-badge sb-base">Base CRM</span>';
+  return '<div class="spiced-block">'
+    + '<div class="spiced-row">'
+    +   '<span class="spiced-lbl">Temperatura SPICED</span>'
+    +   '<span class="spiced-val '+cls+'">'+s+'</span>'
+    + '</div>'
+    + '<div class="spiced-bar"><div class="spiced-fill '+fillCls+'" style="width:'+s+'%"></div></div>'
+    + '<div class="spiced-sub"><span>'+label+'</span>'+badge+'</div>'
+    + '</div>';
+}
+
+// Heurística local de score base (0-100) por tier + fase + delta
+// Substitui o "Valor Elucy" antigo — agora é qualitativo, não monetário
+function _calcSpicedBase(d){
+  var s=40; // base
+  var tier=(d.tier||'').toLowerCase();
+  var fase=(d.fase||d.etapa||'').toLowerCase();
+  var delta=d.delta||d._delta||0;
+  // Tier weight
+  if(tier==='diamond') s+=20;
+  else if(tier==='gold') s+=12;
+  else if(tier==='silver') s+=5;
+  // Fase weight
+  if(fase.includes('negociacao')||fase.includes('oportunidade')) s+=20;
+  else if(fase.includes('agendado')) s+=12;
+  else if(fase.includes('conectado')) s+=6;
+  else if(fase.includes('ganho')) s=100;
+  else if(fase.includes('perdido')) s=5;
+  // Delta penalty
+  if(delta>14) s-=15;
+  else if(delta>7) s-=8;
+  // Signal boost/penalty
+  var sig=d._signal||'';
+  if(sig==='BUY') s+=15;
+  else if(sig==='RISK'||sig==='DOME') s-=15;
+  else if(sig==='CHAMP') s+=10;
+  return Math.max(0, Math.min(100, s));
+}
+
+// ── ENRICHMENT PANEL ──────────────────────────────────────────────
+// Painel onde SDR cola contexto qualitativo (WhatsApp/nota/call/email)
+// Worker Elucy lê lead_enrichments + deal e recalcula SPICED score real
+var _ENR_TIPO={};  // map de deal_id → tipo selecionado ('whatsapp'|'nota'|'call'|'email')
+
+function buildEnrPanel(id, d, items){
+  var tipos=['whatsapp','nota','call','email'];
+  var tipoAtual=_ENR_TIPO[id]||'nota';
+  var ph={
+    whatsapp:'Cole aqui mensagens de WhatsApp do lead (pode ser uma conversa inteira)…',
+    nota:'Nota de qualificação manual — o que você percebeu sobre o lead…',
+    call:'Transcrição ou resumo da call com o lead…',
+    email:'Cole o email recebido do lead…'
+  };
+  var listHtml='';
+  if(items&&items.length){
+    listHtml='<div class="enr-list">';
+    items.slice(0,3).forEach(function(it){
+      var ts=it.created_at?new Date(it.created_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+      var scoreHtml=it.spiced_score!=null?'<div class="enr-score">Score após análise: '+it.spiced_score+'/100</div>':'';
+      listHtml+='<div class="enr-item">'
+        +'<div class="enr-item-h">'
+        +'<span class="enr-tipo et-'+it.tipo+'">'+it.tipo+'</span>'
+        +'<span class="enr-ts">'+ts+'</span>'
+        +'</div>'
+        +'<div class="enr-txt">'+escHtml(it.conteudo)+'</div>'
+        +scoreHtml
+        +'</div>';
+    });
+    listHtml+='</div>';
+  }
+  var tipoBtns=tipos.map(function(t){
+    return '<button class="enr-tipo-btn'+(t===tipoAtual?' on':'')+'" onclick="enrSetTipo(\''+id+'\',\''+t+'\')">'+t+'</button>';
+  }).join('');
+  return '<div class="enr-panel">'
+    +'<div class="enr-h">'
+    +'<span class="enr-title">Enriquecer Lead</span>'
+    +(items&&items.length?'<span class="enr-count">'+items.length+' contexto'+(items.length>1?'s':'')+'</span>':'')
+    +'</div>'
+    +listHtml
+    +'<div class="enr-form">'
+    +'<div class="enr-tipo-sel">'+tipoBtns+'</div>'
+    +'<textarea class="enr-ta" id="enr-ta-'+id+'" placeholder="'+ph[tipoAtual]+'" rows="3"></textarea>'
+    +'<div class="enr-actions">'
+    +'<button class="btn-enr" id="enr-btn-'+id+'" onclick="saveEnrichment(\''+id+'\')">Enriquecer + Recalcular Score</button>'
+    +'<span class="enr-status" id="enr-st-'+id+'"></span>'
+    +'</div>'
+    +'</div>'
+    +'</div>';
+}
+
+function enrSetTipo(id, tipo){
+  _ENR_TIPO[id]=tipo;
+  var panel=document.getElementById('enr-panel-'+id);
+  if(!panel) return;
+  var deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
+  var items=window._ENR_ITEMS&&window._ENR_ITEMS[id]||[];
+  panel.innerHTML=buildEnrPanel(id, deal||{}, items);
+}
+
+// Cache de enrichments carregados por deal_id
+window._ENR_ITEMS=window._ENR_ITEMS||{};
+
+async function loadEnrichments(deal_id, cardId){
+  var sb=getSB();
+  if(!sb) return;
+  var sess=await sb.auth.getSession();
+  if(!sess.data.session) return;
+  var uid=sess.data.session.user.id;
+  var {data,error}=await sb.from('lead_enrichments')
+    .select('id,tipo,conteudo,spiced_score,created_at')
+    .eq('deal_id', deal_id)
+    .eq('operator_id', uid)
+    .order('created_at', {ascending:false})
+    .limit(10);
+  if(error||!data) return;
+  window._ENR_ITEMS[cardId]=data;
+  var deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[cardId];
+  var panel=document.getElementById('enr-panel-'+cardId);
+  if(panel) panel.innerHTML=buildEnrPanel(cardId, deal||{}, data);
+  // Atualiza SPICED score se tiver score processado
+  var lastScore=data.find(function(x){return x.spiced_score!=null;});
+  if(lastScore){
+    var spicedEl=document.getElementById('spiced-block-'+cardId);
+    if(spicedEl) spicedEl.innerHTML=buildSpicedBlock(cardId, deal||{}, lastScore.spiced_score, data.length);
+  }
+}
+
+async function saveEnrichment(cardId){
+  var ta=document.getElementById('enr-ta-'+cardId);
+  var btn=document.getElementById('enr-btn-'+cardId);
+  var st=document.getElementById('enr-st-'+cardId);
+  if(!ta||!ta.value.trim()){
+    if(st) st.textContent='Cole algum contexto primeiro.';
+    return;
+  }
+  var sb=getSB();
+  if(!sb){ if(st) st.textContent='Supabase offline'; return; }
+  var sess=await sb.auth.getSession();
+  if(!sess.data.session){ if(st) st.textContent='Faça login primeiro'; return; }
+  var uid=sess.data.session.user.id;
+  var email=sess.data.session.user.email;
+  var deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[cardId];
+  var deal_id=deal&&(deal.deal_id||deal.id)||cardId;
+  var tipo=_ENR_TIPO[cardId]||'nota';
+  var conteudo=ta.value.trim();
+  if(btn) btn.disabled=true;
+  if(st) st.textContent='Salvando…';
+  var {data,error}=await sb.from('lead_enrichments').insert({
+    deal_id:      deal_id,
+    operator_id:  uid,
+    operator_email: email,
+    tipo:         tipo,
+    conteudo:     conteudo
+  }).select('id').single();
+  if(error){
+    if(btn) btn.disabled=false;
+    if(st) st.textContent='Erro: '+error.message;
+    return;
+  }
+  // Limpa textarea
+  ta.value='';
+  if(st) st.textContent='Salvo! Elucy vai recalcular o score…';
+  if(btn) btn.disabled=false;
+  // Recarrega lista de enrichments
+  await loadEnrichments(deal_id, cardId);
+  // Dispara análise Elucy com flag de re-score
+  var reportEl=document.getElementById('er-'+cardId);
+  delete ELUCY_CACHE[deal_id]; // invalida cache para forçar nova análise
+  // Inclui os enrichments no request para o worker recalcular SPICED
+  var items=window._ENR_ITEMS[cardId]||[];
+  var enrichCtx=items.map(function(x){return '['+x.tipo.toUpperCase()+']\n'+x.conteudo;}).join('\n\n---\n\n');
+  var dealWithCtx=Object.assign({}, deal, {_enrichment_context: enrichCtx, _enrichment_count: items.length});
+  requestElucyAnalysis(deal_id, dealWithCtx, cardId);
+  showSyncToast('ok','Contexto salvo — Elucy recalculando score SPICED…');
+}
 
 // ── CONTEXT CARDS ──────────────────────────────────────────────
 function classifyOrigin(d){
