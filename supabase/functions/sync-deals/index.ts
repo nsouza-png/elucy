@@ -1,0 +1,211 @@
+// Elucy — Edge Function: sync-deals
+// Executa query no Databricks como o operador autenticado e upserta deals no Supabase.
+// Token Databricks nunca sai do servidor (Supabase Secret).
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const DATABRICKS_HOST = 'https://dbc-8acefaf9-a170.cloud.databricks.com'
+const DATABRICKS_WAREHOUSE = 'bbae754ea44f67e0'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    // 1. Autentica o operador via JWT do Supabase
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Authorization header required' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const databricksToken = Deno.env.get('DATABRICKS_TOKEN')!
+
+    // Cliente com service role para writes (bypassa RLS onde necessário)
+    const sbAdmin = createClient(supabaseUrl, supabaseServiceKey)
+
+    // Cliente com JWT do usuário para ler apenas o registro dele
+    const sbUser = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+      global: { headers: { Authorization: authHeader } },
+    })
+
+    // 2. Busca o operador autenticado
+    const { data: { user }, error: userErr } = await sbUser.auth.getUser()
+    if (userErr || !user) {
+      return new Response(JSON.stringify({ error: 'Invalid token' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const operatorEmail = user.email!
+
+    // 3. Verifica aprovação e pega qualificador_name
+    const { data: operator, error: opErr } = await sbAdmin
+      .from('operators')
+      .select('approved, qualificador_name, name')
+      .eq('email', operatorEmail)
+      .maybeSingle()
+
+    if (opErr || !operator) {
+      return new Response(JSON.stringify({ error: 'Operator not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    if (!operator.approved) {
+      return new Response(JSON.stringify({ error: 'Operator not approved' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const qualName = operator.qualificador_name || operator.name
+
+    // 4. Executa query no Databricks
+    const dbQuery = `
+      SELECT
+        f.deal_id,
+        f.fase_atual_no_processo,
+        f.etapa_atual_no_pipeline,
+        f.tier_da_oportunidade,
+        f.delta_t,
+        f.qualificador_name,
+        f.proprietario_name,
+        f.linha_de_receita_vigente,
+        f.grupo_de_receita,
+        f.created_at_crm,
+        f.event_skipped,
+        f.status_do_deal,
+        COALESCE(p.email, '') AS email_lead,
+        COALESCE(p.cargo, '') AS cargo,
+        COALESCE(p.canal_de_marketing, '') AS canal_de_marketing,
+        COALESCE(p.utm_medium, '') AS utm_medium
+      FROM production.diamond.funil_comercial f
+      LEFT JOIN production.diamond.persons_overview p
+        ON f.deal_id = p.deal_id
+      WHERE f.qualificador_name = '${qualName.replace(/'/g, "''")}'
+        AND f.fase_atual_no_processo NOT IN ('Ganho', 'Perdido', 'Desqualificado')
+      ORDER BY f.delta_t DESC
+      LIMIT 300
+    `
+
+    const dbRes = await fetch(`${DATABRICKS_HOST}/api/2.0/sql/statements`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${databricksToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        warehouse_id: DATABRICKS_WAREHOUSE,
+        statement: dbQuery,
+        wait_timeout: '30s',
+        on_wait_timeout: 'CONTINUE',
+      }),
+    })
+
+    if (!dbRes.ok) {
+      const errText = await dbRes.text()
+      return new Response(JSON.stringify({ error: 'Databricks error', detail: errText }), {
+        status: 502,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const dbData = await dbRes.json()
+
+    // Se statement ainda processando, faz poll (max 10s)
+    let result = dbData
+    if (result.status?.state === 'PENDING' || result.status?.state === 'RUNNING') {
+      const stmtId = result.statement_id
+      for (let i = 0; i < 5; i++) {
+        await new Promise(r => setTimeout(r, 2000))
+        const pollRes = await fetch(`${DATABRICKS_HOST}/api/2.0/sql/statements/${stmtId}`, {
+          headers: { Authorization: `Bearer ${databricksToken}` },
+        })
+        result = await pollRes.json()
+        if (result.status?.state === 'SUCCEEDED') break
+        if (result.status?.state === 'FAILED' || result.status?.state === 'CANCELED') {
+          return new Response(JSON.stringify({ error: 'Databricks query failed', state: result.status?.state }), {
+            status: 502,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+      }
+    }
+
+    const cols: string[] = result.manifest?.schema?.columns?.map((c: any) => c.name) || []
+    const rows: any[][] = result.result?.data_array || []
+
+    if (!rows.length) {
+      return new Response(JSON.stringify({ synced: 0, message: 'No active deals found' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // 5. Transforma rows em objetos e upserta no Supabase
+    const colIdx = (name: string) => cols.indexOf(name)
+
+    const deals = rows.map(row => ({
+      deal_id: row[colIdx('deal_id')] ?? '',
+      operator_email: operatorEmail,
+      fase_atual_no_processo: row[colIdx('fase_atual_no_processo')] ?? null,
+      etapa_atual_no_pipeline: row[colIdx('etapa_atual_no_pipeline')] ?? null,
+      tier_da_oportunidade: row[colIdx('tier_da_oportunidade')] ?? null,
+      delta_t: row[colIdx('delta_t')] != null ? Number(row[colIdx('delta_t')]) : null,
+      qualificador_name: row[colIdx('qualificador_name')] ?? null,
+      proprietario_name: row[colIdx('proprietario_name')] ?? null,
+      linha_de_receita_vigente: row[colIdx('linha_de_receita_vigente')] ?? null,
+      grupo_de_receita: row[colIdx('grupo_de_receita')] ?? null,
+      created_at_crm: row[colIdx('created_at_crm')] ?? null,
+      event_skipped: row[colIdx('event_skipped')] === 'true' || row[colIdx('event_skipped')] === true,
+      status_do_deal: row[colIdx('status_do_deal')] ?? null,
+      email_lead: row[colIdx('email_lead')] ?? '',
+      cargo: row[colIdx('cargo')] ?? '',
+      canal_de_marketing: row[colIdx('canal_de_marketing')] ?? '',
+      utm_medium: row[colIdx('utm_medium')] ?? '',
+      synced_at: new Date().toISOString(),
+    }))
+
+    // Apaga deals antigos do operador e reinsere (upsert por deal_id+operator_email)
+    const { error: upsertErr } = await sbAdmin
+      .from('deals')
+      .upsert(deals, { onConflict: 'deal_id,operator_email', ignoreDuplicates: false })
+
+    if (upsertErr) {
+      return new Response(JSON.stringify({ error: 'Supabase upsert failed', detail: upsertErr.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Remove deals que saíram do funil (deal_ids que não vieram mais no resultado)
+    const activeDealIds = deals.map(d => d.deal_id)
+    await sbAdmin
+      .from('deals')
+      .delete()
+      .eq('operator_email', operatorEmail)
+      .not('deal_id', 'in', `(${activeDealIds.map(id => `"${id}"`).join(',')})`)
+
+    return new Response(JSON.stringify({ synced: deals.length, operator: operatorEmail }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+
+  } catch (err: any) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+})

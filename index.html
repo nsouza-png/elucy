@@ -932,41 +932,67 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 });
 
-// ── GROWTH LOOP — Auto-refresh via G4 OS postMessage ─────────────────
+// ── GROWTH LOOP — Auto-refresh via Edge Function (enterprise backend) ──
+
+const EDGE_SYNC_URL = 'https://tnbbsjvzwleeoqnxtafp.supabase.co/functions/v1/sync-deals';
+let _lastSyncAt = null;
+let _syncInProgress = false;
+
+async function callSyncDeals(){
+  if(_syncInProgress) return;
+  const sb=getSB(); if(!sb) return;
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session) return; // não logado, ignora
+  _syncInProgress=true;
+  showSyncToast('load','Sincronizando pipeline...');
+  try{
+    const res=await fetch(EDGE_SYNC_URL,{
+      method:'POST',
+      headers:{
+        'Authorization':'Bearer '+session.access_token,
+        'Content-Type':'application/json'
+      }
+    });
+    const json=await res.json();
+    if(!res.ok){
+      showSyncToast('err','Erro no sync: '+(json.error||res.status));
+      return;
+    }
+    _lastSyncAt=Date.now();
+    // Recarrega deals do Supabase após sync
+    await loadDealsFromSupabase(session.user.email);
+    const el=document.getElementById('sbdate');
+    const now=new Date();
+    const ts=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    if(el) el.textContent='Atualizado: '+ts;
+    showSyncToast('ok','Pipeline atualizado — '+(json.synced||0)+' deals');
+  }catch(err){
+    showSyncToast('err','Falha na conexão com o servidor.');
+  }finally{
+    _syncInProgress=false;
+  }
+}
 
 (function initGrowthLoop(){
   const STALE_MINUTES=15;
-  const POLL_MS=5*60*1000; // a cada 5 minutos
+  const POLL_MS=5*60*1000;
 
   function isStale(){
-    const ts=window.COCKPIT_UPDATED_AT||'';
-    if(!ts) return true;
-    try{
-      const [datePart,timePart]=(ts+' ').split(' ');
-      const [d,m,y]=datePart.split('/');
-      const [h,min]=(timePart||'00:00').split(':');
-      const age=(Date.now()-new Date(y,m-1,d,h||0,min||0).getTime())/60000;
-      return age>STALE_MINUTES;
-    }catch(e){ return true; }
+    if(!_lastSyncAt) return true;
+    return (Date.now()-_lastSyncAt)/60000 > STALE_MINUTES;
   }
 
   function requestRefresh(){
+    if(!window.IS_REMOTE) return; // modo local usa cockpit-data.js via G4OS
     if(!isStale()) return;
-    // Solicita ao G4 OS host (iframe parent) para executar /atualizar-cockpit
-    try{
-      window.parent.postMessage({type:'g4os:skill:run',skill:'atualizar-cockpit'},'*');
-    }catch(e){}
-    // Fallback: dispara também no próprio window (quando aberto direto no browser)
-    window.postMessage({type:'g4os:skill:run',skill:'atualizar-cockpit'},'*');
+    callSyncDeals();
   }
 
-  // Ouve resposta do G4 OS quando cockpit-data.js for regenerado
+  // Mantém compatibilidade com G4OS local (postMessage)
   window.addEventListener('message',function(e){
     if(!e.data||e.data.type!=='g4os:skill:complete'||e.data.skill!=='atualizar-cockpit') return;
-    // Remove script antigo e recarrega com cache-bust
     const old=document.querySelector('script[src^="cockpit-data.js"]');
     if(old) old.remove();
-    // Limpa variáveis globais para forçar re-leitura
     window.COCKPIT_DEALS=null;
     window.COCKPIT_COLS=null;
     window.COCKPIT_UPDATED_AT=null;
@@ -984,17 +1010,15 @@ document.addEventListener('DOMContentLoaded',()=>{
         document.getElementById('op-pill').classList.add('show');
       }
       if(window.COCKPIT_UPDATED_AT){
-        const sb=document.getElementById('sbdate');
-        if(sb) sb.textContent='Atualizado: '+window.COCKPIT_UPDATED_AT;
+        const sb2=document.getElementById('sbdate');
+        if(sb2) sb2.textContent='Atualizado: '+window.COCKPIT_UPDATED_AT;
       }
       showSyncToast('ok','Pipeline atualizado — '+window.COCKPIT_DEALS.length+' deals');
     };
     document.head.appendChild(ns);
   });
 
-  // Checa ao abrir (aguarda 3s para o DOM estabilizar)
   setTimeout(requestRefresh,3000);
-  // Polling a cada 5 min
   setInterval(requestRefresh,POLL_MS);
 })();
 
@@ -1075,9 +1099,13 @@ function showModalStatus(type,msg){
 // ── REFRESH / DATABRICKS SYNC ────────────────────────────────────────
 
 function refreshPipeline(){
-  // Arquitetura: G4 OS gera cockpit-data.js com dados frescos do Databricks
-  // O Cockpit carrega esse arquivo — sem CORS, sem token exposto ao SDR
-  showSyncToast('ok','Para atualizar o pipeline, diga "atualizar cockpit" no G4 OS. Os dados serão injetados automaticamente.');
+  if(window.IS_REMOTE){
+    callSyncDeals();
+  } else {
+    // Modo local: delega ao G4 OS via postMessage
+    try{ window.parent.postMessage({type:'g4os:skill:run',skill:'atualizar-cockpit'},'*'); }catch(e){}
+    window.postMessage({type:'g4os:skill:run',skill:'atualizar-cockpit'},'*');
+  }
 }
 
 function promptDbToken(email){
