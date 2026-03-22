@@ -108,7 +108,7 @@ input,textarea,select{font-family:inherit;font-size:inherit}
 ::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:99px}
 ::-webkit-scrollbar-thumb:hover{background:var(--text4)}
 /* â”€â”€ LAYOUT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-#app,#main{display:flex;width:100%;height:100vh;overflow:hidden}
+/* #app alias mantido por compatibilidade */
 /* â”€â”€ TOPBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 #topbar{
   position:fixed;top:0;left:0;right:0;height:52px;z-index:100;
@@ -259,8 +259,8 @@ input,textarea,select{font-family:inherit;font-size:inherit}
 .fi-meta{font-size:10px;color:var(--text3)}
 .fi-urg{font-size:10px;font-weight:700}
 /* â”€â”€ MAIN CONTENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-#main{display:flex;width:100%;height:100vh;padding-top:52px;overflow:hidden;position:relative}
-#ct{flex:1;min-width:0;height:100%;overflow-y:auto;padding:20px;background:var(--bg)}
+#main{display:flex;width:100%;height:calc(100vh - 52px);margin-top:52px;overflow:hidden;position:relative}
+#ct{flex:1;min-width:0;height:100%;overflow-y:auto;overflow-x:hidden;padding:20px;background:var(--bg)}
 /* â”€â”€ DEAL CARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .screen{display:none}
 .screen.on{display:block}
@@ -617,6 +617,7 @@ input,textarea,select{font-family:inherit;font-size:inherit}
 /* -- SCREEN VISIBILITY --------------------------------------------- */
 #ct > .screen{display:none}
 #ct > .screen.on{display:block}
+#ct > #screen-dm.on{display:flex;height:100%}
 /* Reports screen extras */
 .ftabs{display:flex;gap:6px;margin-bottom:14px}
 .ft{padding:5px 12px;border-radius:var(--r-sm);border:1px solid var(--border);background:none;color:var(--text3);font-size:11px;font-weight:500;cursor:pointer;transition:all .15s}
@@ -647,6 +648,184 @@ input,textarea,select{font-family:inherit;font-size:inherit}
 #rp{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-xl);padding:16px;margin-bottom:16px}
 /* Deal day tag */
 .di-day{font-size:10px;color:var(--text4);background:var(--bg5);padding:2px 6px;border-radius:99px;margin-left:auto}
+
+/* ── MODALS / OVERLAYS ─────────────────────────────────────────────── */
+.modal-ov{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,.65);backdrop-filter:blur(4px);
+  z-index:9999;display:flex;align-items:center;justify-content:center;
+  padding:20px;
+}
+.modal{
+  background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-xl);
+  padding:24px;width:100%;box-shadow:var(--shadow-lg);
+  position:relative;
+}
+.modal-t{font-size:15px;font-weight:700;color:var(--text);margin-bottom:16px}
+.modal-f{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.modal-l{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+.modal-i{
+  background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);
+  color:var(--text);padding:8px 10px;font-size:12px;outline:none;
+  transition:border-color .15s;
+}
+.modal-i:focus{border-color:var(--accent)}
+.modal-note{font-size:10px;color:var(--text3);margin-top:4px}
+/* Wizard steps */
+.wiz-steps{display:flex;gap:6px;margin-bottom:20px}
+.ws{flex:1;height:3px;border-radius:99px;background:var(--bg5);transition:background .3s}
+.ws.done{background:var(--green)}
+.ws.active{background:var(--accent)}
+
+/* ── DM WAR ROOM ──────────────────────────────────────────────────── */
+#screen-dm{display:none;height:100%;padding:0}
+#screen-dm.on{display:flex;flex-direction:row;height:100%}
+#ct>#screen-dm.on{display:flex}
+/* Override default ct padding for DM screen */
+#ct:has(#screen-dm.on){padding:0;overflow:hidden}
+
+.dm-center{flex:1;display:flex;flex-direction:column;height:100%;min-width:0;background:var(--bg);border-right:1px solid var(--border)}
+.dm-right{width:300px;flex-shrink:0;height:100%;overflow-y:auto;background:var(--bg2);border-left:1px solid var(--border)}
+
+/* Drop zone */
+.dm-drop-wrap{padding:16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.dm-drop{
+  border:2px dashed var(--border2);border-radius:var(--r-md);padding:24px 16px;
+  display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;
+  transition:all .2s;background:var(--bg3);
+}
+.dm-drop:hover,.dm-drop.active{border-color:var(--accent);background:var(--adim)}
+.dm-drop-icon{font-size:28px;opacity:.5}
+.dm-drop-title{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.dm-drop-sub{font-size:10px;color:var(--text4)}
+.dm-ocr-bar-wrap{margin-top:8px;display:none}
+.dm-ocr-bar-bg{height:2px;background:var(--bg5);border-radius:99px;overflow:hidden}
+.dm-ocr-bar-fill{height:100%;background:var(--accent);width:0;transition:width .1s linear}
+.dm-ocr-labels{display:flex;justify-content:space-between;margin-top:4px}
+.dm-ocr-step{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+.dm-ocr-pct{font-size:9px;color:var(--accent2);font-weight:700}
+
+/* Chat area */
+.dm-chat{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.dm-msg-lead{display:flex;flex-direction:column;align-items:flex-start;max-width:80%}
+.dm-msg-op{display:flex;flex-direction:column;align-items:flex-end;max-width:80%;margin-left:auto}
+.dm-msg-sender{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.dm-msg-sender.lead{color:var(--green)}
+.dm-msg-sender.op{color:var(--accent2)}
+.dm-msg-ts{font-size:9px;color:var(--text4)}
+.dm-msg-bubble{padding:12px 14px;border-radius:var(--r-md);font-size:13px;line-height:1.6;color:var(--text)}
+.dm-msg-lead .dm-msg-bubble{background:var(--bg3);border:1px solid var(--border)}
+.dm-msg-op .dm-msg-bubble{background:var(--adim);border:1px solid rgba(99,102,241,.25)}
+.dm-msg-meta{margin-top:6px;padding-top:6px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dm-signal-dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dm-signal-green{background:var(--green);box-shadow:0 0 4px rgba(34,197,94,.5)}
+.dm-signal-blue{background:var(--blue)}
+.dm-signal-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.dm-gamif{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+.dm-gamif-badge{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:4px 10px;border-radius:var(--r-sm);display:flex;align-items:center;gap:4px}
+.dm-gb-green{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);color:var(--green)}
+.dm-gb-accent{background:var(--adim);border:1px solid rgba(99,102,241,.2);color:var(--accent2)}
+.dm-footer{height:36px;border-top:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex-shrink:0}
+.dm-footer-left{display:flex;gap:16px}
+.dm-footer-item{font-size:9px;color:var(--text4);text-transform:uppercase;letter-spacing:.5px}
+.dm-footer-right{display:flex;align-items:center;gap:6px;font-size:9px;color:var(--green);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.dm-footer-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Right panel - AI Suggestion */
+.dm-right-inner{padding:16px}
+.dm-section-title{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.dm-ai-card{background:var(--bg3);border:1px solid rgba(99,102,241,.3);border-radius:var(--r-md);padding:14px;position:relative;margin-bottom:14px}
+.dm-ai-label{position:absolute;top:-8px;left:12px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 8px;border-radius:99px}
+.dm-ai-text{font-size:12px;color:var(--text);line-height:1.6;font-style:italic;margin-bottom:10px;margin-top:4px}
+.dm-ai-actions{display:flex;gap:6px}
+.dm-copy-btn{flex:1;padding:8px;background:var(--accent);color:#fff;border:none;border-radius:var(--r-sm);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:4px}
+.dm-copy-btn:hover{background:#4f46e5}
+.dm-edit-btn{padding:8px 10px;background:none;border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text3);cursor:pointer;transition:all .15s}
+.dm-edit-btn:hover{border-color:var(--border3);color:var(--text)}
+.dm-action-btns{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.dm-action-btn{width:100%;padding:10px;background:none;border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text2);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.dm-action-btn:hover{border-color:var(--accent);color:var(--accent2);background:var(--adim)}
+.dm-request-btn{width:100%;margin-top:10px;padding:10px;background:var(--adim);border:1px solid rgba(99,102,241,.25);border-radius:var(--r-sm);color:var(--accent2);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.dm-request-btn:hover{background:var(--adim2);border-color:var(--accent)}
+
+/* Lead Insights blocks */
+.dm-insights-wrap{border-top:1px solid var(--border);padding-top:14px}
+.dm-panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.dm-panel-handle{font-size:12px;font-weight:700;color:var(--accent2)}
+.dm-enr-badge{font-size:9px;padding:2px 8px;border-radius:99px;background:var(--bg4);border:1px solid var(--border);color:var(--text4);text-transform:uppercase;letter-spacing:.4px}
+.dm-empty-state{padding:24px 16px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.dm-empty-icon{font-size:24px;opacity:.3}
+.dm-empty-text{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.5px;line-height:1.5}
+.li-blk{padding:12px 0;border-bottom:1px solid var(--border)}
+.li-blk:last-child{border-bottom:none}
+.li-blk-hdr{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.li-blk-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text);flex:1}
+.li-blk-src{font-size:8px;color:var(--text4);text-transform:uppercase;letter-spacing:.4px}
+.li-fld{display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.li-fld:last-child{border-bottom:none}
+.li-lbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px}
+.li-val{font-size:11px;color:var(--text);text-align:right;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.li-val-hi{font-size:12px;font-weight:700;color:var(--accent2)}
+.li-val-sec{font-size:10px;color:var(--text3);text-align:right}
+.li-badge{font-size:9px;padding:2px 7px;border-radius:99px;font-weight:600}
+.li-badge-green{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+.li-badge-gray{background:var(--bg5);color:var(--text4)}
+.li-badge-accent{background:var(--adim);color:var(--accent2);border:1px solid rgba(99,102,241,.2)}
+.li-phase-pill{font-size:9px;padding:2px 7px;border-radius:99px;text-transform:uppercase}
+.li-phase-hot{background:rgba(249,115,22,.1);color:var(--hot)}
+.li-phase-warn{background:rgba(59,130,246,.1);color:var(--blue)}
+.li-phase-crit{background:rgba(239,68,68,.1);color:var(--red)}
+.li-timeline-wrap{display:flex;flex-direction:column;gap:8px}
+.li-tl-item{display:flex;align-items:flex-start;gap:8px}
+.li-tl-dot{width:7px;height:7px;border-radius:50%;margin-top:3px;flex-shrink:0}
+.li-tl-dot-won{background:var(--green)}
+.li-tl-dot-lost{background:var(--red)}
+.li-tl-dot-open{background:var(--blue)}
+.li-tl-body{font-size:9px;color:var(--text2);line-height:1.5}
+.li-tl-title{font-weight:600;color:var(--text)}
+.li-tl-status-won{color:var(--green)}
+.li-tl-status-lost{color:var(--red)}
+.li-tl-status-open{color:var(--blue)}
+.li-skip-warn{margin-top:6px;padding:4px 8px;background:var(--rdim);border:1px solid rgba(239,68,68,.2);border-radius:var(--r-sm);font-size:9px;color:var(--red);display:flex;align-items:center;gap:4px}
+
+/* ELUCI REPORT inside DM panel */
+.dm-er-panel{border-top:1px solid var(--border);padding-top:14px;display:none}
+.dm-er-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.dm-er-label{font-size:10px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.6px}
+.dm-er-ref{font-size:9px;color:var(--text4)}
+.dm-er-badges{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}
+.dm-er-badge{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:2px 8px;border-radius:99px}
+.dm-er-badge-titan{background:rgba(239,68,68,.1);color:var(--red)}
+.dm-er-badge-builder{background:var(--adim);color:var(--accent2)}
+.dm-er-badge-executor{background:var(--bg5);color:var(--text2)}
+.dm-cds-wrap{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.dm-cds-bar{display:flex;gap:3px}
+.dm-cds-seg{width:16px;height:4px;border-radius:2px;background:var(--bg5)}
+.dm-cds-seg.on{background:var(--accent)}
+.dm-cds-val{font-size:9px;color:var(--accent2);font-weight:700}
+.dm-diag-field{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.dm-diag-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px}
+.dm-diag-value{font-size:10px;color:var(--text);text-align:right;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dm-nba-card{border-left:3px solid var(--accent);padding:10px 12px;background:var(--adim);border-radius:0 var(--r-sm) var(--r-sm) 0;margin:10px 0}
+.dm-nba-action{font-size:12px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:6px}
+.dm-nba-meta{display:flex;gap:10px;font-size:9px;color:var(--text3);text-transform:uppercase}
+.dm-verdict-wrap{display:flex;align-items:center;justify-content:space-between;margin:10px 0}
+.dm-verdict-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:4px 14px;border-radius:99px}
+.dm-verdict-av{background:rgba(34,197,94,.15);color:var(--green)}
+.dm-verdict-ag{background:rgba(59,130,246,.15);color:var(--blue)}
+.dm-verdict-bl{background:var(--rdim);color:var(--red)}
+.dm-gov-flag{font-size:9px;padding:4px 8px;border-radius:var(--r-sm);margin-top:4px}
+.dm-gov-risk{background:var(--ydim);color:var(--yellow)}
+.dm-gov-block{background:var(--rdim);color:var(--red)}
+/* Copy toast */
+.dm-toast{
+  position:fixed;bottom:24px;right:24px;z-index:9999;
+  background:var(--bg3);border:1px solid rgba(99,102,241,.3);border-radius:var(--r-md);
+  padding:10px 16px;display:none;align-items:center;gap:8px;
+  box-shadow:var(--shadow-lg);font-size:12px;color:var(--text);
+}
+.dm-toast.show{display:flex}
 </style>
 </head>
 <body>
@@ -686,6 +865,7 @@ input,textarea,select{font-family:inherit;font-size:inherit}
   <div class="logo">ELUCY <span>by G4</span></div>
   <button class="ntab on" onclick="setScreen('home',this)">PIPELINE</button>
   <button class="ntab" onclick="setScreen('reports',this)">RELATÃ“RIOS</button>
+  <button class="ntab" onclick="setScreen('dm',this)">DM WAR ROOM</button>
   <div class="topbar-right">
     <div class="g4os-status connecting" id="g4os-indicator" title="Status da conexão com G4 OS">
       <span class="g4dot"></span>
@@ -797,6 +977,192 @@ input,textarea,select{font-family:inherit;font-size:inherit}
   <div class="rps"><div class="rps-t">Hoje</div><div class="tr"><span class="tr-l">FUPs</span><span class="tr-v" id="hoje-fups">12</span></div><div class="tr"><span class="tr-l">Deals</span><span class="tr-v" id="hoje-deals">5</span></div><div class="tr"><span class="tr-l">Qualif.</span><span class="tr-v" id="hoje-qual">2</span></div><div class="tr"><span class="tr-l">Handoffs</span><span class="tr-v" id="hoje-hand">1</span></div></div>
 </div></div><!-- /flex-wrap screen-reports -->
 </div><!-- /screen-reports -->
+
+<!-- ── SCREEN: DM WAR ROOM ────────────────────────────────────────── -->
+<div class="screen" id="screen-dm">
+  <div class="dm-center" style="position:relative">
+    <div class="dm-drop-wrap">
+      <div class="dm-drop" id="dm-drop-zone"
+           onclick="dmStartCapture()"
+           ondragover="event.preventDefault();this.classList.add('active')"
+           ondragleave="this.classList.remove('active')"
+           ondrop="event.preventDefault();this.classList.remove('active');dmStartCapture()">
+        <div class="dm-drop-icon">&#128248;</div>
+        <div class="dm-drop-title">Soltar screenshot de DM para analisar</div>
+        <div class="dm-drop-sub" id="dm-ocr-status">OCR ENGINE: PRONTO</div>
+      </div>
+      <div class="dm-ocr-bar-wrap" id="dm-ocr-bar-wrap">
+        <div class="dm-ocr-bar-bg"><div class="dm-ocr-bar-fill" id="dm-ocr-fill"></div></div>
+        <div class="dm-ocr-labels">
+          <span class="dm-ocr-step" id="dm-ocr-step">OCR — SCANNING</span>
+          <span class="dm-ocr-pct" id="dm-ocr-pct">0%</span>
+        </div>
+      </div>
+    </div>
+    <div class="dm-gamif">
+      <div class="dm-gamif-badge dm-gb-green">&#9889; COMBO: 3 FAST</div>
+      <div class="dm-gamif-badge dm-gb-accent">&#128293; STREAK: 12H</div>
+    </div>
+    <div class="dm-chat" id="dm-chat-area">
+      <div class="dm-msg-lead">
+        <div class="dm-msg-sender lead"><span>LEAD</span><span class="dm-msg-ts">14:02</span></div>
+        <div class="dm-msg-bubble">
+          "Já tentei outras soluções mas os resultados sempre demoravam. Como sei que é diferente aqui?"
+          <div class="dm-msg-meta">
+            <span class="dm-signal-dot dm-signal-green"></span>
+            <span class="dm-signal-label" style="color:var(--green);font-size:9px">TOM: CÉTICO</span>
+          </div>
+        </div>
+      </div>
+      <div class="dm-msg-op">
+        <div class="dm-msg-sender op"><span class="dm-msg-ts">14:03</span><span>VOCÊ (OPERADOR)</span></div>
+        <div class="dm-msg-bubble">
+          "Entendo. Posso te mostrar resultados reais de clientes no mesmo perfil em 3 minutos?"
+        </div>
+      </div>
+      <div class="dm-msg-lead">
+        <div class="dm-msg-sender lead"><span>LEAD</span><span class="dm-msg-ts">14:05</span></div>
+        <div class="dm-msg-bubble" style="border-left:2px solid var(--green)">
+          "Ok. Manda. Se os dados baterem, fecho hoje."
+          <div class="dm-msg-meta">
+            <span class="dm-signal-dot dm-signal-blue"></span>
+            <span style="font-size:9px;color:var(--green);font-weight:700;text-transform:uppercase">SINAL: INTENÇÃO DE COMPRA</span>
+          </div>
+        </div>
+      </div>
+      <div id="dm-ocr-messages"></div>
+    </div>
+    <div class="dm-footer">
+      <div class="dm-footer-left">
+        <span class="dm-footer-item">ELUCY v2.4</span>
+        <span class="dm-footer-item">LATÊNCIA: 14MS</span>
+      </div>
+      <div class="dm-footer-right">
+        <span class="dm-footer-dot"></span>
+        AI ANALYZER ATIVO
+      </div>
+    </div>
+  </div>
+
+  <div class="dm-right">
+    <div class="dm-right-inner">
+      <div class="dm-section-title">&#129504; Próxima Melhor Ação</div>
+      <div class="dm-ai-card">
+        <div class="dm-ai-label">AI SUGGESTION</div>
+        <div class="dm-ai-text" id="dm-suggestion-text">
+          "Perfeito. Aqui está o resultado real de um cliente com perfil similar ao seu. Posso reservar uma vaga para começar essa semana."
+        </div>
+        <div class="dm-ai-actions">
+          <button class="dm-copy-btn" onclick="dmCopySuggestion()">&#128203; Copiar DM</button>
+          <button class="dm-edit-btn" onclick="dmEditSuggestion()" title="Editar">&#9999;</button>
+        </div>
+      </div>
+      <div class="dm-action-btns">
+        <button class="dm-action-btn" onclick="dmSendToCRM()">&#128506; Enviar ao CRM</button>
+        <button class="dm-action-btn">&#128197; Agendar Follow-up</button>
+      </div>
+
+      <div class="dm-insights-wrap" id="dm-insights-wrap">
+        <div class="dm-panel-header">
+          <span class="dm-panel-handle" id="dm-lead-handle">@ — Selecione um deal</span>
+          <span class="dm-enr-badge" id="dm-enr-badge">AGUARDANDO</span>
+        </div>
+        <div class="dm-empty-state" id="dm-insights-empty">
+          <div class="dm-empty-icon">&#128070;</div>
+          <div class="dm-empty-text">Selecione um deal no pipeline<br>para ver os insights do lead</div>
+        </div>
+
+        <!-- BLOCO A: PERFIL -->
+        <div class="li-blk" id="dm-bloco-a" style="display:none">
+          <div class="li-blk-hdr">
+            <span>&#128100;</span>
+            <span class="li-blk-title">PERFIL</span>
+            <span class="li-blk-src">persons_overview</span>
+          </div>
+          <div class="li-fld"><span class="li-lbl">Nome</span><span class="li-val" id="dm-li-nome">—</span></div>
+          <div class="li-fld"><span class="li-lbl">Cargo</span><span class="li-val" id="dm-li-cargo">—</span></div>
+          <div class="li-fld"><span class="li-lbl">Faturamento</span><span class="li-val" id="dm-li-fat">—</span></div>
+          <div class="li-fld"><span class="li-lbl">Segmento</span><span class="li-val" id="dm-li-seg">—</span></div>
+          <div class="li-fld"><span class="li-lbl">Perfil ICP</span><span class="li-badge li-badge-accent" id="dm-li-perfil">—</span></div>
+          <div class="li-fld"><span class="li-lbl">Status G4</span><span class="li-badge li-badge-gray" id="dm-li-status">Prospect</span></div>
+          <div class="li-fld"><span class="li-lbl">LTV Total</span><span class="li-val-hi" id="dm-li-ltv">—</span></div>
+        </div>
+
+        <!-- BLOCO B: ECOSSISTEMA G4 -->
+        <div class="li-blk" id="dm-bloco-b" style="display:none">
+          <div class="li-blk-hdr">
+            <span>&#128230;</span>
+            <span class="li-blk-title">ECOSSISTEMA G4</span>
+            <span class="li-blk-src">persons_overview</span>
+          </div>
+          <div class="li-fld"><span class="li-lbl">1&#186; Produto</span><span class="li-val" id="dm-li-prod1">—</span></div>
+          <div class="li-fld"><span class="li-lbl">Último</span><span class="li-val" id="dm-li-prodult">—</span></div>
+          <div class="li-fld"><span class="li-lbl">Cluster RFM</span><span class="li-badge li-badge-gray" id="dm-li-rfm">—</span></div>
+          <div class="li-fld"><span class="li-lbl">Scale</span><span class="li-badge li-badge-gray" id="dm-li-scale">—</span></div>
+          <div class="li-fld"><span class="li-lbl">Club</span><span class="li-badge li-badge-gray" id="dm-li-club">—</span></div>
+        </div>
+
+        <!-- BLOCO C: DEAL ATUAL -->
+        <div class="li-blk" id="dm-bloco-c" style="display:none">
+          <div class="li-blk-hdr">
+            <span>&#128200;</span>
+            <span class="li-blk-title">DEAL ATUAL</span>
+            <span class="li-blk-src">funil_comercial</span>
+          </div>
+          <div class="li-fld"><span class="li-lbl">Fase Atual</span><span class="li-phase-pill li-phase-hot" id="dm-li-fase">—</span></div>
+          <div class="li-fld"><span class="li-lbl">Fase Anterior</span><span class="li-val-sec" id="dm-li-fase-ant">—</span></div>
+          <div class="li-fld"><span class="li-lbl">Tempo na Fase</span><span class="li-val" id="dm-li-delta">—</span></div>
+          <div class="li-fld"><span class="li-lbl">Receita</span><span class="li-val-hi" id="dm-li-receita">—</span></div>
+          <div class="li-fld"><span class="li-lbl">Produto</span><span class="li-val" id="dm-li-linha">—</span></div>
+          <div class="li-fld"><span class="li-lbl">Origem</span><span class="li-val" id="dm-li-origem">—</span></div>
+          <div class="li-fld"><span class="li-lbl">SDR</span><span class="li-val" id="dm-li-sdr">—</span></div>
+          <div class="li-fld"><span class="li-lbl">Closer</span><span class="li-val" id="dm-li-closer">—</span></div>
+          <div id="dm-skip-warn" class="li-skip-warn" style="display:none">&#9888; Etapa pulada — revisar jornada</div>
+        </div>
+
+        <!-- BLOCO D: HISTÓRICO -->
+        <div class="li-blk" id="dm-bloco-d" style="display:none">
+          <div class="li-blk-hdr">
+            <span>&#128336;</span>
+            <span class="li-blk-title">HISTÓRICO</span>
+            <span class="li-blk-src">aquisicao</span>
+          </div>
+          <div class="li-timeline-wrap" id="dm-timeline">
+            <span style="font-size:9px;color:var(--text4);font-style:italic">Nenhuma negociação anterior</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ELUCI REPORT inside DM panel -->
+      <div class="dm-er-panel" id="dm-er-panel">
+        <div class="dm-er-hdr">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span>&#129504;</span>
+            <span class="dm-er-label">ELUCI REPORT</span>
+            <span class="dm-er-ref" id="dm-er-ref">—</span>
+          </div>
+          <button onclick="document.getElementById('dm-er-panel').style.display='none'" style="background:none;border:none;color:var(--text3);cursor:pointer">&#10005;</button>
+        </div>
+        <div id="dm-er-content"></div>
+        <button class="dm-request-btn" onclick="dmRequestElucy()" id="dm-btn-request">
+          &#10024; Gerar Análise ELUCI
+        </button>
+      </div>
+
+      <!-- XP Bar -->
+      <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:9px;font-weight:700;color:var(--accent2);text-transform:uppercase">LVL 42 OPERADOR</span>
+          <span style="font-size:9px;color:var(--text4)">750 / 1000 XP</span>
+        </div>
+        <div style="height:2px;background:var(--bg5);border-radius:99px;overflow:hidden">
+          <div style="height:100%;width:75%;background:var(--accent);box-shadow:0 0 6px rgba(99,102,241,.4)"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div><!-- /screen-dm -->
+
 </div><!-- /ct -->
 </div><!-- /main -->
 <script>
@@ -806,8 +1172,20 @@ let cur=null;
 function setScreen(n,el){
   document.querySelectorAll('#ct > .screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
-  document.getElementById(n==='home'?'screen-home':'screen-reports').classList.add('on');
+  const screenId = n==='home' ? 'screen-home' : n==='dm' ? 'screen-dm' : 'screen-reports';
+  document.getElementById(screenId).classList.add('on');
   if(el) el.classList.add('on');
+  // DM screen: remove padding from #ct for full-height flex layout
+  const ct=document.getElementById('ct');
+  if(ct){
+    if(n==='dm'){
+      ct.style.padding='0';
+      ct.style.overflow='hidden';
+    } else {
+      ct.style.padding='20px';
+      ct.style.overflow='auto';
+    }
+  }
 }
 
 function selectDeal(id){
@@ -2857,6 +3235,200 @@ function showSyncToast(type,msg){
   document.body.appendChild(t);
   setTimeout(()=>t.remove(),5000);
 }
+
+// ── DM WAR ROOM FUNCTIONS ────────────────────────────────────────────
+let _dmCurrentDealId = null;
+
+// Preenche os 4 blocos de Lead Insights quando um deal é selecionado
+function populateDmInsights(dealId, deal){
+  _dmCurrentDealId = dealId;
+  const empty=document.getElementById('dm-insights-empty');
+  if(empty) empty.style.display='none';
+
+  // Handle
+  const handleEl=document.getElementById('dm-lead-handle');
+  if(handleEl) handleEl.textContent='@ '+( deal.nome||deal.lead_name||'—');
+
+  const badge=document.getElementById('dm-enr-badge');
+  if(badge){badge.textContent='ENRICHED';badge.style.background='rgba(34,197,94,.1)';badge.style.borderColor='rgba(34,197,94,.3)';badge.style.color='var(--green)';}
+
+  // BLOCO A: PERFIL
+  const a=document.getElementById('dm-bloco-a');
+  if(a){
+    a.style.display='block';
+    _dmSet('dm-li-nome', deal.nome||deal.lead_name);
+    _dmSet('dm-li-cargo', deal.cargo||deal.job_title);
+    _dmSet('dm-li-fat', deal.faturamento||deal.revenue_range);
+    _dmSet('dm-li-seg', deal.segmento||deal.segment);
+    _dmSet('dm-li-perfil', deal.perfil_icp||deal.icp_profile);
+    _dmSet('dm-li-status', deal.e_cliente ? 'Cliente' : 'Prospect');
+    const statusEl=document.getElementById('dm-li-status');
+    if(statusEl){statusEl.className='li-badge '+(deal.e_cliente?'li-badge-green':'li-badge-gray');}
+    _dmSet('dm-li-ltv', deal.ltv ? 'R$ '+Number(deal.ltv).toLocaleString('pt-BR') : '—');
+  }
+
+  // BLOCO B: ECOSSISTEMA
+  const b=document.getElementById('dm-bloco-b');
+  if(b){
+    b.style.display='block';
+    _dmSet('dm-li-prod1', deal.primeiro_produto||deal.first_product);
+    _dmSet('dm-li-prodult', deal.ultimo_produto||deal.last_product);
+    _dmSet('dm-li-rfm', deal.cluster_rfm||deal.rfm_cluster);
+    _dmSet('dm-li-scale', deal.scale_ativo ? 'Ativo' : 'Inativo');
+    const scaleEl=document.getElementById('dm-li-scale');
+    if(scaleEl) scaleEl.className='li-badge '+(deal.scale_ativo?'li-badge-green':'li-badge-gray');
+    _dmSet('dm-li-club', deal.club_ativo ? 'Ativo' : 'Inativo');
+    const clubEl=document.getElementById('dm-li-club');
+    if(clubEl) clubEl.className='li-badge '+(deal.club_ativo?'li-badge-green':'li-badge-gray');
+  }
+
+  // BLOCO C: DEAL ATUAL
+  const cv=document.getElementById('dm-bloco-c');
+  if(cv){
+    cv.style.display='block';
+    const fase=deal.fase_atual_no_processo||deal.fase||'—';
+    _dmSet('dm-li-fase', fase);
+    _dmSet('dm-li-fase-ant', deal.fase_anterior_no_processo||deal.fase_anterior);
+    const delta=deal.delta_t;
+    _dmSet('dm-li-delta', delta!=null ? delta+' dias' : '—');
+    // Phase color
+    const faseEl=document.getElementById('dm-li-fase');
+    if(faseEl){
+      faseEl.className='li-phase-pill '+(delta>14?'li-phase-crit':delta>7?'li-phase-warn':'li-phase-hot');
+    }
+    _dmSet('dm-li-receita', deal.revenue ? 'R$ '+Number(deal.revenue).toLocaleString('pt-BR') : '—');
+    _dmSet('dm-li-linha', deal.linha_de_receita_vigente||deal.grupo_de_receita||deal.product_line);
+    _dmSet('dm-li-origem', deal.utm_medium||deal.origem);
+    _dmSet('dm-li-sdr', deal.qualificador_name||deal.sdr_name);
+    _dmSet('dm-li-closer', deal.proprietario_name||deal.closer_name);
+    const skipWarn=document.getElementById('dm-skip-warn');
+    if(skipWarn) skipWarn.style.display=(deal.event_skipped?'flex':'none');
+  }
+
+  // BLOCO D: HISTÓRICO — tenta buscar do mapa de dados
+  const d=document.getElementById('dm-bloco-d');
+  if(d){
+    d.style.display='block';
+    const tl=document.getElementById('dm-timeline');
+    if(tl&&deal.historico&&deal.historico.length){
+      tl.innerHTML=deal.historico.map(h=>{
+        const dot=(h.status==='Ganho')?'li-tl-dot-won':(h.status==='Perdido'?'li-tl-dot-lost':'li-tl-dot-open');
+        const sc=(h.status==='Ganho')?'li-tl-status-won':(h.status==='Perdido'?'li-tl-status-lost':'li-tl-status-open');
+        return '<div class="li-tl-item"><div class="li-tl-dot '+dot+'"></div><div class="li-tl-body"><div class="li-tl-title">'+(h.pipeline||h.produto||'—')+'</div><span class="'+sc+'">'+(h.status||'—')+'</span>'+(h.valor?' · <span style="color:var(--accent2)">R$ '+Number(h.valor).toLocaleString('pt-BR')+'</span>':'')+'</div></div>';
+      }).join('');
+    }
+  }
+
+  // Show ELUCI REPORT panel
+  const erPanel=document.getElementById('dm-er-panel');
+  if(erPanel) erPanel.style.display='block';
+  document.getElementById('dm-er-ref').textContent=dealId||'—';
+
+  // Update AI suggestion with deal context if available
+  const sugText=document.getElementById('dm-suggestion-text');
+  if(sugText&&deal.nome){
+    const n=deal.nome.split(' ')[0]||'';
+    const prod=deal.linha_de_receita_vigente||deal.grupo_de_receita||'nossas soluções';
+    sugText.textContent='"'+n+', você está no ponto exato onde outros empresários do seu segmento tomaram a decisão. Posso te mostrar um caso similar em 3 min?"';
+  }
+}
+
+function _dmSet(id, val){
+  const el=document.getElementById(id);
+  if(el) el.textContent=(val&&val!=='null'&&val!=='undefined')?val:'—';
+}
+
+// OCR simulate / drop handler
+function dmStartCapture(){
+  const wrap=document.getElementById('dm-ocr-bar-wrap');
+  const fill=document.getElementById('dm-ocr-fill');
+  const step=document.getElementById('dm-ocr-step');
+  const pct=document.getElementById('dm-ocr-pct');
+  const status=document.getElementById('dm-ocr-status');
+  if(!wrap) return;
+  wrap.style.display='block';
+  const steps=['DETECTANDO ELEMENTOS','EXTRAINDO TEXTO','MAPEANDO INTENÇÃO','ANALISANDO SINAL'];
+  let p=0;
+  const interval=setInterval(()=>{
+    p+=2;
+    if(fill) fill.style.width=p+'%';
+    if(pct) pct.textContent=p+'%';
+    const si=Math.floor((p/100)*steps.length);
+    if(step) step.textContent='OCR — '+steps[Math.min(si,steps.length-1)];
+    if(p>=100){
+      clearInterval(interval);
+      if(status) status.textContent='OCR ENGINE: PRONTO — Screenshot analisada';
+      setTimeout(()=>{
+        wrap.style.display='none';
+        if(fill) fill.style.width='0';
+        if(pct) pct.textContent='0%';
+        if(status) status.textContent='OCR ENGINE: PRONTO';
+      },3000);
+    }
+  },36);
+}
+
+function dmCopySuggestion(){
+  const t=document.getElementById('dm-suggestion-text');
+  if(!t) return;
+  navigator.clipboard.writeText(t.textContent.replace(/^"|"$/g,'')).then(()=>{
+    _dmShowToast('Copy feito! Cole direto no DM.');
+  }).catch(()=>{
+    _dmShowToast('Use Ctrl+C — copy manual');
+  });
+}
+
+function dmEditSuggestion(){
+  const t=document.getElementById('dm-suggestion-text');
+  if(!t) return;
+  t.contentEditable='true';
+  t.style.outline='1px solid var(--accent)';
+  t.focus();
+  t.addEventListener('blur',()=>{t.contentEditable='false';t.style.outline='none';},{once:true});
+}
+
+function dmSendToCRM(){
+  if(!_dmCurrentDealId){_dmShowToast('Selecione um deal primeiro');return;}
+  _dmShowToast('Deal '+_dmCurrentDealId+' sincronizado com CRM');
+}
+
+function dmRequestElucy(){
+  if(!_dmCurrentDealId){_dmShowToast('Selecione um deal para gerar análise');return;}
+  const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[_dmCurrentDealId];
+  if(deal&&deal.deal_id){
+    const content=document.getElementById('dm-er-content');
+    if(content) content.innerHTML='<div style="font-size:11px;color:var(--text3);padding:8px 0">Solicitando análise ELUCI...</div>';
+    requestElucyAnalysis(deal.deal_id,deal,_dmCurrentDealId);
+  }
+}
+
+function _dmShowToast(msg){
+  let t=document.getElementById('dm-toast-el');
+  if(!t){
+    t=document.createElement('div');
+    t.id='dm-toast-el';
+    t.className='dm-toast';
+    document.body.appendChild(t);
+  }
+  t.textContent=msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// Hook: quando um deal for selecionado na sidebar, atualiza o DM War Room também
+const _origSelectLiveDeal=window.selectLiveDeal;
+// Override após load completo
+document.addEventListener('DOMContentLoaded',()=>{
+  const orig=window.selectLiveDeal;
+  if(typeof orig==='function'){
+    window.selectLiveDeal=function(id,deal,...args){
+      const r=orig.apply(this,[id,deal,...args]);
+      // Populate DM insights if deal has data
+      if(deal) populateDmInsights(id,deal);
+      return r;
+    };
+  }
+});
 </script>
 </body>
 </html>
