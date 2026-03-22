@@ -920,9 +920,9 @@ async function loadDealsFromSupabase(email){
   // Usa PIPELINE_COLS — mesma ordem da buildPipelineQuery (única fonte de verdade)
   const cols=PIPELINE_COLS.map((name,i)=>({name,position:i}));
   const rows=data.map(row=>PIPELINE_COLS.map(k=>{
-    // Supabase salva email como 'email_lead', Databricks retorna como 'email'
     const v=row[k]!=null?row[k]:(k==='email'?row['email_lead']:null);
-    if(k==='revenue') return v!=null?String(v):'0';
+    if(k==='revenue'||k==='valor_da_oportunidade'||k==='p_receita_total') return v!=null?String(v):'0';
+    if(k==='p_negociacoes_ganhas') return v!=null?String(v):'0';
     return v!=null?String(v):'';
   }));
   renderLiveDeals(rows,cols);
@@ -1102,18 +1102,21 @@ const DB_WAREHOUSE='bbae754ea44f67e0';
 // deal_id, fase_atual_no_processo, etapa_atual_no_pipeline, tier_da_oportunidade,
 // delta_t, qualificador_name, proprietario_name, linha_de_receita_vigente, grupo_de_receita,
 // created_at_crm, event_skipped, email, cargo, canal_de_marketing, utm_medium, status_do_deal,
-// revenue, contact_name
+// revenue, contact_name, valor_da_oportunidade, probabilidade_de_previsao, faixa_de_faturamento,
+// nome_do_evento, tipo_de_evento, coproprietario_name,
+// p_empresa, p_telefone, p_segmento, p_cluster_rfm, p_negociacoes_ganhas, p_receita_total, p_pa_cliente
 function buildPipelineQuery(qualificadorName){
   const ano=new Date().getFullYear();
-  return `SELECT f.deal_id, f.fase_atual_no_processo, f.etapa_atual_no_pipeline, f.tier_da_oportunidade, f.delta_t, f.qualificador_name, f.proprietario_name, f.linha_de_receita_vigente, f.grupo_de_receita, CAST(f.created_at AS STRING) AS created_at_crm, CAST(f.event_skipped AS STRING) AS event_skipped, f.email, f.cargo, f.canal_de_marketing, f.utm_medium, f.status_do_deal, CAST(f.revenue AS DOUBLE) AS revenue, COALESCE(p.nome, '') AS contact_name FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY deal_id ORDER BY event_timestamp DESC) AS rn FROM production.diamond.funil_comercial WHERE qualificador_name = '${qualificadorName.replace(/'/g,"\\'")}' AND etapa_atual_no_pipeline IN ('Novo lead','Novo Lead ','Dia 01','Dia 02','Dia 03','Dia 04','Dia 05','Dia 06','Conectados','Agendamento','Reagendamento','Entrevista Agendada') AND status_do_deal = 'Aberto' AND pipeline_name = 'Comercial' AND created_at >= '${ano}-01-01') f LEFT JOIN (SELECT DISTINCT email, nome FROM production.diamond.persons_overview WHERE email IS NOT NULL) p ON LOWER(f.email) = LOWER(p.email) WHERE f.rn = 1 ORDER BY f.delta_t DESC LIMIT 200`;
+  return `SELECT f.deal_id, f.fase_atual_no_processo, f.etapa_atual_no_pipeline, f.tier_da_oportunidade, f.delta_t, f.qualificador_name, f.proprietario_name, f.linha_de_receita_vigente, f.grupo_de_receita, CAST(f.created_at AS STRING) AS created_at_crm, CAST(f.event_skipped AS STRING) AS event_skipped, f.email, f.cargo, f.canal_de_marketing, f.utm_medium, f.status_do_deal, CAST(f.revenue AS DOUBLE) AS revenue, COALESCE(p.nome, '') AS contact_name, CAST(f.valor_da_oportunidade AS DOUBLE) AS valor_da_oportunidade, f.probabilidade_de_previsao, f.faixa_de_faturamento, f.nome_do_evento, f.tipo_de_evento, f.coproprietario_name, COALESCE(p.empresa, '') AS p_empresa, COALESCE(p.telefone, '') AS p_telefone, COALESCE(p.segmento, '') AS p_segmento, COALESCE(p.cluster_rfm, '') AS p_cluster_rfm, CAST(COALESCE(p.negociacoes_ganhas, 0) AS BIGINT) AS p_negociacoes_ganhas, CAST(COALESCE(p.receita_total, 0) AS DOUBLE) AS p_receita_total, CAST(COALESCE(p.pa_cliente, false) AS STRING) AS p_pa_cliente FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY deal_id ORDER BY event_timestamp DESC) AS rn FROM production.diamond.funil_comercial WHERE qualificador_name = '${qualificadorName.replace(/'/g,"\\'")}' AND etapa_atual_no_pipeline IN ('Novo lead','Novo Lead ','Dia 01','Dia 02','Dia 03','Dia 04','Dia 05','Dia 06','Conectados','Agendamento','Reagendamento','Entrevista Agendada') AND status_do_deal = 'Aberto' AND pipeline_name = 'Comercial' AND created_at >= '${ano}-01-01') f LEFT JOIN production.diamond.persons_overview p ON LOWER(f.email) = LOWER(p.email) WHERE f.rn = 1 ORDER BY f.delta_t DESC LIMIT 200`;
 }
 
 // Nomes das colunas na ordem exata retornada por buildPipelineQuery
-// Usado pelo loadDealsFromSupabase para mapear objetos → arrays no mesmo formato
 const PIPELINE_COLS=['deal_id','fase_atual_no_processo','etapa_atual_no_pipeline','tier_da_oportunidade',
   'delta_t','qualificador_name','proprietario_name','linha_de_receita_vigente','grupo_de_receita',
   'created_at_crm','event_skipped','email','cargo','canal_de_marketing','utm_medium','status_do_deal',
-  'revenue','contact_name'];
+  'revenue','contact_name','valor_da_oportunidade','probabilidade_de_previsao','faixa_de_faturamento',
+  'nome_do_evento','tipo_de_evento','coproprietario_name',
+  'p_empresa','p_telefone','p_segmento','p_cluster_rfm','p_negociacoes_ganhas','p_receita_total','p_pa_cliente'];
 
 function initOperator(){
   const email=localStorage.getItem('elucy_operator_email');
@@ -1646,8 +1649,23 @@ function renderLiveDeals(rows,cols){
     const linhaReceita=g(row,'linha_de_receita_vigente')||'';
     const utm=g(row,'utm_medium')||'';
     const canal=resolveCanal(linhaReceita,utm);
-    // Valor da oportunidade (time de dados)
+    // Campos enriquecidos
     const revenueRaw=parseFloat(g(row,'revenue'))||0;
+    const valorOportunidade=parseFloat(g(row,'valor_da_oportunidade'))||0;
+    const probFechamento=parseFloat(g(row,'probabilidade_de_previsao'))||0;
+    const faixaFaturamento=g(row,'faixa_de_faturamento')||'';
+    const produto=g(row,'nome_do_evento')||g(row,'grupo_de_receita')||linhaReceita||'—';
+    const tipoEvento=g(row,'tipo_de_evento')||'';
+    const closer=g(row,'proprietario_name')||'—';
+    const cocloser=g(row,'coproprietario_name')||'';
+    // persons_overview
+    const empresaReal=g(row,'p_empresa')||empresa;
+    const telefone=g(row,'p_telefone')||'';
+    const segmento=g(row,'p_segmento')||'';
+    const clusterRfm=g(row,'p_cluster_rfm')||'';
+    const negGanhas=parseInt(g(row,'p_negociacoes_ganhas'))||0;
+    const ltv=parseFloat(g(row,'p_receita_total'))||0;
+    const jaCliente=String(g(row,'p_pa_cliente')).toLowerCase()==='true';
     const deal_id=g(row,'deal_id');
     const temp=calcTemp(row);
     const tc=tempClass(temp);
@@ -1658,12 +1676,15 @@ function renderLiveDeals(rows,cols){
     const irondome=delta>10;
     const classes='di'+(slaRisk?' sla':'')+(irondome?' dome':'');
 
-    // Valor Elucy — calculado por SPICED: tier + cargo + etapa + delta + event_skipped
+    // Valor Elucy — calculado por SPICED
     const elucyValor=calcElucyValor({tier,cargo,etapa,delta,skipped:String(g(row,'event_skipped')).toLowerCase()==='true'});
-    // Forecast delta: divergência entre modelo de dados e modelo Elucy
-    const forecastDelta=revenueRaw>0?elucyValor-revenueRaw:null;
-    const dealObj={nome,empresa,cargo,fase,etapa,tier,delta,canal,deal_id,temp,tc,tl,dd,emailLead,
-      linhaReceita,revenueRaw,elucyValor,forecastDelta,
+    // valorOportunidade = referência do time de dados (preferido sobre revenue)
+    const refValor=valorOportunidade||revenueRaw;
+    const forecastDelta=refValor>0?elucyValor-refValor:null;
+    const dealObj={nome,empresa:empresaReal,cargo,fase,etapa,tier,delta,canal,deal_id,temp,tc,tl,dd,emailLead,
+      linhaReceita,produto,tipoEvento,closer,cocloser,faixaFaturamento,segmento,
+      telefone,clusterRfm,negGanhas,ltv,jaCliente,
+      revenueRaw,valorOportunidade,probFechamento,elucyValor,forecastDelta,
       _fase:fase,_etapa:etapa,_tier:tier,_delta:delta,_temp:temp};
     // Sinal automático
     const signal=calcSignal(dealObj);
@@ -2085,13 +2106,18 @@ function selectLiveDeal(id,d){
         <div class="tg-sub">${tempSub}</div>
       </div>
       <div class="info-grid">
-        <div class="ic"><div class="ic-l">Fase</div><div class="ic-v">${d.fase}</div><div class="ic-s">${d.delta} dias no CRM</div></div>
-        <div class="ic"><div class="ic-l">Canal</div><div class="ic-v">${d.canal}</div><div class="ic-s">${d.linhaReceita||'—'}</div></div>
-        <div class="ic"><div class="ic-l">Dia FUP</div><div class="ic-v">${d.dd}</div></div>
-        <div class="ic"><div class="ic-l">Deal ID</div><div class="ic-v" style="font-size:11px">${d.deal_id||'—'}</div></div>
-        <div class="ic"><div class="ic-l">Valor G4 Dados</div><div class="ic-v" style="color:var(--green)">${fmtBRL(d.revenueRaw)}</div><div class="ic-s">Time de dados</div></div>
-        <div class="ic"><div class="ic-l">Valor Elucy</div><div class="ic-v" style="color:var(--accent2)">${fmtBRL(d.elucyValor)}</div><div class="ic-s">${d.forecastDelta!=null?(d.forecastDelta>=0?'▲ +'+fmtBRL(d.forecastDelta):'▼ '+fmtBRL(d.forecastDelta))+' vs G4 Dados':'Sem ref. dados'}</div></div>
+        <div class="ic"><div class="ic-l">Produto</div><div class="ic-v">${d.produto}</div><div class="ic-s">${d.tipoEvento||d.linhaReceita||'—'}</div></div>
+        <div class="ic"><div class="ic-l">Canal</div><div class="ic-v">${d.canal}</div><div class="ic-s">${d.dd} · ${d.delta} dias no CRM</div></div>
+        <div class="ic"><div class="ic-l">Closer</div><div class="ic-v">${d.closer}</div><div class="ic-s">${d.cocloser?'Co: '+d.cocloser:''}</div></div>
+        <div class="ic"><div class="ic-l">Porte</div><div class="ic-v">${d.faixaFaturamento||'—'}</div><div class="ic-s">${d.segmento||'—'}</div></div>
+        <div class="ic"><div class="ic-l">Valor Oportunidade</div><div class="ic-v" style="color:var(--green)">${fmtBRL(d.valorOportunidade||d.revenueRaw)}</div><div class="ic-s">${d.probFechamento>0?Math.round(d.probFechamento*100)+'% prob. fechamento':'Time de dados'}</div></div>
+        <div class="ic"><div class="ic-l">Valor Elucy</div><div class="ic-v" style="color:var(--accent2)">${fmtBRL(d.elucyValor)}</div><div class="ic-s">${d.forecastDelta!=null?(d.forecastDelta>=0?'▲ +'+fmtBRL(d.forecastDelta):'▼ '+fmtBRL(Math.abs(d.forecastDelta)))+' vs ref.':'Sem ref. dados'}</div></div>
       </div>
+      ${d.jaCliente||d.negGanhas>0||d.ltv>0?`<div class="info-grid" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+        <div class="ic"><div class="ic-l">Histórico G4</div><div class="ic-v" style="color:${d.jaCliente?'var(--green)':'var(--text2)'}">${d.jaCliente?'Cliente G4':'Prospect'}</div><div class="ic-s">${d.negGanhas>0?d.negGanhas+' compra'+( d.negGanhas>1?'s':'')+' anteriores':''}</div></div>
+        ${d.ltv>0?`<div class="ic"><div class="ic-l">LTV G4</div><div class="ic-v" style="color:var(--gold)">${fmtBRL(d.ltv)}</div><div class="ic-s">Receita total histórica</div></div>`:''}
+        ${d.clusterRfm?`<div class="ic"><div class="ic-l">Perfil RFM</div><div class="ic-v">${d.clusterRfm}</div><div class="ic-s">Cluster de compra</div></div>`:''}
+      </div>`:''}
       <div class="recom">
         <div class="recom-l">Recomendação Elucy <span class="elucy-badge">MOTOR ATIVO</span></div>
         <div class="recom-t" id="recom-${id}">${buildRecomText(d)}</div>
