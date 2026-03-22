@@ -869,7 +869,7 @@ function showCockpit(user){
   if(syncBtn) syncBtn.style.display='';
   // Sempre carrega deals do Supabase (pipeline individual por SDR)
   // sync-deals puxa do Databricks via token global do Supabase — não depende do G4 OS
-  callSyncDeals().catch(()=>loadDealsFromSupabase(user.email));
+  callSyncDeals(user.email).catch(()=>loadDealsFromSupabase(user.email));
 }
 
 async function checkApproval(user){
@@ -1035,11 +1035,11 @@ const EDGE_SYNC_URL = 'https://tnbbsjvzwleeoqnxtafp.supabase.co/functions/v1/syn
 let _lastSyncAt = null;
 let _syncInProgress = false;
 
-async function callSyncDeals(){
+async function callSyncDeals(emailHint){
   if(_syncInProgress) return;
   const sb=getSB(); if(!sb) return;
   const {data:{session}}=await sb.auth.getSession();
-  if(!session) return;
+  if(!session){ if(emailHint) await loadDealsFromSupabase(emailHint); return; }
   _syncInProgress=true;
   const syncBtn=document.getElementById('btn-sync-top');
   if(syncBtn){syncBtn.disabled=true;syncBtn.textContent='Sincronizando…';}
@@ -1054,7 +1054,8 @@ async function callSyncDeals(){
     });
     const json=await res.json();
     if(!res.ok){
-      showSyncToast('err','Erro no sync: '+(json.error||res.status));
+      // Sync falhou (401/502) — carrega do cache Supabase que já tem dados frescos
+      await loadDealsFromSupabase(session.user.email);
       return;
     }
     _lastSyncAt=Date.now();
@@ -1065,7 +1066,9 @@ async function callSyncDeals(){
     if(el) el.textContent='Atualizado: '+ts;
     showSyncToast('ok','Pipeline atualizado — '+(json.synced||0)+' deals');
   }catch(err){
-    showSyncToast('err','Falha na conexão com o servidor.');
+    // Fallback: carrega do Supabase cache
+    const {data:{session:s2}}=await getSB().auth.getSession().catch(()=>({data:{session:null}}));
+    if(s2) await loadDealsFromSupabase(s2.user.email);
   }finally{
     _syncInProgress=false;
     if(syncBtn){syncBtn.disabled=false;syncBtn.textContent='Atualizar Pipeline';}
