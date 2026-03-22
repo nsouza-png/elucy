@@ -266,7 +266,7 @@ input,textarea,select{font-family:inherit;font-size:inherit}
 .screen.on{display:block}
 .card{
   background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-xl);
-  padding:20px;margin-bottom:16px;box-shadow:var(--shadow-md);
+  padding:20px 22px 18px;margin-bottom:16px;box-shadow:var(--shadow-md);
   transition:border-color .15s;
 }
 .card:hover{border-color:var(--border2)}
@@ -324,9 +324,11 @@ input,textarea,select{font-family:inherit;font-size:inherit}
 .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
 .ic{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;transition:border-color .15s}
 .ic:hover{border-color:var(--border2)}
-.ic-l{font-size:9px;font-weight:600;color:var(--text4);text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px}
-.ic-v{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
-.ic-s{font-size:10px;color:var(--text3)}
+.ic-l{font-size:9px;font-weight:600;color:var(--text4);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
+.ic-v{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;line-height:1.3}
+.ic-s{font-size:10px;color:var(--text3);line-height:1.4}
+.ic.ic-warn .ic-s{color:rgba(245,158,11,.85)}
+.ic.ic-full{grid-column:1/-1}
 /* Recommendation */
 .recom{background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(99,102,241,.04));border:1px solid rgba(99,102,241,.2);border-radius:var(--r-md);padding:14px;margin-bottom:12px}
 .recom-l{font-size:10px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
@@ -354,7 +356,7 @@ input,textarea,select{font-family:inherit;font-size:inherit}
 .bsuc:hover{background:rgba(34,197,94,.22)}
 .btn-sm{padding:6px 12px;font-size:11px}
 /* â”€â”€ ENRICHMENT PANEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-#enr-panel-*,.enr-panel{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-md);padding:14px;margin-bottom:12px}
+#enr-panel-*,.enr-panel{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-md);padding:14px 14px 12px;margin-bottom:12px}
 .enr-tabs{display:flex;gap:4px;margin-bottom:10px}
 .enr-tab{
   padding:4px 10px;border-radius:var(--r-sm);border:1px solid var(--border);
@@ -383,6 +385,42 @@ input,textarea,select{font-family:inherit;font-size:inherit}
 .enr-ts{font-size:9px;color:var(--text4);margin-left:auto}
 .enr-preview{font-size:11px;color:var(--text3);line-height:1.4}
 .enr-score{font-size:10px;font-weight:600;color:var(--accent2);margin-top:4px}
+/* ── ENR FORM — classes geradas por buildEnrPanel (faltavam no CSS) ── */
+.enr-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.enr-count{font-size:10px;color:var(--accent2);font-weight:600;background:var(--adim);border:1px solid rgba(99,102,241,.2);padding:1px 7px;border-radius:99px}
+.enr-form{display:flex;flex-direction:column;gap:0}
+.enr-tipo-sel{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap}
+.enr-tipo-btn{
+  padding:4px 10px;border-radius:var(--r-sm);border:1px solid var(--border);
+  background:none;color:var(--text3);font-size:11px;font-weight:500;transition:all .15s;cursor:pointer;
+}
+.enr-tipo-btn.on{background:var(--adim2);border-color:var(--accent);color:var(--accent3)}
+.enr-tipo-btn:hover:not(.on){border-color:var(--border2);color:var(--text)}
+.enr-ta{
+  width:100%;min-height:72px;background:var(--bg4);border:1px solid var(--border);
+  border-radius:var(--r-sm);padding:8px 10px;color:var(--text);resize:none;outline:none;
+  font-size:12px;line-height:1.5;transition:border-color .15s;box-sizing:border-box;
+}
+.enr-ta:focus{border-color:var(--accent)}
+.enr-ta::placeholder{color:var(--text4)}
+.enr-actions{display:flex;align-items:center;gap:8px;margin-top:6px}
+.btn-enr{
+  padding:7px 14px;border-radius:var(--r-sm);background:var(--bg4);
+  border:1px solid var(--border2);color:var(--text2);font-size:11px;font-weight:600;
+  transition:all .15s;cursor:pointer;white-space:nowrap;
+}
+.btn-enr:hover{background:var(--bg5);border-color:var(--accent);color:var(--accent3)}
+.btn-enr:disabled{opacity:.5;cursor:not-allowed}
+.enr-status{font-size:11px;color:var(--text3);flex:1}
+/* ── INFO CARD VARIANTS ── */
+.ic.ic-warn .ic-s{color:var(--yellow)}
+.ic.ic-full{grid-column:1/-1}
+/* ── DEAL ACTION BAR ── */
+.deal-action-bar{
+  display:flex;gap:8px;padding-top:12px;margin-top:4px;
+  border-top:1px solid var(--border);
+}
+.deal-action-bar .btn{flex:1;text-align:center}
 /* â”€â”€ DVL GATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .dvl{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-xl);padding:20px;margin-bottom:16px}
 .dvl-t{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
@@ -3168,8 +3206,8 @@ function selectLiveDeal(id,d){
       ${(d._urgency||0)>=60?`<div class="alrt al-d">SLA em risco — deal sem avanço por ${d._delta||d.delta||0} dias.</div>`:''}
       ${d._signal==='DOME'?`<div class="alrt al-w">Iron Dome ativo — +10 dias sem resposta. Copy bloqueada até revisão manual.</div>`:''}
       <div id="enr-panel-${id}">${buildEnrPanel(id, d, [])}</div>
-      <div class="row">
-        <button class="btn bp" onclick="showCopy('${id}')">Gerar Copy via Elucy</button>
+      <div class="deal-action-bar">
+        <button class="btn bp" onclick="showCopy('${id}')">⚡ Gerar Copy via Elucy</button>
         <button class="btn bs" onclick="toggleER('${id}')">Análise de Negócio</button>
       </div>
     </div>
@@ -3452,9 +3490,10 @@ function classifyOrigin(d){
   if(l.includes("form g4")||l.includes("form")) return "form_organico";
   return "outros";
 }
-function ic(label,value,sub,color){
+function ic(label,value,sub,color,cls){
   var cv=color?' style="color:'+color+'"':"";
-  return '<div class="ic"><div class="ic-l">'+label+'</div><div class="ic-v"'+cv+'>'+( value||"—")+'</div>'+(sub?'<div class="ic-s">'+sub+"</div>":"")+"</div>";
+  var cc=cls?' '+cls:'';
+  return '<div class="ic'+cc+'"><div class="ic-l">'+label+'</div><div class="ic-v"'+cv+'>'+( value||"—")+'</div>'+(sub?'<div class="ic-s">'+sub+"</div>":"")+"</div>";
 }
 function buildContextCards(d){
   var origin=classifyOrigin(d);
@@ -3485,7 +3524,7 @@ function buildContextCards(d){
     cards.push(ic("Produto",d.produto||d.grupo||"—","Último: "+(d.ltv>0?fmtBRL(d.ltv)+" em compras":"sem dados")));
   } else if(origin==="social_dm"||origin==="form_pago"||origin==="form_organico"||origin==="isca"){
     var intencao=d.grupo&&d.grupo!=="Não Definido"?d.grupo:(d.linhaReceita||"");
-    if(intencao) cards.push(ic("Intenção",intencao,"SDR em qualificação — produto não definido"));
+    if(intencao) cards.push(ic("Intenção",intencao,"SDR em qualificação — produto não definido",null,"ic-warn"));
   } else {
     if(d.produto&&d.produto!=="—") cards.push(ic("Produto",d.produto,d.tipoEvento||d.grupo||"—"));
   }
@@ -3510,7 +3549,9 @@ function buildContextCards(d){
     else cards.push(ic("Potencial Elucy",fmtBRL(d.elucyValor),"Estimativa por tier/cargo","var(--accent2)"));
   } else if(d.closer&&d.closer!=="—"){
     var vn=d.valorOportunidade||d.revenueRaw;
-    cards.push(ic("Valor Negociação",vn>0?fmtBRL(vn):"—",d.probFechamento>0?Math.round(d.probFechamento*100)+"% prob.":"Projeção pendente","var(--green)"));
+    var vnSub=d.probFechamento>0?Math.round(d.probFechamento*100)+"% prob.":"Projeção pendente";
+    var vnCls=d.probFechamento>0?"":" ic-warn";
+    cards.push(ic("Valor Negociação",vn>0?fmtBRL(vn):"—",vnSub,"var(--green)",vnCls));
   } else {
     var vop=d.valorOportunidade||d.revenueRaw;
     if(vop>0) cards.push(ic("Valor CRM",fmtBRL(vop),"Deal ID: "+(d.deal_id||"—"),"var(--green)"));
