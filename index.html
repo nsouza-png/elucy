@@ -867,9 +867,9 @@ function showCockpit(user){
   // Exibe botão de sync na topbar
   const syncBtn=document.getElementById('btn-sync-top');
   if(syncBtn) syncBtn.style.display='';
-  // Sempre carrega deals do Supabase (pipeline individual por SDR)
-  // sync-deals puxa do Databricks via token global do Supabase — não depende do G4 OS
-  callSyncDeals(user.email).catch(()=>loadDealsFromSupabase(user.email));
+  // Carrega direto do Supabase — dados sincronizados pelo worker G4 OS (agendamento)
+  // Botão de sync manual ainda disponível para refresh forçado
+  loadDealsFromSupabase(user.email);
 }
 
 async function checkApproval(user){
@@ -1201,12 +1201,9 @@ function showModalStatus(type,msg){
 // ── REFRESH / DATABRICKS SYNC ────────────────────────────────────────
 
 function refreshPipeline(){
-  // Sempre usa Supabase sync (token Databricks está no Supabase como secret global)
-  // Se G4 OS disponível: também dispara atualizar-cockpit para regenerar cockpit-data.js local
-  callSyncDeals();
-  if(!_isStandalone()){
-    try{ window.parent.postMessage({type:'g4os:skill:run',skill:'atualizar-cockpit'},'*'); }catch(e){}
-  }
+  // Carrega direto do Supabase — fonte de verdade para o Cockpit
+  // Worker G4 OS sincroniza do Databricks a cada 2 min via agendamento
+  if(_currentUser) loadDealsFromSupabase(_currentUser.email);
 }
 
 function promptDbToken(email){
