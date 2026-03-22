@@ -260,7 +260,7 @@ input,textarea,select{font-family:inherit;font-size:inherit}
 .fi-urg{font-size:10px;font-weight:700}
 /* â”€â”€ MAIN CONTENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 #main{display:flex;height:100vh;padding-top:52px;overflow:hidden}
-#ct{flex:1;height:calc(100vh - 52px);overflow-y:auto;padding:20px;background:var(--bg)}
+#ct{flex:1;min-width:0;height:calc(100vh - 52px);overflow-y:auto;padding:20px;background:var(--bg)}
 /* â”€â”€ DEAL CARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .screen{display:none}
 .screen.on{display:block}
@@ -918,6 +918,7 @@ O que mudou do seu lado?</div><div class="row" style="margin-top:8px"><button cl
 </div></div><!-- /flex-wrap screen-reports -->
 </div><!-- /screen-reports -->
 </div><!-- /ct -->
+</div><!-- /main -->
 <script>
 
 let cur=null;
@@ -2600,10 +2601,13 @@ function selectLiveDeal(id,d){
         </div>
       </div>
     </div>`;
-  document.getElementById('screen-home').appendChild(dealCard);
+  // Garantir screen-home visível antes de appendar
+  document.querySelectorAll('#ct > .screen').forEach(s=>s.classList.remove('on'));
+  const sh=document.getElementById('screen-home');
+  sh.classList.add('on');
+  sh.appendChild(dealCard);
   document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
   document.querySelector('.ntab').classList.add('on');
-  setScreen('home',null);
   // Carrega enrichments existentes deste deal
   var _eid = d.deal_id||id;
   loadEnrichments(_eid, id);
