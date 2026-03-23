@@ -1813,8 +1813,11 @@ function renderLiveDeals(rows,cols){
     // Forecast delta: divergência entre modelo de dados e modelo Elucy
     const forecastDelta=revenueRaw>0?elucyValor-revenueRaw:null;
     const createdAtCrm=g(row,'created_at_crm')||g(row,'created_at')||'';
+    // conta_founder: derivado do utm_medium para rotear tom Social DM no worker
+    const contaFounder=(utm.toLowerCase()==='tallis'||utm.toLowerCase()==='nardon'||utm.toLowerCase()==='alfredo')?utm.toLowerCase():'';
     const dealObj={nome,empresa:emailLead||empresa,cargo,fase,etapa,tier,delta,canal,deal_id,temp,tc,tl,dd,emailLead,
       linhaReceita,revenueRaw,elucyValor,forecastDelta,statusDeal,motivoLost,createdAtCrm,
+      utm_medium:utm,conta_founder:contaFounder,
       _fase:fase,_etapa:etapa,_tier:tier,_delta:delta,_temp:temp};
     // Sinal automático
     const signal=calcSignal(dealObj);
@@ -1936,24 +1939,25 @@ function initRealtimeSubscription(){
 
 function handleElucyResponse(row, pending){
   const {targetId, deal_id, type}=pending;
+  const meta={targetId,deal_id,type};
   if(type==='business_analysis'){
     injectBusinessAnalysis(targetId, row.output);
-    pushNotification('Análise de mercado pronta','Deal '+deal_id,'🏢',row.output);
+    pushNotification('Análise de mercado pronta','Deal '+deal_id,'🏢',row.output,meta);
     logDealInteraction(deal_id, 'business_analysis', row.output);
     return;
   }
   if(type==='analyze'){
     ELUCY_CACHE[deal_id]=row.output;
     injectElucyReport(targetId, row.output);
-    pushNotification('ELUCI Report pronto','Deal '+deal_id,'📊',row.output);
+    pushNotification('ELUCI Report pronto','Deal '+deal_id,'📊',row.output,meta);
   } else if(type==='copy'||type==='dm_copy'){
     try{
       const parsed=JSON.parse(row.output);
       injectElucyCopy(targetId, parsed.copy_wa||parsed.copy||row.output, parsed.copy_crm||'');
-      pushNotification('Copy pronta','Deal '+deal_id,'📋',parsed.copy_wa||parsed.copy||row.output);
+      pushNotification('Copy pronta','Deal '+deal_id,'📋',parsed.copy_wa||parsed.copy||row.output,meta);
     }catch(e){
       injectElucyCopy(targetId, row.output, '');
-      pushNotification('Copy pronta','Deal '+deal_id,'📋',row.output);
+      pushNotification('Copy pronta','Deal '+deal_id,'📋',row.output,meta);
     }
   }
   logDealInteraction(deal_id, type==='analyze'?'analysis':'copy', row.output);
@@ -1990,9 +1994,10 @@ function clearNotifications(){
   if(dot) dot.classList.remove('show');
 }
 
-function pushNotification(title,subtitle,icon,output){
+function pushNotification(title,subtitle,icon,output,meta){
   const ts=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  _notifications.unshift({title,subtitle,icon:icon||'📋',ts,output:output||'',read:false});
+  _notifications.unshift({title,subtitle,icon:icon||'📋',ts,output:output||'',read:false,
+    targetId:(meta&&meta.targetId)||'',dealId:(meta&&meta.deal_id)||'',nType:(meta&&meta.type)||''});
   if(_notifications.length>30) _notifications.pop();
   renderNotifList();
   const dot=document.getElementById('notif-dot');
@@ -2014,19 +2019,55 @@ function renderNotifList(){
 
 function openNotif(idx){
   if(!_notifications[idx]) return;
-  _notifications[idx].read=true;
-  const hasUnread=_notifications.some(n=>!n.read);
+  const n=_notifications[idx];
+  n.read=true;
+  const hasUnread=_notifications.some(x=>!x.read);
   const dot=document.getElementById('notif-dot');
   if(dot&&!hasUnread) dot.classList.remove('show');
   renderNotifList();
-  // Se tem output, copia para clipboard
-  if(_notifications[idx].output){
-    navigator.clipboard.writeText(_notifications[idx].output).then(()=>showSyncToast('ok','Conteúdo copiado!')).catch(()=>{});
+  // Fechar painel de notificações
+  const panel=document.getElementById('notif-panel');
+  if(panel) panel.classList.remove('show');
+  // Navegar até o deal card e abrir o painel correspondente
+  if(n.targetId){
+    const card=document.getElementById('di-'+n.targetId);
+    if(card){
+      card.scrollIntoView({behavior:'smooth',block:'center'});
+      card.style.outline='2px solid var(--accent)';
+      setTimeout(()=>card.style.outline='',2500);
+      // Abrir o painel correto baseado no tipo
+      setTimeout(()=>{
+        if(n.nType==='analyze'){
+          const er=document.getElementById('er-'+n.targetId);
+          if(er) er.style.display='block';
+        } else if(n.nType==='copy'||n.nType==='dm_copy'){
+          const co=document.getElementById('co-'+n.targetId);
+          if(co) co.style.display='block';
+        } else if(n.nType==='business_analysis'){
+          const ba=document.getElementById('ba-'+n.targetId);
+          if(ba) ba.style.display='block';
+        }
+      },400);
+      return;
+    }
+  }
+  // Fallback: copiar conteúdo se não encontrou o card
+  if(n.output){
+    navigator.clipboard.writeText(n.output).then(()=>showSyncToast('ok','Conteúdo copiado!')).catch(()=>{});
   }
 }
 
 function showNotificationBadge(n){
-  pushNotification(n.title||'Conteúdo pronto',n.message||n.subtitle||'','📋',n.output||'');
+  // Resolve targetId pelo deal_id se possível (para navegação ao clicar)
+  let targetId='';
+  const dealId=n.deal_id||'';
+  if(dealId&&window._COCKPIT_DEAL_MAP){
+    for(const [k,v] of Object.entries(window._COCKPIT_DEAL_MAP)){
+      if(String(v.deal_id)===String(dealId)){targetId=k;break;}
+    }
+  }
+  const meta={targetId,deal_id:dealId,type:n.request_type||''};
+  pushNotification(n.title||'Conteúdo pronto',n.message||n.subtitle||'','📋',n.output||'',meta);
   showSyncToast('ok',n.title||'Conteúdo pronto');
 }
 
