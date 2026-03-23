@@ -407,15 +407,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
     </div>
     <div class="sb-filters">
       <div class="filter-row">
-        <span class="filter-label">Fase</span>
-        <span class="fchip on" data-filter="fase" data-val="todos" onclick="toggleFilter(this,'fase')">Todos</span>
-        <span class="fchip" data-filter="fase" data-val="MQL" onclick="toggleFilter(this,'fase')">MQL</span>
-        <span class="fchip" data-filter="fase" data-val="SAL" onclick="toggleFilter(this,'fase')">SAL</span>
-        <span class="fchip" data-filter="fase" data-val="Conectado" onclick="toggleFilter(this,'fase')">Conect.</span>
-        <span class="fchip" data-filter="fase" data-val="Agendado" onclick="toggleFilter(this,'fase')">Agend.</span>
-        <span class="fchip" data-filter="fase" data-val="Negociacao" onclick="toggleFilter(this,'fase')">Negoc.</span>
-      </div>
-      <div class="filter-row">
         <span class="filter-label">Etapa</span>
         <span class="fchip on" data-filter="etapa" data-val="todos" onclick="toggleFilter(this,'etapa')">Todos</span>
         <span class="fchip" data-filter="etapa" data-val="Novo Lead" onclick="toggleFilter(this,'etapa')">MQL</span>
@@ -426,7 +417,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
         <span class="fchip" data-filter="etapa" data-val="Dia 05" onclick="toggleFilter(this,'etapa')">D5</span>
         <span class="fchip" data-filter="etapa" data-val="Dia 06" onclick="toggleFilter(this,'etapa')">D6</span>
         <span class="fchip" data-filter="etapa" data-val="Conectados" onclick="toggleFilter(this,'etapa')">Conect.</span>
+        <span class="fchip" data-filter="etapa" data-val="Nova Oportunidade" onclick="toggleFilter(this,'etapa')">Nova Oport.</span>
         <span class="fchip" data-filter="etapa" data-val="Agendamento" onclick="toggleFilter(this,'etapa')">Agend.</span>
+        <span class="fchip" data-filter="etapa" data-val="Entrevista Agendada" onclick="toggleFilter(this,'etapa')">Entrevista</span>
         <span class="fchip" data-filter="etapa" data-val="Reagendamento" onclick="toggleFilter(this,'etapa')">Reagend.</span>
       </div>
       <div class="filter-row">
@@ -445,7 +438,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
           <option value="temp_asc">Temperatura ↑</option>
           <option value="delta_desc">Dias ↓</option>
           <option value="delta_asc">Dias ↑</option>
-          <option value="fase">Fase</option>
+          <option value="etapa">Etapa</option>
           <option value="tier">Tier</option>
         </select>
       </div>
