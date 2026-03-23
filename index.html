@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Elucy Sales Engagement Cockpit</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%236c63ff'/><text x='50' y='68' font-size='52' font-weight='bold' text-anchor='middle' fill='white' font-family='system-ui'>E</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%236c63ff'/><text x='50' y='68' font-size='52' font-weight='bold' text-anchor='middle' fill='white' font-family='system-ui'>E</text></svg>">
 <!-- Supabase JS SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <!-- cockpit-data.js carregado após auth, apenas em ambiente local G4 OS -->
@@ -286,6 +288,7 @@ body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-ser
 </div>
 <div id="topbar">
   <span class="logo">Elucy <em>Cockpit</em></span>
+  <span style="font-size:10px;color:var(--text2);margin-left:-4px;letter-spacing:.3px">Sales Engagement OS</span>
   <button class="ntab on" onclick="setScreen('home',this)">Pipeline</button>
   <button class="ntab" onclick="setScreen('reports',this)">Relatórios</button>
   <button class="ntab" onclick="setScreen('intelligence',this)">Inteligência</button>
@@ -313,9 +316,9 @@ body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-ser
       </div>
       <div class="sb-date" id="sbdate" style="font-size:11px;color:var(--text2);padding-bottom:6px">Dom, 22 Mar 2026</div>
       <div class="sb-stats">
-        <div class="sbs"><div class="sbs-n">6</div><div class="sbs-l">Ativos</div></div>
-        <div class="sbs"><div class="sbs-n">3</div><div class="sbs-l">Ação hoje</div></div>
-        <div class="sbs"><div class="sbs-n">2</div><div class="sbs-l">SLA risco</div></div>
+        <div class="sbs"><div class="sbs-n" id="stat-ativos">—</div><div class="sbs-l">Ativos</div></div>
+        <div class="sbs"><div class="sbs-n" id="stat-acao">—</div><div class="sbs-l">Ação hoje</div></div>
+        <div class="sbs"><div class="sbs-n" id="stat-sla">—</div><div class="sbs-l">SLA risco</div></div>
       </div>
     </div>
     <div class="sb-search">
@@ -1097,12 +1100,21 @@ async function loadDealsFromSupabase(email){
     {name:'tier_da_oportunidade'},{name:'delta_t'},{name:'qualificador_name'},
     {name:'proprietario_name'},{name:'linha_de_receita_vigente'},{name:'grupo_de_receita'},
     {name:'created_at_crm'},{name:'event_skipped'},{name:'email_lead'},{name:'cargo'},
-    {name:'canal_de_marketing'},{name:'utm_medium'},{name:'status_do_deal'}
+    {name:'canal_de_marketing'},{name:'utm_medium'},{name:'status_do_deal'},
+    {name:'revenue'},{name:'contact_name'},{name:'valor_da_oportunidade'},
+    {name:'faixa_de_faturamento'},{name:'perfil'},{name:'utm_source'},{name:'utm_campaign'},
+    {name:'motivo_lost'},{name:'origem_do_deal'},{name:'coproprietario_name'},
+    {name:'nome_do_evento'},{name:'tipo_de_evento'},
+    {name:'p_telefone'},{name:'p_segmento'},{name:'p_cluster_rfm'},
+    {name:'p_negociacoes_ganhas'},{name:'p_receita_total'},{name:'p_pa_cliente'},
+    {name:'p_primeiro_produto'},{name:'p_ultimo_produto'},{name:'p_produtos_comprados'},
+    {name:'p_data_primeira_compra'},{name:'p_data_ultima_compra'},
+    {name:'p_comprou_scale'},{name:'p_comprou_club'}
   ].map((c,i)=>({name:c.name,position:i}));
   // Transforma objetos em arrays (formato esperado pelo cockpit)
   const colNames=cols.map(c=>c.name);
   const rows=data.map(row=>colNames.map(k=>{
-    if(k==='email_lead') return row.email_lead||'';
+    if(k==='email_lead') return row.email_lead||row.email||'';
     return row[k]!=null?String(row[k]):'';
   }));
   renderLiveDeals(rows,cols);
@@ -1317,9 +1329,23 @@ function openSettings(){
       </div>
       <div class="modal-note">O e-mail é usado como filtro em <code>qualificador_name</code> no funil_comercial. Nunca é enviado a terceiros.</div>
       <div id="modal-sync-status"></div>
-      <div class="row" style="justify-content:flex-end;gap:8px">
+      <div class="row" style="justify-content:flex-end;gap:8px;margin-bottom:12px">
         <button class="btn bs btn-sm" onclick="closeSettings()">Cancelar</button>
         <button class="btn bp btn-sm" onclick="saveOperator()">Salvar e sincronizar</button>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px">
+        <div class="modal-t" style="font-size:13px;margin-bottom:6px">Integrações</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <a href="https://web.whatsapp.com" target="_blank" rel="noopener" class="btn bs btn-sm" style="text-decoration:none;display:flex;align-items:center;gap:4px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            Abrir WhatsApp Web
+          </a>
+          <a href="https://www.instagram.com/direct/inbox/" target="_blank" rel="noopener" class="btn bs btn-sm" style="text-decoration:none;display:flex;align-items:center;gap:4px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E4405F" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="#E4405F" stroke="none"/></svg>
+            Abrir Instagram DM
+          </a>
+        </div>
+        <div style="font-size:10px;color:var(--text2);margin-top:6px">Abra as plataformas lado a lado para copiar&colar as mensagens geradas pelo Elucy.</div>
       </div>
     </div>`;
   ov.addEventListener('click',e=>{if(e.target===ov) closeSettings();});
@@ -1725,11 +1751,10 @@ function renderLiveDeals(rows,cols){
   // Update stats
   const ativos=rows.length;
   const slaCount=rows.filter(r=>(parseInt(g(r,'delta_t'))||0)>7).length;
-  const acaoHoje=rows.filter(r=>(parseInt(g(r,'delta_t'))||0)<=3).length;
-  const stats=document.querySelectorAll('.sbs-n');
-  if(stats[0]) stats[0].textContent=ativos;
-  if(stats[1]) stats[1].textContent=acaoHoje;
-  if(stats[2]) stats[2].textContent=slaCount;
+  const acaoHoje=rows.filter(r=>{const d=parseInt(g(r,'delta_t'))||0;return d>=0&&d<=3;}).length;
+  const sa=document.getElementById('stat-ativos');if(sa) sa.textContent=ativos;
+  const sac=document.getElementById('stat-acao');if(sac) sac.textContent=acaoHoje;
+  const ss=document.getElementById('stat-sla');if(ss) ss.textContent=slaCount;
 
   // Aplica filtros/ordenação iniciais
   applyFilters();
@@ -2389,6 +2414,26 @@ function renderIntelligence(){
           <div class="intel-bar-bg"><div class="intel-bar-fill" style="width:${Math.max(5,e.count/maxFunnel*100)}%"><span class="intel-bar-v">${e.count}</span></div></div>
           <span class="intel-bar-pct">${Math.round(e.count/total*100)}%</span>
         </div>`).join('')}
+      <div class="intel-title" style="margin-top:14px">Taxa de Conversão (pipeline ativo)</div>
+      <div class="intel-kpi-row">
+        ${(()=>{
+          const mql=(byEtapa['novo lead']||0);
+          const sal=(byEtapa['dia 01']||0)+(byEtapa['dia 02']||0)+(byEtapa['dia 03']||0)+(byEtapa['dia 04']||0)+(byEtapa['dia 05']||0)+(byEtapa['dia 06']||0);
+          const conectado=(byEtapa['conectados']||0);
+          const agendado=(byEtapa['agendamento']||0)+(byEtapa['reagendamento']||0)+(byEtapa['entrevista agendada']||0);
+          const totalTop=mql+sal+conectado+agendado;
+          const mqlToSal=mql>0?Math.round((sal+conectado+agendado)/totalTop*100):0;
+          const salToConect=(sal+conectado+agendado)>0?Math.round((conectado+agendado)/(sal+conectado+agendado)*100):0;
+          const conectToAgend=(conectado+agendado)>0?Math.round(agendado/(conectado+agendado)*100):0;
+          return '<div class="intel-kpi"><div class="intel-kpi-v">'+mql+'</div><div class="intel-kpi-l">MQL</div></div>'+
+            '<div class="intel-kpi"><div class="intel-kpi-v" style="font-size:11px;color:var(--text2)">→ '+mqlToSal+'%</div><div class="intel-kpi-l">MQL→SAL</div></div>'+
+            '<div class="intel-kpi"><div class="intel-kpi-v">'+sal+'</div><div class="intel-kpi-l">SAL (prosp.)</div></div>'+
+            '<div class="intel-kpi"><div class="intel-kpi-v" style="font-size:11px;color:var(--text2)">→ '+salToConect+'%</div><div class="intel-kpi-l">SAL→Conect</div></div>'+
+            '<div class="intel-kpi"><div class="intel-kpi-v">'+conectado+'</div><div class="intel-kpi-l">Conectado</div></div>'+
+            '<div class="intel-kpi"><div class="intel-kpi-v" style="font-size:11px;color:var(--text2)">→ '+conectToAgend+'%</div><div class="intel-kpi-l">Conect→Agend</div></div>'+
+            '<div class="intel-kpi"><div class="intel-kpi-v">'+agendado+'</div><div class="intel-kpi-l">Agendado</div></div>';
+        })()}
+      </div>
     `)}
     <div class="intel-grid">
       ${renderCard('Eficiência por Tier',tierData.map(t=>`
