@@ -2746,13 +2746,13 @@ function selectLiveDeal(id,d){
           <span style="margin-left:auto;font-size:10px;color:var(--text2)">Editavel</span>
         </div>
       </div>
+    </div>
     <div class="hist-panel" id="hist-${id}">
       <div class="hist-header" onclick="toggleHistPanel('${id}')">
         <span class="hist-header-title">Histórico de Interações</span>
         <span class="hist-header-count" id="hist-count-${id}"></span>
       </div>
       <div class="hist-list" id="hist-list-${id}"></div>
-    </div>
     </div>`;
   document.getElementById('screen-home').appendChild(dealCard);
   setScreen('home',null);
