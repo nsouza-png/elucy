@@ -1096,7 +1096,7 @@ async function loadDealsFromSupabase(email){
     .select('*')
     .eq('operator_email',email)
     .order('delta_t',{ascending:false})
-    .limit(200);
+    .limit(300);
   if(error||!data||!data.length){
     showSyncToast('err','Nenhum deal encontrado. Aguarde o sync diário ou contate o admin.');
     return;
@@ -1540,7 +1540,8 @@ function fetchPipelineByName(nome,token,btn){
   // Sanitiza nome para prevenir SQL injection
   const safeNome=(nome||'').replace(/'/g,"''").replace(/[;\-\-\/\*]/g,'');
   const anoAtual=new Date().getFullYear();
-  const query=`SELECT f.deal_id, f.fase_atual_no_processo, f.etapa_atual_no_pipeline, f.tier_da_oportunidade, f.delta_t, f.qualificador_name, f.proprietario_name, f.linha_de_receita_vigente, f.grupo_de_receita, f.created_at, f.event_skipped, f.email, f.cargo, f.canal_de_marketing, f.utm_medium, f.status_do_deal, f.revenue, COALESCE(p.nome, '') as contact_name FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY deal_id ORDER BY event_timestamp DESC) as rn FROM production.diamond.funil_comercial WHERE qualificador_name = '${safeNome}' AND etapa_atual_no_pipeline IN ('Novo lead','Novo Lead ','Dia 01','Dia 02','Dia 03','Dia 04','Dia 05','Dia 06','Conectados','Agendamento','Reagendamento','Entrevista Agendada') AND status_do_deal = 'Aberto' AND pipeline_name = 'Comercial' AND created_at >= '${anoAtual}-01-01') f LEFT JOIN (SELECT DISTINCT email, nome FROM production.diamond.persons_overview WHERE email IS NOT NULL) p ON LOWER(f.email) = LOWER(p.email) WHERE f.rn = 1 ORDER BY f.delta_t DESC LIMIT 200`;
+  const mesAtual=String(new Date().getMonth()+1).padStart(2,'0');
+  const query=`SELECT f.deal_id, f.fase_atual_no_processo, f.etapa_atual_no_pipeline, f.tier_da_oportunidade, f.delta_t, f.qualificador_name, f.proprietario_name, f.linha_de_receita_vigente, f.grupo_de_receita, f.created_at, f.event_skipped, f.email, f.cargo, f.canal_de_marketing, f.utm_medium, f.status_do_deal, f.revenue, COALESCE(p.nome, '') as contact_name, COALESCE(f.motivo_lost, '') as motivo_lost FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY deal_id ORDER BY event_timestamp DESC) as rn FROM production.diamond.funil_comercial WHERE qualificador_name = '${safeNome}' AND pipeline_name = 'Comercial' AND created_at >= '${anoAtual}-${mesAtual}-01') f LEFT JOIN (SELECT DISTINCT email, nome FROM production.diamond.persons_overview WHERE email IS NOT NULL) p ON LOWER(f.email) = LOWER(p.email) WHERE f.rn = 1 ORDER BY f.delta_t DESC LIMIT 300`;
 
   fetch(DB_ENDPOINT,{
     method:'POST',
@@ -1715,6 +1716,8 @@ function renderLiveDeals(rows,cols){
     const cargo=g(row,'cargo')||'';
     const fase=g(row,'fase_atual_no_processo')||'Ativo';
     const etapa=g(row,'etapa_atual_no_pipeline')||'';
+    const statusDeal=g(row,'status_do_deal')||'';
+    const motivoLost=g(row,'motivo_lost')||'';
     const tier=(g(row,'tier_da_oportunidade')||'').toLowerCase();
     const delta=parseInt(g(row,'delta_t'))||0;
     // Canal: derivado da linha_de_receita_vigente (canônico) com fallback utm_medium
@@ -1737,8 +1740,9 @@ function renderLiveDeals(rows,cols){
     const elucyValor=calcElucyValor({tier,cargo,etapa,delta,skipped:String(g(row,'event_skipped')).toLowerCase()==='true'});
     // Forecast delta: divergência entre modelo de dados e modelo Elucy
     const forecastDelta=revenueRaw>0?elucyValor-revenueRaw:null;
+    const createdAtCrm=g(row,'created_at_crm')||g(row,'created_at')||'';
     const dealObj={nome,empresa:emailLead||empresa,cargo,fase,etapa,tier,delta,canal,deal_id,temp,tc,tl,dd,emailLead,
-      linhaReceita,revenueRaw,elucyValor,forecastDelta,
+      linhaReceita,revenueRaw,elucyValor,forecastDelta,statusDeal,motivoLost,createdAtCrm,
       _fase:fase,_etapa:etapa,_tier:tier,_delta:delta,_temp:temp};
     // Sinal automático
     const signal=calcSignal(dealObj);
@@ -1771,14 +1775,19 @@ function renderLiveDeals(rows,cols){
       </div>`;
     if(!window._COCKPIT_DEAL_MAP) window._COCKPIT_DEAL_MAP={};
     window._COCKPIT_DEAL_MAP[id]=dealObj;
-    di.onclick=()=>selectLiveDeal(id,dealObj);
-    list.appendChild(di);
+    // Deals perdidos/ganhos ficam no mapa para Intelligence mas não na sidebar
+    const isClosedDeal=statusDeal.toLowerCase()==='perdido'||statusDeal.toLowerCase()==='ganho';
+    if(!isClosedDeal){
+      di.onclick=()=>selectLiveDeal(id,dealObj);
+      list.appendChild(di);
+    }
   });
 
-  // Update stats
-  const ativos=rows.length;
-  const slaCount=rows.filter(r=>(parseInt(g(r,'delta_t'))||0)>7).length;
-  const acaoHoje=rows.filter(r=>{const d=parseInt(g(r,'delta_t'))||0;return d>=0&&d<=3;}).length;
+  // Update stats (apenas deals abertos)
+  const openRows=rows.filter(r=>{const s=(g(r,'status_do_deal')||'').toLowerCase();return s!=='perdido'&&s!=='ganho';});
+  const ativos=openRows.length;
+  const slaCount=openRows.filter(r=>(parseInt(g(r,'delta_t'))||0)>7).length;
+  const acaoHoje=openRows.filter(r=>{const d=parseInt(g(r,'delta_t'))||0;return d>=0&&d<=3;}).length;
   const sa=document.getElementById('stat-ativos');if(sa) sa.textContent=ativos;
   const sac=document.getElementById('stat-acao');if(sac) sac.textContent=acaoHoje;
   const ss=document.getElementById('stat-sla');if(ss) ss.textContent=slaCount;
@@ -2441,24 +2450,64 @@ function renderIntelligence(){
           <div class="intel-bar-bg"><div class="intel-bar-fill" style="width:${Math.max(5,e.count/maxFunnel*100)}%"><span class="intel-bar-v">${e.count}</span></div></div>
           <span class="intel-bar-pct">${Math.round(e.count/total*100)}%</span>
         </div>`).join('')}
-      <div class="intel-title" style="margin-top:14px">Taxa de Conversão (pipeline ativo)</div>
+      <div class="intel-title" style="margin-top:14px">Eficiência — Conversão por Fase <span style="font-weight:400;color:var(--text2);font-size:11px">(${(()=>{const now=new Date();const mp=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');const mc=deals.filter(d=>(d.createdAtCrm||d.created_at_crm||'').startsWith(mp)).length;return mc>=10?'Mês atual — '+mc+' deals':'Pipeline ativo — '+total+' deals';})()})</span></div>
       <div class="intel-kpi-row">
         ${(()=>{
-          const mql=(byEtapa['novo lead']||0);
-          const sal=(byEtapa['dia 01']||0)+(byEtapa['dia 02']||0)+(byEtapa['dia 03']||0)+(byEtapa['dia 04']||0)+(byEtapa['dia 05']||0)+(byEtapa['dia 06']||0);
-          const conectado=(byEtapa['conectados']||0);
-          const agendado=(byEtapa['agendamento']||0)+(byEtapa['reagendamento']||0)+(byEtapa['entrevista agendada']||0);
-          const totalTop=mql+sal+conectado+agendado;
-          const mqlToSal=mql>0?Math.round((sal+conectado+agendado)/totalTop*100):0;
-          const salToConect=(sal+conectado+agendado)>0?Math.round((conectado+agendado)/(sal+conectado+agendado)*100):0;
-          const conectToAgend=(conectado+agendado)>0?Math.round(agendado/(conectado+agendado)*100):0;
-          return '<div class="intel-kpi"><div class="intel-kpi-v">'+mql+'</div><div class="intel-kpi-l">MQL</div></div>'+
-            '<div class="intel-kpi"><div class="intel-kpi-v" style="font-size:11px;color:var(--text2)">→ '+mqlToSal+'%</div><div class="intel-kpi-l">MQL→SAL</div></div>'+
-            '<div class="intel-kpi"><div class="intel-kpi-v">'+sal+'</div><div class="intel-kpi-l">SAL (prosp.)</div></div>'+
-            '<div class="intel-kpi"><div class="intel-kpi-v" style="font-size:11px;color:var(--text2)">→ '+salToConect+'%</div><div class="intel-kpi-l">SAL→Conect</div></div>'+
-            '<div class="intel-kpi"><div class="intel-kpi-v">'+conectado+'</div><div class="intel-kpi-l">Conectado</div></div>'+
-            '<div class="intel-kpi"><div class="intel-kpi-v" style="font-size:11px;color:var(--text2)">→ '+conectToAgend+'%</div><div class="intel-kpi-l">Conect→Agend</div></div>'+
-            '<div class="intel-kpi"><div class="intel-kpi-v">'+agendado+'</div><div class="intel-kpi-l">Agendado</div></div>';
+          // Eficiência real: classifica cada deal pela fase MÁXIMA que atingiu
+          // Para deals abertos: usa fase_atual_no_processo
+          // Para deals perdidos: usa motivo_lost para inferir onde estava
+          // Para deals ganhos: chegaram até OPP+
+          // Classifica onde o deal MORREU para calcular eficiência
+          // [Validação] = nunca entrou em SAL → não converte MQL→SAL
+          // Tudo que é [SDR], [Negociação], [IM], [Qualquer etapa] = entrou em SAL
+          // OPP: apenas deals abertos em Oportunidade/Negociação ou Ganhos
+          //       Perdidos em [Negociação]/[IM] JÁ estavam em OPP mas foram perdidos
+          function lostInMQL(motivo){
+            const m=(motivo||'').toLowerCase();
+            return m.startsWith('[validação]');
+          }
+          function lostInOPP(motivo){
+            const m=(motivo||'').toLowerCase();
+            return m.startsWith('[negociação]')||m.startsWith('[negociaçao]')||m.startsWith('[im]');
+          }
+          function dealReachedSAL(d){
+            const status=(d.statusDeal||'').toLowerCase();
+            const fase=(d._fase||d.fase||'').toLowerCase();
+            if(status==='ganho') return true;
+            if(status==='perdido'||fase==='perdido') return !lostInMQL(d.motivoLost||d.motivo_lost||'');
+            if(fase==='mql') return false;
+            return true; // SAL, Conectado, Agendado, Oportunidade, Negociação, N/A
+          }
+          function dealReachedOPP(d){
+            const status=(d.statusDeal||'').toLowerCase();
+            const fase=(d._fase||d.fase||'').toLowerCase();
+            if(status==='ganho') return true;
+            if(status==='perdido'||fase==='perdido') return lostInOPP(d.motivoLost||d.motivo_lost||'');
+            return fase==='oportunidade'||fase==='negociação';
+          }
+          // Filtrar apenas deals criados no mês atual para eficiência mensal
+          const now=new Date();
+          const mesPrefix=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+          const monthDeals=deals.filter(d=>{
+            const crm=d.createdAtCrm||d.created_at_crm||'';
+            return crm.startsWith(mesPrefix);
+          });
+          // Fallback: se <10 deals com data do mês, usa todos (dados podem não ter created_at_crm)
+          const efDeals=monthDeals.length>=10?monthDeals:deals;
+          const efLabel=monthDeals.length>=10?'Mês atual':'Pipeline ativo';
+          let nMQL=0,nSAL=0,nOPP=0;
+          efDeals.forEach(d=>{
+            nMQL++;
+            if(dealReachedSAL(d)) nSAL++;
+            if(dealReachedOPP(d)) nOPP++;
+          });
+          const crMqlSal=nMQL>0?((nSAL/nMQL)*100).toFixed(1):0;
+          const crSalOpp=nSAL>0?((nOPP/nSAL)*100).toFixed(1):0;
+          return '<div class="intel-kpi"><div class="intel-kpi-v">'+nMQL+'</div><div class="intel-kpi-l"># MQL</div></div>'+
+            '<div class="intel-kpi"><div class="intel-kpi-v" style="font-size:13px;font-weight:800;color:var(--green)">'+crMqlSal+'%</div><div class="intel-kpi-l">MQL → SAL</div></div>'+
+            '<div class="intel-kpi"><div class="intel-kpi-v">'+nSAL+'</div><div class="intel-kpi-l"># SAL</div></div>'+
+            '<div class="intel-kpi"><div class="intel-kpi-v" style="font-size:13px;font-weight:800;color:var(--accent2)">'+crSalOpp+'%</div><div class="intel-kpi-l">SAL → OPP</div></div>'+
+            '<div class="intel-kpi"><div class="intel-kpi-v">'+nOPP+'</div><div class="intel-kpi-l"># OPP</div></div>';
         })()}
       </div>
     `)}
