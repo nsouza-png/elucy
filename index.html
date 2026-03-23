@@ -772,15 +772,64 @@ input,textarea,select{font-family:inherit;font-size:inherit}
 .ws.done{background:var(--green)}
 .ws.active{background:var(--accent)}
 
-/* ── DM WAR ROOM ──────────────────────────────────────────────────── */
+/* ── DM WAR ROOM — CQL PLAYGROUND ────────────────────────────────── */
 #screen-dm{display:none;height:100%;padding:0}
 #screen-dm.on{display:flex;flex-direction:row;height:100%}
 #ct>#screen-dm.on{display:flex}
-/* Override default ct padding for DM screen */
 #ct:has(#screen-dm.on){padding:0;overflow:hidden}
 
-.dm-center{flex:1;display:flex;flex-direction:column;height:100%;min-width:0;background:var(--bg);border-right:1px solid var(--border)}
+/* Sessions sidebar */
+.dm-sessions{width:180px;flex-shrink:0;height:100%;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column}
+.dm-sessions-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid var(--border)}
+.dm-sess-new{width:24px;height:24px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--accent2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.dm-sess-new:hover{background:var(--adim);border-color:var(--accent)}
+.dm-sessions-list{flex:1;overflow-y:auto;padding:8px}
+.dm-sess-item{padding:8px 10px;border-radius:var(--r-sm);cursor:pointer;margin-bottom:4px;transition:all .15s;border:1px solid transparent}
+.dm-sess-item:hover{background:var(--bg3);border-color:var(--border)}
+.dm-sess-item.active{background:var(--adim);border-color:rgba(99,102,241,.3)}
+.dm-sess-handle{font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dm-sess-meta{font-size:9px;color:var(--text4);margin-top:2px;display:flex;gap:6px;align-items:center}
+.dm-sess-account{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:1px 5px;border-radius:3px;background:var(--adim);color:var(--accent2)}
+.dm-sess-cql{font-size:8px;font-weight:700;text-transform:uppercase;padding:1px 5px;border-radius:3px}
+.dm-sess-cql.pre{background:var(--bg5);color:var(--text3)}
+.dm-sess-cql.qual{background:var(--gdim);color:var(--green)}
+.dm-sess-cql.lead{background:var(--bdim);color:var(--blue)}
+
+/* Center */
+.dm-center{flex:1;display:flex;flex-direction:column;height:100%;min-width:0;background:var(--bg)}
 .dm-right{width:300px;flex-shrink:0;height:100%;overflow-y:auto;background:var(--bg2);border-left:1px solid var(--border)}
+
+/* Toolbar */
+.dm-toolbar{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;gap:10px;flex-wrap:wrap}
+.dm-toolbar-left,.dm-toolbar-right{display:flex;align-items:center;gap:8px}
+.dm-account-sel{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;text-transform:uppercase}
+.dm-account-sel:focus{outline:1px solid var(--accent);border-color:var(--accent)}
+.dm-ig-input-wrap{display:flex;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:0 8px;gap:2px}
+.dm-ig-at{font-size:12px;color:var(--accent2);font-weight:700}
+.dm-ig-input{background:none;border:none;color:var(--text);font-size:12px;width:140px;padding:5px 0;outline:none}
+.dm-ig-input::placeholder{color:var(--text4)}
+.dm-cql-pill{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:4px 10px;border-radius:99px;background:var(--bg5);color:var(--text3);white-space:nowrap}
+.dm-cql-pill.qualified{background:var(--gdim);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.dm-cql-pill.lead{background:var(--bdim);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.dm-tb-btn{background:none;border:1px solid var(--border);border-radius:var(--r-sm);padding:4px 10px;color:var(--text3);font-size:10px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.dm-tb-btn:hover{border-color:var(--border3);color:var(--text)}
+.dm-tb-btn-accent{border-color:rgba(99,102,241,.3);color:var(--accent2)}
+.dm-tb-btn-accent:hover{background:var(--adim);border-color:var(--accent)}
+
+/* CQL Card */
+.dm-cql-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-md);padding:14px;margin-bottom:14px}
+.dm-cql-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 0}
+.dm-cql-metric{text-align:center;padding:6px}
+.dm-cql-mv{font-size:18px;font-weight:800;color:var(--text)}
+.dm-cql-ml{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-top:2px}
+.dm-cql-funnel{display:flex;align-items:center;gap:4px;justify-content:center;margin-top:8px}
+.dm-cql-step{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:4px 8px;border-radius:var(--r-sm);background:var(--bg5);color:var(--text4);transition:all .2s}
+.dm-cql-step.active{background:var(--adim);color:var(--accent2);border:1px solid rgba(99,102,241,.3)}
+.dm-cql-step.done{background:var(--gdim);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.dm-cql-arrow{font-size:10px;color:var(--text4)}
+.dm-promote-btn{width:100%;margin-top:10px;padding:8px;border:1px solid rgba(34,197,94,.3);border-radius:var(--r-sm);background:var(--gdim);color:var(--green);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s}
+.dm-promote-btn:hover{background:rgba(34,197,94,.2);border-color:var(--green)}
+.dm-chat-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:40px}
 
 /* Drop zone */
 .dm-drop-wrap{padding:16px;border-bottom:1px solid var(--border);flex-shrink:0}
@@ -1215,9 +1264,45 @@ input,textarea,select{font-family:inherit;font-size:inherit}
   </div><!-- /flex-wrap -->
 </div><!-- /screen-reports -->
 
-<!-- ── SCREEN: DM WAR ROOM ────────────────────────────────────────── -->
+<!-- ── SCREEN: DM WAR ROOM — CQL PLAYGROUND ─────────────────────── -->
 <div class="screen" id="screen-dm">
+  <!-- LEFT: Sessões salvas -->
+  <div class="dm-sessions" id="dm-sessions-panel">
+    <div class="dm-sessions-hdr">
+      <span style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Sessões</span>
+      <button class="dm-sess-new" onclick="dmNewSession()" title="Nova sessão">+</button>
+    </div>
+    <div class="dm-sessions-list" id="dm-sessions-list">
+      <!-- Populado por dmRenderSessions() -->
+    </div>
+  </div>
+
+  <!-- CENTER: Chat playground -->
   <div class="dm-center" style="position:relative">
+    <!-- Toolbar superior -->
+    <div class="dm-toolbar">
+      <div class="dm-toolbar-left">
+        <select class="dm-account-sel" id="dm-account-sel" onchange="dmSwitchAccount()" title="Conta Instagram">
+          <option value="tallis">Tallis</option>
+          <option value="g4">G4</option>
+          <option value="alfredo">Alfredo</option>
+          <option value="nardon">Nardon</option>
+          <option value="scale">Scale</option>
+          <option value="club">Club</option>
+        </select>
+        <div class="dm-ig-input-wrap">
+          <span class="dm-ig-at">@</span>
+          <input class="dm-ig-input" id="dm-ig-handle" type="text" placeholder="instagram do lead" onchange="dmUpdateHandle()">
+        </div>
+      </div>
+      <div class="dm-toolbar-right">
+        <div class="dm-cql-pill" id="dm-cql-pill" title="Status CQL">PRÉ-CQL</div>
+        <button class="dm-tb-btn" onclick="dmClearPlayground()" title="Limpar conversa">Limpar</button>
+        <button class="dm-tb-btn dm-tb-btn-accent" onclick="dmNewSession()" title="Nova sessão">+ Nova</button>
+      </div>
+    </div>
+
+    <!-- Drop zone (screenshot OCR) -->
     <div class="dm-drop-wrap">
       <div class="dm-drop" id="dm-drop-zone"
            onclick="dmStartCapture()"
@@ -1236,58 +1321,66 @@ input,textarea,select{font-family:inherit;font-size:inherit}
         </div>
       </div>
     </div>
+
+    <!-- Gamification badges -->
     <div class="dm-gamif">
-      <div class="dm-gamif-badge dm-gb-green">&#9889; COMBO: 3 FAST</div>
-      <div class="dm-gamif-badge dm-gb-accent">&#128293; STREAK: 12H</div>
+      <div class="dm-gamif-badge dm-gb-green" id="dm-badge-combo">&#9889; COMBO: 0</div>
+      <div class="dm-gamif-badge dm-gb-accent" id="dm-badge-streak">&#128293; SESSÕES: 0</div>
     </div>
+
+    <!-- Chat area -->
     <div class="dm-chat" id="dm-chat-area">
-      <div class="dm-msg-lead">
-        <div class="dm-msg-sender lead"><span>LEAD</span><span class="dm-msg-ts">14:02</span></div>
-        <div class="dm-msg-bubble">
-          "Já tentei outras soluções mas os resultados sempre demoravam. Como sei que é diferente aqui?"
-          <div class="dm-msg-meta">
-            <span class="dm-signal-dot dm-signal-green"></span>
-            <span class="dm-signal-label" style="color:var(--green);font-size:9px">TOM: CÉTICO</span>
-          </div>
-        </div>
-      </div>
-      <div class="dm-msg-op">
-        <div class="dm-msg-sender op"><span class="dm-msg-ts">14:03</span><span>VOCÊ (OPERADOR)</span></div>
-        <div class="dm-msg-bubble">
-          "Entendo. Posso te mostrar resultados reais de clientes no mesmo perfil em 3 minutos?"
-        </div>
-      </div>
-      <div class="dm-msg-lead">
-        <div class="dm-msg-sender lead"><span>LEAD</span><span class="dm-msg-ts">14:05</span></div>
-        <div class="dm-msg-bubble" style="border-left:2px solid var(--green)">
-          "Ok. Manda. Se os dados baterem, fecho hoje."
-          <div class="dm-msg-meta">
-            <span class="dm-signal-dot dm-signal-blue"></span>
-            <span style="font-size:9px;color:var(--green);font-weight:700;text-transform:uppercase">SINAL: INTENÇÃO DE COMPRA</span>
-          </div>
-        </div>
+      <div class="dm-chat-empty" id="dm-chat-empty">
+        <div style="font-size:28px;opacity:.3">&#128172;</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:6px">Selecione uma conta, digite o @ do lead e cole screenshots da DM</div>
+        <div style="font-size:10px;color:var(--text4);margin-top:4px">Cada screenshot vira uma mensagem analisada com sinais CQL</div>
       </div>
       <div id="dm-ocr-messages"></div>
     </div>
+
+    <!-- Footer -->
     <div class="dm-footer">
       <div class="dm-footer-left">
         <span class="dm-footer-item">ELUCY v2.4</span>
-        <span class="dm-footer-item">LATÊNCIA: 14MS</span>
+        <span class="dm-footer-item" id="dm-footer-account">CONTA: TALLIS</span>
+        <span class="dm-footer-item" id="dm-footer-msgs">MSGS: 0</span>
       </div>
       <div class="dm-footer-right">
         <span class="dm-footer-dot"></span>
-        AI ANALYZER ATIVO
+        CQL TRACKER ATIVO
       </div>
     </div>
   </div>
 
+  <!-- RIGHT: Insights + CQL Status + ELUCI REPORT -->
   <div class="dm-right">
     <div class="dm-right-inner">
+      <!-- CQL Status Card -->
+      <div class="dm-cql-card" id="dm-cql-card">
+        <div class="dm-section-title">&#128161; Status CQL</div>
+        <div class="dm-cql-grid">
+          <div class="dm-cql-metric"><div class="dm-cql-mv" id="dm-cql-signals">0</div><div class="dm-cql-ml">Sinais</div></div>
+          <div class="dm-cql-metric"><div class="dm-cql-mv" id="dm-cql-intent">—</div><div class="dm-cql-ml">Intenção</div></div>
+          <div class="dm-cql-metric"><div class="dm-cql-mv" id="dm-cql-score">0</div><div class="dm-cql-ml">CQL Score</div></div>
+        </div>
+        <div class="dm-cql-funnel" id="dm-cql-funnel">
+          <div class="dm-cql-step active" data-step="conversa">Conversa</div>
+          <div class="dm-cql-arrow">&#8594;</div>
+          <div class="dm-cql-step" data-step="cql">CQL</div>
+          <div class="dm-cql-arrow">&#8594;</div>
+          <div class="dm-cql-step" data-step="lead">Lead</div>
+          <div class="dm-cql-arrow">&#8594;</div>
+          <div class="dm-cql-step" data-step="sql">SQL</div>
+        </div>
+        <button class="dm-promote-btn" id="dm-promote-btn" onclick="dmPromoteCQL()" style="display:none">&#9889; Promover para Lead</button>
+      </div>
+
+      <!-- AI Suggestion -->
       <div class="dm-section-title">&#129504; Próxima Melhor Ação</div>
       <div class="dm-ai-card">
         <div class="dm-ai-label">AI SUGGESTION</div>
         <div class="dm-ai-text" id="dm-suggestion-text">
-          "Perfeito. Aqui está o resultado real de um cliente com perfil similar ao seu. Posso reservar uma vaga para começar essa semana."
+          Cole screenshots da conversa para receber sugestões contextuais.
         </div>
         <div class="dm-ai-actions">
           <button class="dm-copy-btn" onclick="dmCopySuggestion()">&#128203; Copiar DM</button>
@@ -1296,9 +1389,10 @@ input,textarea,select{font-family:inherit;font-size:inherit}
       </div>
       <div class="dm-action-btns">
         <button class="dm-action-btn" onclick="dmSendToCRM()">&#128506; Enviar ao CRM</button>
-        <button class="dm-action-btn">&#128197; Agendar Follow-up</button>
+        <button class="dm-action-btn" onclick="dmExportSession()">&#128190; Exportar sessão</button>
       </div>
 
+      <!-- Lead Insights (populated when deal selected) -->
       <div class="dm-insights-wrap" id="dm-insights-wrap">
         <div class="dm-panel-header">
           <span class="dm-panel-handle" id="dm-lead-handle">@ — Selecione um deal</span>
@@ -1308,14 +1402,8 @@ input,textarea,select{font-family:inherit;font-size:inherit}
           <div class="dm-empty-icon">&#128070;</div>
           <div class="dm-empty-text">Selecione um deal no pipeline<br>para ver os insights do lead</div>
         </div>
-
-        <!-- BLOCO A: PERFIL -->
         <div class="li-blk" id="dm-bloco-a" style="display:none">
-          <div class="li-blk-hdr">
-            <span>&#128100;</span>
-            <span class="li-blk-title">PERFIL</span>
-            <span class="li-blk-src">persons_overview</span>
-          </div>
+          <div class="li-blk-hdr"><span>&#128100;</span><span class="li-blk-title">PERFIL</span><span class="li-blk-src">persons_overview</span></div>
           <div class="li-fld"><span class="li-lbl">Nome</span><span class="li-val" id="dm-li-nome">—</span></div>
           <div class="li-fld"><span class="li-lbl">Cargo</span><span class="li-val" id="dm-li-cargo">—</span></div>
           <div class="li-fld"><span class="li-lbl">Faturamento</span><span class="li-val" id="dm-li-fat">—</span></div>
@@ -1324,28 +1412,16 @@ input,textarea,select{font-family:inherit;font-size:inherit}
           <div class="li-fld"><span class="li-lbl">Status G4</span><span class="li-badge li-badge-gray" id="dm-li-status">Prospect</span></div>
           <div class="li-fld"><span class="li-lbl">LTV Total</span><span class="li-val-hi" id="dm-li-ltv">—</span></div>
         </div>
-
-        <!-- BLOCO B: ECOSSISTEMA G4 -->
         <div class="li-blk" id="dm-bloco-b" style="display:none">
-          <div class="li-blk-hdr">
-            <span>&#128230;</span>
-            <span class="li-blk-title">ECOSSISTEMA G4</span>
-            <span class="li-blk-src">persons_overview</span>
-          </div>
+          <div class="li-blk-hdr"><span>&#128230;</span><span class="li-blk-title">ECOSSISTEMA G4</span><span class="li-blk-src">persons_overview</span></div>
           <div class="li-fld"><span class="li-lbl">1&#186; Produto</span><span class="li-val" id="dm-li-prod1">—</span></div>
           <div class="li-fld"><span class="li-lbl">Último</span><span class="li-val" id="dm-li-prodult">—</span></div>
           <div class="li-fld"><span class="li-lbl">Cluster RFM</span><span class="li-badge li-badge-gray" id="dm-li-rfm">—</span></div>
           <div class="li-fld"><span class="li-lbl">Scale</span><span class="li-badge li-badge-gray" id="dm-li-scale">—</span></div>
           <div class="li-fld"><span class="li-lbl">Club</span><span class="li-badge li-badge-gray" id="dm-li-club">—</span></div>
         </div>
-
-        <!-- BLOCO C: DEAL ATUAL -->
         <div class="li-blk" id="dm-bloco-c" style="display:none">
-          <div class="li-blk-hdr">
-            <span>&#128200;</span>
-            <span class="li-blk-title">DEAL ATUAL</span>
-            <span class="li-blk-src">funil_comercial</span>
-          </div>
+          <div class="li-blk-hdr"><span>&#128200;</span><span class="li-blk-title">DEAL ATUAL</span><span class="li-blk-src">funil_comercial</span></div>
           <div class="li-fld"><span class="li-lbl">Fase Atual</span><span class="li-phase-pill li-phase-hot" id="dm-li-fase">—</span></div>
           <div class="li-fld"><span class="li-lbl">Fase Anterior</span><span class="li-val-sec" id="dm-li-fase-ant">—</span></div>
           <div class="li-fld"><span class="li-lbl">Tempo na Fase</span><span class="li-val" id="dm-li-delta">—</span></div>
@@ -1356,21 +1432,13 @@ input,textarea,select{font-family:inherit;font-size:inherit}
           <div class="li-fld"><span class="li-lbl">Closer</span><span class="li-val" id="dm-li-closer">—</span></div>
           <div id="dm-skip-warn" class="li-skip-warn" style="display:none">&#9888; Etapa pulada — revisar jornada</div>
         </div>
-
-        <!-- BLOCO D: HISTÓRICO -->
         <div class="li-blk" id="dm-bloco-d" style="display:none">
-          <div class="li-blk-hdr">
-            <span>&#128336;</span>
-            <span class="li-blk-title">HISTÓRICO</span>
-            <span class="li-blk-src">aquisicao</span>
-          </div>
-          <div class="li-timeline-wrap" id="dm-timeline">
-            <span style="font-size:9px;color:var(--text4);font-style:italic">Nenhuma negociação anterior</span>
-          </div>
+          <div class="li-blk-hdr"><span>&#128336;</span><span class="li-blk-title">HISTÓRICO</span><span class="li-blk-src">aquisicao</span></div>
+          <div class="li-timeline-wrap" id="dm-timeline"><span style="font-size:9px;color:var(--text4);font-style:italic">Nenhuma negociação anterior</span></div>
         </div>
       </div>
 
-      <!-- ELUCI REPORT inside DM panel -->
+      <!-- ELUCI REPORT -->
       <div class="dm-er-panel" id="dm-er-panel">
         <div class="dm-er-hdr">
           <div style="display:flex;align-items:center;gap:6px">
@@ -1381,9 +1449,7 @@ input,textarea,select{font-family:inherit;font-size:inherit}
           <button onclick="document.getElementById('dm-er-panel').style.display='none'" style="background:none;border:none;color:var(--text3);cursor:pointer">&#10005;</button>
         </div>
         <div id="dm-er-content"></div>
-        <button class="dm-request-btn" onclick="dmRequestElucy()" id="dm-btn-request">
-          &#10024; Gerar Análise ELUCI
-        </button>
+        <button class="dm-request-btn" onclick="dmRequestElucy()" id="dm-btn-request">&#10024; Gerar Análise ELUCI</button>
       </div>
 
       <!-- XP Bar -->
@@ -3950,8 +4016,220 @@ function showSyncToast(type,msg){
   setTimeout(()=>t.remove(),5000);
 }
 
-// ── DM WAR ROOM FUNCTIONS ────────────────────────────────────────────
+// ── DM WAR ROOM — CQL PLAYGROUND FUNCTIONS ──────────────────────────
 let _dmCurrentDealId = null;
+let _dmSessions = JSON.parse(localStorage.getItem('elucy_dm_sessions')||'[]');
+let _dmActiveSessionId = null;
+
+function _dmSaveSessions(){localStorage.setItem('elucy_dm_sessions',JSON.stringify(_dmSessions));}
+
+function dmNewSession(){
+  const account=document.getElementById('dm-account-sel');
+  const id='cql-'+Date.now();
+  const sess={id,account:account?account.value:'tallis',handle:'',messages:[],cqlStatus:'pre',cqlScore:0,signals:0,createdAt:new Date().toISOString(),dealId:null};
+  _dmSessions.unshift(sess);
+  _dmSaveSessions();
+  dmLoadSession(id);
+  dmRenderSessions();
+}
+
+function dmLoadSession(id){
+  const sess=_dmSessions.find(s=>s.id===id);
+  if(!sess) return;
+  _dmActiveSessionId=id;
+  // Update toolbar
+  const acSel=document.getElementById('dm-account-sel');
+  if(acSel) acSel.value=sess.account;
+  const igInput=document.getElementById('dm-ig-handle');
+  if(igInput) igInput.value=sess.handle||'';
+  // Update CQL status
+  dmUpdateCQLStatus(sess);
+  // Render messages
+  const chatArea=document.getElementById('dm-chat-area');
+  const emptyEl=document.getElementById('dm-chat-empty');
+  if(chatArea){
+    // Clear everything except empty state and ocr-messages div
+    const ocrDiv=document.getElementById('dm-ocr-messages');
+    chatArea.innerHTML='';
+    if(emptyEl) chatArea.appendChild(emptyEl);
+    if(ocrDiv) chatArea.appendChild(ocrDiv);
+    if(sess.messages.length){
+      if(emptyEl) emptyEl.style.display='none';
+      sess.messages.forEach(m=>_dmRenderMessage(m,chatArea));
+    } else {
+      if(emptyEl) emptyEl.style.display='flex';
+    }
+  }
+  // Update footer
+  const footAccount=document.getElementById('dm-footer-account');
+  if(footAccount) footAccount.textContent='CONTA: '+sess.account.toUpperCase();
+  const footMsgs=document.getElementById('dm-footer-msgs');
+  if(footMsgs) footMsgs.textContent='MSGS: '+sess.messages.length;
+  // Highlight in sessions list
+  dmRenderSessions();
+  // If session has a linked deal, populate insights
+  if(sess.dealId){
+    const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[sess.dealId];
+    if(deal) populateDmInsights(sess.dealId,deal);
+  }
+}
+
+function _dmRenderMessage(msg,container){
+  const isLead=msg.sender==='lead';
+  const div=document.createElement('div');
+  div.className=isLead?'dm-msg-lead':'dm-msg-op';
+  let metaHtml='';
+  if(msg.signal){
+    const dotCls=msg.signal==='BUY'?'dm-signal-green':'dm-signal-blue';
+    metaHtml='<div class="dm-msg-meta"><span class="dm-signal-dot '+dotCls+'"></span><span class="dm-signal-label" style="color:var(--green);font-size:9px">'+msg.signal+'</span></div>';
+  }
+  if(isLead){
+    div.innerHTML='<div class="dm-msg-sender lead"><span>LEAD</span><span class="dm-msg-ts">'+(msg.time||'')+'</span></div><div class="dm-msg-bubble"'+(msg.signal==='BUY'?' style="border-left:2px solid var(--green)"':'')+'>'+(msg.text||'')+metaHtml+'</div>';
+  } else {
+    div.innerHTML='<div class="dm-msg-sender op"><span class="dm-msg-ts">'+(msg.time||'')+'</span><span>VOCÊ (OPERADOR)</span></div><div class="dm-msg-bubble">'+(msg.text||'')+'</div>';
+  }
+  // Insert before ocr-messages div
+  const ocrDiv=document.getElementById('dm-ocr-messages');
+  if(ocrDiv&&container.contains(ocrDiv)){
+    container.insertBefore(div,ocrDiv);
+  } else {
+    container.appendChild(div);
+  }
+}
+
+function dmAddMessage(sender,text,signal){
+  const sess=_dmSessions.find(s=>s.id===_dmActiveSessionId);
+  if(!sess) return;
+  const time=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const msg={sender,text,signal:signal||null,time};
+  sess.messages.push(msg);
+  if(signal) sess.signals++;
+  // Auto-detect CQL signals
+  if(signal==='BUY'||signal==='INTENÇÃO DE COMPRA'){
+    sess.cqlScore=Math.min(100,sess.cqlScore+30);
+    if(sess.cqlStatus==='pre') sess.cqlStatus='cql';
+  } else if(signal){
+    sess.cqlScore=Math.min(100,sess.cqlScore+10);
+  }
+  _dmSaveSessions();
+  dmUpdateCQLStatus(sess);
+  // Render in chat
+  const chatArea=document.getElementById('dm-chat-area');
+  const emptyEl=document.getElementById('dm-chat-empty');
+  if(emptyEl) emptyEl.style.display='none';
+  if(chatArea) _dmRenderMessage(msg,chatArea);
+  const footMsgs=document.getElementById('dm-footer-msgs');
+  if(footMsgs) footMsgs.textContent='MSGS: '+sess.messages.length;
+  dmRenderSessions();
+}
+
+function dmRenderSessions(){
+  const list=document.getElementById('dm-sessions-list');
+  if(!list) return;
+  const badgeStreak=document.getElementById('dm-badge-streak');
+  if(badgeStreak) badgeStreak.innerHTML='&#128293; SESSÕES: '+_dmSessions.length;
+  if(!_dmSessions.length){
+    list.innerHTML='<div style="font-size:10px;color:var(--text4);padding:8px;text-align:center">Nenhuma sessão<br>Clique + para criar</div>';
+    return;
+  }
+  list.innerHTML=_dmSessions.map(s=>{
+    const active=s.id===_dmActiveSessionId?' active':'';
+    const handle=s.handle?'@'+s.handle:'Sem @';
+    const cqlCls=s.cqlStatus==='cql'?'qual':s.cqlStatus==='lead'?'lead':'pre';
+    const cqlLabel=s.cqlStatus==='cql'?'CQL':s.cqlStatus==='lead'?'LEAD':'PRÉ';
+    return '<div class="dm-sess-item'+active+'" onclick="dmLoadSession(\''+s.id+'\')"><div class="dm-sess-handle">'+handle+'</div><div class="dm-sess-meta"><span class="dm-sess-account">'+s.account+'</span><span class="dm-sess-cql '+cqlCls+'">'+cqlLabel+'</span><span>'+s.messages.length+' msgs</span></div></div>';
+  }).join('');
+}
+
+function dmUpdateCQLStatus(sess){
+  const pill=document.getElementById('dm-cql-pill');
+  const signalsEl=document.getElementById('dm-cql-signals');
+  const intentEl=document.getElementById('dm-cql-intent');
+  const scoreEl=document.getElementById('dm-cql-score');
+  const promoteBtn=document.getElementById('dm-promote-btn');
+  if(pill){
+    pill.textContent=sess.cqlStatus==='cql'?'CQL QUALIFICADA':sess.cqlStatus==='lead'?'LEAD GERADO':'PRÉ-CQL';
+    pill.className='dm-cql-pill'+(sess.cqlStatus==='cql'?' qualified':'')+(sess.cqlStatus==='lead'?' lead':'');
+  }
+  if(signalsEl) signalsEl.textContent=sess.signals;
+  if(intentEl) intentEl.textContent=sess.cqlScore>=60?'ALTA':sess.cqlScore>=30?'MÉDIA':'BAIXA';
+  if(scoreEl) scoreEl.textContent=sess.cqlScore;
+  if(promoteBtn) promoteBtn.style.display=sess.cqlStatus==='cql'?'block':'none';
+  // Update funnel steps
+  const funnel=document.getElementById('dm-cql-funnel');
+  if(funnel){
+    funnel.querySelectorAll('.dm-cql-step').forEach(step=>{
+      const s=step.dataset.step;
+      step.className='dm-cql-step';
+      if(sess.cqlStatus==='pre'&&s==='conversa') step.classList.add('active');
+      if(sess.cqlStatus==='cql'){
+        if(s==='conversa') step.classList.add('done');
+        if(s==='cql') step.classList.add('active');
+      }
+      if(sess.cqlStatus==='lead'){
+        if(s==='conversa'||s==='cql') step.classList.add('done');
+        if(s==='lead') step.classList.add('active');
+      }
+    });
+  }
+}
+
+function dmSwitchAccount(){
+  const sess=_dmSessions.find(s=>s.id===_dmActiveSessionId);
+  const sel=document.getElementById('dm-account-sel');
+  if(sess&&sel){
+    sess.account=sel.value;
+    _dmSaveSessions();
+    const footAccount=document.getElementById('dm-footer-account');
+    if(footAccount) footAccount.textContent='CONTA: '+sess.account.toUpperCase();
+    dmRenderSessions();
+  }
+}
+
+function dmUpdateHandle(){
+  const sess=_dmSessions.find(s=>s.id===_dmActiveSessionId);
+  const inp=document.getElementById('dm-ig-handle');
+  if(sess&&inp){
+    sess.handle=inp.value.replace(/^@/,'').trim();
+    _dmSaveSessions();
+    dmRenderSessions();
+  }
+}
+
+function dmClearPlayground(){
+  const sess=_dmSessions.find(s=>s.id===_dmActiveSessionId);
+  if(!sess) return;
+  sess.messages=[];sess.signals=0;sess.cqlScore=0;sess.cqlStatus='pre';
+  _dmSaveSessions();
+  dmLoadSession(sess.id);
+}
+
+function dmPromoteCQL(){
+  const sess=_dmSessions.find(s=>s.id===_dmActiveSessionId);
+  if(!sess) return;
+  sess.cqlStatus='lead';
+  _dmSaveSessions();
+  dmUpdateCQLStatus(sess);
+  dmRenderSessions();
+  _dmShowToast('CQL promovida para Lead! Vincule ao pipeline.');
+}
+
+function dmExportSession(){
+  const sess=_dmSessions.find(s=>s.id===_dmActiveSessionId);
+  if(!sess){_dmShowToast('Nenhuma sessão ativa');return;}
+  const lines=['# CQL Session — @'+(sess.handle||'sem-handle'),'Conta: '+sess.account,'Status: '+sess.cqlStatus,'CQL Score: '+sess.cqlScore,'Sinais: '+sess.signals,'Data: '+sess.createdAt,'','## Conversa',''];
+  sess.messages.forEach(m=>{
+    lines.push((m.sender==='lead'?'LEAD':'OPERADOR')+' ('+m.time+'): '+m.text+(m.signal?' ['+m.signal+']':''));
+  });
+  const text=lines.join('\n');
+  navigator.clipboard.writeText(text).then(()=>_dmShowToast('Sessão copiada para clipboard')).catch(()=>_dmShowToast('Erro ao copiar'));
+}
+
+// Init: render sessions on load
+document.addEventListener('DOMContentLoaded',()=>{
+  dmRenderSessions();
+  if(_dmSessions.length) dmLoadSession(_dmSessions[0].id);
+});
 
 // Preenche os 4 blocos de Lead Insights quando um deal é selecionado
 function populateDmInsights(dealId, deal){
