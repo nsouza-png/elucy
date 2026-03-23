@@ -793,45 +793,34 @@ input,textarea,select{font-family:inherit;font-size:inherit}
 #screen-wa.on{display:flex!important}
 .wa-header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
 .wa-header-left{display:flex;align-items:center;gap:12px}
-.wa-deal-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:var(--r-sm);background:var(--adim);border:1px solid var(--accent);font-size:11px;font-weight:600;color:var(--accent3)}
-.wa-deal-badge .wa-dot{width:6px;height:6px;border-radius:50%;background:var(--accent2);animation:pulse 2s infinite}
-.wa-no-deal{padding:4px 10px;border-radius:var(--r-sm);background:var(--rdim);border:1px solid var(--red);font-size:11px;font-weight:600;color:var(--red)}
 .wa-header-actions{display:flex;gap:6px}
 .wa-btn{padding:6px 14px;border-radius:var(--r-sm);border:1px solid var(--border);background:none;color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
 .wa-btn:hover{border-color:var(--border3);color:var(--text)}
-.wa-btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.wa-btn-primary:hover{background:var(--accent2)}
-.wa-btn-primary:disabled{opacity:.4;cursor:not-allowed}
 .wa-btn-success{background:var(--green);border-color:var(--green);color:#000;font-weight:700}
 .wa-btn-success:hover{background:var(--green2)}
 .wa-body{display:flex;flex:1;overflow:hidden}
 .wa-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.wa-paste-zone{padding:32px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg);transition:background .2s}
-.wa-paste-zone.drag-over{background:var(--adim);border-color:var(--accent)}
-.wa-paste-icon{width:48px;height:48px;border-radius:50%;background:var(--adim);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:10px}
-.wa-paste-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
-.wa-paste-sub{font-size:11px;color:var(--text3);max-width:360px;text-align:center}
-.wa-paste-preview{display:none;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;align-items:center;gap:12px}
-.wa-paste-preview.show{display:flex}
-.wa-paste-preview img{max-height:80px;border-radius:var(--r-sm);border:1px solid var(--border)}
-.wa-paste-preview-info{flex:1}
-.wa-paste-preview-info p{font-size:11px;color:var(--text2)}
-.wa-progress{height:2px;background:var(--bg5);border-radius:1px;overflow:hidden;width:100%;margin-top:6px}
-.wa-progress-bar{height:100%;background:var(--accent);width:0;transition:width .4s ease}
-.wa-log-list{flex:1;overflow-y:auto;padding:0}
-.wa-log-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text4);font-size:12px;gap:6px}
-.wa-log-item{display:flex;gap:12px;padding:10px 20px;border-bottom:1px solid var(--border);transition:background .1s;align-items:flex-start}
-.wa-log-item:hover{background:var(--bg2)}
-.wa-log-time{font-size:10px;font-family:monospace;color:var(--text4);width:50px;flex-shrink:0;padding-top:2px}
-.wa-log-sender{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;width:70px;flex-shrink:0;padding-top:2px}
-.wa-log-sender.op{color:var(--accent2)}
-.wa-log-sender.lead{color:var(--green2)}
-.wa-log-msg{flex:1;font-size:12px;color:var(--text);line-height:1.5}
-.wa-log-status{width:80px;flex-shrink:0;display:flex;justify-content:flex-end;padding-top:2px}
-.wa-log-pill{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 8px;border-radius:var(--r-sm)}
-.wa-pill-logged{background:var(--gdim);color:var(--green);border:1px solid rgba(34,197,94,.2)}
-.wa-pill-pending{background:var(--adim);color:var(--accent2);border:1px solid rgba(99,102,241,.2)}
-.wa-pill-editing{background:var(--ydim);color:var(--yellow);border:1px solid rgba(245,158,11,.2)}
+.wa-chat{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}
+.wa-chat-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:6px}
+.wa-msg{max-width:75%;padding:8px 12px;border-radius:8px;font-size:13px;line-height:1.5;position:relative;word-wrap:break-word}
+.wa-msg-lead{align-self:flex-start;background:var(--bg3);border:1px solid var(--border);border-top-left-radius:2px}
+.wa-msg-op{align-self:flex-end;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.2);border-top-right-radius:2px}
+.wa-msg-sender{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.wa-msg-lead .wa-msg-sender{color:var(--green)}
+.wa-msg-op .wa-msg-sender{color:var(--accent2)}
+.wa-msg-text{color:var(--text)}
+.wa-msg-time{font-size:9px;color:var(--text4);text-align:right;margin-top:4px}
+.wa-msg-signal{display:inline-block;font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;margin-left:6px;background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+.wa-input-wrap{padding:10px 16px;border-top:1px solid var(--border);background:var(--bg2);flex-shrink:0}
+.wa-sender-toggle{display:flex;gap:4px;margin-bottom:6px}
+.wa-sender-btn{padding:4px 12px;border:1px solid var(--border2);border-radius:var(--r-sm);background:var(--bg3);color:var(--text3);font-size:10px;font-weight:600;cursor:pointer;transition:all .15s;text-transform:uppercase;letter-spacing:.5px}
+.wa-sender-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.wa-input-row{display:flex;gap:8px;align-items:flex-end}
+.wa-msg-textarea{flex:1;resize:none;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--r-md);background:var(--bg3);color:var(--text);font-size:12px;line-height:1.5;font-family:inherit}
+.wa-msg-textarea:focus{outline:none;border-color:var(--accent)}
+.wa-msg-textarea::placeholder{color:var(--text4)}
+.wa-send-btn{width:36px;height:36px;border:none;border-radius:var(--r-md);background:var(--accent);color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.wa-send-btn:hover{background:var(--accent2)}
 .wa-sidebar{width:260px;border-left:1px solid var(--border);background:var(--bg2);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
 .wa-sb-hdr{padding:12px 14px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3)}
 .wa-sb-sessions{flex:1;overflow-y:auto;padding:6px}
@@ -1598,44 +1587,40 @@ input,textarea,select{font-family:inherit;font-size:inherit}
   <div class="wa-header">
     <div class="wa-header-left">
       <span style="font-size:15px;font-weight:800;color:var(--text)">WhatsApp Activity Log</span>
-      <div id="wa-deal-info"></div>
+      <div id="wa-deal-info" style="font-size:11px;color:var(--text3)"></div>
     </div>
     <div class="wa-header-actions">
-      <button class="wa-btn" onclick="waClearLog()">Limpar</button>
-      <button class="wa-btn" onclick="waEditToggle()">Editar</button>
-      <button class="wa-btn wa-btn-success" id="wa-btn-confirm" onclick="waConfirmAll()" disabled>Confirmar no CRM</button>
+      <button class="wa-btn wa-btn-success" id="wa-btn-crm" onclick="waSyncCRM()" title="Enviar registros confirmados ao CRM">Enviar ao CRM</button>
     </div>
   </div>
   <div class="wa-body">
     <div class="wa-main">
-      <div class="wa-paste-zone" id="wa-paste-zone">
-        <div class="wa-paste-icon">📋</div>
-        <div class="wa-paste-title">Cole o print do WhatsApp</div>
-        <div class="wa-paste-sub">Ctrl+V com o screenshot da conversa. As mensagens serão extraídas e vinculadas ao deal ativo.</div>
-      </div>
-      <div class="wa-paste-preview" id="wa-paste-preview">
-        <img id="wa-paste-img" src="" alt="Screenshot">
-        <div class="wa-paste-preview-info">
-          <p id="wa-paste-status">Analisando screenshot...</p>
-          <div class="wa-progress"><div class="wa-progress-bar" id="wa-progress-bar"></div></div>
+      <!-- Chat messages (WhatsApp style) -->
+      <div class="wa-chat" id="wa-chat">
+        <div class="wa-chat-empty" id="wa-chat-empty">
+          <span style="font-size:28px;opacity:.3">💬</span>
+          <span style="font-size:12px;color:var(--text3)">Selecione um deal e cole as mensagens do WhatsApp</span>
+          <span style="font-size:10px;color:var(--text4)">Alterne Lead/Operador · Cada mensagem vira um registro individual no CRM</span>
         </div>
-        <button class="wa-btn wa-btn-primary" onclick="waAnalyzeScreenshot()">Extrair</button>
-        <button class="wa-btn" onclick="waClearPreview()">Descartar</button>
       </div>
-      <div class="wa-log-list" id="wa-log-list">
-        <div class="wa-log-empty" id="wa-log-empty">
-          <span style="font-size:24px">💬</span>
-          <span>Nenhuma mensagem registrada</span>
-          <span style="color:var(--text4)">Cole um screenshot do WhatsApp para começar</span>
+      <!-- Input area -->
+      <div class="wa-input-wrap">
+        <div class="wa-sender-toggle">
+          <button class="wa-sender-btn active" id="wa-sender-lead" onclick="waSetSender('lead')">Lead</button>
+          <button class="wa-sender-btn" id="wa-sender-op" onclick="waSetSender('operator')">Operador</button>
+        </div>
+        <div class="wa-input-row">
+          <textarea class="wa-msg-textarea" id="wa-msg-textarea" placeholder="Cole a mensagem do lead aqui..." rows="2" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();waSubmitMsg()}"></textarea>
+          <button class="wa-send-btn" onclick="waSubmitMsg()" title="Adicionar mensagem">&#10148;</button>
         </div>
       </div>
     </div>
     <div class="wa-sidebar">
-      <div class="wa-sb-hdr">Sessões de Log</div>
+      <div class="wa-sb-hdr">Conversas</div>
       <div class="wa-sb-sessions" id="wa-sb-sessions"></div>
       <div class="wa-stats" id="wa-stats">
         <div class="wa-stat"><div class="wa-stat-val" id="wa-stat-msgs">0</div><div class="wa-stat-lbl">Mensagens</div></div>
-        <div class="wa-stat"><div class="wa-stat-val" id="wa-stat-confirmed">0</div><div class="wa-stat-lbl">Confirmadas</div></div>
+        <div class="wa-stat"><div class="wa-stat-val" id="wa-stat-synced">0</div><div class="wa-stat-lbl">No CRM</div></div>
         <div class="wa-stat"><div class="wa-stat-val" id="wa-stat-deals">0</div><div class="wa-stat-lbl">Deals</div></div>
       </div>
     </div>
@@ -2516,9 +2501,11 @@ const PIPELINE_COLS=['deal_id','fase_atual_no_processo','etapa_atual_no_pipeline
   'revenue','contact_name','valor_da_oportunidade','probabilidade_de_previsao','faixa_de_faturamento',
   'nome_do_evento','tipo_de_evento','coproprietario_name',
   'perfil','utm_source','utm_campaign','motivo_lost','origem_do_deal',
+  'tipo_de_conversao','selfbooking',
   'p_telefone','p_segmento','p_cluster_rfm','p_negociacoes_ganhas','p_receita_total','p_pa_cliente',
   'p_primeiro_produto','p_ultimo_produto',
-  'p_produtos_comprados','p_data_primeira_compra','p_data_ultima_compra','p_comprou_scale','p_comprou_club'];
+  'p_produtos_comprados','p_data_primeira_compra','p_data_ultima_compra','p_comprou_scale','p_comprou_club',
+  'p_instagram'];
 
 function initOperator(){
   const email=localStorage.getItem('elucy_operator_email');
@@ -3187,6 +3174,9 @@ function renderLiveDeals(rows,cols){
     const perfilIcp=g(row,'perfil')||'';
     const motivoLost=g(row,'motivo_lost')||'';
     const origemDeal=g(row,'origem_do_deal')||'';
+    const tipoConversao=g(row,'tipo_de_conversao')||'';
+    const selfBooking=g(row,'selfbooking')||'';
+    const instagram=g(row,'p_instagram')||'';
     const produtosComprados=g(row,'p_produtos_comprados')||'';
     const dataPrimeiraCompra=g(row,'p_data_primeira_compra')||'';
     const dataUltimaCompra=g(row,'p_data_ultima_compra')||'';
@@ -3197,7 +3187,8 @@ function renderLiveDeals(rows,cols){
       telefone,clusterRfm,negGanhas,ltv,jaCliente,
       revenueRaw,valorOportunidade,probFechamento,elucyValor,forecastDelta,
       qualificador,utm,utmSource,utmCampaign,grupo,nomeEvento,primeiroProduto,ultimoProduto,
-      perfilIcp,motivoLost,origemDeal,produtosComprados,dataPrimeiraCompra,dataUltimaCompra,
+      perfilIcp,motivoLost,origemDeal,tipoConversao,selfBooking,instagram,
+      produtosComprados,dataPrimeiraCompra,dataUltimaCompra,
       comprouScale,comprouClub,
       spiced_score:(g(row,'spiced_score')!==''&&g(row,'spiced_score')!=null)?parseInt(g(row,'spiced_score')):null,
       enrichment_count:parseInt(g(row,'enrichment_count'))||0,
@@ -3706,6 +3697,16 @@ function selectLiveDeal(id,d){
         </div>
       </div>
 
+      <!-- CONTATO -->
+      ${(d.emailLead||d.telefone||d.instagram)?`<div class="dp-sec">
+        <div class="dp-sec-h sec-identity">Contato</div>
+        <div class="info-grid">
+          ${d.emailLead?ic("Email",d.emailLead,"Lead","var(--accent2)"):''}
+          ${d.telefone?ic("Telefone",d.telefone,"WhatsApp/Fone","var(--accent2)"):''}
+          ${d.instagram?ic("Instagram","@"+(d.instagram||'').replace('@',''),"Rede social","var(--accent2)"):''}
+        </div>
+      </div>`:''}
+
       <!-- DEAL ATUAL -->
       <div class="dp-sec">
         <div class="dp-sec-h sec-deal">Deal Atual</div>
@@ -4107,10 +4108,20 @@ function buildDealCards(d){
   // Valor do deal
   var vop=d.valorOportunidade||d.revenueRaw;
   if(vop>0) cards.push(ic("Valor",fmtBRL(vop),d.probFechamento>0?Math.round(d.probFechamento*100)+"% prob":"—","var(--green)"));
+  // Produto / Evento
+  if(d.produto&&d.produto!=='—') cards.push(ic("Produto",d.produto,d.tipoEvento||d.grupo||"—"));
+  // Grupo de receita
+  if(d.grupo&&d.grupo!==d.produto) cards.push(ic("Grupo",d.grupo,"Receita"));
   // Closer
   if(d.closer&&d.closer!=="—") cards.push(ic("Closer",d.closer,d.cocloser?"Co: "+d.cocloser:"—"));
   // SDR
   if(d.qualificador) cards.push(ic("SDR",d.qualificador,"Qualificador"));
+  // Origem / UTMs
+  if(d.origemDeal) cards.push(ic("Origem",d.origemDeal,"Deal source"));
+  var utmStr=[d.utmSource,d.utm,d.utmCampaign].filter(Boolean).join(" · ");
+  if(utmStr) cards.push(ic("UTM",utmStr,"Atribuição"));
+  // Tipo conversão + Self Booking
+  if(d.tipoConversao) cards.push(ic("Conversão",d.tipoConversao,d.selfBooking==='true'?"Self Booking":"—"));
   return cards.join("");
 }
 

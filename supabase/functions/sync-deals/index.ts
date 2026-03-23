@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
 
     const qualName = operator.qualificador_name || operator.name
 
-    // 4. Executa query no Databricks
+    // 4. Executa query no Databricks — busca todos os campos CRM-relevantes
     const dbQuery = `
       SELECT
         f.deal_id,
@@ -88,15 +88,47 @@ Deno.serve(async (req) => {
         f.created_at_crm,
         f.event_skipped,
         f.status_do_deal,
-        COALESCE(p.email, '') AS email_lead,
-        COALESCE(p.cargo, '') AS cargo,
-        COALESCE(p.canal_de_marketing, '') AS canal_de_marketing,
-        COALESCE(p.utm_medium, '') AS utm_medium
-      FROM production.diamond.funil_comercial f
+        f.revenue,
+        f.valor_da_oportunidade,
+        f.probabilidade_de_previsao,
+        f.nome_do_evento,
+        f.tipo_de_evento,
+        f.tipo_de_conversao,
+        f.selfbooking,
+        COALESCE(f.coproprietario_name, '') AS coproprietario_name,
+        COALESCE(f.email, '') AS email_lead,
+        COALESCE(f.cargo, '') AS cargo,
+        COALESCE(f.canal_de_marketing, '') AS canal_de_marketing,
+        COALESCE(f.utm_medium, '') AS utm_medium,
+        COALESCE(f.utm_source, '') AS utm_source,
+        COALESCE(f.utm_campaign, '') AS utm_campaign,
+        COALESCE(f.perfil, '') AS perfil,
+        COALESCE(f.motivo_lost, '') AS motivo_lost,
+        COALESCE(f.origem_do_deal, '') AS origem_do_deal,
+        COALESCE(f.faixa_de_faturamento, p.faixa_de_faturamento, '') AS faixa_de_faturamento,
+        COALESCE(p.nome, '') AS contact_name,
+        COALESCE(p.telefone, '') AS p_telefone,
+        COALESCE(p.segmento, '') AS p_segmento,
+        COALESCE(p.cluster_rfm, '') AS p_cluster_rfm,
+        COALESCE(p.negociacoes_ganhas, 0) AS p_negociacoes_ganhas,
+        COALESCE(p.receita_total, 0) AS p_receita_total,
+        COALESCE(CAST(p.pa_cliente AS STRING), 'false') AS p_pa_cliente,
+        COALESCE(p.primeiro_produto, '') AS p_primeiro_produto,
+        COALESCE(p.ultimo_produto, '') AS p_ultimo_produto,
+        COALESCE(CAST(p.produtos_comprados AS STRING), '') AS p_produtos_comprados,
+        COALESCE(CAST(p.data_primeira_compra AS STRING), '') AS p_data_primeira_compra,
+        COALESCE(CAST(p.data_ultima_compra AS STRING), '') AS p_data_ultima_compra,
+        COALESCE(CAST(p.comprou_scale AS STRING), 'false') AS p_comprou_scale,
+        COALESCE(CAST(p.comprou_club AS STRING), 'false') AS p_comprou_club
+      FROM (
+        SELECT *, ROW_NUMBER() OVER (PARTITION BY deal_id ORDER BY event_timestamp DESC) AS rn
+        FROM production.diamond.funil_comercial
+        WHERE qualificador_name = '${qualName.replace(/'/g, "''")}'
+          AND fase_atual_no_processo NOT IN ('Ganho', 'Perdido', 'Desqualificado')
+      ) f
       LEFT JOIN production.diamond.persons_overview p
-        ON f.deal_id = p.deal_id
-      WHERE f.qualificador_name = '${qualName.replace(/'/g, "''")}'
-        AND f.fase_atual_no_processo NOT IN ('Ganho', 'Perdido', 'Desqualificado')
+        ON f.email = p.email
+      WHERE f.rn = 1
       ORDER BY f.delta_t DESC
       LIMIT 300
     `
@@ -157,26 +189,58 @@ Deno.serve(async (req) => {
     // 5. Transforma rows em objetos e upserta no Supabase
     const colIdx = (name: string) => cols.indexOf(name)
 
-    const deals = rows.map(row => ({
+    const deals = rows.map(row => {
+      const str = (name: string) => row[colIdx(name)] ?? ''
+      const num = (name: string) => row[colIdx(name)] != null ? Number(row[colIdx(name)]) : null
+      return ({
       deal_id: row[colIdx('deal_id')] ?? '',
       operator_email: operatorEmail,
-      fase_atual_no_processo: row[colIdx('fase_atual_no_processo')] ?? null,
-      etapa_atual_no_pipeline: row[colIdx('etapa_atual_no_pipeline')] ?? null,
-      tier_da_oportunidade: row[colIdx('tier_da_oportunidade')] ?? null,
-      delta_t: row[colIdx('delta_t')] != null ? Number(row[colIdx('delta_t')]) : null,
-      qualificador_name: row[colIdx('qualificador_name')] ?? null,
-      proprietario_name: row[colIdx('proprietario_name')] ?? null,
-      linha_de_receita_vigente: row[colIdx('linha_de_receita_vigente')] ?? null,
-      grupo_de_receita: row[colIdx('grupo_de_receita')] ?? null,
-      created_at_crm: row[colIdx('created_at_crm')] ?? null,
+      fase_atual_no_processo: str('fase_atual_no_processo') || null,
+      etapa_atual_no_pipeline: str('etapa_atual_no_pipeline') || null,
+      tier_da_oportunidade: str('tier_da_oportunidade') || null,
+      delta_t: num('delta_t'),
+      qualificador_name: str('qualificador_name') || null,
+      proprietario_name: str('proprietario_name') || null,
+      linha_de_receita_vigente: str('linha_de_receita_vigente') || null,
+      grupo_de_receita: str('grupo_de_receita') || null,
+      created_at_crm: str('created_at_crm') || null,
       event_skipped: row[colIdx('event_skipped')] === 'true' || row[colIdx('event_skipped')] === true,
-      status_do_deal: row[colIdx('status_do_deal')] ?? null,
-      email_lead: row[colIdx('email_lead')] ?? '',
-      cargo: row[colIdx('cargo')] ?? '',
-      canal_de_marketing: row[colIdx('canal_de_marketing')] ?? '',
-      utm_medium: row[colIdx('utm_medium')] ?? '',
+      status_do_deal: str('status_do_deal') || null,
+      revenue: num('revenue'),
+      valor_da_oportunidade: num('valor_da_oportunidade'),
+      probabilidade_de_previsao: num('probabilidade_de_previsao'),
+      nome_do_evento: str('nome_do_evento'),
+      tipo_de_evento: str('tipo_de_evento'),
+      tipo_de_conversao: str('tipo_de_conversao'),
+      selfbooking: str('selfbooking'),
+      coproprietario_name: str('coproprietario_name'),
+      contact_name: str('contact_name'),
+      faixa_de_faturamento: str('faixa_de_faturamento'),
+      email_lead: str('email_lead'),
+      cargo: str('cargo'),
+      canal_de_marketing: str('canal_de_marketing'),
+      utm_medium: str('utm_medium'),
+      utm_source: str('utm_source'),
+      utm_campaign: str('utm_campaign'),
+      perfil: str('perfil'),
+      motivo_lost: str('motivo_lost'),
+      origem_do_deal: str('origem_do_deal'),
+      p_telefone: str('p_telefone'),
+      p_segmento: str('p_segmento'),
+      p_cluster_rfm: str('p_cluster_rfm'),
+      p_instagram: '',
+      p_negociacoes_ganhas: num('p_negociacoes_ganhas') ?? 0,
+      p_receita_total: num('p_receita_total') ?? 0,
+      p_pa_cliente: str('p_pa_cliente') || 'false',
+      p_primeiro_produto: str('p_primeiro_produto'),
+      p_ultimo_produto: str('p_ultimo_produto'),
+      p_produtos_comprados: str('p_produtos_comprados'),
+      p_data_primeira_compra: str('p_data_primeira_compra'),
+      p_data_ultima_compra: str('p_data_ultima_compra'),
+      p_comprou_scale: str('p_comprou_scale') || 'false',
+      p_comprou_club: str('p_comprou_club') || 'false',
       synced_at: new Date().toISOString(),
-    }))
+    })})
 
     // Apaga deals antigos do operador e reinsere (upsert por deal_id+operator_email)
     const { error: upsertErr } = await sbAdmin
