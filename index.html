@@ -139,6 +139,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .notif-item-sub{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .notif-item-ts{font-size:10px;color:var(--text2);flex-shrink:0}
 .notif-empty{padding:24px;text-align:center;font-size:12px;color:var(--text2)}
+/* Business Analysis panel */
+.ba{background:var(--bg2);border:1px solid var(--clay);border-radius:var(--r2);overflow:hidden;margin-bottom:13px}
+.ba-h{background:linear-gradient(135deg,#1a1008,#0d0d1f);padding:13px 17px;border-bottom:1px solid var(--clay);display:flex;align-items:center;gap:9px}
+.ba-badge{background:var(--clay);color:#fff;font-size:9px;font-weight:900;padding:3px 7px;border-radius:4px;letter-spacing:1.5px}
+.ba-htitle{font-family:var(--font-title);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.ba-b{padding:14px 17px;font-size:12px;line-height:1.7;white-space:pre-wrap}
+.ba-b h3,.ba-b strong{color:var(--accent2)}.ba-b table{width:100%;border-collapse:collapse;margin:8px 0}.ba-b th,.ba-b td{padding:5px 8px;border:1px solid var(--border);font-size:11px;text-align:left}.ba-b th{background:var(--bg3);color:var(--text2)}
 /* ELUCi motor styles */
 .elucy-badge{background:var(--adim);border:1px solid var(--accent);border-radius:3px;padding:1px 6px;font-size:9px;font-weight:800;color:var(--accent2);margin-left:6px;vertical-align:middle}
 .elucy-live{background:var(--gdim)!important;border-color:var(--green)!important;color:var(--green)!important}
@@ -1929,10 +1936,16 @@ function initRealtimeSubscription(){
 
 function handleElucyResponse(row, pending){
   const {targetId, deal_id, type}=pending;
+  if(type==='business_analysis'){
+    injectBusinessAnalysis(targetId, row.output);
+    pushNotification('Análise de mercado pronta','Deal '+deal_id,'🏢',row.output);
+    logDealInteraction(deal_id, 'business_analysis', row.output);
+    return;
+  }
   if(type==='analyze'){
     ELUCY_CACHE[deal_id]=row.output;
     injectElucyReport(targetId, row.output);
-    pushNotification('Análise pronta','Deal '+deal_id,'📊',row.output);
+    pushNotification('ELUCI Report pronto','Deal '+deal_id,'📊',row.output);
   } else if(type==='copy'||type==='dm_copy'){
     try{
       const parsed=JSON.parse(row.output);
@@ -1943,8 +1956,23 @@ function handleElucyResponse(row, pending){
       pushNotification('Copy pronta','Deal '+deal_id,'📋',row.output);
     }
   }
-  // Save to deal_interactions
   logDealInteraction(deal_id, type==='analyze'?'analysis':'copy', row.output);
+}
+
+function injectBusinessAnalysis(targetId, output){
+  const baEl=document.getElementById('ba-'+targetId);
+  if(!baEl) return;
+  // Simple markdown-to-html for tables and headers
+  let html=escHtml(output)
+    .replace(/^### (.+)$/gm,'<h3 style="color:var(--accent2);margin:10px 0 4px;font-size:13px;font-weight:700">$1</h3>')
+    .replace(/^## (.+)$/gm,'<h3 style="color:var(--accent);margin:12px 0 6px;font-size:14px;font-weight:800">$1</h3>')
+    .replace(/^\*\*(.+?)\*\*/gm,'<strong>$1</strong>')
+    .replace(/^- (.+)$/gm,'<div style="padding:2px 0 2px 12px;border-left:2px solid var(--border)">$1</div>')
+    .replace(/\[Alta\]/g,'<span style="color:var(--green);font-weight:700">[Alta]</span>')
+    .replace(/\[Média\]/g,'<span style="color:var(--yellow);font-weight:700">[Média]</span>')
+    .replace(/\[Baixa\]/g,'<span style="color:var(--red);font-weight:700">[Baixa]</span>');
+  baEl.innerHTML='<div class="ba-h"><span class="ba-badge">ANÁLISE</span><span class="ba-htitle">Análise de Mercado</span><button class="hist-copy-btn" onclick="event.stopPropagation();clipText(document.getElementById(\'ba-content-'+targetId+'\').innerText)" style="position:static;margin-left:auto">Copiar</button></div><div class="ba-b" id="ba-content-'+targetId+'">'+html+'</div>';
+  baEl.style.display='block';
 }
 
 // ── NOTIFICATION SYSTEM ──
@@ -2153,6 +2181,83 @@ async function logDealInteraction(dealId, interactionType, content, metadata){
   }).then(()=>{}).catch(()=>{});
 }
 
+// ── BUSINESS ANALYSIS (prompt McKinsey otimizado) ──
+async function requestBusinessAnalysis(id){
+  const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
+  if(!deal){showSyncToast('err','Selecione um deal primeiro.');return;}
+  const baEl=document.getElementById('ba-'+id);
+  if(!baEl) return;
+  // Toggle — se já tem conteúdo, mostra/esconde
+  if(baEl.querySelector('.ba-h')){
+    baEl.style.display=baEl.style.display==='none'?'block':'none';
+    return;
+  }
+  baEl.style.display='block';
+  baEl.innerHTML='<div class="ba-h"><span class="ba-badge">ANÁLISE</span><span class="ba-htitle">Análise de Mercado</span></div><div class="ba-b"><span class="elucy-pulse">ELUCi analisando setor do deal...</span></div>';
+
+  // Monta o setor a partir do deal
+  const setor=deal.linhaReceita||deal.canal||'educação executiva B2B';
+  const empresa=deal.empresa||'—';
+  const cargo=deal.cargo||'—';
+
+  const prompt=`Você é um analista estratégico sênior (tier McKinsey/BCG) especializado no mercado brasileiro.
+
+CONTEXTO DO DEAL: Empresa "${empresa}", Cargo do decisor: "${cargo}", Setor inferido: "${setor}", Produto: "${deal.linhaReceita||'educação executiva'}", Tier: ${deal.tier||'—'}
+
+OBJETIVO: Análise executiva compacta do setor deste deal no Brasil — decisão em 5 minutos.
+
+FORMATO — 6 blocos, sem introdução:
+
+1. MERCADO (3-5 bullets)
+- TAM Brasil (R$, fonte, ano) | Crescimento YoY | Drivers
+- Regulação e tributação relevante
+
+2. TENDÊNCIAS (3-4 bullets)
+- Últimos 12 meses + Próximos 3 anos
+- Benchmark global vs Brasil
+
+3. COMPETIDORES (tabela markdown)
+| Player | Receita BR est. | Preço médio | Canal | Diferencial |
+3-5 players com dados + fonte/ano.
+
+4. FORÇAS COMPETITIVAS
+- Porter: 1 linha por força (Alta/Média/Baixa + justificativa)
+- SWOT: 2 itens por quadrante
+- Cadeia de valor: 3 nós críticos
+
+5. LACUNAS & OPORTUNIDADES
+- 2-3 gaps onde nenhum player atende
+
+6. JOGADAS ESTRATÉGICAS
+- Jogada A/B/C: o quê, para quem, como
+
+REGRAS: Dados BR prioritários. Cite fonte+ano. Marque confiança [Alta]/[Média]/[Baixa]. Moeda R$. Zero opinião sem evidência.`;
+
+  if(window.IS_REMOTE){
+    const sb=getSB();
+    const email=_currentUser&&_currentUser.email;
+    if(!sb||!email) return;
+    initRealtimeSubscription();
+    const {data,error}=await sb.from('cockpit_requests').insert({
+      operator_id: email,
+      deal_id: deal.deal_id||'_ba_'+id,
+      request_type: 'analyze',
+      deal_data: {...deal, _business_analysis: true, _ba_prompt: prompt},
+      status: 'pending'
+    }).select().single();
+    if(error){
+      baEl.innerHTML='<div class="ba-h"><span class="ba-badge">ERRO</span><span class="ba-htitle">Análise de Mercado</span></div><div class="ba-b">'+escHtml(error.message)+'</div>';
+      return;
+    }
+    if(data) _pendingRequests[data.id]={targetId:id, deal_id:deal.deal_id, type:'business_analysis'};
+    logActivity('business_analysis_requested', deal.deal_id);
+  } else {
+    const payload={type:'g4os:elucy:analyze',deal_id:deal.deal_id,deal_data:{...deal,_business_analysis:true,_ba_prompt:prompt},target_id:id};
+    try{window.parent.postMessage(payload,'*');}catch(e){}
+    window.postMessage(payload,'*');
+  }
+}
+
 // Load deal interaction history from Supabase
 async function loadDealHistory(dealId, targetId){
   const sb=getSB();
@@ -2319,12 +2424,14 @@ function selectLiveDeal(id,d){
       ${d._signal==='DOME'?`<div class="alrt al-w">Iron Dome ativo — +10 dias sem resposta. Copy bloqueada até revisão manual.</div>`:''}
       <div class="row">
         <button class="btn bp" onclick="showCopy('${id}')">Gerar Copy via ELUCi</button>
-        <button class="btn bs" onclick="toggleER('${id}')">Análise de Negócio</button>
+        <button class="btn bs" onclick="toggleER('${id}')">ELUCI Report</button>
+        <button class="btn bs" onclick="requestBusinessAnalysis('${id}')" style="border-color:var(--clay);color:var(--clay)">Análise de Mercado</button>
       </div>
     </div>
     <div class="er" id="er-${id}" style="display:none">
       <div class="er-loading" style="display:none"></div>
     </div>
+    <div class="ba" id="ba-${id}" style="display:none"></div>
     <div class="dvl" id="dvl-${id}" style="display:none">
       <div class="dvl-t">DVL Gate — Confirmar antes de gerar</div>
       <div class="dvl-s">Dados do funil_comercial. Edite se necessário.</div>
