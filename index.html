@@ -1942,48 +1942,54 @@ function applyFilters(){
 
 function filterDeals(q){applyFilters();}
 
-// ── BENCHMARK DATABRICKS — dados reais para Intelligence ──
-let _benchData=null;
-let _benchLoading=false;
+// ── INTELLIGENCE ENGINE — Dados Reais Databricks ──
+let _intelData=null;
+let _intelLoading=false;
 
-function loadBenchmarkData(cb){
-  if(_benchData){ cb(_benchData); return; }
-  if(_benchLoading) return;
-  _benchLoading=true;
+function _dbQuery(sql){
   const token=localStorage.getItem('elucy_db_token');
-  if(!token){ _benchLoading=false; cb(null); return; }
-  const ano=new Date().getFullYear();
-  // Query 1: delta por transição × linha (top canais SDR)
-  const q1=`SELECT linha_de_receita_vigente as linha, fase_anterior_no_processo as de, fase_atual_no_processo as para, COUNT(*) as qtd, ROUND(AVG(delta_t),1) as avg_delta FROM production.diamond.funil_comercial WHERE delta_t IS NOT NULL AND delta_t > 0 AND YEAR(event_timestamp) >= ${ano} AND fase_anterior_no_processo IN ('SAL','Conectado','Agendado') AND fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') AND linha_de_receita_vigente IS NOT NULL AND linha_de_receita_vigente != '' GROUP BY linha_de_receita_vigente, fase_anterior_no_processo, fase_atual_no_processo HAVING COUNT(*) >= 5 ORDER BY linha_de_receita_vigente, qtd DESC`;
-  // Query 2: conversão + ticket por linha × perfil
-  const q2=`SELECT linha_de_receita_vigente as linha, perfil, COUNT(DISTINCT deal_id) as deals, SUM(CASE WHEN fase_atual_no_processo='Ganho' THEN 1 ELSE 0 END) as won, ROUND(SUM(CASE WHEN fase_atual_no_processo='Ganho' THEN 1 ELSE 0 END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) as conv, ROUND(AVG(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue END),0) as ticket FROM production.diamond.funil_comercial WHERE YEAR(event_timestamp) >= ${ano} AND perfil IS NOT NULL AND perfil != '' AND linha_de_receita_vigente IS NOT NULL AND linha_de_receita_vigente != '' GROUP BY linha_de_receita_vigente, perfil HAVING COUNT(DISTINCT deal_id) >= 20 ORDER BY deals DESC LIMIT 50`;
-  const hdrs={'x-db-token':token,'apikey':SUPABASE_ANON,'Content-Type':'application/json'};
+  return fetch(DB_ENDPOINT,{
+    method:'POST',
+    headers:{'x-db-token':token,'apikey':SUPABASE_ANON,'Content-Type':'application/json'},
+    body:JSON.stringify({statement:sql,warehouse_id:DB_WAREHOUSE,wait_timeout:'30s',on_wait_timeout:'CONTINUE'})
+  }).then(r=>r.json()).then(r=>(r.result&&r.result.data_array)||[]);
+}
+
+function loadIntelligenceData(cb){
+  if(_intelData){ cb(_intelData); return; }
+  if(_intelLoading) return;
+  _intelLoading=true;
+  const token=localStorage.getItem('elucy_db_token');
+  if(!token){ _intelLoading=false; cb(null); return; }
+
+  const qFunil=`SELECT linha_de_receita_vigente AS linha, COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('MQL','SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) AS mqls, COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) AS sals, COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END) AS opps, COUNT(DISTINCT CASE WHEN fase_atual_no_processo = 'Ganho' THEN deal_id END) AS ganhos, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) * 100.0 / NULLIF(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('MQL','SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END), 0), 1) AS cr_mql_sal, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END) * 100.0 / NULLIF(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END), 0), 1) AS cr_sal_opp, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo = 'Ganho' THEN deal_id END) * 100.0 / NULLIF(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END), 0), 1) AS cr_opp_ganho FROM production.diamond.funil_comercial WHERE YEAR(event_timestamp) = YEAR(CURRENT_DATE()) AND MONTH(event_timestamp) = MONTH(CURRENT_DATE()) AND linha_de_receita_vigente IS NOT NULL AND linha_de_receita_vigente != '' GROUP BY linha_de_receita_vigente HAVING COUNT(DISTINCT deal_id) >= 5 ORDER BY mqls DESC LIMIT 15`;
+
+  const qSDR=`SELECT qualificador_name AS sdr, COUNT(DISTINCT deal_id) AS total_deals, COUNT(DISTINCT CASE WHEN fase_atual_no_processo NOT IN ('MQL') THEN deal_id END) AS convertidos_sal, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo NOT IN ('MQL') THEN deal_id END) * 100.0 / NULLIF(COUNT(DISTINCT deal_id), 0), 1) AS cr_mql_sal, COUNT(DISTINCT CASE WHEN fase_atual_no_processo = 'Ganho' THEN deal_id END) AS ganhos, ROUND(AVG(CASE WHEN fase_atual_no_processo = 'Ganho' THEN revenue END), 0) AS ticket_medio FROM production.diamond.funil_comercial WHERE YEAR(event_timestamp) = YEAR(CURRENT_DATE()) AND MONTH(event_timestamp) = MONTH(CURRENT_DATE()) AND qualificador_name IS NOT NULL AND qualificador_name != '' GROUP BY qualificador_name HAVING COUNT(DISTINCT deal_id) >= 3 ORDER BY cr_mql_sal DESC LIMIT 20`;
+
+  const qPerda=`SELECT fase_anterior_no_processo AS fase_perda, motivo_lost, COUNT(DISTINCT deal_id) AS perdidos, ROUND(AVG(delta_t), 1) AS avg_dias FROM production.diamond.funil_comercial WHERE fase_atual_no_processo = 'Perdido' AND YEAR(event_timestamp) = YEAR(CURRENT_DATE()) AND MONTH(event_timestamp) = MONTH(CURRENT_DATE()) AND motivo_lost IS NOT NULL AND motivo_lost != '' GROUP BY fase_anterior_no_processo, motivo_lost HAVING COUNT(DISTINCT deal_id) >= 2 ORDER BY perdidos DESC LIMIT 12`;
+
+  const qIronDome=`SELECT fase_atual_no_processo AS fase, etapa_atual_no_pipeline AS etapa, COUNT(DISTINCT deal_id) AS deals_parados, ROUND(AVG(delta_t), 1) AS avg_dias, ROUND(SUM(revenue), 0) AS receita_risco FROM production.diamond.funil_comercial WHERE delta_t > 7 AND fase_atual_no_processo NOT IN ('Ganho','Perdido') AND YEAR(event_timestamp) = YEAR(CURRENT_DATE()) AND MONTH(event_timestamp) = MONTH(CURRENT_DATE()) GROUP BY fase_atual_no_processo, etapa_atual_no_pipeline HAVING COUNT(DISTINCT deal_id) >= 2 ORDER BY receita_risco DESC LIMIT 10`;
+
+  const qPipeline=`SELECT fase_atual_no_processo AS fase, COUNT(DISTINCT deal_id) AS deals, ROUND(SUM(revenue), 0) AS receita_bruta, ROUND(SUM(revenue * CASE WHEN fase_atual_no_processo = 'SAL' THEN 0.10 WHEN fase_atual_no_processo = 'Conectado' THEN 0.20 WHEN fase_atual_no_processo = 'Agendado' THEN 0.40 WHEN fase_atual_no_processo = 'Negociação' THEN 0.60 WHEN fase_atual_no_processo = 'Ganho' THEN 1.0 ELSE 0.05 END), 0) AS receita_ponderada FROM production.diamond.funil_comercial WHERE fase_atual_no_processo NOT IN ('Perdido') AND YEAR(event_timestamp) = YEAR(CURRENT_DATE()) AND MONTH(event_timestamp) = MONTH(CURRENT_DATE()) AND revenue > 0 GROUP BY fase_atual_no_processo ORDER BY CASE fase_atual_no_processo WHEN 'MQL' THEN 1 WHEN 'SAL' THEN 2 WHEN 'Conectado' THEN 3 WHEN 'Agendado' THEN 4 WHEN 'Negociação' THEN 5 WHEN 'Ganho' THEN 6 ELSE 7 END`;
+
+  const qICP=`SELECT perfil, COUNT(DISTINCT deal_id) AS deals, COUNT(DISTINCT CASE WHEN fase_atual_no_processo = 'Ganho' THEN deal_id END) AS ganhos, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo = 'Ganho' THEN deal_id END) * 100.0 / NULLIF(COUNT(DISTINCT deal_id), 0), 1) AS win_rate, ROUND(AVG(CASE WHEN fase_atual_no_processo = 'Ganho' THEN revenue END), 0) AS ticket_medio FROM production.diamond.funil_comercial WHERE YEAR(event_timestamp) = YEAR(CURRENT_DATE()) AND MONTH(event_timestamp) = MONTH(CURRENT_DATE()) AND perfil IS NOT NULL AND perfil != '' GROUP BY perfil HAVING COUNT(DISTINCT deal_id) >= 5 ORDER BY win_rate DESC`;
+
+  const qMensal=`SELECT DATE_FORMAT(event_timestamp, 'yyyy-MM') AS mes, COUNT(DISTINCT deal_id) AS mqls, COUNT(DISTINCT CASE WHEN fase_atual_no_processo NOT IN ('MQL') THEN deal_id END) AS sals, COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END) AS opps, COUNT(DISTINCT CASE WHEN fase_atual_no_processo = 'Ganho' THEN deal_id END) AS ganhos, ROUND(SUM(CASE WHEN fase_atual_no_processo = 'Ganho' THEN revenue ELSE 0 END), 0) AS receita FROM production.diamond.funil_comercial WHERE event_timestamp >= ADD_MONTHS(CURRENT_DATE(), -3) AND event_timestamp <= CURRENT_DATE() GROUP BY DATE_FORMAT(event_timestamp, 'yyyy-MM') ORDER BY mes`;
+
+  const qIG=`SELECT CASE WHEN linha_de_receita_vigente LIKE '%Tallis%' THEN 'Tallis' WHEN linha_de_receita_vigente LIKE '%Alfredo%' THEN 'Alfredo' WHEN linha_de_receita_vigente LIKE '%Nardon%' THEN 'Nardon' WHEN linha_de_receita_vigente LIKE '%G4%' AND linha_de_receita_vigente LIKE '%Instagram%' THEN 'G4' ELSE 'Outros' END AS conta_ig, COUNT(DISTINCT deal_id) AS sals, COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END) AS opps, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END) * 100.0 / NULLIF(COUNT(DISTINCT deal_id), 0), 1) AS cr_sal_opp, COUNT(DISTINCT CASE WHEN fase_atual_no_processo = 'Ganho' THEN deal_id END) AS ganhos FROM production.diamond.funil_comercial WHERE linha_de_receita_vigente LIKE '%Instagram%' AND YEAR(event_timestamp) = YEAR(CURRENT_DATE()) AND MONTH(event_timestamp) = MONTH(CURRENT_DATE()) GROUP BY 1 ORDER BY sals DESC`;
+
   Promise.all([
-    fetch(DB_ENDPOINT,{method:'POST',headers:hdrs,body:JSON.stringify({statement:q1,warehouse_id:DB_WAREHOUSE,wait_timeout:'30s',on_wait_timeout:'CONTINUE'})}).then(r=>r.json()),
-    fetch(DB_ENDPOINT,{method:'POST',headers:hdrs,body:JSON.stringify({statement:q2,warehouse_id:DB_WAREHOUSE,wait_timeout:'30s',on_wait_timeout:'CONTINUE'})}).then(r=>r.json())
-  ]).then(([r1,r2])=>{
-    _benchLoading=false;
-    const rows1=(r1.result&&r1.result.data_array)||[];
-    const rows2=(r2.result&&r2.result.data_array)||[];
-    if(!rows1.length&&!rows2.length){ cb(null); return; }
-    // Processar delta por transição
-    const deltaMap={};
-    rows1.forEach(r=>{
-      const linha=r[0]||'';const de=r[1];const para=r[2];const qtd=parseInt(r[3])||0;const avg=parseFloat(r[4])||0;
-      if(!deltaMap[linha]) deltaMap[linha]={};
-      const key=de+'→'+para;
-      deltaMap[linha][key]={qtd,avg};
-    });
-    // Processar conversão × perfil
-    const convMap={};
-    rows2.forEach(r=>{
-      const linha=r[0]||'';const perfil=r[1]||'';const deals=parseInt(r[2])||0;const won=parseInt(r[3])||0;const conv=parseFloat(r[4])||0;const ticket=parseInt(r[5])||0;
-      if(!convMap[linha]) convMap[linha]={};
-      convMap[linha][perfil]={deals,won,conv,ticket};
-    });
-    _benchData={deltaMap,convMap};
-    cb(_benchData);
-  }).catch(()=>{ _benchLoading=false; cb(null); });
+    _dbQuery(qFunil),_dbQuery(qSDR),_dbQuery(qPerda),_dbQuery(qIronDome),
+    _dbQuery(qPipeline),_dbQuery(qICP),_dbQuery(qMensal),_dbQuery(qIG)
+  ]).then(([funil,sdr,perda,ironDome,pipeline,icp,mensal,ig])=>{
+    _intelLoading=false;
+    _intelData={funil,sdr,perda,ironDome,pipeline,icp,mensal,ig};
+    cb(_intelData);
+  }).catch(e=>{
+    console.error('[INTEL] Erro ao carregar dados:',e);
+    _intelLoading=false;
+    cb(null);
+  });
 }
 
 // ── REPORTS DINÂMICOS — dados reais do Databricks via proxy ──
@@ -4758,331 +4764,169 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 });
 
-// ── INTELLIGENCE ENGINE ────────────────────────────────────────
+// ── INTELLIGENCE ENGINE — DADOS REAIS DATABRICKS ──────────────
 function renderIntelligence(){
-  const map=window._COCKPIT_DEAL_MAP;
   const ct=document.getElementById('intel-content');
   const sub=document.getElementById('intel-subtitle');
-  if(!map||!ct) return;
-  const deals=Object.values(map);
-  if(!deals.length){
-    ct.innerHTML='<div class="intel-empty">Nenhum deal carregado. Sincronize o pipeline primeiro.</div>';
+  if(!ct) return;
+  const token=localStorage.getItem('elucy_db_token');
+  if(!token){
+    ct.innerHTML='<div class="intel-empty">Configure seu token Databricks para acessar inteligência operacional.</div>';
     return;
   }
-  if(sub) sub.textContent=deals.length+' deals ativos — '+new Date().toLocaleDateString('pt-BR');
+  ct.innerHTML='<div class="intel-empty" style="display:flex;align-items:center;justify-content:center;gap:8px"><span class="spin" style="width:16px;height:16px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite"></span> Carregando dados reais do Databricks…</div>';
+  if(sub) sub.textContent='Consultando funil_comercial — aguarde…';
 
-  // ── CALCULOS ──
-  const total=deals.length;
-  const byEtapa={},byTier={},byCanal={},bySignal={},byLinha={},byCargo={};
-  let totalDelta=0,deltaCount=0;
-  let slaRisk=0,irondome=0,buyCount=0,riskCount=0,stallCount=0;
+  loadIntelligenceData(function(data){
+    if(!data){
+      ct.innerHTML='<div class="intel-empty">Erro ao carregar dados. Verifique seu token Databricks.</div>';
+      return;
+    }
+    if(sub) sub.textContent='Dados reais — '+new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+    _renderIntelHTML(data);
+  });
+}
 
-  deals.forEach(d=>{
-    const etapa=(d._etapa||d.etapa||'').toLowerCase();
-    const tier=(d._tier||d.tier||'').toLowerCase();
-    const canal=d.canal||'Direto';
-    const signal=d._signal||'';
-    const linha=d.linhaReceita||'Sem linha';
-    const cargo=d.cargo||'Sem cargo';
-    const delta=d._delta||d.delta||0;
+function _renderIntelHTML(D){
+  const ct=document.getElementById('intel-content');
+  const {funil,sdr,perda,ironDome,pipeline,icp,mensal,ig}=D;
 
-    byEtapa[etapa]=(byEtapa[etapa]||0)+1;
-    byTier[tier]=(byTier[tier]||0)+1;
-    byCanal[canal]=(byCanal[canal]||0)+1;
-    bySignal[signal]=(bySignal[signal]||0)+1;
-    byLinha[linha]=(byLinha[linha]||0)+1;
-    byCargo[cargo]=(byCargo[cargo]||0)+1;
-    totalDelta+=delta; deltaCount++;
-    if(delta>7) slaRisk++;
-    if(delta>10) irondome++;
-    if(signal==='BUY') buyCount++;
-    if(signal==='RISK') riskCount++;
-    if(signal==='STALL') stallCount++;
+  // ── SEÇÃO 1: PIPELINE PONDERADO (KPIs macro) ──
+  let totalBruto=0,totalPonderado=0,totalDeals=0,totalGanhos=0,receitaGanha=0;
+  const faseOrder=['MQL','SAL','Conectado','Agendado','Negociação','Ganho'];
+  pipeline.forEach(r=>{
+    const fase=r[0]||'';const deals=parseInt(r[1])||0;const bruto=parseInt(r[2])||0;const pond=parseInt(r[3])||0;
+    totalDeals+=deals;totalBruto+=bruto;totalPonderado+=pond;
+    if(fase==='Ganho'){totalGanhos+=deals;receitaGanha+=bruto;}
   });
 
-  const avgDelta=deltaCount?Math.round(totalDelta/deltaCount*10)/10:0;
+  // Iron Dome total
+  let irondomeTotal=0,irondomeReceita=0;
+  ironDome.forEach(r=>{irondomeTotal+=parseInt(r[2])||0;irondomeReceita+=parseInt(r[4])||0;});
 
-  // Etapas do funil em ordem
-  const funnelOrder=['novo lead','dia 01','dia 02','dia 03','dia 04','dia 05','dia 06','conectados','agendamento','reagendamento','entrevista agendada'];
-  const funnelData=funnelOrder.map(e=>({name:e,count:byEtapa[e]||0})).filter(e=>e.count>0);
-  const maxFunnel=Math.max(...funnelData.map(e=>e.count),1);
-
-  // Top tiers
-  const tierOrder=['diamond','gold','silver','bronze'];
-  const tierData=tierOrder.map(t=>({name:t,count:byTier[t]||0})).filter(t=>t.count>0);
-  const maxTier=Math.max(...tierData.map(t=>t.count),1);
-
-  // Top canais
-  const canalData=Object.entries(byCanal).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  const maxCanal=Math.max(...canalData.map(c=>c[1]),1);
-
-  // Top linhas
-  const linhaData=Object.entries(byLinha).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  const maxLinha=Math.max(...linhaData.map(l=>l[1]),1);
-
-  // Top cargos
-  const cargoData=Object.entries(byCargo).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  const maxCargo=Math.max(...cargoData.map(c=>c[1]),1);
-
-  // Temperatura média
-  const avgTemp=Math.round(deals.reduce((s,d)=>(s+(d._temp||d.temp||0)),0)/total);
-
-  // Valor total pipeline (Elucy)
-  const totalValor=deals.reduce((s,d)=>(s+(d.elucyValor||0)),0);
-
-  // Comportamento — delta por etapa
-  const deltaByEtapa={};
-  deals.forEach(d=>{
-    const e=(d._etapa||d.etapa||'').toLowerCase();
-    if(!deltaByEtapa[e]) deltaByEtapa[e]={sum:0,count:0};
-    deltaByEtapa[e].sum+=(d._delta||d.delta||0);
-    deltaByEtapa[e].count++;
-  });
-
-  // ── INSIGHTS INTELIGENTES ──
-  const insights=[];
-
-  // Onde perde mais (etapa com mais deals SLA risco)
-  const slaByEtapa={};
-  deals.filter(d=>(d._delta||d.delta||0)>7).forEach(d=>{
-    const e=(d._etapa||d.etapa||'').toLowerCase();
-    slaByEtapa[e]=(slaByEtapa[e]||0)+1;
-  });
-  const worstEtapa=Object.entries(slaByEtapa).sort((a,b)=>b[1]-a[1])[0];
-  if(worstEtapa) insights.push({type:'bad',label:'Gargalo detectado',text:`Você tem ${worstEtapa[1]} deal(s) em SLA risco na etapa "${fmtEtapa(worstEtapa[0])}". Revise a abordagem nessa fase — possivelmente falta de follow-up ou qualificação insuficiente.`});
-
-  // Qual tier converte mais (baseado em temperatura média)
-  const tempByTier={};
-  deals.forEach(d=>{
-    const t=(d._tier||d.tier||'').toLowerCase();
-    if(!tempByTier[t]) tempByTier[t]={sum:0,count:0};
-    tempByTier[t].sum+=(d._temp||d.temp||0);
-    tempByTier[t].count++;
-  });
-  const bestTier=Object.entries(tempByTier).sort((a,b)=>(b[1].sum/b[1].count)-(a[1].sum/a[1].count))[0];
-  if(bestTier) insights.push({type:'good',label:'Melhor perfil',text:`Tier "${bestTier[0].toUpperCase()}" tem a maior temperatura média (${Math.round(bestTier[1].sum/bestTier[1].count)}/100). Priorize esses deals no pipeline diário.`});
-
-  // Qual canal performa melhor
-  const tempByCanal={};
-  deals.forEach(d=>{
-    const c=d.canal||'Direto';
-    if(!tempByCanal[c]) tempByCanal[c]={sum:0,count:0};
-    tempByCanal[c].sum+=(d._temp||d.temp||0);
-    tempByCanal[c].count++;
-  });
-  const bestCanal=Object.entries(tempByCanal).filter(c=>c[1].count>=2).sort((a,b)=>(b[1].sum/b[1].count)-(a[1].sum/a[1].count))[0];
-  if(bestCanal) insights.push({type:'good',label:'Melhor canal',text:`"${bestCanal[0]}" tem a melhor performance (temp. média ${Math.round(bestCanal[1].sum/bestCanal[1].count)}/100, ${bestCanal[1].count} deals). Concentre esforço nesse canal.`});
-
-  // Iron Dome ativo
-  if(irondome>0) insights.push({type:'bad',label:'Iron Dome',text:`${irondome} deal(s) com +10 dias sem resposta. Esses deals precisam de revisão estratégica completa antes de novas tentativas.`});
-
-  // Distribuição de sinais
-  if(stallCount>total*0.3) insights.push({type:'warn',label:'Padrão de stall',text:`${Math.round(stallCount/total*100)}% dos seus deals estão travados (STALL). Isso indica falta de urgência ou objeção não mapeada. Use Challenger Reframe nos deals com +5 dias.`});
-
-  if(buyCount>0) insights.push({type:'good',label:'Oportunidade quente',text:`${buyCount} deal(s) com sinal de compra ativo (BUY). Execute fechamento imediato — a janela é de 48h.`});
-
-  // Comportamento — delta médio alto
-  if(avgDelta>5) insights.push({type:'warn',label:'Velocidade do pipeline',text:`Delta médio de ${avgDelta} dias entre fases. Benchmark saudável é <3 dias para SDR. Aumente a cadência de FUPs.`});
-
-  // Concentração em fase inicial
-  const iniciais=(byEtapa['dia 01']||0)+(byEtapa['dia 02']||0)+(byEtapa['dia 03']||0)+(byEtapa['novo lead']||0);
-  if(iniciais>total*0.5) insights.push({type:'warn',label:'Pipeline parado no topo',text:`${Math.round(iniciais/total*100)}% dos deals ainda estão em prospecção (D1-D3/MQL). O funil precisa de mais deals avançando para Conectado/Agendado.`});
-
-  // ── RENDER HTML ──
-  ct.innerHTML=`
-    ${renderSection(1,'Volume',`
-      <div class="intel-kpi-row">
-        <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--accent2)">${total}</div><div class="intel-kpi-l">Deals ativos</div></div>
-        <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--green)">${buyCount}</div><div class="intel-kpi-l">Sinal BUY</div></div>
-        <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--yellow)">${stallCount}</div><div class="intel-kpi-l">Travados</div></div>
-        <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--red)">${riskCount}</div><div class="intel-kpi-l">Em risco</div></div>
-        <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--red)">${irondome}</div><div class="intel-kpi-l">Iron Dome</div></div>
-        <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--accent2)">${fmtBRL(totalValor)}</div><div class="intel-kpi-l">Pipeline Elucy</div></div>
-      </div>
-    `)}
-    ${renderSection(2,'Conversão — Funil por Etapa',`
-      ${funnelData.map(e=>`
-        <div class="intel-bar-row">
-          <span class="intel-bar-label">${fmtEtapa(e.name)}</span>
-          <div class="intel-bar-bg"><div class="intel-bar-fill" style="width:${Math.max(5,e.count/maxFunnel*100)}%"><span class="intel-bar-v">${e.count}</span></div></div>
-          <span class="intel-bar-pct">${Math.round(e.count/total*100)}%</span>
-        </div>`).join('')}
-    `)}
-    <div class="intel-grid">
-      ${renderCard('Eficiência por Tier',tierData.map(t=>`
-        <div class="intel-bar-row">
-          <span class="intel-bar-label">${t.name.toUpperCase()}</span>
-          <div class="intel-bar-bg"><div class="intel-bar-fill" style="width:${Math.max(5,t.count/maxTier*100)}%;${t.name==='diamond'?'background:linear-gradient(90deg,#f59e0b,#fbbf24)':t.name==='gold'?'background:linear-gradient(90deg,#a78bfa,#6c63ff)':''}""><span class="intel-bar-v">${t.count}</span></div></div>
-          <span class="intel-bar-pct">${Math.round(t.count/total*100)}%</span>
-        </div>`).join(''))}
-      ${renderCard('Eficiência por Canal',canalData.map(([c,n])=>`
-        <div class="intel-bar-row">
-          <span class="intel-bar-label">${c}</span>
-          <div class="intel-bar-bg"><div class="intel-bar-fill" style="width:${Math.max(5,n/maxCanal*100)}%"><span class="intel-bar-v">${n}</span></div></div>
-          <span class="intel-bar-pct">${Math.round(n/total*100)}%</span>
-        </div>`).join(''))}
+  let html=renderSection(1,'Pipeline — Mês Atual',`
+    <div class="intel-kpi-row">
+      <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--accent2)">${totalDeals.toLocaleString('pt-BR')}</div><div class="intel-kpi-l">Deals no mês</div></div>
+      <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--green)">${totalGanhos.toLocaleString('pt-BR')}</div><div class="intel-kpi-l">Ganhos</div></div>
+      <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--green)">${fmtBRL(receitaGanha)}</div><div class="intel-kpi-l">Receita fechada</div></div>
+      <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--accent)">${fmtBRL(totalPonderado)}</div><div class="intel-kpi-l">Pipeline ponderado</div></div>
+      <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--red)">${irondomeTotal}</div><div class="intel-kpi-l">Iron Dome (+7d)</div></div>
+      <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--red)">${fmtBRL(irondomeReceita)}</div><div class="intel-kpi-l">Receita em risco</div></div>
     </div>
-    <div class="intel-grid">
-      ${renderCard('Eficiência por Linha de Receita',linhaData.map(([l,n])=>`
-        <div class="intel-bar-row">
-          <span class="intel-bar-label" title="${l}">${l.length>22?l.slice(0,22)+'…':l}</span>
-          <div class="intel-bar-bg"><div class="intel-bar-fill" style="width:${Math.max(5,n/maxLinha*100)}%"><span class="intel-bar-v">${n}</span></div></div>
-          <span class="intel-bar-pct">${Math.round(n/total*100)}%</span>
-        </div>`).join(''))}
-      ${renderCard('Eficiência por Cargo (Senioridade)',cargoData.map(([c,n])=>`
-        <div class="intel-bar-row">
-          <span class="intel-bar-label" title="${c}">${c.length>22?c.slice(0,22)+'…':c}</span>
-          <div class="intel-bar-bg"><div class="intel-bar-fill" style="width:${Math.max(5,n/maxCargo*100)}%"><span class="intel-bar-v">${n}</span></div></div>
-          <span class="intel-bar-pct">${Math.round(n/total*100)}%</span>
-        </div>`).join(''))}
-    </div>
-    ${renderSection(4,'Comportamento do Operador',`
-      <div class="intel-kpi-row">
-        <div class="intel-kpi"><div class="intel-kpi-v">${avgDelta}</div><div class="intel-kpi-l">Delta médio (dias)</div><div class="intel-kpi-d ${avgDelta<=3?'pg':avgDelta<=5?'pm':'pl'}">${avgDelta<=3?'Saudável':avgDelta<=5?'Atenção':'Crítico'}</div></div>
-        <div class="intel-kpi"><div class="intel-kpi-v">${avgTemp}</div><div class="intel-kpi-l">Temp. média</div><div class="intel-kpi-d ${avgTemp>=60?'pg':avgTemp>=40?'pm':'pl'}">${avgTemp>=60?'Bom':avgTemp>=40?'Regular':'Baixo'}</div></div>
-        <div class="intel-kpi"><div class="intel-kpi-v">${slaRisk}</div><div class="intel-kpi-l">SLA em risco</div><div class="intel-kpi-d ${slaRisk<=2?'pg':slaRisk<=5?'pm':'pl'}">${slaRisk<=2?'OK':slaRisk<=5?'Atenção':'Crítico'}</div></div>
-        <div class="intel-kpi"><div class="intel-kpi-v">${Math.round(buyCount/total*100)}%</div><div class="intel-kpi-l">Taxa sinal BUY</div></div>
-      </div>
-      <div class="intel-title">Tempo médio por etapa</div>
-      ${funnelOrder.filter(e=>deltaByEtapa[e]).map(e=>{
-        const avg=Math.round(deltaByEtapa[e].sum/deltaByEtapa[e].count*10)/10;
-        const maxD=10;
-        return `<div class="intel-bar-row">
-          <span class="intel-bar-label">${fmtEtapa(e)}</span>
-          <div class="intel-bar-bg"><div class="intel-bar-fill" style="width:${Math.max(5,avg/maxD*100)}%;${avg>5?'background:linear-gradient(90deg,#ef4444,#f59e0b)':avg>3?'background:linear-gradient(90deg,#f59e0b,#22c55e)':''}"><span class="intel-bar-v">${avg}d</span></div></div>
-          <span class="intel-bar-pct">${deltaByEtapa[e].count} deals</span>
-        </div>`;
+    ${pipeline.length?`<div class="intel-title">Pipeline por fase (receita bruta → ponderada)</div>
+    ${pipeline.filter(r=>faseOrder.includes(r[0])).map(r=>{
+      const fase=r[0];const deals=parseInt(r[1])||0;const bruto=parseInt(r[2])||0;const pond=parseInt(r[3])||0;
+      const pct=totalBruto?Math.round(bruto/totalBruto*100):0;
+      return '<div class="intel-bar-row"><span class="intel-bar-label" style="width:90px;font-weight:600">'+fase+'</span><div class="intel-bar-bg"><div class="intel-bar-fill" style="width:'+Math.max(3,pct)+'%"><span class="intel-bar-v">'+fmtBRL(bruto)+'</span></div></div><span class="intel-bar-pct" style="width:80px">'+fmtBRL(pond)+' pond</span></div>';
+    }).join('')}`:''}
+  `);
+
+  // ── SEÇÃO 2: FUNIL POR CANAL (top 15 linhas) ──
+  if(funil.length){
+    html+=renderSection(2,'Funil por Canal de Receita',`
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Top canais macro — MQL → SAL → Opp → Ganho com taxas de conversão reais</div>
+      <div style="overflow-x:auto"><table class="intel-table" style="min-width:580px">
+        <thead><tr><th>Canal</th><th>MQLs</th><th>SALs</th><th>Opps</th><th>Ganhos</th><th>CR MQL→SAL</th><th>CR SAL→Opp</th><th>CR Opp→Ganho</th></tr></thead>
+        <tbody>${funil.slice(0,15).map(r=>{
+          const cr1=parseFloat(r[5])||0;const cr2=parseFloat(r[6])||0;const cr3=parseFloat(r[7])||0;
+          const nome=(r[0]||'').length>30?(r[0]).slice(0,30)+'…':r[0];
+          return '<tr><td title="'+r[0]+'" style="font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+nome+'</td><td>'+(parseInt(r[1])||0).toLocaleString('pt-BR')+'</td><td>'+(parseInt(r[2])||0).toLocaleString('pt-BR')+'</td><td>'+(parseInt(r[3])||0).toLocaleString('pt-BR')+'</td><td style="font-weight:700;color:var(--green)">'+(parseInt(r[4])||0)+'</td><td class="'+(cr1>=80?'pg':cr1>=50?'pm':'pl')+'">'+cr1+'%</td><td class="'+(cr2>=60?'pg':cr2>=30?'pm':'pl')+'">'+cr2+'%</td><td class="'+(cr3>=5?'pg':cr3>=2?'pm':'pl')+'">'+cr3+'%</td></tr>';
+        }).join('')}</tbody>
+      </table></div>
+    `);
+  }
+
+  // ── SEÇÃO 3: PERFORMANCE SDR ──
+  if(sdr.length){
+    const myName=localStorage.getItem('elucy_qualificador_name')||'';
+    html+=renderSection(3,'Performance por SDR',`
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Conversão MQL→SAL, ganhos e ticket médio dos qualificadores</div>
+      <div style="overflow-x:auto"><table class="intel-table">
+        <thead><tr><th>SDR</th><th>Deals</th><th>SALs</th><th>CR MQL→SAL</th><th>Ganhos</th><th>Ticket Médio</th></tr></thead>
+        <tbody>${sdr.slice(0,20).map(r=>{
+          const name=r[0]||'';const isMe=myName&&name.toLowerCase()===myName.toLowerCase();
+          const cr=parseFloat(r[3])||0;
+          return '<tr style="'+(isMe?'background:var(--adim2);font-weight:700':'')+'">'
+            +'<td>'+(isMe?'★ ':'')+name+'</td>'
+            +'<td>'+(parseInt(r[1])||0)+'</td>'
+            +'<td>'+(parseInt(r[2])||0)+'</td>'
+            +'<td class="'+(cr>=80?'pg':cr>=50?'pm':'pl')+'">'+cr+'%</td>'
+            +'<td style="color:var(--green)">'+(parseInt(r[4])||0)+'</td>'
+            +'<td>'+(parseInt(r[5])?fmtBRL(parseInt(r[5])):'—')+'</td></tr>';
+        }).join('')}</tbody>
+      </table></div>
+    `);
+  }
+
+  // ── SEÇÃO 4: MOTIVOS DE PERDA ──
+  if(perda.length){
+    html+=renderSection(4,'Principais Motivos de Perda',`
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Top motivos × fase onde o deal se perde</div>
+      <div style="overflow-x:auto"><table class="intel-table">
+        <thead><tr><th>Fase</th><th>Motivo</th><th>Deals Perdidos</th><th>Dias Médios</th></tr></thead>
+        <tbody>${perda.slice(0,12).map(r=>{
+          const n=parseInt(r[2])||0;
+          return '<tr><td style="font-weight:600">'+(r[0]||'—')+'</td><td>'+(r[1]||'')+'</td><td style="color:var(--red);font-weight:700">'+n.toLocaleString('pt-BR')+'</td><td>'+(r[3]||'—')+'d</td></tr>';
+        }).join('')}</tbody>
+      </table></div>
+    `);
+  }
+
+  // ── SEÇÃO 5: IRON DOME — Deals parados ──
+  if(ironDome.length){
+    html+=renderSection(5,'Iron Dome — Deals Parados +7 dias',`
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Deals estagnados por fase/etapa com receita em risco</div>
+      <div style="overflow-x:auto"><table class="intel-table">
+        <thead><tr><th>Fase</th><th>Etapa</th><th>Deals</th><th>Dias Médios</th><th>Receita em Risco</th></tr></thead>
+        <tbody>${ironDome.slice(0,10).map(r=>{
+          const rec=parseInt(r[4])||0;
+          return '<tr><td style="font-weight:600">'+(r[0]||'—')+'</td><td>'+(r[1]||'—')+'</td><td style="color:var(--red);font-weight:700">'+(parseInt(r[2])||0)+'</td><td>'+(r[3]||'—')+'d</td><td>'+(rec?fmtBRL(rec):'—')+'</td></tr>';
+        }).join('')}</tbody>
+      </table></div>
+    `);
+  }
+
+  // ── SEÇÃO 6: PERFIL ICP × CONVERSÃO ──
+  if(icp.length){
+    const maxDeals=Math.max(...icp.map(r=>parseInt(r[1])||0),1);
+    html+=renderSection(6,'Perfil ICP × Conversão',`
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Win rate e ticket médio por perfil de lead</div>
+      ${icp.map(r=>{
+        const perfil=r[0]||'?';const deals=parseInt(r[1])||0;const ganhos=parseInt(r[2])||0;
+        const wr=parseFloat(r[3])||0;const ticket=parseInt(r[4])||0;
+        return '<div class="intel-bar-row"><span class="intel-bar-label" style="width:60px;font-weight:700">Perfil '+perfil+'</span><div class="intel-bar-bg"><div class="intel-bar-fill" style="width:'+Math.max(5,deals/maxDeals*100)+'%"><span class="intel-bar-v">'+deals+' deals</span></div></div><span class="intel-bar-pct" style="width:120px;font-size:10px">WR '+wr+'% · '+(ticket?fmtBRL(ticket):'—')+'</span></div>';
       }).join('')}
-    `)}
-    ${renderSection(5,'Inteligência Elucy — Leitura Operacional',`
-      ${insights.length?insights.map(i=>`
-        <div class="intel-insight intel-insight-${i.type}">
-          <div class="intel-insight-label">${i.label}</div>
-          ${i.text}
-        </div>`).join(''):'<div style="color:var(--text2);font-size:12px;padding:10px">Sem insights suficientes — carregue mais deals.</div>'}
-    `)}
-    <div id="intel-bench-section"></div>
-  `;
+    `);
+  }
 
-  // Carrega benchmark Databricks e renderiza seções 6 e 7
-  loadBenchmarkData(function(bench){
-    const sec=document.getElementById('intel-bench-section');
-    if(!sec||!bench) return;
-    const {deltaMap,convMap}=bench;
-    let html='';
+  // ── SEÇÃO 7: CONTAS INSTAGRAM ──
+  if(ig.length){
+    html+=renderSection(7,'Performance por Conta Instagram',`
+      <div style="overflow-x:auto"><table class="intel-table">
+        <thead><tr><th>Conta</th><th>SALs</th><th>Opps</th><th>CR SAL→Opp</th><th>Ganhos</th></tr></thead>
+        <tbody>${ig.map(r=>{
+          const cr=parseFloat(r[3])||0;
+          return '<tr><td style="font-weight:700">'+r[0]+'</td><td>'+(parseInt(r[1])||0).toLocaleString('pt-BR')+'</td><td>'+(parseInt(r[2])||0).toLocaleString('pt-BR')+'</td><td class="'+(cr>=75?'pg':cr>=50?'pm':'pl')+'">'+cr+'%</td><td style="color:var(--green)">'+(parseInt(r[4])||0)+'</td></tr>';
+        }).join('')}</tbody>
+      </table></div>
+    `);
+  }
 
-    // ── SEÇÃO 6: Benchmark por Canal — Delta entre Etapas ──
-    const linhas=Object.keys(deltaMap).sort((a,b)=>{
-      const qa=(deltaMap[a]['SAL→Perdido']||{}).qtd||0;
-      const qb=(deltaMap[b]['SAL→Perdido']||{}).qtd||0;
-      return qb-qa;
-    }).slice(0,8);
-    if(linhas.length){
-      const transKeys=['SAL→Ganho','SAL→Perdido','Agendado→Ganho','Agendado→Perdido','Conectado→Ganho','Conectado→Perdido'];
-      let tableRows=linhas.map(l=>{
-        const d=deltaMap[l];
-        const shortName=l.length>28?l.slice(0,28)+'…':l;
-        let cells='<td title="'+l+'" style="font-weight:600;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis">'+shortName+'</td>';
-        transKeys.forEach(k=>{
-          const v=d[k];
-          if(v&&v.qtd>=5){
-            const isWon=k.includes('Ganho');
-            const cls=isWon?(v.avg<=4?'pg':v.avg<=7?'pm':'pl'):(v.avg<=7?'pg':v.avg<=12?'pm':'pl');
-            cells+='<td class="'+cls+'">'+v.avg+'d <span style="opacity:.5;font-size:9px">('+v.qtd+')</span></td>';
-          } else cells+='<td style="color:var(--text4)">—</td>';
-        });
-        return '<tr>'+cells+'</tr>';
-      }).join('');
-      html+=renderSection(6,'Benchmark por Canal — Delta entre Etapas (Databricks '+new Date().getFullYear()+')',`
-        <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Tempo médio (dias) entre transições. Verde = rápido, vermelho = lento. N = volume de transições.</div>
-        <div style="overflow-x:auto">
-        <table class="intel-table" style="min-width:600px">
-          <thead><tr><th>Canal</th><th>SAL→Ganho</th><th>SAL→Perdido</th><th>Agend.→Ganho</th><th>Agend.→Perdido</th><th>Conect.→Ganho</th><th>Conect.→Perdido</th></tr></thead>
-          <tbody>${tableRows}</tbody>
-        </table></div>
-      `);
-    }
+  // ── SEÇÃO 8: EVOLUÇÃO MENSAL ──
+  if(mensal.length){
+    const maxMql=Math.max(...mensal.map(r=>parseInt(r[1])||0),1);
+    html+=renderSection(8,'Evolução Mensal (Últimos 3 Meses)',`
+      <div style="overflow-x:auto"><table class="intel-table">
+        <thead><tr><th>Mês</th><th>MQLs</th><th>SALs</th><th>Opps</th><th>Ganhos</th><th>Receita</th><th>CR MQL→SAL</th></tr></thead>
+        <tbody>${mensal.filter(r=>(parseInt(r[1])||0)>10).map(r=>{
+          const cr=parseFloat(r[6])||0;
+          return '<tr><td style="font-weight:600">'+r[0]+'</td><td>'+(parseInt(r[1])||0).toLocaleString('pt-BR')+'</td><td>'+(parseInt(r[2])||0).toLocaleString('pt-BR')+'</td><td>'+(parseInt(r[3])||0).toLocaleString('pt-BR')+'</td><td style="color:var(--green)">'+(parseInt(r[4])||0).toLocaleString('pt-BR')+'</td><td style="font-weight:600">'+fmtBRL(parseInt(r[5])||0)+'</td><td class="'+(cr>=70?'pg':cr>=50?'pm':'pl')+'">'+cr+'%</td></tr>';
+        }).join('')}</tbody>
+      </table></div>
+    `);
+  }
 
-    // ── SEÇÃO 7: Conversão × Perfil por Canal ──
-    const convLinhas=Object.keys(convMap).sort((a,b)=>{
-      const da=Object.values(convMap[a]).reduce((s,v)=>s+v.deals,0);
-      const db=Object.values(convMap[b]).reduce((s,v)=>s+v.deals,0);
-      return db-da;
-    }).slice(0,8);
-    if(convLinhas.length){
-      const perfis=['A','B','C','D','E','I','J','K'];
-      let convRows=convLinhas.map(l=>{
-        const d=convMap[l];
-        const shortName=l.length>28?l.slice(0,28)+'…':l;
-        let cells='<td title="'+l+'" style="font-weight:600;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis">'+shortName+'</td>';
-        perfis.forEach(p=>{
-          const v=d[p];
-          if(v){
-            const cls=v.conv>=30?'pg':v.conv>=15?'pm':v.conv>=8?'':'pl';
-            cells+='<td class="'+cls+'">'+v.conv+'% <span style="opacity:.5;font-size:9px">R$'+(v.ticket>=1000?Math.round(v.ticket/1000)+'k':v.ticket)+'</span></td>';
-          } else cells+='<td style="color:var(--text4)">—</td>';
-        });
-        return '<tr>'+cells+'</tr>';
-      }).join('');
-      html+=renderSection(7,'Conversão × Perfil por Canal (Databricks '+new Date().getFullYear()+')',`
-        <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Taxa de conversão deal→ganho e ticket médio. Perfil A = maior faturamento.</div>
-        <div style="overflow-x:auto">
-        <table class="intel-table" style="min-width:600px">
-          <thead><tr><th>Canal</th>${perfis.map(p=>'<th>Perfil '+p+'</th>').join('')}</tr></thead>
-          <tbody>${convRows}</tbody>
-        </table></div>
-      `);
-    }
-
-    // ── SEÇÃO 8: Insights Cruzados (deals locais × benchmark global) ──
-    const crossInsights=[];
-    const localDeals=Object.values(window._COCKPIT_DEAL_MAP||{});
-    if(localDeals.length&&Object.keys(deltaMap).length){
-      // Agrupar deals locais por linha de receita
-      const localByLinha={};
-      localDeals.forEach(d=>{
-        const l=d.linhaReceita||'';
-        if(!l) return;
-        if(!localByLinha[l]) localByLinha[l]={deals:[],deltas:[],tiers:{}};
-        localByLinha[l].deals.push(d);
-        const delta=d._delta||d.delta||0;
-        if(delta>0) localByLinha[l].deltas.push(delta);
-        const tier=(d._tier||d.tier||'').toLowerCase();
-        localByLinha[l].tiers[tier]=(localByLinha[l].tiers[tier]||0)+1;
-      });
-      Object.entries(localByLinha).forEach(([linha,local])=>{
-        const benchDelta=deltaMap[linha];
-        if(!benchDelta) return;
-        const salGanho=benchDelta['SAL→Ganho'];
-        const salPerdido=benchDelta['SAL→Perdido'];
-        if(salGanho&&salPerdido&&local.deltas.length){
-          const localAvg=Math.round(local.deltas.reduce((s,v)=>s+v,0)/local.deltas.length*10)/10;
-          const shortLinha=linha.length>25?linha.slice(0,25)+'…':linha;
-          if(localAvg>salGanho.avg*1.5){
-            crossInsights.push({type:'warn',label:'Delta acima do benchmark',text:'Seus deals em "'+shortLinha+'" têm delta médio de '+localAvg+'d. Benchmark de quem ganha nesse canal: '+salGanho.avg+'d. Benchmark de quem perde: '+salPerdido.avg+'d. Acelere o FUP.'});
-          } else if(localAvg<=salGanho.avg){
-            crossInsights.push({type:'good',label:'Velocidade OK',text:'Seus deals em "'+shortLinha+'" estão com delta de '+localAvg+'d — dentro do benchmark de conversão ('+salGanho.avg+'d). Continue nessa cadência.'});
-          }
-        }
-        // Conversão por perfil — se o deal local tem perfil A mas conv% do canal é baixo
-        const benchConv=convMap[linha];
-        if(benchConv){
-          const topPerfil=Object.entries(benchConv).sort((a,b)=>b[1].conv-a[1].conv)[0];
-          if(topPerfil&&topPerfil[1].conv>=20){
-            const shortLinha=linha.length>20?linha.slice(0,20)+'…':linha;
-            crossInsights.push({type:'good',label:'Perfil forte: '+topPerfil[0],text:'No canal "'+shortLinha+'", perfil '+topPerfil[0]+' converte '+topPerfil[1].conv+'% com ticket R$'+fmtBRL(topPerfil[1].ticket)+'. Priorize leads desse perfil.'});
-          }
-        }
-      });
-    }
-    if(crossInsights.length){
-      html+=renderSection(8,'Insights Cruzados — Seus Deals vs Benchmark',`
-        ${crossInsights.slice(0,6).map(i=>'<div class="intel-insight intel-insight-'+i.type+'"><div class="intel-insight-label">'+i.label+'</div>'+i.text+'</div>').join('')}
-      `);
-    }
-
-    sec.innerHTML=html;
-  });
+  ct.innerHTML=html;
 }
 
 function renderSection(num,title,content){
@@ -5092,14 +4936,6 @@ function renderSection(num,title,content){
   </div>`;
 }
 
-function renderCard(title,content){
-  return `<div class="intel-card"><div class="intel-title">${title}</div>${content}</div>`;
-}
-
-function fmtEtapa(e){
-  const map={'novo lead':'MQL','dia 01':'D1','dia 02':'D2','dia 03':'D3','dia 04':'D4','dia 05':'D5','dia 06':'D6','conectados':'Conectado','agendamento':'Agendamento','reagendamento':'Reagendamento','entrevista agendada':'Entrevista'};
-  return map[(e||'').toLowerCase()]||e;
-}
 
 // ── WA LOG — WhatsApp Activity Logger ─────────────────────────────────
 // Persiste mensagens vinculadas a deal_id no localStorage
