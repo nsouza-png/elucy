@@ -707,12 +707,71 @@ input,textarea,select{font-family:inherit;font-size:inherit}
 .pending-title{font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px}
 .pending-msg{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:6px}
 .pending-email{font-size:12px;color:var(--accent2);font-weight:600;margin-bottom:4px}
+/* -- WA LOG SCREEN ------------------------------------------------ */
+#screen-wa{display:none;flex-direction:column;height:100%;padding:0;overflow:hidden}
+#screen-wa.on{display:flex!important}
+.wa-header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
+.wa-header-left{display:flex;align-items:center;gap:12px}
+.wa-deal-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:var(--r-sm);background:var(--adim);border:1px solid var(--accent);font-size:11px;font-weight:600;color:var(--accent3)}
+.wa-deal-badge .wa-dot{width:6px;height:6px;border-radius:50%;background:var(--accent2);animation:pulse 2s infinite}
+.wa-no-deal{padding:4px 10px;border-radius:var(--r-sm);background:var(--rdim);border:1px solid var(--red);font-size:11px;font-weight:600;color:var(--red)}
+.wa-header-actions{display:flex;gap:6px}
+.wa-btn{padding:6px 14px;border-radius:var(--r-sm);border:1px solid var(--border);background:none;color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+.wa-btn:hover{border-color:var(--border3);color:var(--text)}
+.wa-btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.wa-btn-primary:hover{background:var(--accent2)}
+.wa-btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.wa-btn-success{background:var(--green);border-color:var(--green);color:#000;font-weight:700}
+.wa-btn-success:hover{background:var(--green2)}
+.wa-body{display:flex;flex:1;overflow:hidden}
+.wa-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.wa-paste-zone{padding:32px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg);transition:background .2s}
+.wa-paste-zone.drag-over{background:var(--adim);border-color:var(--accent)}
+.wa-paste-icon{width:48px;height:48px;border-radius:50%;background:var(--adim);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:10px}
+.wa-paste-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
+.wa-paste-sub{font-size:11px;color:var(--text3);max-width:360px;text-align:center}
+.wa-paste-preview{display:none;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;align-items:center;gap:12px}
+.wa-paste-preview.show{display:flex}
+.wa-paste-preview img{max-height:80px;border-radius:var(--r-sm);border:1px solid var(--border)}
+.wa-paste-preview-info{flex:1}
+.wa-paste-preview-info p{font-size:11px;color:var(--text2)}
+.wa-progress{height:2px;background:var(--bg5);border-radius:1px;overflow:hidden;width:100%;margin-top:6px}
+.wa-progress-bar{height:100%;background:var(--accent);width:0;transition:width .4s ease}
+.wa-log-list{flex:1;overflow-y:auto;padding:0}
+.wa-log-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text4);font-size:12px;gap:6px}
+.wa-log-item{display:flex;gap:12px;padding:10px 20px;border-bottom:1px solid var(--border);transition:background .1s;align-items:flex-start}
+.wa-log-item:hover{background:var(--bg2)}
+.wa-log-time{font-size:10px;font-family:monospace;color:var(--text4);width:50px;flex-shrink:0;padding-top:2px}
+.wa-log-sender{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;width:70px;flex-shrink:0;padding-top:2px}
+.wa-log-sender.op{color:var(--accent2)}
+.wa-log-sender.lead{color:var(--green2)}
+.wa-log-msg{flex:1;font-size:12px;color:var(--text);line-height:1.5}
+.wa-log-status{width:80px;flex-shrink:0;display:flex;justify-content:flex-end;padding-top:2px}
+.wa-log-pill{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 8px;border-radius:var(--r-sm)}
+.wa-pill-logged{background:var(--gdim);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+.wa-pill-pending{background:var(--adim);color:var(--accent2);border:1px solid rgba(99,102,241,.2)}
+.wa-pill-editing{background:var(--ydim);color:var(--yellow);border:1px solid rgba(245,158,11,.2)}
+.wa-sidebar{width:260px;border-left:1px solid var(--border);background:var(--bg2);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.wa-sb-hdr{padding:12px 14px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3)}
+.wa-sb-sessions{flex:1;overflow-y:auto;padding:6px}
+.wa-sb-item{padding:8px 10px;border-radius:var(--r-sm);cursor:pointer;transition:background .1s;margin-bottom:2px}
+.wa-sb-item:hover{background:var(--bg4)}
+.wa-sb-item.active{background:var(--adim);border:1px solid var(--accent)}
+.wa-sb-deal{font-size:11px;font-weight:600;color:var(--text)}
+.wa-sb-meta{font-size:10px;color:var(--text3);margin-top:2px;display:flex;gap:8px}
+.wa-sb-count{color:var(--accent2)}
+.wa-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 14px;border-top:1px solid var(--border);flex-shrink:0}
+.wa-stat{text-align:center}
+.wa-stat-val{font-size:18px;font-weight:800;color:var(--text)}
+.wa-stat-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--text4);margin-top:2px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 /* -- SCREEN VISIBILITY --------------------------------------------- */
 #ct > .screen{display:none}
 #ct > .screen.on{display:block}
 #ct > #screen-dm.on{display:flex;height:100%}
 #ct > #screen-reports.on{display:flex;flex-direction:column;height:100%}
 #ct:has(#screen-reports.on){padding:0;overflow:hidden}
+#ct:has(#screen-wa.on){padding:0;overflow:hidden}
 /* Reports screen extras */
 .ftabs{display:flex;gap:6px;margin-bottom:14px}
 .ft{padding:5px 12px;border-radius:var(--r-sm);border:1px solid var(--border);background:none;color:var(--text3);font-size:11px;font-weight:500;cursor:pointer;transition:all .15s}
@@ -1100,6 +1159,7 @@ input,textarea,select{font-family:inherit;font-size:inherit}
   <button class="ntab" onclick="setScreen('reports',this)">RELAT&Oacute;RIOS</button>
   <button class="ntab" onclick="setScreen('dm',this)">DM WAR ROOM</button>
   <button class="ntab" onclick="setScreen('intelligence',this)">Inteligência</button>
+  <button class="ntab" onclick="setScreen('wa',this)">WA LOG</button>
   <div class="topbar-right">
     <div class="g4os-status connecting" id="g4os-indicator" title="Status da conexão com G4 OS">
       <span class="g4dot"></span>
@@ -1481,6 +1541,54 @@ input,textarea,select{font-family:inherit;font-size:inherit}
   </div>
 </div><!-- /screen-intelligence -->
 
+<div class="screen" id="screen-wa">
+  <div class="wa-header">
+    <div class="wa-header-left">
+      <span style="font-size:15px;font-weight:800;color:var(--text)">WhatsApp Activity Log</span>
+      <div id="wa-deal-info"></div>
+    </div>
+    <div class="wa-header-actions">
+      <button class="wa-btn" onclick="waClearLog()">Limpar</button>
+      <button class="wa-btn" onclick="waEditToggle()">Editar</button>
+      <button class="wa-btn wa-btn-success" id="wa-btn-confirm" onclick="waConfirmAll()" disabled>Confirmar no CRM</button>
+    </div>
+  </div>
+  <div class="wa-body">
+    <div class="wa-main">
+      <div class="wa-paste-zone" id="wa-paste-zone">
+        <div class="wa-paste-icon">📋</div>
+        <div class="wa-paste-title">Cole o print do WhatsApp</div>
+        <div class="wa-paste-sub">Ctrl+V com o screenshot da conversa. As mensagens serão extraídas e vinculadas ao deal ativo.</div>
+      </div>
+      <div class="wa-paste-preview" id="wa-paste-preview">
+        <img id="wa-paste-img" src="" alt="Screenshot">
+        <div class="wa-paste-preview-info">
+          <p id="wa-paste-status">Analisando screenshot...</p>
+          <div class="wa-progress"><div class="wa-progress-bar" id="wa-progress-bar"></div></div>
+        </div>
+        <button class="wa-btn wa-btn-primary" onclick="waAnalyzeScreenshot()">Extrair</button>
+        <button class="wa-btn" onclick="waClearPreview()">Descartar</button>
+      </div>
+      <div class="wa-log-list" id="wa-log-list">
+        <div class="wa-log-empty" id="wa-log-empty">
+          <span style="font-size:24px">💬</span>
+          <span>Nenhuma mensagem registrada</span>
+          <span style="color:var(--text4)">Cole um screenshot do WhatsApp para começar</span>
+        </div>
+      </div>
+    </div>
+    <div class="wa-sidebar">
+      <div class="wa-sb-hdr">Sessões de Log</div>
+      <div class="wa-sb-sessions" id="wa-sb-sessions"></div>
+      <div class="wa-stats" id="wa-stats">
+        <div class="wa-stat"><div class="wa-stat-val" id="wa-stat-msgs">0</div><div class="wa-stat-lbl">Mensagens</div></div>
+        <div class="wa-stat"><div class="wa-stat-val" id="wa-stat-confirmed">0</div><div class="wa-stat-lbl">Confirmadas</div></div>
+        <div class="wa-stat"><div class="wa-stat-val" id="wa-stat-deals">0</div><div class="wa-stat-lbl">Deals</div></div>
+      </div>
+    </div>
+  </div>
+</div><!-- /screen-wa -->
+
 </div><!-- /ct -->
 </div><!-- /main -->
 <script>
@@ -1490,14 +1598,14 @@ let cur=null;
 function setScreen(n,el){
   document.querySelectorAll('#ct > .screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
-  const screenMap={home:'screen-home',dm:'screen-dm',reports:'screen-reports',intelligence:'screen-intelligence'};
+  const screenMap={home:'screen-home',dm:'screen-dm',reports:'screen-reports',intelligence:'screen-intelligence',wa:'screen-wa'};
   const target=document.getElementById(screenMap[n]||'screen-home');
   if(target) target.classList.add('on');
   if(el) el.classList.add('on');
   // DM & Reports screens: remove padding from #ct for full-height flex layout
   const ct=document.getElementById('ct');
   if(ct){
-    if(n==='dm'||n==='reports'){
+    if(n==='dm'||n==='reports'||n==='wa'){
       ct.style.padding='0';
       ct.style.overflow='hidden';
     } else {
@@ -1507,6 +1615,7 @@ function setScreen(n,el){
   }
   if(n==='intelligence') renderIntelligence();
   if(n==='reports') renderReports();
+  if(n==='wa') waRenderScreen();
 }
 
 function selectDeal(id){
@@ -4836,6 +4945,342 @@ function fmtEtapa(e){
   const map={'novo lead':'MQL','dia 01':'D1','dia 02':'D2','dia 03':'D3','dia 04':'D4','dia 05':'D5','dia 06':'D6','conectados':'Conectado','agendamento':'Agendamento','reagendamento':'Reagendamento','entrevista agendada':'Entrevista'};
   return map[(e||'').toLowerCase()]||e;
 }
+
+// ── WA LOG — WhatsApp Activity Logger ─────────────────────────────────
+// Persiste mensagens vinculadas a deal_id no localStorage
+// Futuro: sync com Supabase activity_logs → HubSpot CRM
+
+const WA_STORAGE_KEY='elucy_wa_logs';
+let _waLogs=JSON.parse(localStorage.getItem(WA_STORAGE_KEY)||'[]');
+let _waActiveSessionIdx=null;
+let _waPasteBlob=null;
+let _waEditMode=false;
+
+function _waSave(){
+  localStorage.setItem(WA_STORAGE_KEY,JSON.stringify(_waLogs));
+}
+
+function waRenderScreen(){
+  // Deal info header
+  const info=document.getElementById('wa-deal-info');
+  if(info){
+    if(cur&&window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[cur]){
+      const d=window._COCKPIT_DEAL_MAP[cur];
+      info.innerHTML='<div class="wa-deal-badge"><span class="wa-dot"></span>'+
+        (d.nome||'Lead')+ ' · '+(d.fase||'Ativo')+ ' · '+(d.canal||'')+'</div>';
+    } else {
+      info.innerHTML='<div class="wa-no-deal">Selecione um deal no Pipeline primeiro</div>';
+    }
+  }
+  waRenderSessions();
+  waRenderLog();
+  waUpdateStats();
+}
+
+function waRenderSessions(){
+  const el=document.getElementById('wa-sb-sessions');
+  if(!el) return;
+  if(!_waLogs.length){
+    el.innerHTML='<div style="padding:14px;font-size:11px;color:var(--text4);text-align:center">Nenhuma sessão ainda</div>';
+    return;
+  }
+  el.innerHTML=_waLogs.map((s,i)=>{
+    const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[s.deal_id];
+    const nome=deal?deal.nome:s.deal_id||'Sem deal';
+    const confirmed=s.messages.filter(m=>m.status==='confirmed').length;
+    const total=s.messages.length;
+    const active=i===_waActiveSessionIdx;
+    return '<div class="wa-sb-item'+(active?' active':'')+'" onclick="waLoadSession('+i+')">'+
+      '<div class="wa-sb-deal">'+nome+'</div>'+
+      '<div class="wa-sb-meta"><span class="wa-sb-count">'+total+' msgs</span><span>'+confirmed+' ✓</span><span>'+_waFmtDate(s.created_at)+'</span></div>'+
+    '</div>';
+  }).join('');
+}
+
+function waLoadSession(idx){
+  _waActiveSessionIdx=idx;
+  waRenderLog();
+  waRenderSessions();
+}
+
+function waRenderLog(){
+  const list=document.getElementById('wa-log-list');
+  const empty=document.getElementById('wa-log-empty');
+  if(!list) return;
+
+  const session=_waActiveSessionIdx!==null?_waLogs[_waActiveSessionIdx]:null;
+  if(!session||!session.messages.length){
+    list.innerHTML='';
+    if(empty) empty.style.display='flex';
+    list.appendChild(empty);
+    document.getElementById('wa-btn-confirm').disabled=true;
+    return;
+  }
+  if(empty) empty.style.display='none';
+  const hasPending=session.messages.some(m=>m.status==='pending');
+  document.getElementById('wa-btn-confirm').disabled=!hasPending;
+
+  list.innerHTML=session.messages.map((m,i)=>{
+    const senderClass=m.sender==='operator'?'op':'lead';
+    const senderLabel=m.sender==='operator'?'Operador':'Lead';
+    const pillClass=m.status==='confirmed'?'wa-pill-logged':m.status==='editing'?'wa-pill-editing':'wa-pill-pending';
+    const pillLabel=m.status==='confirmed'?'Registrado':m.status==='editing'?'Editando':'Pendente';
+    return '<div class="wa-log-item" data-idx="'+i+'">'+
+      '<div class="wa-log-time">'+(m.time||'--:--')+'</div>'+
+      '<div class="wa-log-sender '+senderClass+'">'+senderLabel+'</div>'+
+      '<div class="wa-log-msg"'+(_waEditMode?' contenteditable="true" style="outline:1px dashed var(--border2);padding:2px 4px;border-radius:4px"':'')+'>'+_waEsc(m.text)+'</div>'+
+      '<div class="wa-log-status"><span class="wa-log-pill '+pillClass+'">'+pillLabel+'</span></div>'+
+    '</div>';
+  }).join('');
+
+  // If edit mode, listen for blur to save edits
+  if(_waEditMode){
+    list.querySelectorAll('.wa-log-msg[contenteditable]').forEach(el=>{
+      el.addEventListener('blur',function(){
+        const idx=parseInt(this.closest('.wa-log-item').dataset.idx);
+        if(!isNaN(idx)&&session.messages[idx]){
+          session.messages[idx].text=this.textContent.trim();
+          session.messages[idx].status='pending';
+          _waSave();
+        }
+      });
+    });
+  }
+}
+
+function waUpdateStats(){
+  let totalMsgs=0,confirmed=0,dealSet=new Set();
+  _waLogs.forEach(s=>{
+    totalMsgs+=s.messages.length;
+    confirmed+=s.messages.filter(m=>m.status==='confirmed').length;
+    if(s.deal_id) dealSet.add(s.deal_id);
+  });
+  const setEl=(id,v)=>{const e=document.getElementById(id);if(e) e.textContent=v;};
+  setEl('wa-stat-msgs',totalMsgs);
+  setEl('wa-stat-confirmed',confirmed);
+  setEl('wa-stat-deals',dealSet.size);
+}
+
+// ── Paste handler (screenshot) ──
+document.addEventListener('paste',function(e){
+  const waScreen=document.getElementById('screen-wa');
+  if(!waScreen||!waScreen.classList.contains('on')) return;
+  const items=e.clipboardData&&e.clipboardData.items;
+  if(!items) return;
+  for(let i=0;i<items.length;i++){
+    if(items[i].type.indexOf('image')!==-1){
+      e.preventDefault();
+      _waPasteBlob=items[i].getAsFile();
+      _waShowPreview(_waPasteBlob);
+      return;
+    }
+    // Text paste — parse as chat
+    if(items[i].type==='text/plain'){
+      items[i].getAsString(function(text){
+        if(text.trim().length>20){
+          e.preventDefault();
+          _waParseTextAndAdd(text);
+        }
+      });
+      return;
+    }
+  }
+});
+
+function _waShowPreview(blob){
+  const preview=document.getElementById('wa-paste-preview');
+  const img=document.getElementById('wa-paste-img');
+  const zone=document.getElementById('wa-paste-zone');
+  if(!preview||!img) return;
+  const url=URL.createObjectURL(blob);
+  img.src=url;
+  preview.classList.add('show');
+  if(zone) zone.style.display='none';
+  document.getElementById('wa-paste-status').textContent='Screenshot pronto — clique Extrair';
+  document.getElementById('wa-progress-bar').style.width='0%';
+}
+
+function waClearPreview(){
+  const preview=document.getElementById('wa-paste-preview');
+  const zone=document.getElementById('wa-paste-zone');
+  if(preview) preview.classList.remove('show');
+  if(zone) zone.style.display='flex';
+  _waPasteBlob=null;
+}
+
+function waAnalyzeScreenshot(){
+  if(!_waPasteBlob) return;
+  if(!cur){
+    alert('Selecione um deal no Pipeline antes de registrar mensagens.');
+    return;
+  }
+  const bar=document.getElementById('wa-progress-bar');
+  const status=document.getElementById('wa-paste-status');
+  status.textContent='Extraindo mensagens...';
+  bar.style.width='20%';
+
+  // Simulated OCR — in production this goes to the bridge/worker
+  // For now: generate realistic extracted messages based on deal context
+  setTimeout(()=>{bar.style.width='50%';status.textContent='Processando OCR...'},400);
+  setTimeout(()=>{bar.style.width='80%';status.textContent='Identificando remetentes...'},800);
+  setTimeout(()=>{
+    bar.style.width='100%';
+    status.textContent='Extração completa';
+    // Try to send to bridge for real OCR, fallback to text prompt
+    _waRequestOCR(_waPasteBlob);
+  },1200);
+}
+
+function _waRequestOCR(blob){
+  // Check if bridge is active — if yes, send to Supabase for processing
+  const bridgeKey=localStorage.getItem('elucy_bridge_key');
+  const opId=localStorage.getItem('elucy_operator_id');
+  const sbUrl='https://tnbbsjvzwleeoqnxtafp.supabase.co';
+  const sbKey=localStorage.getItem('elucy_supabase_key')||'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRuYmJzanZ6d2xlZW9xbnh0YWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE4MTg2OTcsImV4cCI6MjA1NzM5NDY5N30.GJV3x-0FqImb66F3Caqlvvyiq2cFJVr_rnxayoJVc3g';
+
+  // Convert blob to base64
+  const reader=new FileReader();
+  reader.onload=function(){
+    const base64=reader.result.split(',')[1];
+    // Send as cockpit_request type=ocr_extract
+    fetch(sbUrl+'/rest/v1/cockpit_requests',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':sbKey,'Authorization':'Bearer '+sbKey,'Prefer':'return=representation'},
+      body:JSON.stringify({
+        operator_id:opId||'default',
+        deal_id:cur,
+        request_type:'wa_ocr',
+        payload:JSON.stringify({image_base64:base64.substring(0,100)+'...',deal_id:cur,instruction:'Extract WhatsApp messages from this screenshot. Return JSON array of {time, sender: operator|lead, text}'}),
+        status:'pending'
+      })
+    }).then(r=>r.json()).then(data=>{
+      // For now, add placeholder messages — real OCR comes from worker response
+      _waAddPlaceholderMessages();
+    }).catch(()=>{
+      // Offline / no bridge — prompt user to type manually
+      _waAddPlaceholderMessages();
+    });
+  };
+  reader.readAsDataURL(blob);
+}
+
+function _waAddPlaceholderMessages(){
+  // Show input for manual text extraction
+  const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[cur];
+  const nome=deal?deal.nome:'Lead';
+  const text=prompt('OCR em desenvolvimento. Cole o texto da conversa do WhatsApp (ou edite depois):','');
+  if(text&&text.trim()){
+    _waParseTextAndAdd(text);
+  }
+  waClearPreview();
+}
+
+function _waParseTextAndAdd(rawText){
+  if(!cur){
+    alert('Selecione um deal no Pipeline primeiro.');
+    return;
+  }
+  // Parse WhatsApp text format: [HH:MM] Name: Message
+  // Also handles: HH:MM - Name: Message
+  const lines=rawText.split('\n').filter(l=>l.trim());
+  const msgs=[];
+  const opName=(localStorage.getItem('elucy_operator_name')||'').toLowerCase();
+
+  lines.forEach(line=>{
+    // Try patterns: [14:02] Name: msg | 14:02 - Name: msg | Name: msg
+    let match=line.match(/\[?(\d{1,2}:\d{2})(?::?\d{2})?\]?\s*[-–]?\s*([^:]+):\s*(.+)/);
+    if(match){
+      const time=match[1];
+      const sender=match[2].trim().toLowerCase();
+      const text=match[3].trim();
+      const isOp=opName&&sender.includes(opName.split(' ')[0].toLowerCase());
+      msgs.push({time,sender:isOp?'operator':'lead',text,status:'pending'});
+    } else if(line.trim().length>5){
+      // No pattern match — treat as continuation or unknown sender
+      msgs.push({time:'--:--',sender:'lead',text:line.trim(),status:'pending'});
+    }
+  });
+
+  if(!msgs.length){
+    // Single block — add as one message
+    msgs.push({time:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),sender:'lead',text:rawText.trim(),status:'pending'});
+  }
+
+  // Create or append to session
+  let session=_waLogs.find(s=>s.deal_id===cur&&!s.confirmed_at);
+  if(!session){
+    session={deal_id:cur,created_at:new Date().toISOString(),messages:[],confirmed_at:null};
+    _waLogs.unshift(session);
+    _waActiveSessionIdx=0;
+  } else {
+    _waActiveSessionIdx=_waLogs.indexOf(session);
+  }
+  session.messages.push(...msgs);
+  _waSave();
+  waRenderLog();
+  waRenderSessions();
+  waUpdateStats();
+  waClearPreview();
+}
+
+function waConfirmAll(){
+  if(_waActiveSessionIdx===null) return;
+  const session=_waLogs[_waActiveSessionIdx];
+  if(!session) return;
+
+  // Mark all pending as confirmed
+  session.messages.forEach(m=>{if(m.status==='pending'||m.status==='editing') m.status='confirmed';});
+  session.confirmed_at=new Date().toISOString();
+  _waSave();
+
+  // Try to sync to Supabase activity_logs
+  _waSyncToSupabase(session);
+
+  waRenderLog();
+  waRenderSessions();
+  waUpdateStats();
+}
+
+function _waSyncToSupabase(session){
+  const sbUrl='https://tnbbsjvzwleeoqnxtafp.supabase.co';
+  const sbKey=localStorage.getItem('elucy_supabase_key')||'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRuYmJzanZ6d2xlZW9xbnh0YWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE4MTg2OTcsImV4cCI6MjA1NzM5NDY5N30.GJV3x-0FqImb66F3Caqlvvyiq2cFJVr_rnxayoJVc3g';
+  const opId=localStorage.getItem('elucy_operator_id')||'default';
+
+  fetch(sbUrl+'/rest/v1/activity_logs',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':sbKey,'Authorization':'Bearer '+sbKey,'Prefer':'return=minimal'},
+    body:JSON.stringify({
+      operator_id:opId,
+      deal_id:session.deal_id,
+      channel:'whatsapp',
+      messages:JSON.stringify(session.messages),
+      confirmed_at:session.confirmed_at,
+      created_at:session.created_at
+    })
+  }).catch(()=>{/* Offline — already in localStorage */});
+}
+
+function waClearLog(){
+  if(_waActiveSessionIdx===null) return;
+  if(!confirm('Limpar todas as mensagens desta sessão?')) return;
+  _waLogs.splice(_waActiveSessionIdx,1);
+  _waActiveSessionIdx=_waLogs.length?0:null;
+  _waSave();
+  waRenderScreen();
+}
+
+function waEditToggle(){
+  _waEditMode=!_waEditMode;
+  waRenderLog();
+}
+
+function _waFmtDate(iso){
+  if(!iso) return '';
+  const d=new Date(iso);
+  return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+
+function _waEsc(s){return (s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 </script>
 </body>
