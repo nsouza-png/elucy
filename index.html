@@ -1996,39 +1996,80 @@ function loadIntelligenceData(cb){
   _intelLoading=true;
   const token=localStorage.getItem('elucy_db_token');
   if(!token){ _intelLoading=false; cb(null); return; }
+  const mf="YEAR(event_timestamp)=YEAR(CURRENT_DATE()) AND MONTH(event_timestamp)=MONTH(CURRENT_DATE())";
 
-  const qFunil=`SELECT linha_de_receita_vigente AS linha, COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('MQL','SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) AS mqls, COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) AS sals, COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END) AS opps, COUNT(DISTINCT CASE WHEN fase_atual_no_processo = 'Ganho' THEN deal_id END) AS ganhos, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) * 100.0 / NULLIF(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('MQL','SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END), 0), 1) AS cr_mql_sal, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END) * 100.0 / NULLIF(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END), 0), 1) AS cr_sal_opp, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo = 'Ganho' THEN deal_id END) * 100.0 / NULLIF(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END), 0), 1) AS cr_opp_ganho FROM production.diamond.funil_comercial WHERE YEAR(event_timestamp) = YEAR(CURRENT_DATE()) AND MONTH(event_timestamp) = MONTH(CURRENT_DATE()) AND linha_de_receita_vigente IS NOT NULL AND linha_de_receita_vigente != '' GROUP BY linha_de_receita_vigente HAVING COUNT(DISTINCT deal_id) >= 5 ORDER BY mqls DESC LIMIT 15`;
+  // Q1: Funil Macro — MQL → SAL → SQL → WON por canal
+  const qFunil=`SELECT linha_de_receita_vigente AS canal,
+    COUNT(DISTINCT deal_id) AS mql,
+    COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) AS sal,
+    COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) AS sql_,
+    COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END) AS won,
+    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS cr_mql_sal,
+    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END),0),1) AS cr_sal_sql,
+    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END),0),1) AS cr_sql_won,
+    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS win_rate,
+    ROUND(SUM(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue ELSE 0 END),0) AS receita,
+    ROUND(AVG(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue END),0) AS ticket_medio
+  FROM production.diamond.funil_comercial
+  WHERE ${mf} AND linha_de_receita_vigente IS NOT NULL AND linha_de_receita_vigente!=''
+  GROUP BY linha_de_receita_vigente HAVING COUNT(DISTINCT deal_id)>=5 ORDER BY mql DESC LIMIT 15`;
 
-  const qSDR=`SELECT qualificador_name AS sdr, COUNT(DISTINCT deal_id) AS total_deals, COUNT(DISTINCT CASE WHEN fase_atual_no_processo NOT IN ('MQL') THEN deal_id END) AS convertidos_sal, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo NOT IN ('MQL') THEN deal_id END) * 100.0 / NULLIF(COUNT(DISTINCT deal_id), 0), 1) AS cr_mql_sal, COUNT(DISTINCT CASE WHEN fase_atual_no_processo = 'Ganho' THEN deal_id END) AS ganhos, ROUND(AVG(CASE WHEN fase_atual_no_processo = 'Ganho' THEN revenue END), 0) AS ticket_medio FROM production.diamond.funil_comercial WHERE YEAR(event_timestamp) = YEAR(CURRENT_DATE()) AND MONTH(event_timestamp) = MONTH(CURRENT_DATE()) AND qualificador_name IS NOT NULL AND qualificador_name != '' GROUP BY qualificador_name HAVING COUNT(DISTINCT deal_id) >= 3 ORDER BY cr_mql_sal DESC LIMIT 20`;
+  // Q2: Totais Gerais (1 row)
+  const qTotais=`SELECT
+    COUNT(DISTINCT deal_id) AS mql,
+    COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) AS sal,
+    COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) AS sql_,
+    COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END) AS won,
+    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS cr01,
+    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END),0),1) AS cr03,
+    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END),0),1) AS cr04,
+    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS win_rate,
+    ROUND(SUM(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue ELSE 0 END),0) AS receita,
+    ROUND(AVG(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue END),0) AS ticket
+  FROM production.diamond.funil_comercial WHERE ${mf}`;
 
-  const qPerda=`SELECT fase_anterior_no_processo AS fase_perda, motivo_lost, COUNT(DISTINCT deal_id) AS perdidos, ROUND(AVG(delta_t), 1) AS avg_dias FROM production.diamond.funil_comercial WHERE fase_atual_no_processo = 'Perdido' AND YEAR(event_timestamp) = YEAR(CURRENT_DATE()) AND MONTH(event_timestamp) = MONTH(CURRENT_DATE()) AND motivo_lost IS NOT NULL AND motivo_lost != '' GROUP BY fase_anterior_no_processo, motivo_lost HAVING COUNT(DISTINCT deal_id) >= 2 ORDER BY perdidos DESC LIMIT 12`;
+  // Q3: SDR performance
+  const qSDR=`SELECT qualificador_name AS sdr,
+    COUNT(DISTINCT deal_id) AS mql,
+    COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) AS sal,
+    COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) AS sql_,
+    COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END) AS won,
+    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS cr01,
+    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END),0),1) AS saop,
+    ROUND(AVG(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue END),0) AS ticket
+  FROM production.diamond.funil_comercial WHERE ${mf} AND qualificador_name IS NOT NULL AND qualificador_name!=''
+  GROUP BY qualificador_name HAVING COUNT(DISTINCT deal_id)>=3 ORDER BY mql DESC LIMIT 20`;
 
-  const qIronDome=`SELECT fase_atual_no_processo AS fase, etapa_atual_no_pipeline AS etapa, COUNT(DISTINCT deal_id) AS deals_parados, ROUND(AVG(delta_t), 1) AS avg_dias, ROUND(SUM(revenue), 0) AS receita_risco FROM production.diamond.funil_comercial WHERE delta_t > 7 AND fase_atual_no_processo NOT IN ('Ganho','Perdido') AND YEAR(event_timestamp) = YEAR(CURRENT_DATE()) AND MONTH(event_timestamp) = MONTH(CURRENT_DATE()) GROUP BY fase_atual_no_processo, etapa_atual_no_pipeline HAVING COUNT(DISTINCT deal_id) >= 2 ORDER BY receita_risco DESC LIMIT 10`;
+  // Q4: Motivos de perda
+  const qPerda=`SELECT fase_anterior_no_processo AS fase, motivo_lost, COUNT(DISTINCT deal_id) AS perdidos, ROUND(AVG(delta_t),1) AS avg_dias FROM production.diamond.funil_comercial WHERE fase_atual_no_processo='Perdido' AND ${mf} AND motivo_lost IS NOT NULL AND motivo_lost!='' GROUP BY fase_anterior_no_processo, motivo_lost HAVING COUNT(DISTINCT deal_id)>=2 ORDER BY perdidos DESC LIMIT 12`;
 
-  const qPipeline=`SELECT fase_atual_no_processo AS fase, COUNT(DISTINCT deal_id) AS deals, ROUND(SUM(revenue), 0) AS receita_bruta, ROUND(SUM(revenue * CASE WHEN fase_atual_no_processo = 'SAL' THEN 0.10 WHEN fase_atual_no_processo = 'Conectado' THEN 0.20 WHEN fase_atual_no_processo = 'Agendado' THEN 0.40 WHEN fase_atual_no_processo = 'Negociação' THEN 0.60 WHEN fase_atual_no_processo = 'Ganho' THEN 1.0 ELSE 0.05 END), 0) AS receita_ponderada FROM production.diamond.funil_comercial WHERE fase_atual_no_processo NOT IN ('Perdido') AND YEAR(event_timestamp) = YEAR(CURRENT_DATE()) AND MONTH(event_timestamp) = MONTH(CURRENT_DATE()) AND revenue > 0 GROUP BY fase_atual_no_processo ORDER BY CASE fase_atual_no_processo WHEN 'MQL' THEN 1 WHEN 'SAL' THEN 2 WHEN 'Conectado' THEN 3 WHEN 'Agendado' THEN 4 WHEN 'Negociação' THEN 5 WHEN 'Ganho' THEN 6 ELSE 7 END`;
+  // Q5: Iron Dome
+  const qIronDome=`SELECT fase_atual_no_processo AS fase, etapa_atual_no_pipeline AS etapa, COUNT(DISTINCT deal_id) AS deals, ROUND(AVG(delta_t),1) AS avg_dias, ROUND(SUM(revenue),0) AS receita FROM production.diamond.funil_comercial WHERE delta_t>7 AND fase_atual_no_processo NOT IN ('Ganho','Perdido') AND ${mf} GROUP BY fase_atual_no_processo, etapa_atual_no_pipeline HAVING COUNT(DISTINCT deal_id)>=2 ORDER BY receita DESC LIMIT 10`;
 
-  const qICP=`SELECT perfil, COUNT(DISTINCT deal_id) AS deals, COUNT(DISTINCT CASE WHEN fase_atual_no_processo = 'Ganho' THEN deal_id END) AS ganhos, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo = 'Ganho' THEN deal_id END) * 100.0 / NULLIF(COUNT(DISTINCT deal_id), 0), 1) AS win_rate, ROUND(AVG(CASE WHEN fase_atual_no_processo = 'Ganho' THEN revenue END), 0) AS ticket_medio FROM production.diamond.funil_comercial WHERE YEAR(event_timestamp) = YEAR(CURRENT_DATE()) AND MONTH(event_timestamp) = MONTH(CURRENT_DATE()) AND perfil IS NOT NULL AND perfil != '' GROUP BY perfil HAVING COUNT(DISTINCT deal_id) >= 5 ORDER BY win_rate DESC`;
+  // Q6: Tendência mensal (3 meses)
+  const qMensal=`SELECT DATE_FORMAT(event_timestamp,'yyyy-MM') AS mes,
+    COUNT(DISTINCT deal_id) AS mql,
+    COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) AS sal,
+    COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) AS sql_,
+    COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END) AS won,
+    ROUND(SUM(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue ELSE 0 END),0) AS receita,
+    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS cr01,
+    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END),0),1) AS cr03,
+    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END),0),1) AS cr04
+  FROM production.diamond.funil_comercial WHERE event_timestamp>=ADD_MONTHS(CURRENT_DATE(),-3) AND event_timestamp<=CURRENT_DATE() GROUP BY DATE_FORMAT(event_timestamp,'yyyy-MM') ORDER BY mes`;
 
-  const qMensal=`SELECT DATE_FORMAT(event_timestamp, 'yyyy-MM') AS mes, COUNT(DISTINCT deal_id) AS mqls, COUNT(DISTINCT CASE WHEN fase_atual_no_processo NOT IN ('MQL') THEN deal_id END) AS sals, COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END) AS opps, COUNT(DISTINCT CASE WHEN fase_atual_no_processo = 'Ganho' THEN deal_id END) AS ganhos, ROUND(SUM(CASE WHEN fase_atual_no_processo = 'Ganho' THEN revenue ELSE 0 END), 0) AS receita FROM production.diamond.funil_comercial WHERE event_timestamp >= ADD_MONTHS(CURRENT_DATE(), -3) AND event_timestamp <= CURRENT_DATE() GROUP BY DATE_FORMAT(event_timestamp, 'yyyy-MM') ORDER BY mes`;
-
-  const qIG=`SELECT CASE WHEN linha_de_receita_vigente LIKE '%Tallis%' THEN 'Tallis' WHEN linha_de_receita_vigente LIKE '%Alfredo%' THEN 'Alfredo' WHEN linha_de_receita_vigente LIKE '%Nardon%' THEN 'Nardon' WHEN linha_de_receita_vigente LIKE '%G4%' AND linha_de_receita_vigente LIKE '%Instagram%' THEN 'G4' ELSE 'Outros' END AS conta_ig, COUNT(DISTINCT deal_id) AS sals, COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END) AS opps, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END) * 100.0 / NULLIF(COUNT(DISTINCT deal_id), 0), 1) AS cr_sal_opp, COUNT(DISTINCT CASE WHEN fase_atual_no_processo = 'Ganho' THEN deal_id END) AS ganhos FROM production.diamond.funil_comercial WHERE linha_de_receita_vigente LIKE '%Instagram%' AND YEAR(event_timestamp) = YEAR(CURRENT_DATE()) AND MONTH(event_timestamp) = MONTH(CURRENT_DATE()) GROUP BY 1 ORDER BY sals DESC`;
-
-  // Executa em lotes de 2 para evitar rate limit do proxy
+  // Executa em lotes de 2
   async function runBatched(){
     try{
-      const [funil,sdr]=await Promise.all([_dbQuery(qFunil,'funil'),_dbQuery(qSDR,'sdr')]);
-      const [perda,ironDome]=await Promise.all([_dbQuery(qPerda,'perda'),_dbQuery(qIronDome,'ironDome')]);
-      const [pipeline,icp]=await Promise.all([_dbQuery(qPipeline,'pipeline'),_dbQuery(qICP,'icp')]);
-      const [mensal,ig]=await Promise.all([_dbQuery(qMensal,'mensal'),_dbQuery(qIG,'ig')]);
+      const [funil,totais]=await Promise.all([_dbQuery(qFunil,'funil'),_dbQuery(qTotais,'totais')]);
+      const [sdr,perda]=await Promise.all([_dbQuery(qSDR,'sdr'),_dbQuery(qPerda,'perda')]);
+      const [ironDome,mensal]=await Promise.all([_dbQuery(qIronDome,'ironDome'),_dbQuery(qMensal,'mensal')]);
       _intelLoading=false;
-      _intelData={funil,sdr,perda,ironDome,pipeline,icp,mensal,ig};
-      console.log('[INTEL] Todas as queries carregadas:',
-        'funil='+funil.length,'sdr='+sdr.length,'perda='+perda.length,
-        'ironDome='+ironDome.length,'pipeline='+pipeline.length,'icp='+icp.length,
-        'mensal='+mensal.length,'ig='+ig.length);
+      _intelData={funil,totais,sdr,perda,ironDome,mensal};
+      console.log('[INTEL] Carregado:','funil='+funil.length,'totais='+totais.length,'sdr='+sdr.length,'perda='+perda.length,'ironDome='+ironDome.length,'mensal='+mensal.length);
       cb(_intelData);
     }catch(e){
-      console.error('[INTEL] Erro ao carregar dados:',e);
+      console.error('[INTEL] Erro:',e);
       _intelLoading=false;
       cb(null);
     }
@@ -4833,70 +4874,103 @@ function renderIntelligence(){
 
 function _renderIntelHTML(D){
   const ct=document.getElementById('intel-content');
-  const {funil,sdr,perda,ironDome,pipeline,icp,mensal,ig}=D;
+  const {funil,totais,sdr,perda,ironDome,mensal}=D;
+  const t=totais&&totais[0]?totais[0]:[];
+  const mql=parseInt(t[0])||0,sal=parseInt(t[1])||0,sql=parseInt(t[2])||0,won=parseInt(t[3])||0;
+  const cr01=parseFloat(t[4])||0,cr03=parseFloat(t[5])||0,cr04=parseFloat(t[6])||0,wr=parseFloat(t[7])||0;
+  const receita=parseInt(t[8])||0,ticket=parseInt(t[9])||0;
 
-  // ── SEÇÃO 1: PIPELINE PONDERADO (KPIs macro) ──
-  let totalBruto=0,totalPonderado=0,totalDeals=0,totalGanhos=0,receitaGanha=0;
-  const faseOrder=['MQL','SAL','Conectado','Agendado','Negociação','Ganho'];
-  pipeline.forEach(r=>{
-    const fase=r[0]||'';const deals=parseInt(r[1])||0;const bruto=parseInt(r[2])||0;const pond=parseInt(r[3])||0;
-    totalDeals+=deals;totalBruto+=bruto;totalPonderado+=pond;
-    if(fase==='Ganho'){totalGanhos+=deals;receitaGanha+=bruto;}
-  });
+  // Iron Dome totals
+  let domeDeals=0,domeRec=0;
+  ironDome.forEach(r=>{domeDeals+=parseInt(r[2])||0;domeRec+=parseInt(r[4])||0;});
 
-  // Iron Dome total
-  let irondomeTotal=0,irondomeReceita=0;
-  ironDome.forEach(r=>{irondomeTotal+=parseInt(r[2])||0;irondomeReceita+=parseInt(r[4])||0;});
+  // ── SEÇÃO 1: KPIs MACRO + FUNIL VISUAL ──
+  const funnelSteps=[{label:'MQL',val:mql,color:'#6366f1'},{label:'SAL',val:sal,color:'#8b5cf6'},{label:'SQL',val:sql,color:'#a78bfa'},{label:'WON',val:won,color:'#22c55e'}];
+  const maxF=Math.max(mql,1);
+  const funnelBars=funnelSteps.map((s,i)=>{
+    const w=Math.max(8,s.val/maxF*100);
+    const next=funnelSteps[i+1];
+    const crLabel=i===0?cr01+'%':i===1?cr03+'%':i===2?cr04+'%':'';
+    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">'
+      +'<span style="width:36px;font-size:11px;font-weight:700;color:var(--text2);text-align:right">'+s.label+'</span>'
+      +'<div style="flex:1;position:relative;height:32px;border-radius:6px;overflow:hidden;background:var(--bg2)">'
+      +'<div style="height:100%;width:'+w+'%;background:'+s.color+';border-radius:6px;display:flex;align-items:center;padding-left:10px">'
+      +'<span style="font-size:13px;font-weight:700;color:#fff">'+s.val.toLocaleString('pt-BR')+'</span></div></div>'
+      +(crLabel?'<span style="width:50px;font-size:10px;color:var(--text3);text-align:center">'+crLabel+'</span>':'<span style="width:50px"></span>')
+      +'</div>';
+  }).join('');
 
-  let html=renderSection(1,'Pipeline — Mês Atual',`
+  let html=renderSection(1,'Dashboard Funil — Mês Atual',`
     <div class="intel-kpi-row">
-      <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--accent2)">${totalDeals.toLocaleString('pt-BR')}</div><div class="intel-kpi-l">Deals no mês</div></div>
-      <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--green)">${totalGanhos.toLocaleString('pt-BR')}</div><div class="intel-kpi-l">Ganhos</div></div>
-      <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--green)">${fmtBRL(receitaGanha)}</div><div class="intel-kpi-l">Receita fechada</div></div>
-      <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--accent)">${fmtBRL(totalPonderado)}</div><div class="intel-kpi-l">Pipeline ponderado</div></div>
-      <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--red)">${irondomeTotal}</div><div class="intel-kpi-l">Iron Dome (+7d)</div></div>
-      <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--red)">${fmtBRL(irondomeReceita)}</div><div class="intel-kpi-l">Receita em risco</div></div>
+      <div class="intel-kpi"><div class="intel-kpi-v" style="color:#6366f1">${mql.toLocaleString('pt-BR')}</div><div class="intel-kpi-l">MQL</div></div>
+      <div class="intel-kpi"><div class="intel-kpi-v" style="color:#8b5cf6">${sal.toLocaleString('pt-BR')}</div><div class="intel-kpi-l">SAL</div></div>
+      <div class="intel-kpi"><div class="intel-kpi-v" style="color:#a78bfa">${sql.toLocaleString('pt-BR')}</div><div class="intel-kpi-l">SQL</div></div>
+      <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--green)">${won.toLocaleString('pt-BR')}</div><div class="intel-kpi-l">WON</div></div>
+      <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--green)">${fmtBRL(receita)}</div><div class="intel-kpi-l">Receita</div></div>
+      <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--accent)">${fmtBRL(ticket)}</div><div class="intel-kpi-l">Ticket Médio</div></div>
     </div>
-    ${pipeline.length?`<div class="intel-title">Pipeline por fase (receita bruta → ponderada)</div>
-    ${pipeline.filter(r=>faseOrder.includes(r[0])).map(r=>{
-      const fase=r[0];const deals=parseInt(r[1])||0;const bruto=parseInt(r[2])||0;const pond=parseInt(r[3])||0;
-      const pct=totalBruto?Math.round(bruto/totalBruto*100):0;
-      return '<div class="intel-bar-row"><span class="intel-bar-label" style="width:90px;font-weight:600">'+fase+'</span><div class="intel-bar-bg"><div class="intel-bar-fill" style="width:'+Math.max(3,pct)+'%"><span class="intel-bar-v">'+fmtBRL(bruto)+'</span></div></div><span class="intel-bar-pct" style="width:80px">'+fmtBRL(pond)+' pond</span></div>';
-    }).join('')}`:''}
+    <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:280px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px">Funil de Conversão</div>
+        ${funnelBars}
+      </div>
+      <div style="min-width:200px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px">Taxas de Conversão</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--bg2);border-radius:6px"><span style="font-size:11px;color:var(--text2)">CR01 MQL→SAL</span><span class="${cr01>=60?'pg':cr01>=40?'pm':'pl'}" style="font-weight:700;font-size:12px">${cr01}%</span></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--bg2);border-radius:6px"><span style="font-size:11px;color:var(--text2)">CR03 SAL→SQL</span><span class="${cr03>=50?'pg':cr03>=30?'pm':'pl'}" style="font-weight:700;font-size:12px">${cr03}%</span></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--bg2);border-radius:6px"><span style="font-size:11px;color:var(--text2)">CR04 SQL→WON</span><span class="${cr04>=5?'pg':cr04>=2?'pm':'pl'}" style="font-weight:700;font-size:12px">${cr04}%</span></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--bg2);border-radius:6px"><span style="font-size:11px;color:var(--text2)">Win Rate Geral</span><span class="${wr>=3?'pg':wr>=1?'pm':'pl'}" style="font-weight:700;font-size:12px">${wr}%</span></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--bg2);border-radius:6px;border:1px solid var(--red)"><span style="font-size:11px;color:var(--text2)">Iron Dome (+7d)</span><span style="font-weight:700;font-size:12px;color:var(--red)">${domeDeals} deals · ${fmtBRL(domeRec)}</span></div>
+        </div>
+      </div>
+    </div>
   `);
 
-  // ── SEÇÃO 2: FUNIL POR CANAL (top 15 linhas) ──
+  // ── SEÇÃO 2: FUNIL POR CANAL ──
   if(funil.length){
     html+=renderSection(2,'Funil por Canal de Receita',`
-      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Top canais macro — MQL → SAL → Opp → Ganho com taxas de conversão reais</div>
-      <div style="overflow-x:auto"><table class="intel-table" style="min-width:580px">
-        <thead><tr><th>Canal</th><th>MQLs</th><th>SALs</th><th>Opps</th><th>Ganhos</th><th>CR MQL→SAL</th><th>CR SAL→Opp</th><th>CR Opp→Ganho</th></tr></thead>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">MQL → SAL → SQL → WON com CRs e receita por canal</div>
+      <div style="overflow-x:auto"><table class="intel-table" style="min-width:700px">
+        <thead><tr><th>Canal</th><th>MQL</th><th>SAL</th><th>SQL</th><th>WON</th><th>CR01</th><th>CR03</th><th>CR04</th><th>WR%</th><th>Receita</th><th>Ticket</th></tr></thead>
         <tbody>${funil.slice(0,15).map(r=>{
-          const cr1=parseFloat(r[5])||0;const cr2=parseFloat(r[6])||0;const cr3=parseFloat(r[7])||0;
-          const nome=(r[0]||'').length>30?(r[0]).slice(0,30)+'…':r[0];
-          return '<tr><td title="'+r[0]+'" style="font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+nome+'</td><td>'+(parseInt(r[1])||0).toLocaleString('pt-BR')+'</td><td>'+(parseInt(r[2])||0).toLocaleString('pt-BR')+'</td><td>'+(parseInt(r[3])||0).toLocaleString('pt-BR')+'</td><td style="font-weight:700;color:var(--green)">'+(parseInt(r[4])||0)+'</td><td class="'+(cr1>=80?'pg':cr1>=50?'pm':'pl')+'">'+cr1+'%</td><td class="'+(cr2>=60?'pg':cr2>=30?'pm':'pl')+'">'+cr2+'%</td><td class="'+(cr3>=5?'pg':cr3>=2?'pm':'pl')+'">'+cr3+'%</td></tr>';
+          const nome=(r[0]||'').length>28?r[0].slice(0,28)+'…':r[0];
+          const c1=parseFloat(r[5])||0,c3=parseFloat(r[6])||0,c4=parseFloat(r[7])||0,w=parseFloat(r[8])||0;
+          return '<tr><td title="'+r[0]+'" style="font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+nome+'</td>'
+            +'<td>'+(parseInt(r[1])||0).toLocaleString('pt-BR')+'</td>'
+            +'<td>'+(parseInt(r[2])||0).toLocaleString('pt-BR')+'</td>'
+            +'<td>'+(parseInt(r[3])||0).toLocaleString('pt-BR')+'</td>'
+            +'<td style="color:var(--green);font-weight:700">'+(parseInt(r[4])||0)+'</td>'
+            +'<td class="'+(c1>=60?'pg':c1>=40?'pm':'pl')+'">'+c1+'%</td>'
+            +'<td class="'+(c3>=50?'pg':c3>=30?'pm':'pl')+'">'+c3+'%</td>'
+            +'<td class="'+(c4>=5?'pg':c4>=2?'pm':'pl')+'">'+c4+'%</td>'
+            +'<td class="'+(w>=3?'pg':w>=1?'pm':'pl')+'">'+w+'%</td>'
+            +'<td style="font-weight:600">'+fmtBRL(parseInt(r[9])||0)+'</td>'
+            +'<td>'+fmtBRL(parseInt(r[10])||0)+'</td></tr>';
         }).join('')}</tbody>
       </table></div>
     `);
   }
 
-  // ── SEÇÃO 3: PERFORMANCE SDR ──
+  // ── SEÇÃO 3: QUALIFICADOR (SDR) — com % SAOP ──
   if(sdr.length){
     const myName=localStorage.getItem('elucy_qualificador_name')||'';
-    html+=renderSection(3,'Performance por SDR',`
-      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Conversão MQL→SAL, ganhos e ticket médio dos qualificadores</div>
+    html+=renderSection(3,'Performance por Qualificador',`
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">MQL→SAL→SQL→WON + %SAOP (SAL→SQL) por SDR</div>
       <div style="overflow-x:auto"><table class="intel-table">
-        <thead><tr><th>SDR</th><th>Deals</th><th>SALs</th><th>CR MQL→SAL</th><th>Ganhos</th><th>Ticket Médio</th></tr></thead>
+        <thead><tr><th>Qualificador</th><th>MQL</th><th>SAL</th><th>SQL</th><th>WON</th><th>CR01</th><th>%SAOP</th><th>Ticket</th></tr></thead>
         <tbody>${sdr.slice(0,20).map(r=>{
           const name=r[0]||'';const isMe=myName&&name.toLowerCase()===myName.toLowerCase();
-          const cr=parseFloat(r[3])||0;
-          return '<tr style="'+(isMe?'background:var(--adim2);font-weight:700':'')+'">'
+          const c1=parseFloat(r[5])||0;const saop=parseFloat(r[6])||0;
+          return '<tr style="'+(isMe?'background:rgba(99,102,241,.15);font-weight:700':'')+'">'
             +'<td>'+(isMe?'★ ':'')+name+'</td>'
             +'<td>'+(parseInt(r[1])||0)+'</td>'
             +'<td>'+(parseInt(r[2])||0)+'</td>'
-            +'<td class="'+(cr>=80?'pg':cr>=50?'pm':'pl')+'">'+cr+'%</td>'
+            +'<td>'+(parseInt(r[3])||0)+'</td>'
             +'<td style="color:var(--green)">'+(parseInt(r[4])||0)+'</td>'
-            +'<td>'+(parseInt(r[5])?fmtBRL(parseInt(r[5])):'—')+'</td></tr>';
+            +'<td class="'+(c1>=60?'pg':c1>=40?'pm':'pl')+'">'+c1+'%</td>'
+            +'<td class="'+(saop>=50?'pg':saop>=30?'pm':'pl')+'">'+saop+'%</td>'
+            +'<td>'+(parseInt(r[7])?fmtBRL(parseInt(r[7])):'—')+'</td></tr>';
         }).join('')}</tbody>
       </table></div>
     `);
@@ -4904,70 +4978,65 @@ function _renderIntelHTML(D){
 
   // ── SEÇÃO 4: MOTIVOS DE PERDA ──
   if(perda.length){
-    html+=renderSection(4,'Principais Motivos de Perda',`
-      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Top motivos × fase onde o deal se perde</div>
+    html+=renderSection(4,'Onde e Por Que Perdemos',`
       <div style="overflow-x:auto"><table class="intel-table">
-        <thead><tr><th>Fase</th><th>Motivo</th><th>Deals Perdidos</th><th>Dias Médios</th></tr></thead>
-        <tbody>${perda.slice(0,12).map(r=>{
-          const n=parseInt(r[2])||0;
-          return '<tr><td style="font-weight:600">'+(r[0]||'—')+'</td><td>'+(r[1]||'')+'</td><td style="color:var(--red);font-weight:700">'+n.toLocaleString('pt-BR')+'</td><td>'+(r[3]||'—')+'d</td></tr>';
+        <thead><tr><th>Fase</th><th>Motivo</th><th>Deals</th><th>Dias Médios</th></tr></thead>
+        <tbody>${perda.map(r=>{
+          return '<tr><td style="font-weight:600">'+(r[0]||'—')+'</td><td>'+(r[1]||'')+'</td><td style="color:var(--red);font-weight:700">'+(parseInt(r[2])||0).toLocaleString('pt-BR')+'</td><td>'+(r[3]||'—')+'d</td></tr>';
         }).join('')}</tbody>
       </table></div>
     `);
   }
 
-  // ── SEÇÃO 5: IRON DOME — Deals parados ──
+  // ── SEÇÃO 5: IRON DOME ──
   if(ironDome.length){
     html+=renderSection(5,'Iron Dome — Deals Parados +7 dias',`
-      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Deals estagnados por fase/etapa com receita em risco</div>
       <div style="overflow-x:auto"><table class="intel-table">
-        <thead><tr><th>Fase</th><th>Etapa</th><th>Deals</th><th>Dias Médios</th><th>Receita em Risco</th></tr></thead>
-        <tbody>${ironDome.slice(0,10).map(r=>{
-          const rec=parseInt(r[4])||0;
-          return '<tr><td style="font-weight:600">'+(r[0]||'—')+'</td><td>'+(r[1]||'—')+'</td><td style="color:var(--red);font-weight:700">'+(parseInt(r[2])||0)+'</td><td>'+(r[3]||'—')+'d</td><td>'+(rec?fmtBRL(rec):'—')+'</td></tr>';
+        <thead><tr><th>Fase</th><th>Etapa</th><th>Deals</th><th>Dias</th><th>Receita em Risco</th></tr></thead>
+        <tbody>${ironDome.map(r=>{
+          return '<tr><td style="font-weight:600">'+(r[0]||'—')+'</td><td>'+(r[1]||'—')+'</td><td style="color:var(--red);font-weight:700">'+(parseInt(r[2])||0)+'</td><td>'+(r[3]||'—')+'d</td><td>'+(parseInt(r[4])?fmtBRL(parseInt(r[4])):'—')+'</td></tr>';
         }).join('')}</tbody>
       </table></div>
     `);
   }
 
-  // ── SEÇÃO 6: PERFIL ICP × CONVERSÃO ──
-  if(icp.length){
-    const maxDeals=Math.max(...icp.map(r=>parseInt(r[1])||0),1);
-    html+=renderSection(6,'Perfil ICP × Conversão',`
-      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Win rate e ticket médio por perfil de lead</div>
-      ${icp.map(r=>{
-        const perfil=r[0]||'?';const deals=parseInt(r[1])||0;const ganhos=parseInt(r[2])||0;
-        const wr=parseFloat(r[3])||0;const ticket=parseInt(r[4])||0;
-        return '<div class="intel-bar-row"><span class="intel-bar-label" style="width:60px;font-weight:700">Perfil '+perfil+'</span><div class="intel-bar-bg"><div class="intel-bar-fill" style="width:'+Math.max(5,deals/maxDeals*100)+'%"><span class="intel-bar-v">'+deals+' deals</span></div></div><span class="intel-bar-pct" style="width:120px;font-size:10px">WR '+wr+'% · '+(ticket?fmtBRL(ticket):'—')+'</span></div>';
-      }).join('')}
-    `);
-  }
-
-  // ── SEÇÃO 7: CONTAS INSTAGRAM ──
-  if(ig.length){
-    html+=renderSection(7,'Performance por Conta Instagram',`
-      <div style="overflow-x:auto"><table class="intel-table">
-        <thead><tr><th>Conta</th><th>SALs</th><th>Opps</th><th>CR SAL→Opp</th><th>Ganhos</th></tr></thead>
-        <tbody>${ig.map(r=>{
-          const cr=parseFloat(r[3])||0;
-          return '<tr><td style="font-weight:700">'+r[0]+'</td><td>'+(parseInt(r[1])||0).toLocaleString('pt-BR')+'</td><td>'+(parseInt(r[2])||0).toLocaleString('pt-BR')+'</td><td class="'+(cr>=75?'pg':cr>=50?'pm':'pl')+'">'+cr+'%</td><td style="color:var(--green)">'+(parseInt(r[4])||0)+'</td></tr>';
-        }).join('')}</tbody>
-      </table></div>
-    `);
-  }
-
-  // ── SEÇÃO 8: EVOLUÇÃO MENSAL ──
+  // ── SEÇÃO 6: TENDÊNCIA MENSAL (com barras visuais) ──
   if(mensal.length){
-    const maxMql=Math.max(...mensal.map(r=>parseInt(r[1])||0),1);
-    html+=renderSection(8,'Evolução Mensal (Últimos 3 Meses)',`
-      <div style="overflow-x:auto"><table class="intel-table">
-        <thead><tr><th>Mês</th><th>MQLs</th><th>SALs</th><th>Opps</th><th>Ganhos</th><th>Receita</th><th>CR MQL→SAL</th></tr></thead>
-        <tbody>${mensal.filter(r=>(parseInt(r[1])||0)>10).map(r=>{
-          const cr=parseFloat(r[6])||0;
-          return '<tr><td style="font-weight:600">'+r[0]+'</td><td>'+(parseInt(r[1])||0).toLocaleString('pt-BR')+'</td><td>'+(parseInt(r[2])||0).toLocaleString('pt-BR')+'</td><td>'+(parseInt(r[3])||0).toLocaleString('pt-BR')+'</td><td style="color:var(--green)">'+(parseInt(r[4])||0).toLocaleString('pt-BR')+'</td><td style="font-weight:600">'+fmtBRL(parseInt(r[5])||0)+'</td><td class="'+(cr>=70?'pg':cr>=50?'pm':'pl')+'">'+cr+'%</td></tr>';
-        }).join('')}</tbody>
-      </table></div>
-    `);
+    const validMonths=mensal.filter(r=>(parseInt(r[1])||0)>10);
+    if(validMonths.length){
+      const maxM=Math.max(...validMonths.map(r=>parseInt(r[1])||0),1);
+      const barChart=validMonths.map(r=>{
+        const m=r[0];const mq=parseInt(r[1])||0;const s=parseInt(r[2])||0;const sq=parseInt(r[3])||0;const w=parseInt(r[4])||0;
+        return '<div style="display:flex;align-items:flex-end;gap:3px;flex:1;min-width:70px;text-align:center;flex-direction:column">'
+          +'<div style="font-size:10px;font-weight:600;color:var(--text2);width:100%;text-align:center">'+m+'</div>'
+          +'<div style="display:flex;gap:2px;width:100%;justify-content:center;align-items:flex-end;height:80px">'
+          +'<div style="width:16px;background:#6366f1;border-radius:3px 3px 0 0;height:'+Math.max(4,mq/maxM*80)+'px" title="MQL: '+mq.toLocaleString('pt-BR')+'"></div>'
+          +'<div style="width:16px;background:#8b5cf6;border-radius:3px 3px 0 0;height:'+Math.max(4,s/maxM*80)+'px" title="SAL: '+s.toLocaleString('pt-BR')+'"></div>'
+          +'<div style="width:16px;background:#a78bfa;border-radius:3px 3px 0 0;height:'+Math.max(4,sq/maxM*80)+'px" title="SQL: '+sq.toLocaleString('pt-BR')+'"></div>'
+          +'<div style="width:16px;background:#22c55e;border-radius:3px 3px 0 0;height:'+Math.max(4,w/maxM*80)+'px" title="WON: '+w.toLocaleString('pt-BR')+'"></div>'
+          +'</div></div>';
+      }).join('');
+
+      html+=renderSection(6,'Tendência Mensal',`
+        <div style="display:flex;gap:4px;margin-bottom:10px"><span style="display:inline-block;width:10px;height:10px;background:#6366f1;border-radius:2px"></span><span style="font-size:10px;color:var(--text3)">MQL</span><span style="display:inline-block;width:10px;height:10px;background:#8b5cf6;border-radius:2px;margin-left:8px"></span><span style="font-size:10px;color:var(--text3)">SAL</span><span style="display:inline-block;width:10px;height:10px;background:#a78bfa;border-radius:2px;margin-left:8px"></span><span style="font-size:10px;color:var(--text3)">SQL</span><span style="display:inline-block;width:10px;height:10px;background:#22c55e;border-radius:2px;margin-left:8px"></span><span style="font-size:10px;color:var(--text3)">WON</span></div>
+        <div style="display:flex;gap:8px;align-items:flex-end;padding:8px 0">${barChart}</div>
+        <div style="overflow-x:auto;margin-top:8px"><table class="intel-table">
+          <thead><tr><th>Mês</th><th>MQL</th><th>SAL</th><th>SQL</th><th>WON</th><th>Receita</th><th>CR01</th><th>CR03</th><th>CR04</th></tr></thead>
+          <tbody>${validMonths.map(r=>{
+            const c1=parseFloat(r[6])||0,c3=parseFloat(r[7])||0,c4=parseFloat(r[8])||0;
+            return '<tr><td style="font-weight:600">'+r[0]+'</td>'
+              +'<td>'+(parseInt(r[1])||0).toLocaleString('pt-BR')+'</td>'
+              +'<td>'+(parseInt(r[2])||0).toLocaleString('pt-BR')+'</td>'
+              +'<td>'+(parseInt(r[3])||0).toLocaleString('pt-BR')+'</td>'
+              +'<td style="color:var(--green)">'+(parseInt(r[4])||0).toLocaleString('pt-BR')+'</td>'
+              +'<td style="font-weight:600">'+fmtBRL(parseInt(r[5])||0)+'</td>'
+              +'<td class="'+(c1>=60?'pg':c1>=40?'pm':'pl')+'">'+c1+'%</td>'
+              +'<td class="'+(c3>=50?'pg':c3>=30?'pm':'pl')+'">'+c3+'%</td>'
+              +'<td class="'+(c4>=5?'pg':c4>=2?'pm':'pl')+'">'+c4+'%</td></tr>';
+          }).join('')}</tbody>
+        </table></div>
+      `);
+    }
   }
 
   ct.innerHTML=html;
