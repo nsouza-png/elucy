@@ -1821,6 +1821,7 @@ function renderFocusPanel(){
   if(!fl) return;
   const all=Object.entries(map)
     .map(([id,d])=>({id,...d}))
+    .filter(d=>{const s=(d.statusDeal||'').toLowerCase();return s!=='perdido'&&s!=='ganho'&&s!=='desqualificado';})
     .sort((a,b)=>(b._urgency||0)-(a._urgency||0))
     .slice(0,5);
   if(!all.length){fl.innerHTML='<div style="font-size:11px;color:var(--text2);padding:4px 0">Sem deals ativos</div>';return;}
@@ -2322,11 +2323,13 @@ function renderIntelligence(){
   const ct=document.getElementById('intel-content');
   const sub=document.getElementById('intel-subtitle');
   if(!map||!ct) return;
-  const deals=Object.values(map);
-  if(!deals.length){
+  const allDeals=Object.values(map);
+  if(!allDeals.length){
     ct.innerHTML='<div class="intel-empty">Nenhum deal carregado. Sincronize o pipeline primeiro.</div>';
     return;
   }
+  // Separa deals abertos (pipeline ativo) de fechados (para eficiência)
+  const deals=allDeals.filter(d=>{const s=(d.statusDeal||'').toLowerCase();return s!=='perdido'&&s!=='ganho'&&s!=='desqualificado';});
   if(sub) sub.textContent=deals.length+' deals ativos — '+new Date().toLocaleDateString('pt-BR');
 
   // ── CALCULOS ──
@@ -2478,16 +2481,16 @@ function renderIntelligence(){
             crSalOpp=em.cr_sal_opp.toFixed(1);
             src='Databricks — '+em.month;
           } else {
-            // Fallback local: conta por fase_atual_no_processo
-            nMQL=total;
-            nSAL=deals.filter(d=>{
+            // Fallback local: usa allDeals (inclui fechados) para conversão real
+            nMQL=allDeals.length;
+            nSAL=allDeals.filter(d=>{
               const s=(d.statusDeal||'').toLowerCase();
               const f=(d._fase||d.fase||'').toLowerCase();
               if(s==='ganho') return true;
               if(s==='perdido'||f==='perdido') return !(d.motivoLost||d.motivo_lost||'').toLowerCase().startsWith('[validação]');
               return f!=='mql';
             }).length;
-            nOPP=deals.filter(d=>{
+            nOPP=allDeals.filter(d=>{
               const s=(d.statusDeal||'').toLowerCase();
               const f=(d._fase||d.fase||'').toLowerCase();
               if(s==='ganho') return true;
@@ -2496,7 +2499,7 @@ function renderIntelligence(){
             }).length;
             crMqlSal=nMQL>0?((nSAL/nMQL)*100).toFixed(1):'0';
             crSalOpp=nSAL>0?((nOPP/nSAL)*100).toFixed(1):'0';
-            src='Estimativa local — '+total+' deals';
+            src='Estimativa local — '+nMQL+' deals';
           }
           setTimeout(()=>{const el=document.getElementById('ef-source');if(el) el.textContent='('+src+')';},0);
           return '<div class="intel-kpi"><div class="intel-kpi-v">'+nMQL+'</div><div class="intel-kpi-l"># MQL</div></div>'+
