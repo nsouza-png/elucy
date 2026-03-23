@@ -831,17 +831,20 @@ input,textarea,select{font-family:inherit;font-size:inherit}
 .dm-promote-btn:hover{background:rgba(34,197,94,.2);border-color:var(--green)}
 .dm-chat-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:40px}
 
-/* Drop zone */
-.dm-drop-wrap{padding:16px;border-bottom:1px solid var(--border);flex-shrink:0}
-.dm-drop{
-  border:2px dashed var(--border2);border-radius:var(--r-md);padding:24px 16px;
-  display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;
-  transition:all .2s;background:var(--bg3);
+/* Paste button + preview */
+.dm-paste-wrap{padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.dm-paste-btn{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:14px 16px;border:2px dashed var(--border2);border-radius:var(--r-md);
+  background:var(--bg3);cursor:pointer;transition:all .2s;
 }
-.dm-drop:hover,.dm-drop.active{border-color:var(--accent);background:var(--adim)}
-.dm-drop-icon{font-size:28px;opacity:.5}
-.dm-drop-title{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
-.dm-drop-sub{font-size:10px;color:var(--text4)}
+.dm-paste-btn:hover,.dm-paste-btn.active{border-color:var(--accent);background:var(--adim)}
+.dm-paste-icon{font-size:20px}
+.dm-paste-label{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.dm-paste-hint{font-size:9px;color:var(--text4);background:var(--bg5);padding:2px 6px;border-radius:3px;font-family:monospace}
+.dm-paste-preview{margin-top:10px;border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;background:var(--bg3)}
+.dm-paste-preview img{width:100%;max-height:200px;object-fit:contain;display:block;background:#000}
+.dm-paste-actions{display:flex;gap:8px;padding:8px 10px;border-top:1px solid var(--border);justify-content:flex-end}
 .dm-ocr-bar-wrap{margin-top:8px;display:none}
 .dm-ocr-bar-bg{height:2px;background:var(--bg5);border-radius:99px;overflow:hidden}
 .dm-ocr-bar-fill{height:100%;background:var(--accent);width:0;transition:width .1s linear}
@@ -1302,16 +1305,19 @@ input,textarea,select{font-family:inherit;font-size:inherit}
       </div>
     </div>
 
-    <!-- Drop zone (screenshot OCR) -->
-    <div class="dm-drop-wrap">
-      <div class="dm-drop" id="dm-drop-zone"
-           onclick="dmStartCapture()"
-           ondragover="event.preventDefault();this.classList.add('active')"
-           ondragleave="this.classList.remove('active')"
-           ondrop="event.preventDefault();this.classList.remove('active');dmStartCapture()">
-        <div class="dm-drop-icon">&#128248;</div>
-        <div class="dm-drop-title">Soltar screenshot de DM para analisar</div>
-        <div class="dm-drop-sub" id="dm-ocr-status">OCR ENGINE: PRONTO</div>
+    <!-- Paste button + preview -->
+    <div class="dm-paste-wrap" id="dm-paste-wrap">
+      <button class="dm-paste-btn" id="dm-paste-btn" onclick="dmTriggerPaste()" title="Ctrl+V ou clique para colar screenshot">
+        <span class="dm-paste-icon">&#128203;</span>
+        <span class="dm-paste-label">Colar Screenshot</span>
+        <span class="dm-paste-hint">Ctrl+V</span>
+      </button>
+      <div class="dm-paste-preview" id="dm-paste-preview" style="display:none">
+        <img id="dm-paste-img" src="" alt="Screenshot">
+        <div class="dm-paste-actions">
+          <button class="btn bp btn-sm" onclick="dmAnalyzeScreenshot()">Analisar</button>
+          <button class="btn bs btn-sm" onclick="dmClearPaste()">Descartar</button>
+        </div>
       </div>
       <div class="dm-ocr-bar-wrap" id="dm-ocr-bar-wrap">
         <div class="dm-ocr-bar-bg"><div class="dm-ocr-bar-fill" id="dm-ocr-fill"></div></div>
@@ -4331,12 +4337,78 @@ function _dmSet(id, val){
 }
 
 // OCR simulate / drop handler
-function dmStartCapture(){
+// ── PASTE SCREENSHOT ──────────────────────────────────────────────
+let _dmPastedBlob=null;
+
+// Listen for Ctrl+V paste anywhere on the DM screen
+document.addEventListener('paste',function(e){
+  // Only process if DM screen is active
+  const dmScreen=document.getElementById('screen-dm');
+  if(!dmScreen||!dmScreen.classList.contains('on')) return;
+  const items=e.clipboardData&&e.clipboardData.items;
+  if(!items) return;
+  for(let i=0;i<items.length;i++){
+    if(items[i].type.indexOf('image')!==-1){
+      e.preventDefault();
+      const blob=items[i].getAsFile();
+      if(blob) _dmShowPastePreview(blob);
+      return;
+    }
+  }
+});
+
+function dmTriggerPaste(){
+  // Fallback: prompt user to use Ctrl+V
+  const btn=document.getElementById('dm-paste-btn');
+  if(btn){
+    btn.classList.add('active');
+    setTimeout(()=>btn.classList.remove('active'),1500);
+  }
+  _dmShowToast('Use Ctrl+V para colar a screenshot do clipboard');
+  // Also try to read clipboard directly (modern browsers)
+  if(navigator.clipboard&&navigator.clipboard.read){
+    navigator.clipboard.read().then(items=>{
+      for(const item of items){
+        const imgType=item.types.find(t=>t.startsWith('image/'));
+        if(imgType){
+          item.getType(imgType).then(blob=>_dmShowPastePreview(blob));
+          return;
+        }
+      }
+      _dmShowToast('Nenhuma imagem no clipboard. Copie o screenshot primeiro.');
+    }).catch(()=>{});
+  }
+}
+
+function _dmShowPastePreview(blob){
+  _dmPastedBlob=blob;
+  const preview=document.getElementById('dm-paste-preview');
+  const img=document.getElementById('dm-paste-img');
+  const btn=document.getElementById('dm-paste-btn');
+  if(!preview||!img) return;
+  const url=URL.createObjectURL(blob);
+  img.src=url;
+  preview.style.display='block';
+  if(btn) btn.style.display='none';
+}
+
+function dmClearPaste(){
+  _dmPastedBlob=null;
+  const preview=document.getElementById('dm-paste-preview');
+  const img=document.getElementById('dm-paste-img');
+  const btn=document.getElementById('dm-paste-btn');
+  if(preview) preview.style.display='none';
+  if(img){URL.revokeObjectURL(img.src);img.src='';}
+  if(btn) btn.style.display='flex';
+}
+
+function dmAnalyzeScreenshot(){
+  if(!_dmPastedBlob){_dmShowToast('Nenhuma imagem para analisar');return;}
+  // Show OCR progress bar
   const wrap=document.getElementById('dm-ocr-bar-wrap');
   const fill=document.getElementById('dm-ocr-fill');
   const step=document.getElementById('dm-ocr-step');
   const pct=document.getElementById('dm-ocr-pct');
-  const status=document.getElementById('dm-ocr-status');
   if(!wrap) return;
   wrap.style.display='block';
   const steps=['DETECTANDO ELEMENTOS','EXTRAINDO TEXTO','MAPEANDO INTENÇÃO','ANALISANDO SINAL'];
@@ -4349,16 +4421,42 @@ function dmStartCapture(){
     if(step) step.textContent='OCR — '+steps[Math.min(si,steps.length-1)];
     if(p>=100){
       clearInterval(interval);
-      if(status) status.textContent='OCR ENGINE: PRONTO — Screenshot analisada';
+      // Add screenshot as message in chat with thumbnail
+      const sess=_dmSessions.find(s=>s.id===_dmActiveSessionId);
+      if(sess){
+        const img=document.getElementById('dm-paste-img');
+        const dataUrl=img?img.src:'';
+        // Save screenshot reference in session
+        const msgIdx=sess.messages.length;
+        dmAddMessage('lead','[Screenshot #'+(msgIdx+1)+']',null);
+        // Insert thumbnail in chat
+        if(dataUrl){
+          const chatArea=document.getElementById('dm-chat-area');
+          if(chatArea){
+            const thumbDiv=document.createElement('div');
+            thumbDiv.className='dm-msg-lead';
+            thumbDiv.innerHTML='<div style="max-width:60%;border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;margin-bottom:6px"><img src="'+dataUrl+'" style="width:100%;display:block;max-height:300px;object-fit:contain;background:#000"></div>';
+            const ocrDiv=document.getElementById('dm-ocr-messages');
+            if(ocrDiv&&chatArea.contains(ocrDiv)) chatArea.insertBefore(thumbDiv,ocrDiv);
+            else chatArea.appendChild(thumbDiv);
+            chatArea.scrollTop=chatArea.scrollHeight;
+          }
+        }
+      }
+      // Reset paste area
       setTimeout(()=>{
         wrap.style.display='none';
         if(fill) fill.style.width='0';
         if(pct) pct.textContent='0%';
-        if(status) status.textContent='OCR ENGINE: PRONTO';
-      },3000);
+        dmClearPaste();
+        _dmShowToast('Screenshot adicionada ao chat');
+      },800);
     }
   },36);
 }
+
+// Legacy compat
+function dmStartCapture(){ dmTriggerPaste(); }
 
 function dmCopySuggestion(){
   const t=document.getElementById('dm-suggestion-text');
