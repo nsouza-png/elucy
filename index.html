@@ -1927,13 +1927,67 @@ function filterDeals(q){applyFilters();}
 let _intelData=null;
 let _intelLoading=false;
 
-function _dbQuery(sql){
+function _dbQuery(sql,label){
   const token=localStorage.getItem('elucy_db_token');
+  console.log('[INTEL] Query '+label+' enviada');
   return fetch(DB_ENDPOINT,{
     method:'POST',
-    headers:{'x-db-token':token,'apikey':SUPABASE_ANON,'Content-Type':'application/json'},
+    headers:{
+      'x-db-token':token,
+      'apikey':SUPABASE_ANON,
+      'Authorization':'Bearer '+SUPABASE_ANON,
+      'Content-Type':'application/json'
+    },
     body:JSON.stringify({statement:sql,warehouse_id:DB_WAREHOUSE,wait_timeout:'30s',on_wait_timeout:'CONTINUE'})
-  }).then(r=>r.json()).then(r=>(r.result&&r.result.data_array)||[]);
+  }).then(r=>{
+    console.log('[INTEL] '+label+' http:',r.status);
+    if(!r.ok) return r.text().then(t=>{console.error('[INTEL] '+label+' err body:',t);return {};});
+    return r.json();
+  }).then(r=>{
+    console.log('[INTEL] '+label+' response keys:',Object.keys(r||{}).join(','));
+    // Databricks retorna {status:{state}, result:{data_array}} via proxy
+    const rows=(r.result&&r.result.data_array)||[];
+    if(!rows.length&&r.data_array) return r.data_array;
+    // Status pode ser string (direto) ou object (via proxy): {state:'PENDING'}
+    const st=typeof r.status==='object'?(r.status&&r.status.state):r.status;
+    // PENDING/RUNNING → poll
+    if((st==='PENDING'||st==='RUNNING')&&r.statement_id){
+      console.log('[INTEL] '+label+' '+st+', polling stmt='+r.statement_id);
+      return _dbPoll(r.statement_id,label);
+    }
+    if(st==='FAILED'){
+      const errMsg=(r.status&&r.status.error&&r.status.error.message)||'unknown';
+      console.error('[INTEL] '+label+' FAILED:',errMsg);
+      return [];
+    }
+    console.log('[INTEL] '+label+' rows:',rows.length,'status:',st||'ok');
+    return rows;
+  }).catch(e=>{
+    console.error('[INTEL] '+label+' erro:',e);
+    return [];
+  });
+}
+
+function _dbPoll(stmtId,label){
+  const token=localStorage.getItem('elucy_db_token');
+  return new Promise(resolve=>{
+    let tries=0;
+    const iv=setInterval(()=>{
+      tries++;
+      if(tries>10){clearInterval(iv);console.warn('[INTEL] '+label+' timeout poll');resolve([]);return;}
+      fetch(DB_PROXY+'?stmt_id='+stmtId,{
+        headers:{'x-db-token':token,'apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}
+      }).then(r=>r.json()).then(r=>{
+        const rows=(r.result&&r.result.data_array)||[];
+        const st=typeof r.status==='object'?(r.status&&r.status.state):r.status;
+        if(rows.length||st==='SUCCEEDED'||st==='FAILED'){
+          clearInterval(iv);
+          console.log('[INTEL] '+label+' poll done, rows:',rows.length,'st:',st);
+          resolve(rows);
+        }
+      }).catch(()=>{clearInterval(iv);resolve([]);});
+    },3000);
+  });
 }
 
 function loadIntelligenceData(cb){
@@ -1959,18 +2013,27 @@ function loadIntelligenceData(cb){
 
   const qIG=`SELECT CASE WHEN linha_de_receita_vigente LIKE '%Tallis%' THEN 'Tallis' WHEN linha_de_receita_vigente LIKE '%Alfredo%' THEN 'Alfredo' WHEN linha_de_receita_vigente LIKE '%Nardon%' THEN 'Nardon' WHEN linha_de_receita_vigente LIKE '%G4%' AND linha_de_receita_vigente LIKE '%Instagram%' THEN 'G4' ELSE 'Outros' END AS conta_ig, COUNT(DISTINCT deal_id) AS sals, COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END) AS opps, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END) * 100.0 / NULLIF(COUNT(DISTINCT deal_id), 0), 1) AS cr_sal_opp, COUNT(DISTINCT CASE WHEN fase_atual_no_processo = 'Ganho' THEN deal_id END) AS ganhos FROM production.diamond.funil_comercial WHERE linha_de_receita_vigente LIKE '%Instagram%' AND YEAR(event_timestamp) = YEAR(CURRENT_DATE()) AND MONTH(event_timestamp) = MONTH(CURRENT_DATE()) GROUP BY 1 ORDER BY sals DESC`;
 
-  Promise.all([
-    _dbQuery(qFunil),_dbQuery(qSDR),_dbQuery(qPerda),_dbQuery(qIronDome),
-    _dbQuery(qPipeline),_dbQuery(qICP),_dbQuery(qMensal),_dbQuery(qIG)
-  ]).then(([funil,sdr,perda,ironDome,pipeline,icp,mensal,ig])=>{
-    _intelLoading=false;
-    _intelData={funil,sdr,perda,ironDome,pipeline,icp,mensal,ig};
-    cb(_intelData);
-  }).catch(e=>{
-    console.error('[INTEL] Erro ao carregar dados:',e);
-    _intelLoading=false;
-    cb(null);
-  });
+  // Executa em lotes de 2 para evitar rate limit do proxy
+  async function runBatched(){
+    try{
+      const [funil,sdr]=await Promise.all([_dbQuery(qFunil,'funil'),_dbQuery(qSDR,'sdr')]);
+      const [perda,ironDome]=await Promise.all([_dbQuery(qPerda,'perda'),_dbQuery(qIronDome,'ironDome')]);
+      const [pipeline,icp]=await Promise.all([_dbQuery(qPipeline,'pipeline'),_dbQuery(qICP,'icp')]);
+      const [mensal,ig]=await Promise.all([_dbQuery(qMensal,'mensal'),_dbQuery(qIG,'ig')]);
+      _intelLoading=false;
+      _intelData={funil,sdr,perda,ironDome,pipeline,icp,mensal,ig};
+      console.log('[INTEL] Todas as queries carregadas:',
+        'funil='+funil.length,'sdr='+sdr.length,'perda='+perda.length,
+        'ironDome='+ironDome.length,'pipeline='+pipeline.length,'icp='+icp.length,
+        'mensal='+mensal.length,'ig='+ig.length);
+      cb(_intelData);
+    }catch(e){
+      console.error('[INTEL] Erro ao carregar dados:',e);
+      _intelLoading=false;
+      cb(null);
+    }
+  }
+  runBatched();
 }
 
 // ── REPORTS DINÂMICOS — dados reais do Databricks via proxy ──
