@@ -973,25 +973,17 @@ input,textarea,select{font-family:inherit;font-size:inherit}
 .dm-chat-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:40px}
 
 /* Paste button + preview */
-.dm-paste-wrap{padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
-.dm-paste-btn{
-  width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
-  padding:14px 16px;border:2px dashed var(--border2);border-radius:var(--r-md);
-  background:var(--bg3);cursor:pointer;transition:all .2s;
-}
-.dm-paste-btn:hover,.dm-paste-btn.active{border-color:var(--accent);background:var(--adim)}
-.dm-paste-icon{font-size:20px}
-.dm-paste-label{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
-.dm-paste-hint{font-size:9px;color:var(--text4);background:var(--bg5);padding:2px 6px;border-radius:3px;font-family:monospace}
-.dm-paste-preview{margin-top:10px;border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;background:var(--bg3)}
-.dm-paste-preview img{width:100%;max-height:200px;object-fit:contain;display:block;background:#000}
-.dm-paste-actions{display:flex;gap:8px;padding:8px 10px;border-top:1px solid var(--border);justify-content:flex-end}
-.dm-ocr-bar-wrap{margin-top:8px;display:none}
-.dm-ocr-bar-bg{height:2px;background:var(--bg5);border-radius:99px;overflow:hidden}
-.dm-ocr-bar-fill{height:100%;background:var(--accent);width:0;transition:width .1s linear}
-.dm-ocr-labels{display:flex;justify-content:space-between;margin-top:4px}
-.dm-ocr-step{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
-.dm-ocr-pct{font-size:9px;color:var(--accent2);font-weight:700}
+.dm-msg-input-wrap{padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.dm-sender-toggle{display:flex;gap:4px;margin-bottom:8px}
+.dm-sender-btn{padding:5px 14px;border:1px solid var(--border2);border-radius:var(--r-sm);background:var(--bg3);color:var(--text3);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;text-transform:uppercase;letter-spacing:.5px}
+.dm-sender-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.dm-sender-btn:not(.active):hover{border-color:var(--accent);color:var(--text1)}
+.dm-input-row{display:flex;gap:8px;align-items:flex-end}
+.dm-msg-textarea{flex:1;resize:none;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--r-md);background:var(--bg3);color:var(--text);font-size:13px;line-height:1.5;font-family:inherit;transition:border-color .15s}
+.dm-msg-textarea:focus{outline:none;border-color:var(--accent)}
+.dm-msg-textarea::placeholder{color:var(--text4)}
+.dm-send-btn{width:40px;height:40px;border:none;border-radius:var(--r-md);background:var(--accent);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0}
+.dm-send-btn:hover{background:var(--accent2)}
 
 /* Chat area */
 .dm-chat{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
@@ -1437,26 +1429,15 @@ input,textarea,select{font-family:inherit;font-size:inherit}
       </div>
     </div>
 
-    <!-- Paste button + preview -->
-    <div class="dm-paste-wrap" id="dm-paste-wrap">
-      <button class="dm-paste-btn" id="dm-paste-btn" onclick="dmTriggerPaste()" title="Ctrl+V ou clique para colar screenshot">
-        <span class="dm-paste-icon">&#128203;</span>
-        <span class="dm-paste-label">Colar Screenshot</span>
-        <span class="dm-paste-hint">Ctrl+V</span>
-      </button>
-      <div class="dm-paste-preview" id="dm-paste-preview" style="display:none">
-        <img id="dm-paste-img" src="" alt="Screenshot">
-        <div class="dm-paste-actions">
-          <button class="btn bp btn-sm" onclick="dmAnalyzeScreenshot()">Analisar</button>
-          <button class="btn bs btn-sm" onclick="dmClearPaste()">Descartar</button>
-        </div>
+    <!-- Message input area -->
+    <div class="dm-msg-input-wrap" id="dm-msg-input-wrap">
+      <div class="dm-sender-toggle">
+        <button class="dm-sender-btn active" id="dm-sender-lead" onclick="dmSetSender('lead')">Lead</button>
+        <button class="dm-sender-btn" id="dm-sender-op" onclick="dmSetSender('op')">Founder</button>
       </div>
-      <div class="dm-ocr-bar-wrap" id="dm-ocr-bar-wrap">
-        <div class="dm-ocr-bar-bg"><div class="dm-ocr-bar-fill" id="dm-ocr-fill"></div></div>
-        <div class="dm-ocr-labels">
-          <span class="dm-ocr-step" id="dm-ocr-step">OCR — SCANNING</span>
-          <span class="dm-ocr-pct" id="dm-ocr-pct">0%</span>
-        </div>
+      <div class="dm-input-row">
+        <textarea class="dm-msg-textarea" id="dm-msg-textarea" placeholder="Cole a mensagem do lead aqui..." rows="2" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();dmSubmitMessage()}"></textarea>
+        <button class="dm-send-btn" onclick="dmSubmitMessage()" title="Adicionar mensagem">&#10148;</button>
       </div>
     </div>
 
@@ -1470,8 +1451,8 @@ input,textarea,select{font-family:inherit;font-size:inherit}
     <div class="dm-chat" id="dm-chat-area">
       <div class="dm-chat-empty" id="dm-chat-empty">
         <div style="font-size:28px;opacity:.3">&#128172;</div>
-        <div style="font-size:12px;color:var(--text3);margin-top:6px">Selecione uma conta, digite o @ do lead e cole screenshots da DM</div>
-        <div style="font-size:10px;color:var(--text4);margin-top:4px">Cada screenshot vira uma mensagem analisada com sinais CQL</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:6px">Selecione uma conta, digite o @ do lead e cole as mensagens da conversa</div>
+        <div style="font-size:10px;color:var(--text4);margin-top:4px">Alterne entre Lead/Founder para construir o histórico que será inputado no CRM</div>
       </div>
       <div id="dm-ocr-messages"></div>
     </div>
@@ -1518,7 +1499,7 @@ input,textarea,select{font-family:inherit;font-size:inherit}
       <div class="dm-ai-card">
         <div class="dm-ai-label">AI SUGGESTION</div>
         <div class="dm-ai-text" id="dm-suggestion-text">
-          Cole screenshots da conversa para receber sugestões contextuais.
+          Cole as mensagens da conversa para receber sugestões contextuais.
         </div>
         <div class="dm-ai-actions">
           <button class="dm-copy-btn" onclick="dmCopySuggestion()">&#128203; Copiar DM</button>
@@ -1927,181 +1908,52 @@ function filterDeals(q){applyFilters();}
 let _intelData=null;
 let _intelLoading=false;
 
-async function _dbQuery(sql,label){
-  const token=localStorage.getItem('elucy_db_token');
-  if(!token){console.warn('[INTEL] '+label+' no db token');return [];}
-  console.log('[INTEL] '+label+' sending...');
-  const body={statement:sql,warehouse_id:DB_WAREHOUSE,wait_timeout:'30s',on_wait_timeout:'CONTINUE'};
-  let r=null;
-  // Path 1: Supabase SDK (uses session JWT automatically — handles edge function auth)
-  const sb=getSB();
-  if(sb&&sb.functions){
-    try{
-      const {data,error}=await sb.functions.invoke('db-proxy',{body,headers:{'x-db-token':token}});
-      if(!error&&data){
-        console.log('[INTEL] '+label+' SDK ok');
-        r=data;
-      } else {
-        console.warn('[INTEL] '+label+' SDK err:',error||'no data','→ fallback fetch');
-      }
-    }catch(e){console.warn('[INTEL] '+label+' SDK catch:',e);}
-  }
-  // Path 2: Direct fetch (fallback)
-  if(!r){
-    try{
-      const resp=await fetch(DB_ENDPOINT,{
-        method:'POST',
-        headers:{'x-db-token':token,'apikey':SUPABASE_ANON,'Content-Type':'application/json'},
-        body:JSON.stringify(body)
-      });
-      console.log('[INTEL] '+label+' fetch http:',resp.status);
-      if(resp.ok) r=await resp.json();
-      else console.error('[INTEL] '+label+' fetch err:',await resp.text());
-    }catch(e){console.error('[INTEL] '+label+' fetch catch:',e);}
-  }
-  if(!r||typeof r!=='object') return [];
-  const rows=(r.result&&r.result.data_array)||[];
-  if(!rows.length&&r.data_array) return r.data_array;
-  const st=typeof r.status==='object'?(r.status&&r.status.state):r.status;
-  if((st==='PENDING'||st==='RUNNING')&&r.statement_id){
-    console.log('[INTEL] '+label+' '+st+' → polling',r.statement_id);
-    return _dbPoll(r.statement_id,label);
-  }
-  if(st==='FAILED'){console.error('[INTEL] '+label+' FAILED:',r.status);return [];}
-  console.log('[INTEL] '+label+' ✓',rows.length,'rows');
-  return rows;
-}
-
-function _dbPoll(stmtId,label){
-  const token=localStorage.getItem('elucy_db_token');
-  return new Promise(resolve=>{
-    let tries=0;
-    const iv=setInterval(()=>{
-      tries++;
-      if(tries>15){clearInterval(iv);console.warn('[INTEL] '+label+' poll timeout');resolve([]);return;}
-      fetch(DB_PROXY+'?stmt_id='+stmtId,{
-        headers:{'x-db-token':token,'apikey':SUPABASE_ANON}
-      }).then(r=>r.json()).then(r=>{
-        const rows=(r.result&&r.result.data_array)||[];
-        const st=typeof r.status==='object'?(r.status&&r.status.state):r.status;
-        if(rows.length||st==='SUCCEEDED'||st==='FAILED'){
-          clearInterval(iv);
-          console.log('[INTEL] '+label+' poll ✓',rows.length,'rows');
-          resolve(rows);
-        }
-      }).catch(()=>{clearInterval(iv);resolve([]);});
-    },3000);
-  });
+// Fetch cached intelligence data from Supabase REST API
+async function _intelFetch(queryId){
+  try{
+    const url=SUPABASE_URL+'/rest/v1/intelligence_cache?query_id=eq.'+queryId+'&select=data,row_count,updated_at';
+    const resp=await fetch(url,{headers:{'apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}});
+    if(!resp.ok){console.warn('[INTEL] '+queryId+' fetch err:',resp.status);return [];}
+    const arr=await resp.json();
+    if(!arr.length){console.warn('[INTEL] '+queryId+' no cache');return [];}
+    console.log('[INTEL] '+queryId+' ✓',arr[0].row_count,'rows (cached '+arr[0].updated_at+')');
+    return arr[0].data||[];
+  }catch(e){console.error('[INTEL] '+queryId+' err:',e);return [];}
 }
 
 function loadIntelligenceData(cb){
   if(_intelData){ cb(_intelData); return; }
   if(_intelLoading) return;
   _intelLoading=true;
-  const token=localStorage.getItem('elucy_db_token');
-  if(!token){ _intelLoading=false; cb(null); return; }
-  const mf="YEAR(event_timestamp)=YEAR(CURRENT_DATE()) AND MONTH(event_timestamp)=MONTH(CURRENT_DATE())";
 
-  // Q1: Funil Macro — MQL → SAL → SQL → WON por canal
-  const qFunil=`SELECT linha_de_receita_vigente AS canal,
-    COUNT(DISTINCT deal_id) AS mql,
-    COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) AS sal,
-    COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) AS sql_,
-    COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END) AS won,
-    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS cr_mql_sal,
-    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END),0),1) AS cr_sal_sql,
-    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END),0),1) AS cr_sql_won,
-    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS win_rate,
-    ROUND(SUM(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue ELSE 0 END),0) AS receita,
-    ROUND(AVG(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue END),0) AS ticket_medio
-  FROM production.diamond.funil_comercial
-  WHERE ${mf} AND linha_de_receita_vigente IS NOT NULL AND linha_de_receita_vigente!=''
-  GROUP BY linha_de_receita_vigente HAVING COUNT(DISTINCT deal_id)>=5 ORDER BY mql DESC LIMIT 15`;
+  // Fetch all 15 queries from Supabase intelligence_cache (pre-computed by intel-sync edge function)
+  const queryIds=['funil','totais','sdr','perda','ironDome','mensal','velocidade','closer','skip','tier','ig','socialDM','icp','pipeline','abandono'];
 
-  // Q2: Totais Gerais (1 row)
-  const qTotais=`SELECT
-    COUNT(DISTINCT deal_id) AS mql,
-    COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) AS sal,
-    COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) AS sql_,
-    COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END) AS won,
-    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS cr01,
-    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END),0),1) AS cr03,
-    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END),0),1) AS cr04,
-    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS win_rate,
-    ROUND(SUM(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue ELSE 0 END),0) AS receita,
-    ROUND(AVG(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue END),0) AS ticket
-  FROM production.diamond.funil_comercial WHERE ${mf}`;
-
-  // Q3: SDR performance
-  const qSDR=`SELECT qualificador_name AS sdr,
-    COUNT(DISTINCT deal_id) AS mql,
-    COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) AS sal,
-    COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) AS sql_,
-    COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END) AS won,
-    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS cr01,
-    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END),0),1) AS saop,
-    ROUND(AVG(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue END),0) AS ticket
-  FROM production.diamond.funil_comercial WHERE ${mf} AND qualificador_name IS NOT NULL AND qualificador_name!=''
-  GROUP BY qualificador_name HAVING COUNT(DISTINCT deal_id)>=3 ORDER BY mql DESC LIMIT 20`;
-
-  // Q4: Motivos de perda
-  const qPerda=`SELECT fase_anterior_no_processo AS fase, motivo_lost, COUNT(DISTINCT deal_id) AS perdidos, ROUND(AVG(delta_t),1) AS avg_dias FROM production.diamond.funil_comercial WHERE fase_atual_no_processo='Perdido' AND ${mf} AND motivo_lost IS NOT NULL AND motivo_lost!='' GROUP BY fase_anterior_no_processo, motivo_lost HAVING COUNT(DISTINCT deal_id)>=2 ORDER BY perdidos DESC LIMIT 12`;
-
-  // Q5: Iron Dome
-  const qIronDome=`SELECT fase_atual_no_processo AS fase, etapa_atual_no_pipeline AS etapa, COUNT(DISTINCT deal_id) AS deals, ROUND(AVG(delta_t),1) AS avg_dias, ROUND(SUM(revenue),0) AS receita FROM production.diamond.funil_comercial WHERE delta_t>7 AND fase_atual_no_processo NOT IN ('Ganho','Perdido') AND ${mf} GROUP BY fase_atual_no_processo, etapa_atual_no_pipeline HAVING COUNT(DISTINCT deal_id)>=2 ORDER BY receita DESC LIMIT 10`;
-
-  // Q6: Tendência mensal (3 meses)
-  const qMensal=`SELECT DATE_FORMAT(event_timestamp,'yyyy-MM') AS mes,
-    COUNT(DISTINCT deal_id) AS mql,
-    COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) AS sal,
-    COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END) AS sql_,
-    COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END) AS won,
-    ROUND(SUM(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue ELSE 0 END),0) AS receita,
-    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS cr01,
-    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END),0),1) AS cr03,
-    ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END),0),1) AS cr04
-  FROM production.diamond.funil_comercial WHERE event_timestamp>=ADD_MONTHS(CURRENT_DATE(),-3) AND event_timestamp<=CURRENT_DATE() GROUP BY DATE_FORMAT(event_timestamp,'yyyy-MM') ORDER BY mes`;
-
-  // Q7: Velocidade por transição de fase
-  const qVelocidade=`SELECT linha_de_receita_vigente AS linha, fase_anterior_no_processo AS de, fase_atual_no_processo AS para, COUNT(*) AS transicoes, ROUND(AVG(delta_t),1) AS avg_dias, ROUND(PERCENTILE_APPROX(delta_t,0.5),1) AS mediana, MAX(delta_t) AS max_dias FROM production.diamond.funil_comercial WHERE delta_t IS NOT NULL AND delta_t>0 AND YEAR(event_timestamp)>=YEAR(CURRENT_DATE()) AND fase_anterior_no_processo IN ('MQL','SAL','Conectado','Agendado','Negociação') AND fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') GROUP BY linha_de_receita_vigente,fase_anterior_no_processo,fase_atual_no_processo HAVING COUNT(*)>=5 ORDER BY linha,de,para`;
-
-  // Q8: Eficiência por Closer
-  const qCloser=`SELECT proprietario_name AS closer, COUNT(DISTINCT deal_id) AS deals, COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END) AS ganhos, COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Perdido' THEN deal_id END) AS perdidos, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS win_rate, ROUND(AVG(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue END),0) AS ticket, ROUND(SUM(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue ELSE 0 END),0) AS receita, ROUND(AVG(CASE WHEN fase_atual_no_processo='Ganho' THEN delta_t END),1) AS dias_ganho FROM production.diamond.funil_comercial WHERE ${mf} AND proprietario_name IS NOT NULL AND proprietario_name!='' AND fase_atual_no_processo IN ('Ganho','Perdido','Negociação') GROUP BY proprietario_name HAVING COUNT(DISTINCT deal_id)>=3 ORDER BY receita DESC LIMIT 20`;
-
-  // Q9: Deals com etapa pulada (risco)
-  const qSkip=`SELECT qualificador_name AS sdr, linha_de_receita_vigente AS linha, COUNT(DISTINCT deal_id) AS deals_skip, ROUND(AVG(delta_t),1) AS avg_delta FROM production.diamond.funil_comercial WHERE event_skipped=true AND ${mf} GROUP BY qualificador_name,linha_de_receita_vigente HAVING COUNT(DISTINCT deal_id)>=2 ORDER BY deals_skip DESC LIMIT 15`;
-
-  // Q10: Tier × Linha de Receita
-  const qTier=`SELECT linha_de_receita_vigente AS linha, tier_da_oportunidade AS tier, COUNT(DISTINCT deal_id) AS deals, ROUND(AVG(revenue),0) AS ticket, COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END) AS ganhos, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS win_rate FROM production.diamond.funil_comercial WHERE ${mf} AND tier_da_oportunidade IS NOT NULL AND tier_da_oportunidade!='' GROUP BY linha_de_receita_vigente,tier_da_oportunidade HAVING COUNT(DISTINCT deal_id)>=3 ORDER BY linha,deals DESC LIMIT 30`;
-
-  // Q11: Contas Instagram
-  const qIG=`SELECT CASE WHEN linha_de_receita_vigente LIKE '%Tallis%' THEN 'Tallis' WHEN linha_de_receita_vigente LIKE '%Alfredo%' THEN 'Alfredo' WHEN linha_de_receita_vigente LIKE '%Nardon%' THEN 'Nardon' WHEN linha_de_receita_vigente LIKE '%G4%' AND linha_de_receita_vigente LIKE '%Instagram%' THEN 'G4' ELSE 'Outros' END AS conta, COUNT(DISTINCT deal_id) AS sals, COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END) AS opps, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS cr_sal_opp, COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END) AS ganhos, ROUND(AVG(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue END),0) AS ticket FROM production.diamond.funil_comercial WHERE linha_de_receita_vigente LIKE '%Instagram%' AND ${mf} GROUP BY 1 ORDER BY sals DESC`;
-
-  // Q12: Social DM
-  const qSocialDM=`SELECT linha_de_receita_vigente AS linha, COUNT(DISTINCT deal_id) AS mqls, COUNT(DISTINCT CASE WHEN fase_atual_no_processo NOT IN ('MQL') THEN deal_id END) AS sals, COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END) AS opps, COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END) AS ganhos, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS cr_mql_opp, ROUND(AVG(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue END),0) AS ticket FROM production.diamond.funil_comercial WHERE linha_de_receita_vigente LIKE '%Social DM%' AND ${mf} GROUP BY linha_de_receita_vigente ORDER BY mqls DESC`;
-
-  // Q13: Perfil ICP
-  const qICP=`SELECT perfil, COUNT(DISTINCT deal_id) AS deals, COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END) AS ganhos, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS win_rate, ROUND(AVG(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue END),0) AS ticket, ROUND(AVG(delta_t),1) AS velocidade FROM production.diamond.funil_comercial WHERE ${mf} AND perfil IS NOT NULL AND perfil!='' GROUP BY perfil HAVING COUNT(DISTINCT deal_id)>=5 ORDER BY win_rate DESC`;
-
-  // Q14: Pipeline Ponderado
-  const qPipeline=`SELECT fase_atual_no_processo AS fase, COUNT(DISTINCT deal_id) AS deals, ROUND(SUM(revenue),0) AS receita_bruta, ROUND(SUM(revenue*CASE WHEN fase_atual_no_processo='SAL' THEN 0.10 WHEN fase_atual_no_processo='Conectado' THEN 0.20 WHEN fase_atual_no_processo='Agendado' THEN 0.40 WHEN fase_atual_no_processo='Negociação' THEN 0.60 WHEN fase_atual_no_processo='Ganho' THEN 1.0 ELSE 0.05 END),0) AS receita_pond, ROUND(AVG(revenue),0) AS ticket FROM production.diamond.funil_comercial WHERE fase_atual_no_processo NOT IN ('Perdido') AND ${mf} AND revenue>0 GROUP BY fase_atual_no_processo ORDER BY CASE fase_atual_no_processo WHEN 'MQL' THEN 1 WHEN 'SAL' THEN 2 WHEN 'Conectado' THEN 3 WHEN 'Agendado' THEN 4 WHEN 'Negociação' THEN 5 WHEN 'Ganho' THEN 6 END`;
-
-  // Q15: Abandono de Carrinho
-  const qAbandono=`SELECT linha_de_receita_vigente AS linha, COUNT(DISTINCT deal_id) AS abandonos, COUNT(DISTINCT CASE WHEN fase_atual_no_processo NOT IN ('MQL') THEN deal_id END) AS contatados, COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END) AS recuperados, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS taxa_rec, ROUND(SUM(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue ELSE 0 END),0) AS receita_rec FROM production.diamond.funil_comercial WHERE (linha_de_receita_vigente LIKE '%Abandono%' OR linha_de_receita_vigente LIKE '%carrinho%') AND ${mf} GROUP BY linha_de_receita_vigente`;
-
-  // Executa em lotes de 2-3
-  async function runBatched(){
+  async function fetchAll(){
     try{
-      const [funil,totais]=await Promise.all([_dbQuery(qFunil,'funil'),_dbQuery(qTotais,'totais')]);
-      const [sdr,perda]=await Promise.all([_dbQuery(qSDR,'sdr'),_dbQuery(qPerda,'perda')]);
-      const [ironDome,mensal]=await Promise.all([_dbQuery(qIronDome,'ironDome'),_dbQuery(qMensal,'mensal')]);
-      const [velocidade,closer]=await Promise.all([_dbQuery(qVelocidade,'velocidade'),_dbQuery(qCloser,'closer')]);
-      const [skip,tier]=await Promise.all([_dbQuery(qSkip,'skip'),_dbQuery(qTier,'tier')]);
-      const [ig,socialDM]=await Promise.all([_dbQuery(qIG,'ig'),_dbQuery(qSocialDM,'socialDM')]);
-      const [icp,pipeline,abandono]=await Promise.all([_dbQuery(qICP,'icp'),_dbQuery(qPipeline,'pipeline'),_dbQuery(qAbandono,'abandono')]);
+      // Fetch all in one request using PostgREST IN filter
+      const url=SUPABASE_URL+'/rest/v1/intelligence_cache?query_id=in.('+queryIds.join(',')+')&select=query_id,data,row_count,updated_at';
+      const resp=await fetch(url,{headers:{'apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}});
+      if(!resp.ok){
+        console.error('[INTEL] Supabase fetch err:',resp.status);
+        _intelLoading=false;cb(null);return;
+      }
+      const rows=await resp.json();
+      if(!rows.length){
+        console.warn('[INTEL] No cached data — run intel-sync edge function first');
+        _intelLoading=false;cb(null);return;
+      }
+
+      // Map query_id → data array
+      const map={};
+      rows.forEach(r=>{map[r.query_id]=r.data||[];});
+      _intelData={};
+      queryIds.forEach(qid=>{_intelData[qid]=map[qid]||[];});
+
+      const loaded=rows.length;
+      const newest=rows.reduce((a,b)=>a.updated_at>b.updated_at?a:b);
+      console.log('[INTEL] Loaded '+loaded+'/'+queryIds.length+' queries from Supabase (last sync: '+newest.updated_at+')');
       _intelLoading=false;
-      _intelData={funil,totais,sdr,perda,ironDome,mensal,velocidade,closer,skip,tier,ig,socialDM,icp,pipeline,abandono};
-      console.log('[INTEL] Carregado: funil='+funil.length+' totais='+totais.length+' sdr='+sdr.length+' perda='+perda.length+' ironDome='+ironDome.length+' mensal='+mensal.length+' velocidade='+velocidade.length+' closer='+closer.length+' skip='+skip.length+' tier='+tier.length+' ig='+ig.length+' socialDM='+socialDM.length+' icp='+icp.length+' pipeline='+pipeline.length+' abandono='+abandono.length);
       cb(_intelData);
     }catch(e){
       console.error('[INTEL] Erro:',e);
@@ -2109,7 +1961,7 @@ function loadIntelligenceData(cb){
       cb(null);
     }
   }
-  runBatched();
+  fetchAll();
 }
 
 // ── REPORTS DINÂMICOS — dados reais do Databricks via proxy ──
@@ -4544,6 +4396,47 @@ function dmUpdateCQLStatus(sess){
       }
     });
   }
+}
+
+// ── Message input: sender toggle + submit ──
+let _dmCurrentSender='lead';
+
+function dmSetSender(who){
+  _dmCurrentSender=who==='op'?'op':'lead';
+  const leadBtn=document.getElementById('dm-sender-lead');
+  const opBtn=document.getElementById('dm-sender-op');
+  if(leadBtn) leadBtn.className='dm-sender-btn'+(_dmCurrentSender==='lead'?' active':'');
+  if(opBtn) opBtn.className='dm-sender-btn'+(_dmCurrentSender==='op'?' active':'');
+  const ta=document.getElementById('dm-msg-textarea');
+  if(ta) ta.placeholder=_dmCurrentSender==='lead'?'Cole a mensagem do lead aqui...':'Cole a resposta do founder aqui...';
+}
+
+function dmSubmitMessage(){
+  const ta=document.getElementById('dm-msg-textarea');
+  if(!ta) return;
+  const text=ta.value.trim();
+  if(!text) return;
+  // Auto-create session if none
+  if(!_dmActiveSessionId) dmNewSession();
+  const sender=_dmCurrentSender==='op'?'operator':'lead';
+  // Simple signal detection for lead messages
+  let signal=null;
+  if(sender==='lead'){
+    const lower=text.toLowerCase();
+    if(lower.includes('quanto custa')||lower.includes('valor')||lower.includes('preço')||lower.includes('investimento')) signal='BUY';
+    else if(lower.includes('quero saber mais')||lower.includes('me conta')||lower.includes('interesse')) signal='INTEREST';
+    else if(lower.includes('agenda')||lower.includes('reunião')||lower.includes('conversar')||lower.includes('call')) signal='INTENT';
+  }
+  dmAddMessage(sender,text,signal);
+  ta.value='';
+  ta.focus();
+  // Auto scroll chat to bottom
+  const chatArea=document.getElementById('dm-chat-area');
+  if(chatArea) chatArea.scrollTop=chatArea.scrollHeight;
+  // Update combo badge
+  const comboBadge=document.getElementById('dm-badge-combo');
+  const sess=_dmSessions.find(s=>s.id===_dmActiveSessionId);
+  if(comboBadge&&sess) comboBadge.innerHTML='&#9889; COMBO: '+sess.messages.length;
 }
 
 function dmSwitchAccount(){
