@@ -1267,7 +1267,8 @@ async function loadDealsFromSupabase(email){
     {name:'p_negociacoes_ganhas'},{name:'p_receita_total'},{name:'p_pa_cliente'},
     {name:'p_primeiro_produto'},{name:'p_ultimo_produto'},{name:'p_produtos_comprados'},
     {name:'p_data_primeira_compra'},{name:'p_data_ultima_compra'},
-    {name:'p_comprou_scale'},{name:'p_comprou_club'}
+    {name:'p_comprou_scale'},{name:'p_comprou_club'},
+    {name:'fase_anterior_no_processo'},{name:'faixa_de_funcionarios'},{name:'closed_at'}
   ].map((c,i)=>({name:c.name,position:i}));
   // Transforma objetos em arrays (formato esperado pelo cockpit)
   const colNames=cols.map(c=>c.name);
@@ -1920,9 +1921,12 @@ function renderLiveDeals(rows,cols){
     // conta_founder: derivado do utm_medium para rotear tom Social DM no worker
     const contaFounder=(utm.toLowerCase()==='tallis'||utm.toLowerCase()==='nardon'||utm.toLowerCase()==='alfredo')?utm.toLowerCase():'';
     const telefone=g(row,'p_telefone')||'';
-    const dealObj={nome,nomeNegocio,contact_name:contactName,empresa:emailLead||empresa,cargo,fase,etapa,tier,delta,canal,deal_id,temp,tc,tl,dd,emailLead,
-      linhaReceita,revenueRaw,elucyValor,forecastDelta,statusDeal,motivoLost,createdAtCrm,
-      utm_medium:utm,conta_founder:contaFounder,telefone,
+    const faseAnterior=g(row,'fase_anterior_no_processo')||'';
+    const faixaFunc=g(row,'faixa_de_funcionarios')||'';
+    const closedAt=g(row,'closed_at')||'';
+    const dealObj={nome,nomeNegocio,contact_name:contactName,empresa:emailLead||empresa,cargo,fase,faseAnterior,etapa,tier,delta,canal,deal_id,temp,tc,tl,dd,emailLead,
+      linhaReceita,revenueRaw,elucyValor,forecastDelta,statusDeal,motivoLost,createdAtCrm,closedAt,
+      utm_medium:utm,conta_founder:contaFounder,telefone,faixaFunc,
       _fase:fase,_etapa:etapa,_tier:tier,_delta:delta,_temp:temp};
     // Sinal automático
     const signal=calcSignal(dealObj);
