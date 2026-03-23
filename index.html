@@ -288,7 +288,7 @@ body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-ser
 </div>
 <div id="topbar">
   <span class="logo">Elucy <em>Cockpit</em></span>
-  <span style="font-size:10px;color:var(--text2);margin-left:-4px;letter-spacing:.3px">Sales Engagement OS</span>
+  <span style="font-size:10px;color:var(--text2);margin-left:-4px;letter-spacing:.3px">Conversation Intelligence</span>
   <button class="ntab on" onclick="setScreen('home',this)">Pipeline</button>
   <button class="ntab" onclick="setScreen('reports',this)">Relatórios</button>
   <button class="ntab" onclick="setScreen('intelligence',this)">Inteligência</button>
@@ -335,13 +335,18 @@ body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-ser
         <span class="fchip" data-filter="fase" data-val="Negociacao" onclick="toggleFilter(this,'fase')">Negoc.</span>
       </div>
       <div class="filter-row">
-        <span class="filter-label">Sinal</span>
-        <span class="fchip on" data-filter="sinal" data-val="todos" onclick="toggleFilter(this,'sinal')">Todos</span>
-        <span class="fchip" data-filter="sinal" data-val="BUY" onclick="toggleFilter(this,'sinal')">BUY</span>
-        <span class="fchip" data-filter="sinal" data-val="RISK" onclick="toggleFilter(this,'sinal')">RISK</span>
-        <span class="fchip" data-filter="sinal" data-val="STALL" onclick="toggleFilter(this,'sinal')">STALL</span>
-        <span class="fchip" data-filter="sinal" data-val="CHAMP" onclick="toggleFilter(this,'sinal')">CHAMP</span>
-        <span class="fchip" data-filter="sinal" data-val="DOME" onclick="toggleFilter(this,'sinal')">DOME</span>
+        <span class="filter-label">Etapa</span>
+        <span class="fchip on" data-filter="etapa" data-val="todos" onclick="toggleFilter(this,'etapa')">Todos</span>
+        <span class="fchip" data-filter="etapa" data-val="Novo Lead" onclick="toggleFilter(this,'etapa')">MQL</span>
+        <span class="fchip" data-filter="etapa" data-val="Dia 01" onclick="toggleFilter(this,'etapa')">D1</span>
+        <span class="fchip" data-filter="etapa" data-val="Dia 02" onclick="toggleFilter(this,'etapa')">D2</span>
+        <span class="fchip" data-filter="etapa" data-val="Dia 03" onclick="toggleFilter(this,'etapa')">D3</span>
+        <span class="fchip" data-filter="etapa" data-val="Dia 04" onclick="toggleFilter(this,'etapa')">D4</span>
+        <span class="fchip" data-filter="etapa" data-val="Dia 05" onclick="toggleFilter(this,'etapa')">D5</span>
+        <span class="fchip" data-filter="etapa" data-val="Dia 06" onclick="toggleFilter(this,'etapa')">D6</span>
+        <span class="fchip" data-filter="etapa" data-val="Conectados" onclick="toggleFilter(this,'etapa')">Conect.</span>
+        <span class="fchip" data-filter="etapa" data-val="Agendamento" onclick="toggleFilter(this,'etapa')">Agend.</span>
+        <span class="fchip" data-filter="etapa" data-val="Reagendamento" onclick="toggleFilter(this,'etapa')">Reagend.</span>
       </div>
       <div class="filter-row">
         <span class="filter-label">Tier</span>
@@ -773,7 +778,7 @@ function resetDMA(id){
 
 // ── FILTROS, ORDENAÇÃO, SINAIS ───────────────────────────────────────
 
-const ACTIVE_FILTERS={fase:'todos',sinal:'todos',tier:'todos'};
+const ACTIVE_FILTERS={fase:'todos',etapa:'todos',tier:'todos'};
 
 function toggleFilter(el,group){
   document.querySelectorAll(`.fchip[data-filter="${group}"]`).forEach(c=>{
@@ -825,7 +830,7 @@ function applyFilters(){
   const q=(document.getElementById('srch-input')||{}).value||'';
   const ql=q.toLowerCase();
   const fFase=ACTIVE_FILTERS.fase;
-  const fSinal=ACTIVE_FILTERS.sinal;
+  const fEtapa=ACTIVE_FILTERS.etapa;
   const fTier=ACTIVE_FILTERS.tier;
   const sortBy=(document.getElementById('sort-sel')||{}).value||'urgencia';
 
@@ -848,9 +853,11 @@ function applyFilters(){
       const needle=(faseMap[fFase.toLowerCase()]||fFase.toLowerCase());
       if(!fase.includes(needle)&&!etapa.includes(needle)){di.style.display='none';return;}
     }
-    // filtro sinal
-    if(fSinal!=='todos'){
-      if(deal._signal!==fSinal){di.style.display='none';return;}
+    // filtro etapa do pipeline
+    if(fEtapa!=='todos'){
+      const etapa=(deal._etapa||deal.etapa||'').toLowerCase();
+      const needle=fEtapa.toLowerCase();
+      if(!etapa.includes(needle)){di.style.display='none';return;}
     }
     // filtro tier
     if(fTier!=='todos'){
@@ -1316,36 +1323,52 @@ function applyOperator(email){
 
 function openSettings(){
   const saved=localStorage.getItem('elucy_operator_email')||'';
+  const savedToken=localStorage.getItem('elucy_db_token')||'';
+  const tokenMask=savedToken?'••••'+savedToken.slice(-8):'';
   const ov=document.createElement('div');
   ov.className='modal-ov';
   ov.id='settings-modal';
   ov.innerHTML=`
-    <div class="modal">
-      <div class="modal-t">Configurar Operador</div>
-      <div class="modal-s">Insira seu e-mail corporativo para sincronizar o Cockpit com o <strong>funil_comercial</strong> do Databricks, filtrando apenas os deals do seu qualificador.</div>
-      <div class="modal-f">
-        <label class="modal-l">E-mail do operador</label>
-        <input class="modal-i" id="op-email-input" type="email" placeholder="nathan.souza@g4educacao.com" value="${saved}" autocomplete="email">
+    <div class="modal" style="max-width:440px">
+      <div class="modal-t">Configurações</div>
+
+      <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
+        <div class="modal-s" style="font-weight:600;margin-bottom:6px">Operador</div>
+        <div class="modal-f">
+          <label class="modal-l">E-mail corporativo</label>
+          <input class="modal-i" id="op-email-input" type="email" placeholder="nome@g4educacao.com" value="${saved}" autocomplete="email">
+        </div>
+        <div class="modal-note">Usado como filtro no funil_comercial. Nunca enviado a terceiros.</div>
       </div>
-      <div class="modal-note">O e-mail é usado como filtro em <code>qualificador_name</code> no funil_comercial. Nunca é enviado a terceiros.</div>
-      <div id="modal-sync-status"></div>
-      <div class="row" style="justify-content:flex-end;gap:8px;margin-bottom:12px">
-        <button class="btn bs btn-sm" onclick="closeSettings()">Cancelar</button>
-        <button class="btn bp btn-sm" onclick="saveOperator()">Salvar e sincronizar</button>
+
+      <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
+        <div class="modal-s" style="font-weight:600;margin-bottom:6px">Databricks</div>
+        <div class="modal-f">
+          <label class="modal-l">Token de acesso</label>
+          <input class="modal-i" id="op-token-input" type="password" placeholder="${tokenMask||'dapi...'}" autocomplete="off" style="font-family:monospace;font-size:12px">
+        </div>
+        <div class="modal-note">Token pessoal do Databricks (Settings → Developer → Access tokens). Armazenado apenas no seu navegador.</div>
+        ${savedToken?'<div style="font-size:10px;color:var(--green);margin-top:4px">Token configurado ✓</div>':'<div style="font-size:10px;color:var(--yellow);margin-top:4px">Sem token — o modo local não funcionará sem ele.</div>'}
       </div>
-      <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px">
-        <div class="modal-t" style="font-size:13px;margin-bottom:6px">Integrações</div>
+
+      <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
+        <div class="modal-s" style="font-weight:600;margin-bottom:6px">Integrações</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <a href="https://web.whatsapp.com" target="_blank" rel="noopener" class="btn bs btn-sm" style="text-decoration:none;display:flex;align-items:center;gap:4px">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-            Abrir WhatsApp Web
+            WhatsApp Web
           </a>
           <a href="https://www.instagram.com/direct/inbox/" target="_blank" rel="noopener" class="btn bs btn-sm" style="text-decoration:none;display:flex;align-items:center;gap:4px">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E4405F" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="#E4405F" stroke="none"/></svg>
-            Abrir Instagram DM
+            Instagram DM
           </a>
         </div>
-        <div style="font-size:10px;color:var(--text2);margin-top:6px">Abra as plataformas lado a lado para copiar&colar as mensagens geradas pelo Elucy.</div>
+      </div>
+
+      <div id="modal-sync-status"></div>
+      <div class="row" style="justify-content:flex-end;gap:8px">
+        <button class="btn bs btn-sm" onclick="closeSettings()">Cancelar</button>
+        <button class="btn bp btn-sm" onclick="saveOperator()">Salvar</button>
       </div>
     </div>`;
   ov.addEventListener('click',e=>{if(e.target===ov) closeSettings();});
@@ -1365,11 +1388,15 @@ function saveOperator(){
     showModalStatus('err','E-mail inválido. Use o formato nome@domínio.com');
     return;
   }
+  // Salvar token Databricks se preenchido
+  const tokenInput=document.getElementById('op-token-input');
+  const token=(tokenInput?tokenInput.value:'').trim();
+  if(token) localStorage.setItem('elucy_db_token',token);
   // Limpa cache de nome se o email mudou (força novo lookup)
   const prev=localStorage.getItem('elucy_operator_email');
   if(prev!==email) localStorage.removeItem('elucy_qualificador_name');
   applyOperator(email);
-  showModalStatus('ok','Operador salvo. Sincronizando pipeline...');
+  showModalStatus('ok','Configurações salvas. Sincronizando pipeline...');
   setTimeout(()=>{
     closeSettings();
     refreshPipeline();
