@@ -43,20 +43,97 @@ function _setG4Status(state, label){
 
 // Aplica estado imediatamente — sem timeout, sem handshake
 document.addEventListener('DOMContentLoaded', function(){
-  // Elucy relay: sempre conectado via Supabase — não depende do G4 OS local do SDR
-  // O worker G4 OS do admin processa todos os requests em background (a cada 2 min)
-  _setG4Status('connected','Elucy ativo');
+  // Status inicial: detecta se G4 OS local está ativo
+  if(window._G4OS_PARENT){
+    _setG4Status('connected','G4 OS local');
+    // Probe LLM em 500ms pra confirmar que responde
+    setTimeout(()=>{
+      try{
+        const target = window.parent !== window ? window.parent : window;
+        target.postMessage({type:'elucy:ping'}, '*');
+      }catch(e){}
+    }, 500);
+  } else {
+    // Relay via Supabase — worker central
+    _setG4Status('connected','Elucy ativo');
+  }
 });
 
-// Listener de postMessage mantido para compatibilidade futura
+// ── G4 OS LLM BRIDGE — comunicação direta via postMessage ────────────
+// Quando o Cockpit roda dentro do G4 OS (Electron browser integrado),
+// ele envia prompts direto pro LLM local e recebe resposta instantânea.
+// Zero Supabase no path. Zero latência. Zero custo de API.
+//
+// Protocolo:
+//   Cockpit → G4 OS:  {type:'elucy:llm_request', id, prompt, system}
+//   G4 OS → Cockpit:  {type:'elucy:llm_response', id, output, error?}
+//   G4 OS → Cockpit:  {type:'g4os:pong'} (heartbeat — confirma que está vivo)
+
+const _G4OS_LLM_CALLBACKS={};
+let _G4OS_LLM_READY=false;
+
 window.addEventListener('message', function(e){
   if(!e.data) return;
+
+  // Heartbeat — confirma que G4 OS está vivo
   if(e.data.type === 'g4os:pong' || e.data.type === 'g4os:heartbeat'){
     window._G4OS_PARENT = true;
     window.IS_REMOTE = false;
-    _setG4Status('connected','G4 OS ativo');
+    _G4OS_LLM_READY = true;
+    _setG4Status('connected','G4 OS ativo — LLM local');
+  }
+
+  // Resposta do LLM local
+  if(e.data.type === 'elucy:llm_response'){
+    const cb = _G4OS_LLM_CALLBACKS[e.data.id];
+    if(cb){
+      delete _G4OS_LLM_CALLBACKS[e.data.id];
+      if(e.data.error) cb.onError(e.data.error);
+      else cb.onResult(e.data.output);
+    }
   }
 });
+
+// Envia prompt pro LLM local do G4 OS
+// Retorna true se conseguiu enviar, false se G4 OS não está disponível
+function _g4osLlmRequest(prompt, system, onResult, onError){
+  if(!_G4OS_LLM_READY || !window._G4OS_PARENT) return false;
+
+  const id = 'elucy_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+  _G4OS_LLM_CALLBACKS[id] = {onResult, onError};
+
+  // Envia para o parent (G4 OS Electron)
+  const target = window.parent !== window ? window.parent : window;
+  target.postMessage({
+    type: 'elucy:llm_request',
+    id,
+    prompt,
+    system: system || 'Você é o ELUCY, motor de inteligência de receita do G4 Educação. Responda em português com as seções exatas solicitadas no prompt.'
+  }, '*');
+
+  // Timeout de 60s para LLM local
+  setTimeout(()=>{
+    if(_G4OS_LLM_CALLBACKS[id]){
+      delete _G4OS_LLM_CALLBACKS[id];
+      onError('LLM local não respondeu em 60s');
+    }
+  }, 60000);
+
+  return true;
+}
+
+// Verifica se LLM local está disponível
+function _g4osLlmAvailable(){
+  return _G4OS_LLM_READY && window._G4OS_PARENT;
+}
+
+// Probe: envia ping pra confirmar que G4 OS responde
+(function(){
+  try{
+    const target = window.parent !== window ? window.parent : window;
+    target.postMessage({type:'elucy:ping'}, '*');
+  }catch(e){}
+})();
 </script>
 <script>
 // cockpit-data.js: carrega apenas se G4 OS detectado (Electron app ou local)
@@ -65,6 +142,10 @@ if(window._G4OS_PARENT){
   const s=document.createElement('script');
   s.src='cockpit-data.js';
   document.head.appendChild(s);
+  // Bridge LLM: carrega listener que conecta o Cockpit ao LLM local do G4 OS
+  const b=document.createElement('script');
+  b.src='g4os-bridge.js';
+  document.head.appendChild(b);
 }
 </script>
 <style>
@@ -3256,7 +3337,41 @@ function _setElucyLoadingState(reportEl, state, extra){
 }
 
 // Insere request no Supabase e escuta resposta via Realtime
+// OU processa localmente via G4 OS LLM quando disponível
 async function _requestElucyRelay(deal_id, dealData, request_type, copy_mode, onResult, onError, reportEl){
+
+  // ── PATH 1: LLM LOCAL (G4 OS) — resposta instantânea, zero Supabase ──
+  if(_g4osLlmAvailable()){
+    _setElucyLoadingState(reportEl, 'processing');
+    _setG4Status('processing','LLM local processando…');
+
+    const prompt = request_type==='copy'
+      ? _buildCopyPrompt(deal_id, dealData, copy_mode||'whatsapp')
+      : _buildAnalyzePrompt(deal_id, dealData);
+
+    const sent = _g4osLlmRequest(prompt, null,
+      (output)=>{
+        _setElucyLoadingState(reportEl, 'done');
+        _setG4Status('connected','G4 OS ativo — LLM local');
+        setTimeout(()=>{ onResult&&onResult(output); }, 200);
+      },
+      (err)=>{
+        // Fallback: se LLM local falhar, tenta Supabase
+        console.warn('[Elucy] LLM local falhou, caindo pro relay Supabase:', err);
+        _setElucyLoadingState(reportEl, 'inserting');
+        _requestElucyRelaySB(deal_id, dealData, request_type, copy_mode, onResult, onError, reportEl);
+      }
+    );
+
+    if(sent) return;
+    // Se não conseguiu enviar, cai pro Supabase
+  }
+
+  // ── PATH 2: SUPABASE RELAY — worker central processa ──
+  return _requestElucyRelaySB(deal_id, dealData, request_type, copy_mode, onResult, onError, reportEl);
+}
+
+async function _requestElucyRelaySB(deal_id, dealData, request_type, copy_mode, onResult, onError, reportEl){
   const sb=getSB();
   if(!sb){ onError&&onError('Supabase offline'); return; }
   const {data:{session}}=await sb.auth.getSession();
