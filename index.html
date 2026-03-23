@@ -118,6 +118,23 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 0%,rgb
 .hist-expanded.show{display:block}
 .hist-copy-btn{position:absolute;top:6px;right:6px;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg4);color:var(--text2);cursor:pointer;transition:.12s}
 .hist-copy-btn:hover{border-color:var(--accent);color:var(--accent2);background:var(--adim)}
+/* Nota CRM — rich rendering */
+.nota-crm-card{background:rgba(8,14,26,.6);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+.nota-crm-header{display:flex;align-items:center;gap:9px;padding:13px 17px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,rgba(10,30,20,.5),rgba(8,14,26,.8))}
+.nota-crm-badge{background:var(--gdim);color:var(--green);font-size:9px;font-weight:900;padding:3px 8px;border-radius:4px;letter-spacing:1.5px;text-transform:uppercase}
+.nota-crm-title{font-size:13px;font-weight:700;color:var(--text)}
+.nota-crm-body{padding:16px 18px;font-size:13px;line-height:1.7;color:var(--text)}
+.nota-section-title{font-size:13px;font-weight:800;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);letter-spacing:.3px}
+.nota-section{display:flex;align-items:center;gap:7px;margin:14px 0 6px;padding:6px 0}
+.nota-section-icon{font-size:15px;flex-shrink:0}
+.nota-section-label{font-size:12px;font-weight:800;color:var(--accent2);text-transform:uppercase;letter-spacing:.8px}
+.nota-list{list-style:none;padding:0;margin:0 0 4px 0}
+.nota-list li{position:relative;padding:3px 0 3px 16px;font-size:12.5px;line-height:1.65;color:var(--text)}
+.nota-list li::before{content:"•";position:absolute;left:2px;color:var(--text2);font-weight:700}
+.nota-key{color:var(--text2);font-weight:600}
+.nota-list li strong{color:var(--text);font-weight:700}
+.nota-nao-informado{color:var(--yellow);font-style:italic;font-weight:600;background:var(--ydim);padding:1px 6px;border-radius:3px;font-size:11px}
+.nota-text{font-size:12.5px;line-height:1.6;margin:2px 0}
 /* WhatsApp conversation panel */
 .wa-conv-btn{padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--green);color:var(--green);background:transparent;transition:.15s}
 .wa-conv-btn:hover{background:var(--gdim);color:#4ade80}
@@ -2502,13 +2519,61 @@ function injectNotaCRM(targetId, output){
   const notaEl=document.getElementById('nota-'+targetId);
   if(!notaEl) return;
   notaEl.dataset.loaded='1';
-  let html=escHtml(output)
-    .replace(/^(\w[\w_]+:)\s*/gm,'<strong style="color:var(--green)">$1</strong> ')
-    .replace(/\[NOTA DE QUALIFICAÇÃO[^\]]*\]/g,'<span style="color:var(--green);font-weight:800">$&</span>')
-    .replace(/NAO_INFORMADO/g,'<span style="color:var(--yellow);font-style:italic">NAO_INFORMADO</span>')
-    .replace(/\n/g,'<br>');
-  notaEl.innerHTML='<div class="ba-h"><span class="ba-badge" style="background:var(--gdim);color:var(--green)">CRM</span><span class="ba-htitle">Nota de Qualificação</span><button class="hist-copy-btn" onclick="event.stopPropagation();clipText(document.getElementById(\'nota-content-'+targetId+'\').innerText)" style="position:static;margin-left:auto">Copiar</button></div><div class="ba-b" id="nota-content-'+targetId+'">'+html+'</div>';
+  // Rich rendering: parse markdown-like structure into styled HTML
+  let html=renderNotaRich(output);
+  notaEl.innerHTML='<div class="nota-crm-card"><div class="nota-crm-header"><span class="nota-crm-badge">CRM</span><span class="nota-crm-title">Nota de Qualificação</span><button class="hist-copy-btn" onclick="event.stopPropagation();clipText(document.getElementById(\'nota-content-'+targetId+'\').innerText)" style="position:static;margin-left:auto">Copiar</button></div><div class="nota-crm-body" id="nota-content-'+targetId+'">'+html+'</div></div>';
   notaEl.style.display='block';
+}
+function renderNotaRich(text){
+  const lines=text.split('\n');
+  let html='';
+  let inList=false;
+  for(let i=0;i<lines.length;i++){
+    let line=lines[i];
+    const trimmed=line.trim();
+    if(!trimmed){ if(inList){html+='</ul>';inList=false;} html+='<div style="height:6px"></div>'; continue; }
+    // Title line (NOTA DE QUALIFICAÇÃO...)
+    if(trimmed.match(/^NOTA DE QUALIFICA[ÇC][ÃA]O/i)||trimmed.match(/^\[NOTA DE/i)){
+      if(inList){html+='</ul>';inList=false;}
+      html+='<div class="nota-section-title">'+escHtml(trimmed)+'</div>';
+      continue;
+    }
+    // Section headers with emoji (📋 Observações:, 🏢 Perfil da Empresa, etc)
+    const secMatch=trimmed.match(/^[•\-\*]?\s*([\p{Emoji}\u{200d}\u{fe0f}\u{20e3}]+)\s*\*?\*?([^*\n:]+):?\*?\*?\s*$/u);
+    if(secMatch){
+      if(inList){html+='</ul>';inList=false;}
+      html+='<div class="nota-section"><span class="nota-section-icon">'+secMatch[1]+'</span><span class="nota-section-label">'+escHtml(secMatch[2].trim())+'</span></div>';
+      continue;
+    }
+    // Section header without emoji but bold (**Something:**)
+    const boldSecMatch=trimmed.match(/^[•\-\*]?\s*\*\*([^*]+)\*\*:?\s*$/);
+    if(boldSecMatch){
+      if(inList){html+='</ul>';inList=false;}
+      html+='<div class="nota-section"><span class="nota-section-label">'+escHtml(boldSecMatch[1].trim())+'</span></div>';
+      continue;
+    }
+    // Bullet items (• or - or *)
+    const bulletMatch=trimmed.match(/^[•\-\*]\s+(.+)/);
+    if(bulletMatch){
+      if(!inList){html+='<ul class="nota-list">';inList=true;}
+      let content=bulletMatch[1];
+      // Format key: value patterns
+      content=content.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+      content=content.replace(/^([^:]+?):\s*/,'<span class="nota-key">$1:</span> ');
+      content=content.replace(/NAO_INFORMADO/g,'<span class="nota-nao-informado">NAO_INFORMADO</span>');
+      // Bold words between ** already handled, now handle remaining bold-like patterns
+      html+='<li>'+content+'</li>';
+      continue;
+    }
+    // Regular text with possible formatting
+    if(inList){html+='</ul>';inList=false;}
+    let content=escHtml(trimmed);
+    content=content.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+    content=content.replace(/NAO_INFORMADO/g,'<span class="nota-nao-informado">NAO_INFORMADO</span>');
+    html+='<div class="nota-text">'+content+'</div>';
+  }
+  if(inList) html+='</ul>';
+  return html;
 }
 
 // ── WHATSAPP CONVERSATION FLOW ──────────────────────────────────────
