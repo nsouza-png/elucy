@@ -1275,45 +1275,35 @@ input,textarea,select{font-family:inherit;font-size:inherit}
       </div>
     </div>
     <div class="sb-search">
-      <input class="srch" id="srch-input" placeholder="Buscar lead..." oninput="applyFilters()">
+      <input class="srch" id="srch-input" placeholder="Buscar lead ou deal_id..." oninput="applyFilters()">
     </div>
     <div class="sb-filters">
       <div class="filter-row">
-        <span class="filter-label">Fase</span>
-        <span class="fchip on" data-filter="fase" data-val="todos" onclick="toggleFilter(this,'fase')">Todos</span>
-        <span class="fchip" data-filter="fase" data-val="MQL" onclick="toggleFilter(this,'fase')">MQL</span>
-        <span class="fchip" data-filter="fase" data-val="SAL" onclick="toggleFilter(this,'fase')">SAL</span>
-        <span class="fchip" data-filter="fase" data-val="Conectado" onclick="toggleFilter(this,'fase')">Conect.</span>
-        <span class="fchip" data-filter="fase" data-val="Agendado" onclick="toggleFilter(this,'fase')">Agend.</span>
-        <span class="fchip" data-filter="fase" data-val="Negociacao" onclick="toggleFilter(this,'fase')">Negoc.</span>
+        <span class="filter-label">Etapa</span>
+        <span class="fchip on" data-filter="etapa" data-val="todos" onclick="toggleFilter(this,'etapa')">Todos</span>
+        <span class="fchip" data-filter="etapa" data-val="novo lead" onclick="toggleFilter(this,'etapa')">MQL</span>
+        <span class="fchip" data-filter="etapa" data-val="dia 01" onclick="toggleFilter(this,'etapa')">D1</span>
+        <span class="fchip" data-filter="etapa" data-val="dia 02" onclick="toggleFilter(this,'etapa')">D2</span>
+        <span class="fchip" data-filter="etapa" data-val="dia 03" onclick="toggleFilter(this,'etapa')">D3</span>
+        <span class="fchip" data-filter="etapa" data-val="conectados" onclick="toggleFilter(this,'etapa')">Conectado</span>
+        <span class="fchip" data-filter="etapa" data-val="agendamento" onclick="toggleFilter(this,'etapa')">Agendamento</span>
+        <span class="fchip" data-filter="etapa" data-val="negociacao" onclick="toggleFilter(this,'etapa')">Negociação</span>
       </div>
-      <div class="filter-row">
-        <span class="filter-label">Sinal</span>
-        <span class="fchip on" data-filter="sinal" data-val="todos" onclick="toggleFilter(this,'sinal')">Todos</span>
-        <span class="fchip" data-filter="sinal" data-val="BUY" onclick="toggleFilter(this,'sinal')">BUY</span>
-        <span class="fchip" data-filter="sinal" data-val="RISK" onclick="toggleFilter(this,'sinal')">RISK</span>
-        <span class="fchip" data-filter="sinal" data-val="STALL" onclick="toggleFilter(this,'sinal')">STALL</span>
-        <span class="fchip" data-filter="sinal" data-val="CHAMP" onclick="toggleFilter(this,'sinal')">CHAMP</span>
-        <span class="fchip" data-filter="sinal" data-val="DOME" onclick="toggleFilter(this,'sinal')">DOME</span>
-      </div>
-      <div class="filter-row">
-        <span class="filter-label">Tier</span>
-        <span class="fchip on" data-filter="tier" data-val="todos" onclick="toggleFilter(this,'tier')">Todos</span>
-        <span class="fchip" data-filter="tier" data-val="diamond" onclick="toggleFilter(this,'tier')">Diamond</span>
-        <span class="fchip" data-filter="tier" data-val="gold" onclick="toggleFilter(this,'tier')">Gold</span>
-        <span class="fchip" data-filter="tier" data-val="silver" onclick="toggleFilter(this,'tier')">Silver</span>
-        <span class="fchip" data-filter="tier" data-val="bronze" onclick="toggleFilter(this,'tier')">Bronze</span>
+      <div class="filter-row" style="align-items:center">
+        <span class="filter-label">Valor</span>
+        <input type="number" class="val-input" id="val-min" placeholder="Min" oninput="applyFilters()" style="width:70px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text1);padding:3px 6px;font-size:11px">
+        <span style="color:var(--text3);font-size:10px;margin:0 2px">—</span>
+        <input type="number" class="val-input" id="val-max" placeholder="Max" oninput="applyFilters()" style="width:70px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text1);padding:3px 6px;font-size:11px">
       </div>
       <div class="sort-row">
         <span style="font-size:10px;color:var(--text2)">Ordenar:</span>
         <select class="sort-sel" id="sort-sel" onchange="applyFilters()">
           <option value="urgencia">Urgência</option>
-          <option value="temp_desc">Temperatura ↓</option>
-          <option value="temp_asc">Temperatura ↑</option>
-          <option value="delta_desc">Dias ↓</option>
-          <option value="delta_asc">Dias ↑</option>
-          <option value="fase">Fase</option>
-          <option value="tier">Tier</option>
+          <option value="delta_desc">Dias parado ↓</option>
+          <option value="delta_asc">Dias parado ↑</option>
+          <option value="valor_desc">Valor ↓</option>
+          <option value="valor_asc">Valor ↑</option>
+          <option value="etapa">Etapa</option>
         </select>
       </div>
     </div>
@@ -1831,18 +1821,14 @@ function resetDMA(id){
 
 // ── FILTROS, ORDENAÇÃO, SINAIS ───────────────────────────────────────
 
-const ACTIVE_FILTERS={fase:'todos',sinal:'todos',tier:'todos'};
+const ACTIVE_FILTERS={etapa:'todos'};
 
 function toggleFilter(el,group){
   document.querySelectorAll(`.fchip[data-filter="${group}"]`).forEach(c=>{
     c.classList.remove('on','on-green','on-red','on-yellow');
   });
-  const val=el.dataset.val;
-  if(val==='BUY') el.classList.add('on-green');
-  else if(val==='RISK') el.classList.add('on-red');
-  else if(val==='STALL'||val==='DOME') el.classList.add('on-yellow');
-  else el.classList.add('on');
-  ACTIVE_FILTERS[group]=val;
+  el.classList.add('on');
+  ACTIVE_FILTERS[group]=el.dataset.val;
   applyFilters();
 }
 
@@ -1881,10 +1867,10 @@ function urgClass(u){
 
 function applyFilters(){
   const q=(document.getElementById('srch-input')||{}).value||'';
-  const ql=q.toLowerCase();
-  const fFase=ACTIVE_FILTERS.fase;
-  const fSinal=ACTIVE_FILTERS.sinal;
-  const fTier=ACTIVE_FILTERS.tier;
+  const ql=q.trim().toLowerCase();
+  const fEtapa=ACTIVE_FILTERS.etapa||'todos';
+  const valMin=parseFloat((document.getElementById('val-min')||{}).value)||0;
+  const valMax=parseFloat((document.getElementById('val-max')||{}).value)||0;
   const sortBy=(document.getElementById('sort-sel')||{}).value||'urgencia';
 
   const map=window._COCKPIT_DEAL_MAP||{};
@@ -1895,25 +1881,22 @@ function applyFilters(){
     const id=di.id.replace('di-','');
     const deal=map[id];
     if(!deal){di.style.display='none';return;}
-    // texto search
-    const txt=(di.textContent||'').toLowerCase();
-    if(ql&&!txt.includes(ql)){di.style.display='none';return;}
-    // filtro fase
-    if(fFase!=='todos'){
-      const fase=(deal._fase||deal.fase||'').toLowerCase();
+    // busca por texto ou deal_id direto
+    if(ql){
+      const dealId=(deal.deal_id||deal.dealId||id||'').toLowerCase();
+      const txt=(di.textContent||'').toLowerCase();
+      if(!txt.includes(ql)&&!dealId.includes(ql)&&!id.toLowerCase().includes(ql)){di.style.display='none';return;}
+    }
+    // filtro etapa do negócio
+    if(fEtapa!=='todos'){
       const etapa=(deal._etapa||deal.etapa||'').toLowerCase();
-      const faseMap={mql:'mql',sal:'sal',conectado:'conect',agendado:'agend',negociacao:'negoc'};
-      const needle=(faseMap[fFase.toLowerCase()]||fFase.toLowerCase());
-      if(!fase.includes(needle)&&!etapa.includes(needle)){di.style.display='none';return;}
+      if(!etapa.includes(fEtapa)){di.style.display='none';return;}
     }
-    // filtro sinal
-    if(fSinal!=='todos'){
-      if(deal._signal!==fSinal){di.style.display='none';return;}
-    }
-    // filtro tier
-    if(fTier!=='todos'){
-      const t=(deal._tier||deal.tier||'').toLowerCase();
-      if(!t.includes(fTier.toLowerCase())){di.style.display='none';return;}
+    // filtro valor (range)
+    if(valMin>0||valMax>0){
+      const rev=deal.revenue||deal.elucyValor||deal._revenue||0;
+      if(valMin>0&&rev<valMin){di.style.display='none';return;}
+      if(valMax>0&&rev>valMax){di.style.display='none';return;}
     }
     di.style.display='';
     visible.push({el:di,deal,id});
@@ -1922,18 +1905,16 @@ function applyFilters(){
   // Ordenação
   const list=document.getElementById('deal-list');
   if(!list) return;
-  const faseOrder={mql:1,sal:2,conectados:3,agendamento:3,reagendamento:3,'entrevista agendada':3,'novo lead':4,'dia 01':5,'dia 02':6,'dia 03':7,'dia 04':8,'dia 05':9,'dia 06':10};
-  const tierOrder={diamond:1,gold:2,silver:3,bronze:4};
+  const etapaOrder={'novo lead':1,'dia 01':2,'dia 02':3,'dia 03':4,'dia 04':5,'dia 05':6,'dia 06':7,conectados:8,agendamento:9,reagendamento:10,'entrevista agendada':11,negociacao:12};
 
   visible.sort((a,b)=>{
     switch(sortBy){
       case 'urgencia': return (b.deal._urgency||0)-(a.deal._urgency||0);
-      case 'temp_desc': return (b.deal._temp||0)-(a.deal._temp||0);
-      case 'temp_asc':  return (a.deal._temp||0)-(b.deal._temp||0);
       case 'delta_desc': return (b.deal._delta||0)-(a.deal._delta||0);
       case 'delta_asc':  return (a.deal._delta||0)-(b.deal._delta||0);
-      case 'fase': return ((faseOrder[(a.deal._etapa||'').toLowerCase()]||99)-(faseOrder[(b.deal._etapa||'').toLowerCase()]||99));
-      case 'tier': return ((tierOrder[(a.deal._tier||'').toLowerCase()]||99)-(tierOrder[(b.deal._tier||'').toLowerCase()]||99));
+      case 'valor_desc': return ((b.deal.revenue||b.deal.elucyValor||0)-(a.deal.revenue||a.deal.elucyValor||0));
+      case 'valor_asc':  return ((a.deal.revenue||a.deal.elucyValor||0)-(b.deal.revenue||b.deal.elucyValor||0));
+      case 'etapa': return ((etapaOrder[(a.deal._etapa||'').toLowerCase()]||99)-(etapaOrder[(b.deal._etapa||'').toLowerCase()]||99));
       default: return 0;
     }
   });
