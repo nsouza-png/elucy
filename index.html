@@ -1124,8 +1124,23 @@ async function loadDealsFromSupabase(email){
     if(k==='email_lead') return row.email_lead||row.email||'';
     return row[k]!=null?String(row[k]):'';
   }));
+  // Busca métricas de eficiência do cache (Databricks)
+  loadEfficiencyMetrics(sb,email);
   renderLiveDeals(rows,cols);
-  showSyncToast('ok',`Pipeline carregado — ${rows.length} deals ativos.`);
+  showSyncToast('ok',`Pipeline carregado — ${rows.length} deals.`);
+}
+
+async function loadEfficiencyMetrics(sb,email){
+  try{
+    const {data}=await sb.from('elucy_cache')
+      .select('report')
+      .eq('deal_id','_efficiency_metrics')
+      .eq('operator_email',email)
+      .maybeSingle();
+    if(data&&data.report){
+      window._EFFICIENCY_METRICS=JSON.parse(data.report);
+    }
+  }catch(e){/* fallback to local calc */}
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
@@ -2450,59 +2465,40 @@ function renderIntelligence(){
           <div class="intel-bar-bg"><div class="intel-bar-fill" style="width:${Math.max(5,e.count/maxFunnel*100)}%"><span class="intel-bar-v">${e.count}</span></div></div>
           <span class="intel-bar-pct">${Math.round(e.count/total*100)}%</span>
         </div>`).join('')}
-      <div class="intel-title" style="margin-top:14px">Eficiência — Conversão por Fase <span style="font-weight:400;color:var(--text2);font-size:11px">(${(()=>{const now=new Date();const mp=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');const mc=deals.filter(d=>(d.createdAtCrm||d.created_at_crm||'').startsWith(mp)).length;return mc>=10?'Mês atual — '+mc+' deals':'Pipeline ativo — '+total+' deals';})()})</span></div>
-      <div class="intel-kpi-row">
+      <div class="intel-title" style="margin-top:14px">Eficiência — Conversão por Fase <span id="ef-source" style="font-weight:400;color:var(--text2);font-size:11px"></span></div>
+      <div class="intel-kpi-row" id="efficiency-kpis">
         ${(()=>{
-          // Eficiência real: classifica cada deal pela fase MÁXIMA que atingiu
-          // Para deals abertos: usa fase_atual_no_processo
-          // Para deals perdidos: usa motivo_lost para inferir onde estava
-          // Para deals ganhos: chegaram até OPP+
-          // Classifica onde o deal MORREU para calcular eficiência
-          // [Validação] = nunca entrou em SAL → não converte MQL→SAL
-          // Tudo que é [SDR], [Negociação], [IM], [Qualquer etapa] = entrou em SAL
-          // OPP: apenas deals abertos em Oportunidade/Negociação ou Ganhos
-          //       Perdidos em [Negociação]/[IM] JÁ estavam em OPP mas foram perdidos
-          function lostInMQL(motivo){
-            const m=(motivo||'').toLowerCase();
-            return m.startsWith('[validação]');
+          // Usa métricas do elucy_cache (preenchidas pelo sync job via Databricks)
+          // Se não disponível, calcula localmente como fallback
+          const em=window._EFFICIENCY_METRICS;
+          let nMQL,nSAL,nOPP,crMqlSal,crSalOpp,src;
+          if(em&&em.mql>0){
+            nMQL=em.mql;nSAL=em.sal;nOPP=em.opp;
+            crMqlSal=em.cr_mql_sal.toFixed(1);
+            crSalOpp=em.cr_sal_opp.toFixed(1);
+            src='Databricks — '+em.month;
+          } else {
+            // Fallback local: conta por fase_atual_no_processo
+            nMQL=total;
+            nSAL=deals.filter(d=>{
+              const s=(d.statusDeal||'').toLowerCase();
+              const f=(d._fase||d.fase||'').toLowerCase();
+              if(s==='ganho') return true;
+              if(s==='perdido'||f==='perdido') return !(d.motivoLost||d.motivo_lost||'').toLowerCase().startsWith('[validação]');
+              return f!=='mql';
+            }).length;
+            nOPP=deals.filter(d=>{
+              const s=(d.statusDeal||'').toLowerCase();
+              const f=(d._fase||d.fase||'').toLowerCase();
+              if(s==='ganho') return true;
+              if(s==='perdido'||f==='perdido'){const m=(d.motivoLost||d.motivo_lost||'').toLowerCase();return m.startsWith('[negociação]')||m.startsWith('[im]');}
+              return f==='oportunidade'||f==='negociação';
+            }).length;
+            crMqlSal=nMQL>0?((nSAL/nMQL)*100).toFixed(1):'0';
+            crSalOpp=nSAL>0?((nOPP/nSAL)*100).toFixed(1):'0';
+            src='Estimativa local — '+total+' deals';
           }
-          function lostInOPP(motivo){
-            const m=(motivo||'').toLowerCase();
-            return m.startsWith('[negociação]')||m.startsWith('[negociaçao]')||m.startsWith('[im]');
-          }
-          function dealReachedSAL(d){
-            const status=(d.statusDeal||'').toLowerCase();
-            const fase=(d._fase||d.fase||'').toLowerCase();
-            if(status==='ganho') return true;
-            if(status==='perdido'||fase==='perdido') return !lostInMQL(d.motivoLost||d.motivo_lost||'');
-            if(fase==='mql') return false;
-            return true; // SAL, Conectado, Agendado, Oportunidade, Negociação, N/A
-          }
-          function dealReachedOPP(d){
-            const status=(d.statusDeal||'').toLowerCase();
-            const fase=(d._fase||d.fase||'').toLowerCase();
-            if(status==='ganho') return true;
-            if(status==='perdido'||fase==='perdido') return lostInOPP(d.motivoLost||d.motivo_lost||'');
-            return fase==='oportunidade'||fase==='negociação';
-          }
-          // Filtrar apenas deals criados no mês atual para eficiência mensal
-          const now=new Date();
-          const mesPrefix=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-          const monthDeals=deals.filter(d=>{
-            const crm=d.createdAtCrm||d.created_at_crm||'';
-            return crm.startsWith(mesPrefix);
-          });
-          // Fallback: se <10 deals com data do mês, usa todos (dados podem não ter created_at_crm)
-          const efDeals=monthDeals.length>=10?monthDeals:deals;
-          const efLabel=monthDeals.length>=10?'Mês atual':'Pipeline ativo';
-          let nMQL=0,nSAL=0,nOPP=0;
-          efDeals.forEach(d=>{
-            nMQL++;
-            if(dealReachedSAL(d)) nSAL++;
-            if(dealReachedOPP(d)) nOPP++;
-          });
-          const crMqlSal=nMQL>0?((nSAL/nMQL)*100).toFixed(1):0;
-          const crSalOpp=nSAL>0?((nOPP/nSAL)*100).toFixed(1):0;
+          setTimeout(()=>{const el=document.getElementById('ef-source');if(el) el.textContent='('+src+')';},0);
           return '<div class="intel-kpi"><div class="intel-kpi-v">'+nMQL+'</div><div class="intel-kpi-l"># MQL</div></div>'+
             '<div class="intel-kpi"><div class="intel-kpi-v" style="font-size:13px;font-weight:800;color:var(--green)">'+crMqlSal+'%</div><div class="intel-kpi-l">MQL → SAL</div></div>'+
             '<div class="intel-kpi"><div class="intel-kpi-v">'+nSAL+'</div><div class="intel-kpi-l"># SAL</div></div>'+
