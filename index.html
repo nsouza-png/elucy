@@ -2035,7 +2035,7 @@ function openNotif(idx){
       card.scrollIntoView({behavior:'smooth',block:'center'});
       card.style.outline='2px solid var(--accent)';
       setTimeout(()=>card.style.outline='',2500);
-      // Abrir o painel correto baseado no tipo
+      // Abrir o painel correto + histórico expandido com conteúdo
       setTimeout(()=>{
         if(n.nType==='analyze'){
           const er=document.getElementById('er-'+n.targetId);
@@ -2046,6 +2046,24 @@ function openNotif(idx){
         } else if(n.nType==='business_analysis'){
           const ba=document.getElementById('ba-'+n.targetId);
           if(ba) ba.style.display='block';
+        }
+        // Abrir histórico e expandir o item mais recente do tipo
+        const histPanel=document.getElementById('hist-'+n.targetId);
+        if(histPanel&&!histPanel.classList.contains('open')) histPanel.classList.add('open');
+        // Encontrar e expandir o primeiro item do tipo correspondente
+        const typeMap={analyze:'analysis',copy:'copy',dm_copy:'dm',business_analysis:'analysis',brief:'brief'};
+        const matchType=typeMap[n.nType]||n.nType;
+        const histItems=histPanel?histPanel.querySelectorAll('.hist-item'):[];
+        for(let i=0;i<histItems.length;i++){
+          const label=histItems[i].querySelector('.hist-item-type');
+          if(label){
+            const lt=label.textContent.toLowerCase();
+            const expand=document.getElementById('hexp-'+n.targetId+'-'+i);
+            if((matchType==='copy'&&lt.includes('copy'))||(matchType==='analysis'&&(lt.includes('anál')||lt.includes('anal')))||(matchType==='dm'&&lt.includes('dm'))||(matchType==='brief'&&lt.includes('brief'))){
+              if(expand&&!expand.classList.contains('show')) expand.classList.add('show');
+              break;
+            }
+          }
         }
       },400);
       return;
