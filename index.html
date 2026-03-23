@@ -994,14 +994,8 @@ function _renderDailyChart(byDay){
     const lbl=d.slice(8,10)+'/'+d.slice(5,7);
     return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="font-size:10px;color:var(--accent2);font-weight:700">'+byDay[d].total+'</div><div style="width:100%;height:'+h+'px;background:var(--accent);border-radius:3px 3px 0 0;min-height:4px"></div><div style="font-size:9px;color:var(--text2)">'+lbl+'</div></div>';
   }).join('')+'</div>';
-});
-    label.textContent=nome+' · '+month.charAt(0).toUpperCase()+month.slice(1);
-  }
-  // Load current month
-  const months=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-  const currentMonth=months[new Date().getMonth()];
-  await rp(currentMonth,document.querySelector('.ft.on'));
 }
+
 // ── SUPABASE AUTH ─────────────────────────────────────────────────────
 
 const SUPABASE_URL='https://tnbbsjvzwleeoqnxtafp.supabase.co';
@@ -1850,7 +1844,7 @@ async function requestElucyAnalysis(deal_id, dealData, targetId){
   }
   const reportEl=document.getElementById('er-'+targetId);
   if(reportEl){
-    reportEl.innerHTML='<div class="er-loading"><span class="elucy-pulse">Elucy analisando deal '+deal_id+'...</span></div>';
+    reportEl.innerHTML='<div class="er-loading"><span class="elucy-pulse">Elucy analisando deal '+escHtml(deal_id)+'...</span></div>';
     reportEl.style.display='block';
   }
 
