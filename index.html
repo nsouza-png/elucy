@@ -3404,61 +3404,66 @@ async function _requestElucyRelaySB(deal_id, dealData, request_type, copy_mode, 
 
     const request_id=req.id;
 
-    // ESTADO 2: Aguardando worker
+    // ESTADO 2: Aguardando worker — polling agressivo (3s) + Realtime como bonus
     _setElucyLoadingState(reportEl, 'waiting');
+    let _resolved=false;
 
-    // Realtime: escuta INSERT em cockpit_responses filtrado pelo request_id
-    const channel=sb.channel('elucy:'+request_id)
-      .on('postgres_changes',{
-        event:'INSERT',
-        schema:'public',
-        table:'cockpit_responses',
-        filter:'request_id=eq.'+request_id
-      }, (payload)=>{
-        const output=payload.new?.output;
-        if(output){
-          _setElucyLoadingState(reportEl, 'done');
-          _setG4Status('connected','Elucy ativo');
-          setTimeout(()=>{ onResult&&onResult(output, payload.new); }, 400);
-          sb.removeChannel(channel);
-          delete ELUCY_LISTENERS[request_id];
+    function _onResponse(output, data){
+      if(_resolved) return;
+      _resolved=true;
+      _setElucyLoadingState(reportEl, 'done');
+      _setG4Status('connected','Elucy ativo');
+      setTimeout(()=>{ onResult&&onResult(output, data); }, 300);
+      // Cleanup
+      if(ELUCY_LISTENERS[request_id+'_poll']) clearInterval(ELUCY_LISTENERS[request_id+'_poll']);
+      if(ELUCY_LISTENERS[request_id]) { try{sb.removeChannel(ELUCY_LISTENERS[request_id]);}catch(e){} }
+      delete ELUCY_LISTENERS[request_id];
+      delete ELUCY_LISTENERS[request_id+'_poll'];
+    }
+
+    // Polling principal: cada 3s por 3 min — mais confiável que Realtime
+    let _pollCount=0;
+    const poll=setInterval(async()=>{
+      if(_resolved){ clearInterval(poll); return; }
+      _pollCount++;
+      try{
+        const {data}=await sb.from('cockpit_responses')
+          .select('output,request_type')
+          .eq('request_id',request_id)
+          .maybeSingle();
+        if(data?.output){
+          clearInterval(poll);
+          _onResponse(data.output, data);
+        } else if(_pollCount>60){ // 3s × 60 = 3 min
+          clearInterval(poll);
+          if(!_resolved){
+            _resolved=true;
+            _setG4Status('connected','Elucy ativo');
+            _setElucyLoadingState(reportEl,'error','Worker não respondeu em 3 min. Tente novamente.');
+            onError&&onError('timeout');
+          }
+        } else if(_pollCount===5){
+          _setElucyLoadingState(reportEl, 'processing');
         }
-      })
-      .subscribe((status)=>{
-        if(status==='SUBSCRIBED'){
-          // Polling de fallback: verifica a cada 15s se Realtime não chegou
-          const poll=setInterval(async()=>{
-            if(!ELUCY_LISTENERS[request_id]){ clearInterval(poll); return; }
-            const {data}=await sb.from('cockpit_responses')
-              .select('output,request_type')
-              .eq('request_id',request_id)
-              .maybeSingle();
-            if(data?.output){
-              clearInterval(poll);
-              _setElucyLoadingState(reportEl,'done');
-              _setG4Status('connected','Elucy ativo');
-              setTimeout(()=>{ onResult&&onResult(data.output, data); }, 400);
-              sb.removeChannel(channel);
-              delete ELUCY_LISTENERS[request_id];
-            }
-          }, 15000);
-          ELUCY_LISTENERS[request_id+'_poll']=poll;
-        }
-      });
+      }catch(e){/* polling error — retry next cycle */}
+    }, 3000);
+    ELUCY_LISTENERS[request_id+'_poll']=poll;
 
-    ELUCY_LISTENERS[request_id]=channel;
-
-    // Timeout de 5 minutos
-    setTimeout(()=>{
-      if(ELUCY_LISTENERS[request_id]){
-        if(ELUCY_LISTENERS[request_id+'_poll']) clearInterval(ELUCY_LISTENERS[request_id+'_poll']);
-        sb.removeChannel(ELUCY_LISTENERS[request_id]);
-        delete ELUCY_LISTENERS[request_id];
-        _setG4Status('connected','Elucy ativo');
-        _setElucyLoadingState(reportEl,'error','Worker não respondeu em 5 min. G4 OS está ligado?');
-        onError&&onError('timeout');
-      }
-    }, 300000);
+    // Realtime como bonus (pode não funcionar se replication desligada)
+    try{
+      const channel=sb.channel('elucy:'+request_id)
+        .on('postgres_changes',{
+          event:'INSERT',
+          schema:'public',
+          table:'cockpit_responses',
+          filter:'request_id=eq.'+request_id
+        }, (payload)=>{
+          const output=payload.new?.output;
+          if(output) _onResponse(output, payload.new);
+        })
+        .subscribe();
+      ELUCY_LISTENERS[request_id]=channel;
+    }catch(e){/* Realtime optional */}
 
     return request_id;
   }catch(e){
