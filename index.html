@@ -1963,6 +1963,12 @@ function handleElucyResponse(row, pending){
     logDealInteraction(deal_id, 'business_analysis', row.output);
     return;
   }
+  if(type==='note'){
+    injectNotaCRM(targetId, row.output);
+    pushNotification('Nota CRM pronta','Deal '+deal_id,'📝',row.output,meta);
+    logDealInteraction(deal_id, 'note_crm', row.output);
+    return;
+  }
   if(type==='analyze'){
     ELUCY_CACHE[deal_id]=row.output;
     injectElucyReport(targetId, row.output);
@@ -2395,6 +2401,56 @@ function clipText(text){
   navigator.clipboard.writeText(text).then(()=>showSyncToast('ok','Copiado!')).catch(()=>{});
 }
 
+// ── NOTA DE QUALIFICAÇÃO CRM ──────────────────────────────────────
+
+async function requestNotaCRM(id){
+  const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
+  if(!deal){showSyncToast('err','Selecione um deal primeiro.');return;}
+  const notaEl=document.getElementById('nota-'+id);
+  if(!notaEl) return;
+  // Toggle se já tem conteúdo
+  if(notaEl.dataset.loaded==='1'){
+    notaEl.style.display=notaEl.style.display==='none'?'block':'none';
+    return;
+  }
+  notaEl.innerHTML='<div class="ba-h"><span class="ba-badge" style="background:var(--gdim);color:var(--green)">CRM</span><span class="ba-htitle">Nota de Qualificação</span></div><div class="ba-b"><span class="elucy-pulse">ELUCi gerando nota de qualificação...</span></div>';
+  notaEl.style.display='block';
+  notaEl.scrollIntoView({behavior:'smooth',block:'nearest'});
+  if(window.IS_REMOTE){
+    const sb=getSB();
+    const email=_currentUser&&_currentUser.email;
+    if(!sb||!email) return;
+    initRealtimeSubscription();
+    const {data,error}=await sb.from('cockpit_requests').insert({
+      operator_id: email,
+      deal_id: String(deal.deal_id),
+      request_type: 'note',
+      deal_data: deal,
+      status: 'pending'
+    }).select().single();
+    if(error){
+      notaEl.innerHTML='<div class="ba-h"><span class="ba-badge" style="background:var(--rdim);color:var(--red)">ERRO</span><span class="ba-htitle">Nota CRM</span></div><div class="ba-b">'+escHtml(error.message)+'</div>';
+      return;
+    }
+    if(data) _pendingRequests[data.id]={targetId:id, deal_id:deal.deal_id, type:'note'};
+    logActivity('note_requested', deal.deal_id, {});
+    showSyncToast('ok','Nota de qualificação solicitada...');
+  }
+}
+
+function injectNotaCRM(targetId, output){
+  const notaEl=document.getElementById('nota-'+targetId);
+  if(!notaEl) return;
+  notaEl.dataset.loaded='1';
+  let html=escHtml(output)
+    .replace(/^(\w[\w_]+:)\s*/gm,'<strong style="color:var(--green)">$1</strong> ')
+    .replace(/\[NOTA DE QUALIFICAÇÃO[^\]]*\]/g,'<span style="color:var(--green);font-weight:800">$&</span>')
+    .replace(/NAO_INFORMADO/g,'<span style="color:var(--yellow);font-style:italic">NAO_INFORMADO</span>')
+    .replace(/\n/g,'<br>');
+  notaEl.innerHTML='<div class="ba-h"><span class="ba-badge" style="background:var(--gdim);color:var(--green)">CRM</span><span class="ba-htitle">Nota de Qualificação</span><button class="hist-copy-btn" onclick="event.stopPropagation();clipText(document.getElementById(\'nota-content-'+targetId+'\').innerText)" style="position:static;margin-left:auto">Copiar</button></div><div class="ba-b" id="nota-content-'+targetId+'">'+html+'</div>';
+  notaEl.style.display='block';
+}
+
 // ── WHATSAPP CONVERSATION FLOW ──────────────────────────────────────
 
 function toggleWaPanel(id){
@@ -2678,7 +2734,9 @@ function selectLiveDeal(id,d){
         <button class="btn bs" onclick="toggleER('${id}')">ELUCI Report</button>
         <button class="btn bs" onclick="requestBusinessAnalysis('${id}')" style="border-color:var(--clay);color:var(--clay)">Análise de Mercado</button>
         <button class="wa-conv-btn" onclick="toggleWaPanel('${id}')">💬 Conversa</button>
+        <button class="btn bs btn-sm" onclick="requestNotaCRM('${id}')" style="border-color:var(--green);color:var(--green)">📝 Nota CRM</button>
       </div>
+      <div class="ba" id="nota-${id}" style="display:none"></div>
       <div class="wa-panel" id="wa-panel-${id}">
         <div class="wa-panel-header">
           <span class="wa-panel-title">Conversa WhatsApp</span>
