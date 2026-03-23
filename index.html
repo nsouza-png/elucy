@@ -1929,43 +1929,34 @@ let _intelLoading=false;
 
 function _dbQuery(sql,label){
   const token=localStorage.getItem('elucy_db_token');
-  console.log('[INTEL] Query '+label+' enviada');
+  if(!token){console.warn('[INTEL] '+label+' no db token');return Promise.resolve([]);}
+  console.log('[INTEL] '+label+' sending...');
+  // Use same pattern as fetchPipelineByName (which works in production)
   return fetch(DB_ENDPOINT,{
     method:'POST',
-    headers:{
-      'x-db-token':token,
-      'apikey':SUPABASE_ANON,
-      'Authorization':'Bearer '+SUPABASE_ANON,
-      'Content-Type':'application/json'
-    },
+    headers:{'x-db-token':token,'apikey':SUPABASE_ANON,'Content-Type':'application/json'},
     body:JSON.stringify({statement:sql,warehouse_id:DB_WAREHOUSE,wait_timeout:'30s',on_wait_timeout:'CONTINUE'})
   }).then(r=>{
     console.log('[INTEL] '+label+' http:',r.status);
-    if(!r.ok) return r.text().then(t=>{console.error('[INTEL] '+label+' err body:',t);return {};});
+    if(!r.ok) return r.text().then(t=>{console.error('[INTEL] '+label+' err:',t);return {};});
     return r.json();
   }).then(r=>{
-    console.log('[INTEL] '+label+' response keys:',Object.keys(r||{}).join(','));
-    // Databricks retorna {status:{state}, result:{data_array}} via proxy
+    if(!r||typeof r!=='object'){console.warn('[INTEL] '+label+' bad response');return [];}
     const rows=(r.result&&r.result.data_array)||[];
     if(!rows.length&&r.data_array) return r.data_array;
-    // Status pode ser string (direto) ou object (via proxy): {state:'PENDING'}
     const st=typeof r.status==='object'?(r.status&&r.status.state):r.status;
-    // PENDING/RUNNING → poll
     if((st==='PENDING'||st==='RUNNING')&&r.statement_id){
-      console.log('[INTEL] '+label+' '+st+', polling stmt='+r.statement_id);
+      console.log('[INTEL] '+label+' '+st+' → polling',r.statement_id);
       return _dbPoll(r.statement_id,label);
     }
     if(st==='FAILED'){
-      const errMsg=(r.status&&r.status.error&&r.status.error.message)||'unknown';
-      console.error('[INTEL] '+label+' FAILED:',errMsg);
+      const msg=r.status&&r.status.error?r.status.error.message:'?';
+      console.error('[INTEL] '+label+' FAILED:',msg);
       return [];
     }
-    console.log('[INTEL] '+label+' rows:',rows.length,'status:',st||'ok');
+    console.log('[INTEL] '+label+' ✓',rows.length,'rows');
     return rows;
-  }).catch(e=>{
-    console.error('[INTEL] '+label+' erro:',e);
-    return [];
-  });
+  }).catch(e=>{console.error('[INTEL] '+label+' catch:',e);return [];});
 }
 
 function _dbPoll(stmtId,label){
@@ -1974,15 +1965,15 @@ function _dbPoll(stmtId,label){
     let tries=0;
     const iv=setInterval(()=>{
       tries++;
-      if(tries>10){clearInterval(iv);console.warn('[INTEL] '+label+' timeout poll');resolve([]);return;}
+      if(tries>15){clearInterval(iv);console.warn('[INTEL] '+label+' poll timeout');resolve([]);return;}
       fetch(DB_PROXY+'?stmt_id='+stmtId,{
-        headers:{'x-db-token':token,'apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}
+        headers:{'x-db-token':token,'apikey':SUPABASE_ANON}
       }).then(r=>r.json()).then(r=>{
         const rows=(r.result&&r.result.data_array)||[];
         const st=typeof r.status==='object'?(r.status&&r.status.state):r.status;
         if(rows.length||st==='SUCCEEDED'||st==='FAILED'){
           clearInterval(iv);
-          console.log('[INTEL] '+label+' poll done, rows:',rows.length,'st:',st);
+          console.log('[INTEL] '+label+' poll ✓',rows.length,'rows');
           resolve(rows);
         }
       }).catch(()=>{clearInterval(iv);resolve([]);});
