@@ -261,8 +261,9 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 0%,rgb
 .fchip.on-red{background:var(--rdim);border-color:var(--red);color:var(--red)}
 .fchip.on-yellow{background:var(--ydim);border-color:var(--yellow);color:var(--yellow)}
 .sort-row{display:flex;align-items:center;gap:4px}
-.sort-sel{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 7px;font-size:10px;color:var(--text2);outline:none;cursor:pointer;font-family:inherit}
+.sort-sel{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 7px;font-size:10px;color:var(--text2);outline:none;cursor:pointer;font-family:inherit;-webkit-appearance:none;appearance:none;padding-right:18px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235d7290'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 5px center}
 .sort-sel:focus{border-color:var(--accent)}
+.sort-sel option{background:var(--bg2);color:var(--text)}
 /* Sinal badges */
 .sig-buy{background:var(--gdim);color:var(--green);border:1px solid var(--green)}
 .sig-risk{background:var(--rdim);color:var(--red);border:1px solid var(--red)}
@@ -1261,7 +1262,7 @@ async function loadDealsFromSupabase(email){
     {name:'revenue'},{name:'contact_name'},{name:'valor_da_oportunidade'},
     {name:'faixa_de_faturamento'},{name:'perfil'},{name:'utm_source'},{name:'utm_campaign'},
     {name:'motivo_lost'},{name:'origem_do_deal'},{name:'coproprietario_name'},
-    {name:'nome_do_evento'},{name:'tipo_de_evento'},
+    {name:'nome_do_negocio'},{name:'nome_do_evento'},{name:'tipo_de_evento'},
     {name:'p_telefone'},{name:'p_segmento'},{name:'p_cluster_rfm'},
     {name:'p_negociacoes_ganhas'},{name:'p_receita_total'},{name:'p_pa_cliente'},
     {name:'p_primeiro_produto'},{name:'p_ultimo_produto'},{name:'p_produtos_comprados'},
@@ -1879,10 +1880,12 @@ function renderLiveDeals(rows,cols){
     const id='live-'+idx;
     const deal_id=g(row,'deal_id')||'';
     const emailLead=g(row,'email_lead')||g(row,'email')||'';
-    // Nome do contato — persons_overview.nome via JOIN (contact_name), fallback email
+    // Nome: prioridade nome_do_negocio > contact_name > email parsed > Deal #ID
+    const nomeNegocio=(g(row,'nome_do_negocio')||'').trim();
     const contactName=(g(row,'contact_name')||'').trim();
     let nome='';
-    if(contactName) nome=contactName;
+    if(nomeNegocio) nome=nomeNegocio;
+    else if(contactName) nome=contactName;
     else if(emailLead) nome=emailLead.split('@')[0].replace(/[._-]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
     else nome=deal_id?('Deal #'+deal_id):('Lead '+(idx+1));
     // Empresa: domínio do email
@@ -1917,7 +1920,7 @@ function renderLiveDeals(rows,cols){
     // conta_founder: derivado do utm_medium para rotear tom Social DM no worker
     const contaFounder=(utm.toLowerCase()==='tallis'||utm.toLowerCase()==='nardon'||utm.toLowerCase()==='alfredo')?utm.toLowerCase():'';
     const telefone=g(row,'p_telefone')||'';
-    const dealObj={nome,empresa:emailLead||empresa,cargo,fase,etapa,tier,delta,canal,deal_id,temp,tc,tl,dd,emailLead,
+    const dealObj={nome,nomeNegocio,contact_name:contactName,empresa:emailLead||empresa,cargo,fase,etapa,tier,delta,canal,deal_id,temp,tc,tl,dd,emailLead,
       linhaReceita,revenueRaw,elucyValor,forecastDelta,statusDeal,motivoLost,createdAtCrm,
       utm_medium:utm,conta_founder:contaFounder,telefone,
       _fase:fase,_etapa:etapa,_tier:tier,_delta:delta,_temp:temp};
