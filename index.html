@@ -846,6 +846,7 @@ input,textarea,select{font-family:inherit;font-size:inherit}
 .wa-stat-val{font-size:18px;font-weight:800;color:var(--text)}
 .wa-stat-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--text4);margin-top:2px}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes slideInRight{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
 /* -- SCREEN VISIBILITY --------------------------------------------- */
 #ct > .screen{display:none}
 #ct > .screen.on{display:block}
@@ -3371,102 +3372,136 @@ async function _requestElucyRelay(deal_id, dealData, request_type, copy_mode, on
   return _requestElucyRelaySB(deal_id, dealData, request_type, copy_mode, onResult, onError, reportEl);
 }
 
+// ── NOTIFICAÇÃO VISUAL — toast quando response chega ──
+function _elucyToast(msg, type){
+  let container=document.getElementById('elucy-toast-container');
+  if(!container){
+    container=document.createElement('div');
+    container.id='elucy-toast-container';
+    container.style.cssText='position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none';
+    document.body.appendChild(container);
+  }
+  const toast=document.createElement('div');
+  const bg=type==='success'?'var(--green)':type==='error'?'var(--red)':'var(--accent)';
+  const icon=type==='success'?'✅':type==='error'?'⚠':'⚡';
+  toast.style.cssText='pointer-events:auto;padding:10px 16px;border-radius:var(--r);background:var(--bg3);border:1px solid '+bg+';color:var(--text);font-size:12px;font-weight:600;box-shadow:var(--shadow-lg);display:flex;align-items:center;gap:8px;animation:slideInRight .3s ease;cursor:pointer;max-width:380px';
+  toast.innerHTML='<span style="font-size:16px">'+icon+'</span><span>'+msg+'</span>';
+  toast.onclick=function(){ toast.remove(); };
+  container.appendChild(toast);
+  setTimeout(()=>{ toast.style.opacity='0'; toast.style.transition='opacity .3s'; setTimeout(()=>toast.remove(),300); }, 6000);
+}
+
 async function _requestElucyRelaySB(deal_id, dealData, request_type, copy_mode, onResult, onError, reportEl){
+  // Tenta SDK primeiro, fallback pra fetch direto
   const sb=getSB();
-  if(!sb){ onError&&onError('Supabase offline'); return; }
-  const {data:{session}}=await sb.auth.getSession();
-  if(!session){ onError&&onError('Faça login para usar o Elucy'); return; }
+  let userId=null;
+  if(sb){
+    try{
+      const {data:{session}}=await sb.auth.getSession();
+      userId=session?.user?.id;
+    }catch(e){}
+  }
+  if(!userId) userId=localStorage.getItem('elucy_operator_id')||'default';
 
   try{
     // ESTADO 1: Inserindo na fila
     _setElucyLoadingState(reportEl, 'inserting');
     _setG4Status('processing','Elucy processando…');
+    console.log('[Elucy] Inserindo request:', {deal_id, request_type, copy_mode, userId});
 
-    // INSERT direto via SDK — sem Edge Function
-    const {data:req, error:insertErr}=await sb
-      .from('cockpit_requests')
-      .insert({
-        operator_id: session.user.id,
-        deal_id,
-        request_type,
+    // INSERT via fetch direto — sem depender do SDK
+    const insertResp=await fetch(SUPABASE_URL+'/rest/v1/cockpit_requests', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'apikey':SUPABASE_ANON,
+        'Authorization':'Bearer '+SUPABASE_ANON,
+        'Prefer':'return=representation'
+      },
+      body:JSON.stringify({
+        operator_id: userId,
+        deal_id: deal_id,
+        request_type: request_type,
         copy_mode: copy_mode||null,
         deal_data: dealData,
         status: 'pending'
       })
-      .select('id')
-      .single();
+    });
 
-    if(insertErr){
-      onError&&onError('Erro ao enfileirar: '+insertErr.message);
+    if(!insertResp.ok){
+      const errText=await insertResp.text();
+      console.error('[Elucy] INSERT falhou:', insertResp.status, errText);
+      onError&&onError('Erro ao enfileirar: HTTP '+insertResp.status);
       _setG4Status('connected','Elucy ativo');
       return;
     }
 
-    const request_id=req.id;
+    const insertData=await insertResp.json();
+    const request_id=Array.isArray(insertData)?insertData[0]?.id:insertData?.id;
+    if(!request_id){
+      console.error('[Elucy] INSERT não retornou ID:', insertData);
+      onError&&onError('Erro: request sem ID');
+      _setG4Status('connected','Elucy ativo');
+      return;
+    }
 
-    // ESTADO 2: Aguardando worker — polling agressivo (3s) + Realtime como bonus
+    console.log('[Elucy] Request inserido:', request_id);
+
+    // ESTADO 2: Aguardando worker — polling via fetch direto
     _setElucyLoadingState(reportEl, 'waiting');
     let _resolved=false;
 
     function _onResponse(output, data){
       if(_resolved) return;
       _resolved=true;
+      console.log('[Elucy] Response recebida! Tipo:', request_type);
       _setElucyLoadingState(reportEl, 'done');
       _setG4Status('connected','Elucy ativo');
+      // Notificação visual
+      const dealName=(dealData&&(dealData.nome||dealData.contact_name))||deal_id;
+      _elucyToast(request_type==='copy'?'Copy gerada para '+dealName:'Análise ELUCI pronta para '+dealName, 'success');
       setTimeout(()=>{ onResult&&onResult(output, data); }, 300);
       // Cleanup
       if(ELUCY_LISTENERS[request_id+'_poll']) clearInterval(ELUCY_LISTENERS[request_id+'_poll']);
-      if(ELUCY_LISTENERS[request_id]) { try{sb.removeChannel(ELUCY_LISTENERS[request_id]);}catch(e){} }
-      delete ELUCY_LISTENERS[request_id];
       delete ELUCY_LISTENERS[request_id+'_poll'];
     }
 
-    // Polling principal: cada 3s por 3 min — mais confiável que Realtime
+    // Polling via fetch direto — cada 3s por 3 min
     let _pollCount=0;
     const poll=setInterval(async()=>{
       if(_resolved){ clearInterval(poll); return; }
       _pollCount++;
       try{
-        const {data}=await sb.from('cockpit_responses')
-          .select('output,request_type')
-          .eq('request_id',request_id)
-          .maybeSingle();
-        if(data?.output){
-          clearInterval(poll);
-          _onResponse(data.output, data);
-        } else if(_pollCount>60){ // 3s × 60 = 3 min
-          clearInterval(poll);
-          if(!_resolved){
-            _resolved=true;
-            _setG4Status('connected','Elucy ativo');
-            _setElucyLoadingState(reportEl,'error','Worker não respondeu em 3 min. Tente novamente.');
-            onError&&onError('timeout');
+        const pollResp=await fetch(
+          SUPABASE_URL+'/rest/v1/cockpit_responses?request_id=eq.'+request_id+'&select=output,request_type&limit=1',
+          {headers:{'apikey':SUPABASE_ANON,'Authorization':'Bearer '+SUPABASE_ANON}}
+        );
+        if(pollResp.ok){
+          const rows=await pollResp.json();
+          if(rows.length>0 && rows[0].output){
+            clearInterval(poll);
+            console.log('[Elucy] Polling pegou response na tentativa', _pollCount);
+            _onResponse(rows[0].output, rows[0]);
           }
-        } else if(_pollCount===5){
-          _setElucyLoadingState(reportEl, 'processing');
         }
-      }catch(e){/* polling error — retry next cycle */}
+      }catch(e){ console.warn('[Elucy] Poll error:', e); }
+
+      if(_pollCount>60 && !_resolved){ // 3s × 60 = 3 min
+        clearInterval(poll);
+        _resolved=true;
+        _setG4Status('connected','Elucy ativo');
+        _setElucyLoadingState(reportEl,'error','Worker não respondeu em 3 min. Tente novamente.');
+        _elucyToast('Timeout — worker não respondeu. G4 OS está ligado?', 'error');
+        onError&&onError('timeout');
+      } else if(_pollCount===5){
+        _setElucyLoadingState(reportEl, 'processing');
+      }
     }, 3000);
     ELUCY_LISTENERS[request_id+'_poll']=poll;
 
-    // Realtime como bonus (pode não funcionar se replication desligada)
-    try{
-      const channel=sb.channel('elucy:'+request_id)
-        .on('postgres_changes',{
-          event:'INSERT',
-          schema:'public',
-          table:'cockpit_responses',
-          filter:'request_id=eq.'+request_id
-        }, (payload)=>{
-          const output=payload.new?.output;
-          if(output) _onResponse(output, payload.new);
-        })
-        .subscribe();
-      ELUCY_LISTENERS[request_id]=channel;
-    }catch(e){/* Realtime optional */}
-
     return request_id;
   }catch(e){
+    console.error('[Elucy] Erro geral:', e);
     _setG4Status('connected','Elucy ativo');
     onError&&onError('Erro: '+e.message);
   }
