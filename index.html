@@ -3173,29 +3173,35 @@ function renderIntelligence(){
       <div class="intel-title" style="margin-top:14px">Eficiência — Conversão por Fase <span id="ef-source" style="font-weight:400;color:var(--text2);font-size:11px"></span></div>
       <div class="intel-kpi-row" id="efficiency-kpis">
         ${(()=>{
-          // Calcula eficiência direto dos deals carregados do Supabase (fonte: HubSpot)
-          // Usa etapa_atual_no_pipeline como fonte de verdade
+          // Calcula eficiência dos deals CRIADOS NO MÊS ATUAL (fonte: Supabase/HubSpot)
+          // Filtra por createdAtCrm para refletir apenas o funil do mês
+          const now=new Date();
+          const monthStart=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
+          const monthLabel=(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getFullYear();
+          const monthDeals=allDeals.filter(d=>{
+            const dt=d.createdAtCrm||'';
+            if(!dt) return false;
+            return dt.slice(0,10)>=monthStart;
+          });
           const oppEtapas=['nova oportunidade','(não usar) nova oportunidade','negociação','negociacao','em negociação','em negociacao','fechamento','entrevista agendada'];
-          const salEtapas=['dia 01','dia 02','dia 03','dia 04','dia 05','dia 06','conectados','agendamento','reagendamento','self checkout',...oppEtapas];
           const mqlEtapas=['novo lead','novo lead '];
           let nMQL,nSAL,nOPP,crMqlSal,crSalOpp,src;
-          // MQL = todos os deals (cada deal entrou como MQL)
-          nMQL=allDeals.length;
-          // SAL = deals que saíram de MQL (etapa != MQL e != null)
-          nSAL=allDeals.filter(d=>{
+          // MQL = deals criados no mês
+          nMQL=monthDeals.length;
+          // SAL = deals que saíram de MQL
+          nSAL=monthDeals.filter(d=>{
             const et=(d._etapa||d.etapa||'').toLowerCase().trim();
             const s=(d.statusDeal||'').toLowerCase();
             if(s==='ganho'||s==='perdido') return true;
             if(mqlEtapas.includes(et)) return false;
             return et.length>0;
           }).length;
-          // OPP = deals em etapas pós-agendamento (Nova Oport, Negociação, Fechamento, Entrevista) + Ganho + Perdidos que vieram de OPP
-          nOPP=allDeals.filter(d=>{
+          // OPP = deals em etapas pós-agendamento + Ganho + Perdidos de OPP
+          nOPP=monthDeals.filter(d=>{
             const et=(d._etapa||d.etapa||'').toLowerCase().trim();
             const s=(d.statusDeal||'').toLowerCase();
             if(s==='ganho') return true;
             if(oppEtapas.includes(et)) return true;
-            // Perdidos que estavam em fase de OPP
             if(s==='perdido'){
               const f=(d._fase||d.fase||'').toLowerCase();
               return f==='oportunidade'||f==='negociação'||f==='negociacao';
@@ -3204,7 +3210,7 @@ function renderIntelligence(){
           }).length;
           crMqlSal=nMQL>0?((nSAL/nMQL)*100).toFixed(1):'0';
           crSalOpp=nSAL>0?((nOPP/nSAL)*100).toFixed(1):'0';
-          src='Supabase — '+nMQL+' deals';
+          src='Criados em '+monthLabel+' — '+nMQL+' deals';
           setTimeout(()=>{const el=document.getElementById('ef-source');if(el) el.textContent='('+src+')';},0);
           return '<div class="intel-kpi"><div class="intel-kpi-v">'+nMQL+'</div><div class="intel-kpi-l"># MQL</div></div>'+
             '<div class="intel-kpi"><div class="intel-kpi-v" style="font-size:13px;font-weight:800;color:var(--green)">'+crMqlSal+'%</div><div class="intel-kpi-l">MQL → SAL</div></div>'+
