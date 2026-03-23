@@ -142,6 +142,37 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .wa-bubble-ts{font-size:9px;color:var(--text2);text-align:right;margin-top:2px}
 .wa-bubble-text{white-space:pre-wrap}
 .wa-saved-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;background:var(--gdim);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+/* Slack alerts */
+.slack-btn{position:relative;padding:5px 8px;border-radius:6px;font-size:13px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);transition:.15s;line-height:1;font-weight:600}
+.slack-btn:hover{border-color:#e01e5a;color:#e01e5a}
+.slack-btn .notif-dot{background:#e01e5a}
+.slack-count{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;border-radius:8px;background:#e01e5a;color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;display:none}
+.slack-count.show{display:flex}
+.slack-panel{position:absolute;top:46px;right:120px;width:400px;max-height:480px;overflow-y:auto;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:50;display:none}
+.slack-panel.show{display:block;animation:fadeIn .15s ease}
+.slack-panel-header{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.slack-panel-title{font-family:var(--font-title);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text)}
+.slack-alert{display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:.12s}
+.slack-alert:hover{background:var(--bg3)}
+.slack-alert.unread{background:rgba(224,30,90,.06)}
+.slack-alert.highlight{border-left:3px solid #e01e5a}
+.slack-alert-ch{font-size:10px;font-weight:700;color:#e01e5a}
+.slack-alert-msg{font-size:12px;color:var(--text);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slack-alert-meta{font-size:10px;color:var(--text2);margin-top:2px}
+.slack-alert-sender{font-weight:600;color:var(--accent2)}
+.slack-setup-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:100;display:none;align-items:center;justify-content:center}
+.slack-setup-modal.show{display:flex}
+.slack-setup-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);width:480px;max-height:80vh;overflow-y:auto;padding:24px}
+.slack-setup-title{font-family:var(--font-title);font-size:14px;text-transform:uppercase;letter-spacing:1px;color:var(--text);margin-bottom:16px}
+.slack-setup-input{width:100%;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-size:13px;font-family:var(--font-body);resize:none;outline:none;min-height:60px}
+.slack-setup-input::placeholder{color:var(--text2)}
+.slack-setup-input:focus{border-color:var(--accent)}
+.slack-setup-preview{margin-top:12px;padding:12px;background:var(--bg3);border-radius:var(--r);font-size:12px;display:none}
+.slack-setup-preview.show{display:block}
+.slack-cfg-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+.slack-cfg-ch{font-weight:700;color:#e01e5a;font-size:12px}
+.slack-cfg-type{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--adim);color:var(--accent2)}
+.slack-cfg-hl{font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(224,30,90,.15);color:#e01e5a}
 /* Notification system */
 .notif-btn{position:relative;padding:5px 8px;border-radius:6px;font-size:14px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);transition:.15s;line-height:1}
 .notif-btn:hover{border-color:var(--accent);color:var(--accent2)}
@@ -374,8 +405,35 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
       <span class="chip-name" id="chip-name">Nathan</span>
       <span class="chip-lvl">Hunter Lv3</span>
     </div>
+    <button class="slack-btn" id="slack-btn" onclick="toggleSlackPanel()" title="Alertas Slack">⚡<span class="slack-count" id="slack-count">0</span></button>
     <button class="notif-btn" id="notif-btn" onclick="toggleNotifPanel()" title="Notificações">🔔<span class="notif-dot" id="notif-dot"></span></button>
     <button class="btn-settings" onclick="openSettings()" title="Configurar operador">⚙</button>
+  </div>
+  <div class="slack-panel" id="slack-panel">
+    <div class="slack-panel-header">
+      <span class="slack-panel-title">Alertas Slack</span>
+      <div style="display:flex;gap:6px">
+        <button class="btn bs btn-sm" onclick="openSlackSetup()" style="font-size:10px;padding:3px 8px">+ Config</button>
+        <button class="btn bs btn-sm" onclick="markAllSlackRead()" style="font-size:10px;padding:3px 8px">Limpar</button>
+      </div>
+    </div>
+    <div id="slack-alert-list"><div class="notif-empty">Nenhum alerta Slack.</div></div>
+  </div>
+  <div class="slack-setup-modal" id="slack-setup-modal">
+    <div class="slack-setup-box">
+      <div class="slack-setup-title">Configurar Alertas Slack</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Descreva o que quer monitorar em linguagem natural. Ex: "quero receber alertas do canal fup-dm-insta com destaque especial" ou "monitorar menções no #deals-quentes"</p>
+      <textarea class="slack-setup-input" id="slack-setup-input" placeholder="Ex: quero acompanhar o canal fup-dm-insta com destaque quando tiver FUPs pendentes para mim"></textarea>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button class="btn bsuc btn-sm" onclick="processSlackSetup()">Configurar</button>
+        <button class="btn bs btn-sm" onclick="closeSlackSetup()">Cancelar</button>
+      </div>
+      <div class="slack-setup-preview" id="slack-setup-preview"></div>
+      <div style="margin-top:16px">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">Canais ativos:</div>
+        <div id="slack-cfg-list"></div>
+      </div>
+    </div>
   </div>
   <div class="notif-panel" id="notif-panel">
     <div class="notif-panel-header">
@@ -1136,6 +1194,7 @@ function showCockpit(user){
   if(window.IS_REMOTE){
     loadDealsFromSupabase(user.email);
   }
+  initSlackAlerts();
 }
 
 async function checkApproval(user){
@@ -1832,9 +1891,10 @@ function renderLiveDeals(rows,cols){
     const createdAtCrm=g(row,'created_at_crm')||g(row,'created_at')||'';
     // conta_founder: derivado do utm_medium para rotear tom Social DM no worker
     const contaFounder=(utm.toLowerCase()==='tallis'||utm.toLowerCase()==='nardon'||utm.toLowerCase()==='alfredo')?utm.toLowerCase():'';
+    const telefone=g(row,'p_telefone')||'';
     const dealObj={nome,empresa:emailLead||empresa,cargo,fase,etapa,tier,delta,canal,deal_id,temp,tc,tl,dd,emailLead,
       linhaReceita,revenueRaw,elucyValor,forecastDelta,statusDeal,motivoLost,createdAtCrm,
-      utm_medium:utm,conta_founder:contaFounder,
+      utm_medium:utm,conta_founder:contaFounder,telefone,
       _fase:fase,_etapa:etapa,_tier:tier,_delta:delta,_temp:temp};
     // Sinal automático
     const signal=calcSignal(dealObj);
@@ -2792,6 +2852,7 @@ function selectLiveDeal(id,d){
         <div class="co-txt" id="ct-${id}-crm" contenteditable="true" spellcheck="false" style="display:none">[ELUCI NOTE] ${new Date().toLocaleDateString('pt-BR')}\n\nDeal ID: ${d.deal_id||id} | Fase: ${d.fase} | Temp: ${d.temp}/100\nCanal: ${d.canal} | Dia: ${d.dd} | Delta: ${d.delta} dias\n\nAção: FUP via ${d.canal}\nStatus: Aguardando resposta.</div>
         <div class="copy-actions">
           <button class="btn bs btn-sm" onclick="clip('ct-${id}-wa')">Copiar</button>
+          <button class="btn bs btn-sm" onclick="openWhatsApp('${id}','${(d.telefone||'').replace(/'/g,'')}')" style="border-color:#25d366;color:#25d366" title="Abrir no WhatsApp">📱 WhatsApp</button>
           <button class="btn bs btn-sm" onclick="regenCopy('${id}')">Regenerar</button>
           <button class="btn bs btn-sm" onclick="clip('ct-${id}-crm')">Copiar Nota</button>
           <span style="margin-left:auto;font-size:10px;color:var(--text2)">Editavel</span>
@@ -2809,6 +2870,26 @@ function selectLiveDeal(id,d){
   setScreen('home',null);
   // Carrega histórico do deal
   if(d.deal_id && window.IS_REMOTE) loadDealHistory(d.deal_id, id);
+}
+
+// ── WHATSAPP DEEP LINK ──
+function openWhatsApp(id, phone){
+  // Pega o texto da copy atual
+  const el=document.getElementById('ct-'+id+'-wa');
+  const text=el?el.textContent||el.innerText:'';
+  // Normalizar telefone: remover tudo que não é dígito
+  let num=(phone||'').replace(/\D/g,'');
+  if(!num){
+    // Sem telefone — copia e abre wa.me sem número
+    const encoded=encodeURIComponent(text);
+    window.open('https://api.whatsapp.com/send?text='+encoded,'_blank');
+    showSyncToast('ok','WhatsApp aberto (sem número do lead).');
+    return;
+  }
+  // Garantir código de país BR
+  if(num.length===10||num.length===11) num='55'+num;
+  const encoded=encodeURIComponent(text);
+  window.open('https://api.whatsapp.com/send?phone='+num+'&text='+encoded,'_blank');
 }
 
 // ── RECOMENDAÇÃO DINÂMICA & COPY HELPERS ────────────────────────────
@@ -3233,6 +3314,184 @@ function showSyncToast(type,msg){
   t.textContent=msg;
   document.body.appendChild(t);
   setTimeout(()=>t.remove(),5000);
+}
+
+// ── SLACK ALERTS SYSTEM ──
+let _slackAlerts=[];
+let _slackConfigs=[];
+
+function toggleSlackPanel(){
+  const panel=document.getElementById('slack-panel');
+  if(!panel) return;
+  const wasOpen=panel.classList.contains('show');
+  // Fechar outros painéis
+  document.getElementById('notif-panel')?.classList.remove('show');
+  if(wasOpen){ panel.classList.remove('show'); return; }
+  panel.classList.add('show');
+  loadSlackAlerts();
+}
+
+function openSlackSetup(){
+  const modal=document.getElementById('slack-setup-modal');
+  if(modal){ modal.classList.add('show'); loadSlackConfigs(); }
+}
+
+function closeSlackSetup(){
+  const modal=document.getElementById('slack-setup-modal');
+  if(modal) modal.classList.remove('show');
+  document.getElementById('slack-setup-input').value='';
+  const prev=document.getElementById('slack-setup-preview');
+  if(prev){ prev.classList.remove('show'); prev.innerHTML=''; }
+}
+
+async function loadSlackConfigs(){
+  const email=_currentUser&&_currentUser.email;
+  if(!email) return;
+  const sb=getSB(); if(!sb) return;
+  const {data}=await sb.from('operator_slack_configs').select('*').eq('operator_id',email).eq('enabled',true);
+  _slackConfigs=data||[];
+  const el=document.getElementById('slack-cfg-list');
+  if(!el) return;
+  if(!_slackConfigs.length){ el.innerHTML='<div style="font-size:11px;color:var(--text2)">Nenhum canal configurado.</div>'; return; }
+  el.innerHTML=_slackConfigs.map(c=>{
+    const badge=c.highlight?'<span style="background:#e01e5a;color:#fff;font-size:9px;padding:1px 5px;border-radius:3px;margin-left:6px">destaque</span>':'';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">'+
+      '<div><span style="font-weight:600;color:var(--text);font-size:12px">#'+escHtml(c.channel_name)+'</span>'+badge+
+      '<span style="font-size:10px;color:var(--text2);margin-left:8px">'+escHtml(c.alert_type)+'</span></div>'+
+      '<button class="btn bs btn-sm" onclick="removeSlackConfig(\''+c.id+'\')" style="font-size:9px;padding:2px 6px;color:#ef4444;border-color:#ef4444">×</button></div>';
+  }).join('');
+}
+
+async function removeSlackConfig(cfgId){
+  const sb=getSB(); if(!sb) return;
+  await sb.from('operator_slack_configs').update({enabled:false}).eq('id',cfgId);
+  loadSlackConfigs();
+  showSyncToast('ok','Config removida.');
+}
+
+async function processSlackSetup(){
+  const input=document.getElementById('slack-setup-input');
+  const text=(input&&input.value||'').trim();
+  if(!text){ showSyncToast('err','Descreva o que quer monitorar.'); return; }
+  const email=_currentUser&&_currentUser.email;
+  if(!email) return;
+  // Parse natural language → extract channel name and alert type
+  const lower=text.toLowerCase();
+  let channelName='';
+  let channelId='';
+  let alertType='mention';
+  let highlight=false;
+  let keywords=[];
+  // Detect channel name
+  const chMatch=lower.match(/#?([\w-]+)/);
+  if(chMatch) channelName=chMatch[1];
+  // Known channel mapping (expandir conforme necessário)
+  const knownChannels={'fup-dm-insta':'C091M783T8F','deals-quentes':'','geral':''};
+  if(knownChannels[channelName]) channelId=knownChannels[channelName];
+  // Detect alert type
+  if(lower.includes('fup')||lower.includes('follow')||lower.includes('pendente')) alertType='fup_pending';
+  if(lower.includes('menç')||lower.includes('mention')||lower.includes('me marca')) alertType='mention';
+  if(lower.includes('keyword')||lower.includes('palavra')) alertType='keyword';
+  // Detect highlight
+  if(lower.includes('destaque')||lower.includes('highlight')||lower.includes('especial')) highlight=true;
+  // Detect keywords
+  const kwMatch=text.match(/palavras?[- ]?chave[s]?[:\s]+([^\n]+)/i);
+  if(kwMatch) keywords=kwMatch[1].split(',').map(k=>k.trim()).filter(Boolean);
+  if(!channelName){ showSyncToast('err','Não consegui identificar o canal. Use # antes do nome.'); return; }
+  // Preview
+  const prev=document.getElementById('slack-setup-preview');
+  if(!channelId){
+    // Sem channel_id mapeado — salva com placeholder
+    channelId='UNKNOWN_'+channelName.toUpperCase();
+  }
+  const sb=getSB(); if(!sb) return;
+  const {error}=await sb.from('operator_slack_configs').upsert({
+    operator_id:email, channel_id:channelId, channel_name:channelName,
+    alert_type:alertType, highlight:highlight, keywords:keywords, enabled:true
+  },{onConflict:'operator_id,channel_id,alert_type'});
+  if(error){ showSyncToast('err','Erro ao salvar: '+error.message); return; }
+  if(prev){
+    prev.classList.add('show');
+    prev.innerHTML='<div style="color:var(--green);font-weight:600;margin-bottom:4px">✓ Configurado!</div>'+
+      '<div style="font-size:11px;color:var(--text2)">Canal: <b>#'+escHtml(channelName)+'</b> | Tipo: <b>'+alertType+'</b>'+
+      (highlight?' | <span style="color:#e01e5a">Destaque ativo</span>':'')+
+      (keywords.length?' | Keywords: '+keywords.join(', '):'')+
+      '</div>';
+  }
+  input.value='';
+  loadSlackConfigs();
+}
+
+async function loadSlackAlerts(){
+  const email=_currentUser&&_currentUser.email;
+  if(!email) return;
+  const sb=getSB(); if(!sb) return;
+  const {data}=await sb.from('operator_slack_alerts').select('*').eq('operator_id',email).order('created_at',{ascending:false}).limit(30);
+  _slackAlerts=data||[];
+  renderSlackAlerts();
+  // Update count badge
+  const unread=_slackAlerts.filter(a=>!a.is_read).length;
+  const countEl=document.getElementById('slack-count');
+  if(countEl){ countEl.textContent=unread; if(unread>0) countEl.classList.add('show'); else countEl.classList.remove('show'); }
+}
+
+function renderSlackAlerts(){
+  const list=document.getElementById('slack-alert-list');
+  if(!list) return;
+  if(!_slackAlerts.length){ list.innerHTML='<div class="notif-empty">Nenhum alerta Slack.</div>'; return; }
+  list.innerHTML=_slackAlerts.map((a,i)=>{
+    const cls='notif-item'+(a.is_read?'':' unread');
+    const ts=a.created_at?new Date(a.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
+    const hl=a.highlight?'border-left:3px solid #e01e5a;':'';
+    const icon=a.alert_type==='fup_pending'?'⏳':a.alert_type==='mention'?'@':'🔑';
+    const preview=(a.message_text||'').substring(0,80)+(a.message_text&&a.message_text.length>80?'…':'');
+    return '<div class="'+cls+'" style="'+hl+'" onclick="openSlackAlert('+i+')">'+
+      '<span class="notif-item-icon">'+icon+'</span>'+
+      '<div class="notif-item-body">'+
+        '<div class="notif-item-title">#'+escHtml(a.channel_name||'')+(a.sender_name?' — '+escHtml(a.sender_name):'')+'</div>'+
+        '<div class="notif-item-sub">'+escHtml(preview)+'</div>'+
+      '</div>'+
+      '<span class="notif-item-ts">'+ts+'</span></div>';
+  }).join('');
+}
+
+async function openSlackAlert(idx){
+  if(!_slackAlerts[idx]) return;
+  const a=_slackAlerts[idx];
+  if(!a.is_read){
+    a.is_read=true;
+    const sb=getSB();
+    if(sb) sb.from('operator_slack_alerts').update({is_read:true}).eq('id',a.id).then(()=>{});
+    renderSlackAlerts();
+    const unread=_slackAlerts.filter(x=>!x.is_read).length;
+    const countEl=document.getElementById('slack-count');
+    if(countEl){ countEl.textContent=unread; if(unread>0) countEl.classList.add('show'); else countEl.classList.remove('show'); }
+  }
+  if(a.permalink){ window.open(a.permalink,'_blank'); }
+  else if(a.message_text){
+    navigator.clipboard.writeText(a.message_text).then(()=>showSyncToast('ok','Mensagem copiada!')).catch(()=>{});
+  }
+}
+
+async function markAllSlackRead(){
+  const email=_currentUser&&_currentUser.email;
+  if(!email) return;
+  const sb=getSB(); if(!sb) return;
+  await sb.from('operator_slack_alerts').update({is_read:true}).eq('operator_id',email).eq('is_read',false);
+  _slackAlerts.forEach(a=>a.is_read=true);
+  renderSlackAlerts();
+  const countEl=document.getElementById('slack-count');
+  if(countEl){ countEl.textContent='0'; countEl.classList.remove('show'); }
+  showSyncToast('ok','Alertas limpos.');
+}
+
+// Auto-load slack alert count on init
+function initSlackAlerts(){
+  const email=_currentUser&&_currentUser.email;
+  if(!email) return;
+  loadSlackAlerts();
+  // Poll every 60s for new alerts
+  setInterval(()=>loadSlackAlerts(),60000);
 }
 </script>
 <script src="cockpit-engine.js"></script>
