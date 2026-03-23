@@ -1433,7 +1433,7 @@ input,textarea,select{font-family:inherit;font-size:inherit}
           <div class="li-fld"><span class="li-lbl">Tempo na Fase</span><span class="li-val" id="dm-li-delta">—</span></div>
           <div class="li-fld"><span class="li-lbl">Receita</span><span class="li-val-hi" id="dm-li-receita">—</span></div>
           <div class="li-fld"><span class="li-lbl">Produto</span><span class="li-val" id="dm-li-linha">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Origem</span><span class="li-val" id="dm-li-origem">—</span></div>
+          <div class="li-fld"><span class="li-lbl">Linha de Receita</span><span class="li-val" id="dm-li-origem">—</span></div>
           <div class="li-fld"><span class="li-lbl">SDR</span><span class="li-val" id="dm-li-sdr">—</span></div>
           <div class="li-fld"><span class="li-lbl">Closer</span><span class="li-val" id="dm-li-closer">—</span></div>
           <div id="dm-skip-warn" class="li-skip-warn" style="display:none">&#9888; Etapa pulada — revisar jornada</div>
@@ -3247,7 +3247,7 @@ async function _requestElucyRelay(deal_id, dealData, request_type, copy_mode, on
 
 // Benchmarks + Brandbook G4 comprimidos — viajam em cada postMessage
 // Garante profundidade total independente dos MCPs instalados no G4 OS do SDR
-const _BENCH_COMPACT=`BENCHMARKS G4 2025 (utm_medium→canal, tier→perfil: diamond=A/B, gold=C/D, silver=E/F, bronze=G+):
+const _BENCH_COMPACT=`BENCHMARKS G4 2025 (linha_de_receita_vigente→canal, tier→perfil: diamond=A/B, gold=C/D, silver=E/F, bronze=G+):
 [IM Chat] geral: MQL→Won 5,7% | ticket R$18.500 | SAL→Won 6,5%
 [IG Tallis] A:14,6%/R$49k | B:15,7%/R$60k | C:8,4%/R$20k | geral:7,2%/R$26k
 [IG G4] A:8,7%/R$44k | B:9,0%/R$37k | C:6,6%/R$22k | geral:5,8%/R$22k
@@ -3271,7 +3271,7 @@ function _buildAnalyzePrompt(deal_id, d){
   const tier=d[3]||d.tier_da_oportunidade||'?';
   const delta=d[4]||d.delta_t||'?';
   const produto=d[7]||d.linha_de_receita_vigente||d[8]||d.grupo_de_receita||'?';
-  const canal=d[14]||d.utm_medium||'?';
+  const canal=d[7]||d.linha_de_receita_vigente||d[14]||d.utm_medium||'?';
   const revenue=d.revenue||'?';
   const cargo=d[11]||d.cargo||'?';
   const fase_ant=d[1]||d.fase_anterior_no_processo||'?';
@@ -3285,7 +3285,7 @@ function _buildAnalyzePrompt(deal_id, d){
 DADOS DO DEAL:
 - Fase atual: ${fase} | Fase anterior: ${fase_ant}
 - Tier: ${tier} | Delta-T: ${delta}d | Revenue projetado: R$${revenue}
-- Produto: ${produto} | Canal (utm_medium): ${canal}
+- Produto: ${produto} | Canal: ${canal}
 - Cargo/Perfil: ${cargo}
 ${enrichBlock}
 ${_BENCH_COMPACT}
@@ -3304,10 +3304,10 @@ function _buildCopyPrompt(deal_id, d, canal){
   const fase=d[1]||d.fase_atual_no_processo||'?';
   const tier=d[3]||d.tier_da_oportunidade||'?';
   const produto=d[7]||d.linha_de_receita_vigente||d[8]||'?';
-  const utm=d[14]||d.utm_medium||'';
+  const linhaCanal=d[7]||d.linha_de_receita_vigente||d[14]||'';
   return `[COCKPIT→ELUCY] COPY_MODE — deal_id: ${deal_id} — canal: ${canal}
 
-DEAL: fase=${fase} | tier=${tier} | produto=${produto} | utm=${utm}
+DEAL: fase=${fase} | tier=${tier} | produto=${produto} | canal=${linhaCanal}
 
 GERAR:
 1. Copy ${canal} (WhatsApp/Instagram): máx 3 linhas, tensão de custo de inação, PROIBIDO mencionar G4/produto/preço/call anterior
@@ -3884,12 +3884,12 @@ function buildDealCards(d){
   // Valor
   var vop=d.valorOportunidade||d.revenueRaw;
   if(vop>0) cards.push(ic("Valor",fmtBRL(vop),d.probFechamento>0?Math.round(d.probFechamento*100)+"% prob":"—","var(--green)"));
-  // Origem UTM
-  if(d.utmSource||d.utmCampaign){
-    var utmSub=[];
-    if(d.utmSource) utmSub.push(d.utmSource);
-    if(d.utmCampaign) utmSub.push(d.utmCampaign);
-    cards.push(ic("Origem",d.utm||"Direto",utmSub.join(" · ")));
+  // Linha de Receita (produto/canal canônico)
+  if(d.linhaReceita){
+    var lrSub=[];
+    if(d.grupo&&d.grupo!=="Não Definido") lrSub.push(d.grupo);
+    if(d.origemDeal) lrSub.push(d.origemDeal);
+    cards.push(ic("Canal",d.linhaReceita,lrSub.join(" · ")||"linha_de_receita_vigente"));
   }
   // SDR
   if(d.qualificador) cards.push(ic("SDR",d.qualificador,"Qualificador"));
@@ -4296,7 +4296,7 @@ function populateDmInsights(dealId, deal){
     }
     _dmSet('dm-li-receita', deal.revenue ? 'R$ '+Number(deal.revenue).toLocaleString('pt-BR') : '—');
     _dmSet('dm-li-linha', deal.linha_de_receita_vigente||deal.grupo_de_receita||deal.product_line);
-    _dmSet('dm-li-origem', deal.utm_medium||deal.origem);
+    _dmSet('dm-li-origem', deal.linha_de_receita_vigente||deal.linhaReceita||deal.grupo_de_receita||'—');
     _dmSet('dm-li-sdr', deal.qualificador_name||deal.sdr_name);
     _dmSet('dm-li-closer', deal.proprietario_name||deal.closer_name);
     const skipWarn=document.getElementById('dm-skip-warn');
