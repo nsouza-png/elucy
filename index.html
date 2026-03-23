@@ -1432,8 +1432,6 @@ input,textarea,select{font-family:inherit;font-size:inherit}
           <div class="li-fld"><span class="li-lbl">Fase Anterior</span><span class="li-val-sec" id="dm-li-fase-ant">—</span></div>
           <div class="li-fld"><span class="li-lbl">Tempo na Fase</span><span class="li-val" id="dm-li-delta">—</span></div>
           <div class="li-fld"><span class="li-lbl">Receita</span><span class="li-val-hi" id="dm-li-receita">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Produto</span><span class="li-val" id="dm-li-linha">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Linha de Receita</span><span class="li-val" id="dm-li-origem">—</span></div>
           <div class="li-fld"><span class="li-lbl">SDR</span><span class="li-val" id="dm-li-sdr">—</span></div>
           <div class="li-fld"><span class="li-lbl">Closer</span><span class="li-val" id="dm-li-closer">—</span></div>
           <div id="dm-skip-warn" class="li-skip-warn" style="display:none">&#9888; Etapa pulada — revisar jornada</div>
@@ -3270,8 +3268,7 @@ function _buildAnalyzePrompt(deal_id, d){
   const fase=d[1]||d.fase_atual_no_processo||'?';
   const tier=d[3]||d.tier_da_oportunidade||'?';
   const delta=d[4]||d.delta_t||'?';
-  const produto=d[7]||d.linha_de_receita_vigente||d[8]||d.grupo_de_receita||'?';
-  const canal=d[7]||d.linha_de_receita_vigente||d[14]||d.utm_medium||'?';
+  const canalReceita=d[7]||d.linha_de_receita_vigente||d[8]||d.grupo_de_receita||'?';
   const revenue=d.revenue||'?';
   const cargo=d[11]||d.cargo||'?';
   const fase_ant=d[1]||d.fase_anterior_no_processo||'?';
@@ -3285,7 +3282,7 @@ function _buildAnalyzePrompt(deal_id, d){
 DADOS DO DEAL:
 - Fase atual: ${fase} | Fase anterior: ${fase_ant}
 - Tier: ${tier} | Delta-T: ${delta}d | Revenue projetado: R$${revenue}
-- Produto: ${produto} | Canal: ${canal}
+- Canal de Receita: ${canalReceita}
 - Cargo/Perfil: ${cargo}
 ${enrichBlock}
 ${_BENCH_COMPACT}
@@ -3295,7 +3292,7 @@ OUTPUT OBRIGATÓRIO — use exatamente estas seções:
 [DIAGNOSTIC CORE] diagnóstico SPICED/Challenger/SPIN conforme tier e canal — 3-5 bullets${enrichCtx?' (use o contexto qualitativo acima para calibrar o diagnóstico)':''}
 [STRATEGIC DIRECTIVE] diretiva estratégica — o que fazer agora
 [NEXT BEST ACTION] próxima ação exata: canal + tom + timing
-[BENCHMARK CANAL] posição do deal vs. benchmark ${canal} perfil ${tier} — ACIMA/NA_MEDIA/ABAIXO/OUTLIER + dado numérico
+[BENCHMARK CANAL] posição do deal vs. benchmark ${canalReceita} perfil ${tier} — ACIMA/NA_MEDIA/ABAIXO/OUTLIER + dado numérico
 [GOVERNANCE FLAGS] kill switches ativos se houver (Tier2+Imersão, MEI+Authority, etc)
 [ELUCI VERDICT] score DQI 0-10 + veredito em 1 frase${enrichCtx?'\n[SPICED SCORE] score 0-100 baseado nos dados + contexto qualitativo — justificativa em 1 linha':''}`;
 }
@@ -3303,11 +3300,10 @@ OUTPUT OBRIGATÓRIO — use exatamente estas seções:
 function _buildCopyPrompt(deal_id, d, canal){
   const fase=d[1]||d.fase_atual_no_processo||'?';
   const tier=d[3]||d.tier_da_oportunidade||'?';
-  const produto=d[7]||d.linha_de_receita_vigente||d[8]||'?';
-  const linhaCanal=d[7]||d.linha_de_receita_vigente||d[14]||'';
+  const canalReceita=d[7]||d.linha_de_receita_vigente||d[8]||'?';
   return `[COCKPIT→ELUCY] COPY_MODE — deal_id: ${deal_id} — canal: ${canal}
 
-DEAL: fase=${fase} | tier=${tier} | produto=${produto} | canal=${linhaCanal}
+DEAL: fase=${fase} | tier=${tier} | canal_receita=${canalReceita}
 
 GERAR:
 1. Copy ${canal} (WhatsApp/Instagram): máx 3 linhas, tensão de custo de inação, PROIBIDO mencionar G4/produto/preço/call anterior
@@ -3806,19 +3802,13 @@ function buildContextCards(d){
   } else {
     cards.push(ic("Canal",d.canal,d.dd+" · "+d.delta+" dias no CRM"));
   }
-  // PRODUTO
+  // CONTEXTO DE ORIGEM
   if(origin==="cart_abandon"){
-    var prod=d.nomeEvento||d.linhaReceita||"—";
-    cards.push(ic("Produto",prod,"Abandonou carrinho — produto confirmado","var(--accent2)"));
+    cards.push(ic("Origem","Carrinho abandonado",d.nomeEvento||"Evento não identificado","var(--accent2)"));
   } else if(origin==="evento"&&d.nomeEvento){
-    cards.push(ic("Produto",d.nomeEvento,d.tipoEvento||d.grupo||"—"));
+    cards.push(ic("Evento",d.nomeEvento,d.tipoEvento||"—"));
   } else if(origin==="reativacao"&&d.jaCliente){
-    cards.push(ic("Produto",d.produto||d.grupo||"—","Último: "+(d.ltv>0?fmtBRL(d.ltv)+" em compras":"sem dados")));
-  } else if(origin==="social_dm"||origin==="form_pago"||origin==="form_organico"||origin==="isca"){
-    var intencao=d.grupo&&d.grupo!=="Não Definido"?d.grupo:(d.linhaReceita||"");
-    if(intencao) cards.push(ic("Intenção",intencao,"SDR em qualificação — produto não definido",null,"ic-warn"));
-  } else {
-    if(d.produto&&d.produto!=="—") cards.push(ic("Produto",d.produto,d.tipoEvento||d.grupo||"—"));
+    cards.push(ic("Reativação","Cliente G4",d.ltv>0?fmtBRL(d.ltv)+" em compras":"sem dados anteriores"));
   }
   // PERFIL ICP (A/B/C/D) + cargo
   var perfilLabel=d.perfilIcp?("Perfil "+d.perfilIcp):"—";
@@ -3872,25 +3862,11 @@ function buildDealCards(d){
   cards.push(ic("Canal",d.canal||"—",d.dd+" · "+d.delta+" dias no CRM"));
   // Etapa
   cards.push(ic("Etapa",d.etapa||d.fase||"—",d.closer&&d.closer!=="—"?"Closer: "+d.closer:"SDR em qualificação"));
-  // Produto / Intenção
-  if(origin==="cart_abandon"){
-    cards.push(ic("Produto",d.nomeEvento||d.linhaReceita||"—","Abandonou carrinho","var(--accent2)"));
-  } else if(d.produto&&d.produto!=="—"&&d.produto!=="Não Definido"){
-    cards.push(ic("Produto",d.produto,d.tipoEvento||d.grupo||"—"));
-  } else {
-    var intencao=d.grupo&&d.grupo!=="Não Definido"?d.grupo:(d.linhaReceita||"—");
-    cards.push(ic("Intenção",intencao,"Produto não definido",null,"ic-warn"));
-  }
-  // Valor
+  // Valor do deal
   var vop=d.valorOportunidade||d.revenueRaw;
   if(vop>0) cards.push(ic("Valor",fmtBRL(vop),d.probFechamento>0?Math.round(d.probFechamento*100)+"% prob":"—","var(--green)"));
-  // Linha de Receita (produto/canal canônico)
-  if(d.linhaReceita){
-    var lrSub=[];
-    if(d.grupo&&d.grupo!=="Não Definido") lrSub.push(d.grupo);
-    if(d.origemDeal) lrSub.push(d.origemDeal);
-    cards.push(ic("Canal",d.linhaReceita,lrSub.join(" · ")||"linha_de_receita_vigente"));
-  }
+  // Closer
+  if(d.closer&&d.closer!=="—") cards.push(ic("Closer",d.closer,d.cocloser?"Co: "+d.cocloser:"—"));
   // SDR
   if(d.qualificador) cards.push(ic("SDR",d.qualificador,"Qualificador"));
   return cards.join("");
@@ -4295,8 +4271,6 @@ function populateDmInsights(dealId, deal){
       faseEl.className='li-phase-pill '+(delta>14?'li-phase-crit':delta>7?'li-phase-warn':'li-phase-hot');
     }
     _dmSet('dm-li-receita', deal.revenue ? 'R$ '+Number(deal.revenue).toLocaleString('pt-BR') : '—');
-    _dmSet('dm-li-linha', deal.linha_de_receita_vigente||deal.grupo_de_receita||deal.product_line);
-    _dmSet('dm-li-origem', deal.linha_de_receita_vigente||deal.linhaReceita||deal.grupo_de_receita||'—');
     _dmSet('dm-li-sdr', deal.qualificador_name||deal.sdr_name);
     _dmSet('dm-li-closer', deal.proprietario_name||deal.closer_name);
     const skipWarn=document.getElementById('dm-skip-warn');
