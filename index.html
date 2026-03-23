@@ -1927,36 +1927,49 @@ function filterDeals(q){applyFilters();}
 let _intelData=null;
 let _intelLoading=false;
 
-function _dbQuery(sql,label){
+async function _dbQuery(sql,label){
   const token=localStorage.getItem('elucy_db_token');
-  if(!token){console.warn('[INTEL] '+label+' no db token');return Promise.resolve([]);}
+  if(!token){console.warn('[INTEL] '+label+' no db token');return [];}
   console.log('[INTEL] '+label+' sending...');
-  // Use same pattern as fetchPipelineByName (which works in production)
-  return fetch(DB_ENDPOINT,{
-    method:'POST',
-    headers:{'x-db-token':token,'apikey':SUPABASE_ANON,'Content-Type':'application/json'},
-    body:JSON.stringify({statement:sql,warehouse_id:DB_WAREHOUSE,wait_timeout:'30s',on_wait_timeout:'CONTINUE'})
-  }).then(r=>{
-    console.log('[INTEL] '+label+' http:',r.status);
-    if(!r.ok) return r.text().then(t=>{console.error('[INTEL] '+label+' err:',t);return {};});
-    return r.json();
-  }).then(r=>{
-    if(!r||typeof r!=='object'){console.warn('[INTEL] '+label+' bad response');return [];}
-    const rows=(r.result&&r.result.data_array)||[];
-    if(!rows.length&&r.data_array) return r.data_array;
-    const st=typeof r.status==='object'?(r.status&&r.status.state):r.status;
-    if((st==='PENDING'||st==='RUNNING')&&r.statement_id){
-      console.log('[INTEL] '+label+' '+st+' → polling',r.statement_id);
-      return _dbPoll(r.statement_id,label);
-    }
-    if(st==='FAILED'){
-      const msg=r.status&&r.status.error?r.status.error.message:'?';
-      console.error('[INTEL] '+label+' FAILED:',msg);
-      return [];
-    }
-    console.log('[INTEL] '+label+' ✓',rows.length,'rows');
-    return rows;
-  }).catch(e=>{console.error('[INTEL] '+label+' catch:',e);return [];});
+  const body={statement:sql,warehouse_id:DB_WAREHOUSE,wait_timeout:'30s',on_wait_timeout:'CONTINUE'};
+  let r=null;
+  // Path 1: Supabase SDK (uses session JWT automatically — handles edge function auth)
+  const sb=getSB();
+  if(sb&&sb.functions){
+    try{
+      const {data,error}=await sb.functions.invoke('db-proxy',{body,headers:{'x-db-token':token}});
+      if(!error&&data){
+        console.log('[INTEL] '+label+' SDK ok');
+        r=data;
+      } else {
+        console.warn('[INTEL] '+label+' SDK err:',error||'no data','→ fallback fetch');
+      }
+    }catch(e){console.warn('[INTEL] '+label+' SDK catch:',e);}
+  }
+  // Path 2: Direct fetch (fallback)
+  if(!r){
+    try{
+      const resp=await fetch(DB_ENDPOINT,{
+        method:'POST',
+        headers:{'x-db-token':token,'apikey':SUPABASE_ANON,'Content-Type':'application/json'},
+        body:JSON.stringify(body)
+      });
+      console.log('[INTEL] '+label+' fetch http:',resp.status);
+      if(resp.ok) r=await resp.json();
+      else console.error('[INTEL] '+label+' fetch err:',await resp.text());
+    }catch(e){console.error('[INTEL] '+label+' fetch catch:',e);}
+  }
+  if(!r||typeof r!=='object') return [];
+  const rows=(r.result&&r.result.data_array)||[];
+  if(!rows.length&&r.data_array) return r.data_array;
+  const st=typeof r.status==='object'?(r.status&&r.status.state):r.status;
+  if((st==='PENDING'||st==='RUNNING')&&r.statement_id){
+    console.log('[INTEL] '+label+' '+st+' → polling',r.statement_id);
+    return _dbPoll(r.statement_id,label);
+  }
+  if(st==='FAILED'){console.error('[INTEL] '+label+' FAILED:',r.status);return [];}
+  console.log('[INTEL] '+label+' ✓',rows.length,'rows');
+  return rows;
 }
 
 function _dbPoll(stmtId,label){
@@ -2049,15 +2062,46 @@ function loadIntelligenceData(cb){
     ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Conectado','Agendado','Negociação','Ganho','Perdido') THEN deal_id END),0),1) AS cr04
   FROM production.diamond.funil_comercial WHERE event_timestamp>=ADD_MONTHS(CURRENT_DATE(),-3) AND event_timestamp<=CURRENT_DATE() GROUP BY DATE_FORMAT(event_timestamp,'yyyy-MM') ORDER BY mes`;
 
-  // Executa em lotes de 2
+  // Q7: Velocidade por transição de fase
+  const qVelocidade=`SELECT linha_de_receita_vigente AS linha, fase_anterior_no_processo AS de, fase_atual_no_processo AS para, COUNT(*) AS transicoes, ROUND(AVG(delta_t),1) AS avg_dias, ROUND(PERCENTILE_APPROX(delta_t,0.5),1) AS mediana, MAX(delta_t) AS max_dias FROM production.diamond.funil_comercial WHERE delta_t IS NOT NULL AND delta_t>0 AND YEAR(event_timestamp)>=YEAR(CURRENT_DATE()) AND fase_anterior_no_processo IN ('MQL','SAL','Conectado','Agendado','Negociação') AND fase_atual_no_processo IN ('SAL','Conectado','Agendado','Negociação','Ganho','Perdido') GROUP BY linha_de_receita_vigente,fase_anterior_no_processo,fase_atual_no_processo HAVING COUNT(*)>=5 ORDER BY linha,de,para`;
+
+  // Q8: Eficiência por Closer
+  const qCloser=`SELECT proprietario_name AS closer, COUNT(DISTINCT deal_id) AS deals, COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END) AS ganhos, COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Perdido' THEN deal_id END) AS perdidos, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS win_rate, ROUND(AVG(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue END),0) AS ticket, ROUND(SUM(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue ELSE 0 END),0) AS receita, ROUND(AVG(CASE WHEN fase_atual_no_processo='Ganho' THEN delta_t END),1) AS dias_ganho FROM production.diamond.funil_comercial WHERE ${mf} AND proprietario_name IS NOT NULL AND proprietario_name!='' AND fase_atual_no_processo IN ('Ganho','Perdido','Negociação') GROUP BY proprietario_name HAVING COUNT(DISTINCT deal_id)>=3 ORDER BY receita DESC LIMIT 20`;
+
+  // Q9: Deals com etapa pulada (risco)
+  const qSkip=`SELECT qualificador_name AS sdr, linha_de_receita_vigente AS linha, COUNT(DISTINCT deal_id) AS deals_skip, ROUND(AVG(delta_t),1) AS avg_delta FROM production.diamond.funil_comercial WHERE event_skipped=true AND ${mf} GROUP BY qualificador_name,linha_de_receita_vigente HAVING COUNT(DISTINCT deal_id)>=2 ORDER BY deals_skip DESC LIMIT 15`;
+
+  // Q10: Tier × Linha de Receita
+  const qTier=`SELECT linha_de_receita_vigente AS linha, tier_da_oportunidade AS tier, COUNT(DISTINCT deal_id) AS deals, ROUND(AVG(revenue),0) AS ticket, COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END) AS ganhos, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS win_rate FROM production.diamond.funil_comercial WHERE ${mf} AND tier_da_oportunidade IS NOT NULL AND tier_da_oportunidade!='' GROUP BY linha_de_receita_vigente,tier_da_oportunidade HAVING COUNT(DISTINCT deal_id)>=3 ORDER BY linha,deals DESC LIMIT 30`;
+
+  // Q11: Contas Instagram
+  const qIG=`SELECT CASE WHEN linha_de_receita_vigente LIKE '%Tallis%' THEN 'Tallis' WHEN linha_de_receita_vigente LIKE '%Alfredo%' THEN 'Alfredo' WHEN linha_de_receita_vigente LIKE '%Nardon%' THEN 'Nardon' WHEN linha_de_receita_vigente LIKE '%G4%' AND linha_de_receita_vigente LIKE '%Instagram%' THEN 'G4' ELSE 'Outros' END AS conta, COUNT(DISTINCT deal_id) AS sals, COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END) AS opps, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS cr_sal_opp, COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END) AS ganhos, ROUND(AVG(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue END),0) AS ticket FROM production.diamond.funil_comercial WHERE linha_de_receita_vigente LIKE '%Instagram%' AND ${mf} GROUP BY 1 ORDER BY sals DESC`;
+
+  // Q12: Social DM
+  const qSocialDM=`SELECT linha_de_receita_vigente AS linha, COUNT(DISTINCT deal_id) AS mqls, COUNT(DISTINCT CASE WHEN fase_atual_no_processo NOT IN ('MQL') THEN deal_id END) AS sals, COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END) AS opps, COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END) AS ganhos, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho','Perdido') THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS cr_mql_opp, ROUND(AVG(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue END),0) AS ticket FROM production.diamond.funil_comercial WHERE linha_de_receita_vigente LIKE '%Social DM%' AND ${mf} GROUP BY linha_de_receita_vigente ORDER BY mqls DESC`;
+
+  // Q13: Perfil ICP
+  const qICP=`SELECT perfil, COUNT(DISTINCT deal_id) AS deals, COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END) AS ganhos, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS win_rate, ROUND(AVG(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue END),0) AS ticket, ROUND(AVG(delta_t),1) AS velocidade FROM production.diamond.funil_comercial WHERE ${mf} AND perfil IS NOT NULL AND perfil!='' GROUP BY perfil HAVING COUNT(DISTINCT deal_id)>=5 ORDER BY win_rate DESC`;
+
+  // Q14: Pipeline Ponderado
+  const qPipeline=`SELECT fase_atual_no_processo AS fase, COUNT(DISTINCT deal_id) AS deals, ROUND(SUM(revenue),0) AS receita_bruta, ROUND(SUM(revenue*CASE WHEN fase_atual_no_processo='SAL' THEN 0.10 WHEN fase_atual_no_processo='Conectado' THEN 0.20 WHEN fase_atual_no_processo='Agendado' THEN 0.40 WHEN fase_atual_no_processo='Negociação' THEN 0.60 WHEN fase_atual_no_processo='Ganho' THEN 1.0 ELSE 0.05 END),0) AS receita_pond, ROUND(AVG(revenue),0) AS ticket FROM production.diamond.funil_comercial WHERE fase_atual_no_processo NOT IN ('Perdido') AND ${mf} AND revenue>0 GROUP BY fase_atual_no_processo ORDER BY CASE fase_atual_no_processo WHEN 'MQL' THEN 1 WHEN 'SAL' THEN 2 WHEN 'Conectado' THEN 3 WHEN 'Agendado' THEN 4 WHEN 'Negociação' THEN 5 WHEN 'Ganho' THEN 6 END`;
+
+  // Q15: Abandono de Carrinho
+  const qAbandono=`SELECT linha_de_receita_vigente AS linha, COUNT(DISTINCT deal_id) AS abandonos, COUNT(DISTINCT CASE WHEN fase_atual_no_processo NOT IN ('MQL') THEN deal_id END) AS contatados, COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END) AS recuperados, ROUND(COUNT(DISTINCT CASE WHEN fase_atual_no_processo='Ganho' THEN deal_id END)*100.0/NULLIF(COUNT(DISTINCT deal_id),0),1) AS taxa_rec, ROUND(SUM(CASE WHEN fase_atual_no_processo='Ganho' THEN revenue ELSE 0 END),0) AS receita_rec FROM production.diamond.funil_comercial WHERE (linha_de_receita_vigente LIKE '%Abandono%' OR linha_de_receita_vigente LIKE '%carrinho%') AND ${mf} GROUP BY linha_de_receita_vigente`;
+
+  // Executa em lotes de 2-3
   async function runBatched(){
     try{
       const [funil,totais]=await Promise.all([_dbQuery(qFunil,'funil'),_dbQuery(qTotais,'totais')]);
       const [sdr,perda]=await Promise.all([_dbQuery(qSDR,'sdr'),_dbQuery(qPerda,'perda')]);
       const [ironDome,mensal]=await Promise.all([_dbQuery(qIronDome,'ironDome'),_dbQuery(qMensal,'mensal')]);
+      const [velocidade,closer]=await Promise.all([_dbQuery(qVelocidade,'velocidade'),_dbQuery(qCloser,'closer')]);
+      const [skip,tier]=await Promise.all([_dbQuery(qSkip,'skip'),_dbQuery(qTier,'tier')]);
+      const [ig,socialDM]=await Promise.all([_dbQuery(qIG,'ig'),_dbQuery(qSocialDM,'socialDM')]);
+      const [icp,pipeline,abandono]=await Promise.all([_dbQuery(qICP,'icp'),_dbQuery(qPipeline,'pipeline'),_dbQuery(qAbandono,'abandono')]);
       _intelLoading=false;
-      _intelData={funil,totais,sdr,perda,ironDome,mensal};
-      console.log('[INTEL] Carregado:','funil='+funil.length,'totais='+totais.length,'sdr='+sdr.length,'perda='+perda.length,'ironDome='+ironDome.length,'mensal='+mensal.length);
+      _intelData={funil,totais,sdr,perda,ironDome,mensal,velocidade,closer,skip,tier,ig,socialDM,icp,pipeline,abandono};
+      console.log('[INTEL] Carregado: funil='+funil.length+' totais='+totais.length+' sdr='+sdr.length+' perda='+perda.length+' ironDome='+ironDome.length+' mensal='+mensal.length+' velocidade='+velocidade.length+' closer='+closer.length+' skip='+skip.length+' tier='+tier.length+' ig='+ig.length+' socialDM='+socialDM.length+' icp='+icp.length+' pipeline='+pipeline.length+' abandono='+abandono.length);
       cb(_intelData);
     }catch(e){
       console.error('[INTEL] Erro:',e);
@@ -5028,6 +5072,192 @@ function _renderIntelHTML(D){
         </table></div>
       `);
     }
+  }
+
+  // ── SEÇÃO 7: EFICIÊNCIA POR CLOSER ──
+  if(D.closer&&D.closer.length){
+    html+=renderSection(7,'Eficiência por Closer',`
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Win rate, ticket, receita total e velocidade até ganho</div>
+      <div style="overflow-x:auto"><table class="intel-table" style="min-width:600px">
+        <thead><tr><th>Closer</th><th>Deals</th><th>Ganhos</th><th>Perdidos</th><th>Win Rate</th><th>Ticket</th><th>Receita</th><th>Dias→Ganho</th></tr></thead>
+        <tbody>${D.closer.slice(0,20).map(r=>{
+          const wr=parseFloat(r[4])||0;
+          return '<tr><td style="font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+r[0]+'">'+(r[0]||'—')+'</td>'
+            +'<td>'+(parseInt(r[1])||0)+'</td>'
+            +'<td style="color:var(--green);font-weight:700">'+(parseInt(r[2])||0)+'</td>'
+            +'<td style="color:var(--red)">'+(parseInt(r[3])||0)+'</td>'
+            +'<td class="'+(wr>=40?'pg':wr>=20?'pm':'pl')+'" style="font-weight:700">'+wr+'%</td>'
+            +'<td>'+fmtBRL(parseInt(r[5])||0)+'</td>'
+            +'<td style="font-weight:600">'+fmtBRL(parseInt(r[6])||0)+'</td>'
+            +'<td>'+(r[7]||'—')+'d</td></tr>';
+        }).join('')}</tbody>
+      </table></div>
+    `);
+  }
+
+  // ── SEÇÃO 8: VELOCIDADE POR TRANSIÇÃO ──
+  if(D.velocidade&&D.velocidade.length){
+    // Agrupar por transição (de→para), mostrar avg global
+    const transMap={};
+    D.velocidade.forEach(r=>{
+      const key=(r[1]||'?')+'→'+(r[2]||'?');
+      if(!transMap[key]) transMap[key]={trans:0,sum:0,max:0};
+      transMap[key].trans+=(parseInt(r[3])||0);
+      transMap[key].sum+=(parseInt(r[3])||0)*(parseFloat(r[4])||0);
+      transMap[key].max=Math.max(transMap[key].max,parseInt(r[6])||0);
+    });
+    const transRows=Object.entries(transMap).sort((a,b)=>b[1].trans-a[1].trans).slice(0,10);
+    html+=renderSection(8,'Velocidade por Transição de Fase',`
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Tempo médio e máximo entre transições do funil (todas as linhas)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">${transRows.map(([key,v])=>{
+        const avg=v.trans>0?(v.sum/v.trans).toFixed(1):'0';
+        const color=parseFloat(avg)>7?'var(--red)':parseFloat(avg)>3?'var(--yellow)':'var(--green)';
+        return '<div style="flex:1;min-width:140px;padding:10px;background:var(--bg2);border-radius:8px;border-left:3px solid '+color+'">'
+          +'<div style="font-size:11px;font-weight:700;color:var(--text1)">'+key+'</div>'
+          +'<div style="display:flex;gap:12px;margin-top:4px">'
+          +'<div><span style="font-size:16px;font-weight:700;color:'+color+'">'+avg+'</span><span style="font-size:10px;color:var(--text3)"> dias avg</span></div>'
+          +'<div><span style="font-size:12px;color:var(--text3)">máx '+v.max+'d</span></div>'
+          +'</div></div>';
+      }).join('')}</div>
+    `);
+  }
+
+  // ── SEÇÃO 9: TIER × LINHA ──
+  if(D.tier&&D.tier.length){
+    html+=renderSection(9,'Tier × Linha de Receita',`
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Distribuição de deals por tier e canal com win rate</div>
+      <div style="overflow-x:auto"><table class="intel-table">
+        <thead><tr><th>Linha</th><th>Tier</th><th>Deals</th><th>Ticket</th><th>Ganhos</th><th>Win Rate</th></tr></thead>
+        <tbody>${D.tier.slice(0,30).map(r=>{
+          const wr=parseFloat(r[5])||0;const tierName=(r[1]||'').toLowerCase();
+          const tierColor=tierName==='diamond'?'#60a5fa':tierName==='gold'?'#fbbf24':tierName==='silver'?'#94a3b8':'#cd7c32';
+          return '<tr><td style="font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+r[0]+'">'+(r[0]||'—')+'</td>'
+            +'<td><span style="color:'+tierColor+';font-weight:700;text-transform:capitalize">'+(r[1]||'—')+'</span></td>'
+            +'<td>'+(parseInt(r[2])||0)+'</td>'
+            +'<td>'+fmtBRL(parseInt(r[3])||0)+'</td>'
+            +'<td style="color:var(--green)">'+(parseInt(r[4])||0)+'</td>'
+            +'<td class="'+(wr>=15?'pg':wr>=5?'pm':'pl')+'">'+wr+'%</td></tr>';
+        }).join('')}</tbody>
+      </table></div>
+    `);
+  }
+
+  // ── SEÇÃO 10: ETAPAS PULADAS (RISCO) ──
+  if(D.skip&&D.skip.length){
+    let totalSkip=0;D.skip.forEach(r=>totalSkip+=parseInt(r[2])||0);
+    html+=renderSection(10,'Etapas Puladas — Risco Operacional',`
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">${totalSkip} deals com etapas puladas no mês</div>
+      <div style="overflow-x:auto"><table class="intel-table">
+        <thead><tr><th>SDR</th><th>Linha</th><th>Deals Skip</th><th>Δ Médio</th></tr></thead>
+        <tbody>${D.skip.slice(0,15).map(r=>{
+          return '<tr><td style="font-weight:600">'+(r[0]||'Sem SDR')+'</td><td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+r[1]+'">'+(r[1]||'—')+'</td>'
+            +'<td style="color:var(--red);font-weight:700">'+(parseInt(r[2])||0)+'</td>'
+            +'<td>'+(r[3]||'—')+'d</td></tr>';
+        }).join('')}</tbody>
+      </table></div>
+    `);
+  }
+
+  // ── SEÇÃO 11: CONTAS INSTAGRAM ──
+  if(D.ig&&D.ig.length){
+    html+=renderSection(11,'Contas Instagram — Conversão por Founder',`
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">SAL→Opp por conta (Tallis, Alfredo, Nardon, G4)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">${D.ig.map(r=>{
+        const cr=parseFloat(r[3])||0;
+        return '<div style="flex:1;min-width:150px;padding:12px;background:var(--bg2);border-radius:8px;text-align:center">'
+          +'<div style="font-size:14px;font-weight:700;color:var(--accent)">'+(r[0]||'—')+'</div>'
+          +'<div style="display:flex;justify-content:space-around;margin-top:8px">'
+          +'<div><div style="font-size:18px;font-weight:700">'+(parseInt(r[1])||0)+'</div><div style="font-size:9px;color:var(--text3)">SALs</div></div>'
+          +'<div><div style="font-size:18px;font-weight:700;color:var(--green)">'+(parseInt(r[4])||0)+'</div><div style="font-size:9px;color:var(--text3)">Ganhos</div></div>'
+          +'</div>'
+          +'<div style="margin-top:6px"><span class="'+(cr>=30?'pg':cr>=15?'pm':'pl')+'" style="font-weight:700;font-size:13px">'+cr+'% CR SAL→Opp</span></div>'
+          +'<div style="font-size:10px;color:var(--text3);margin-top:2px">Ticket: '+(parseInt(r[5])?fmtBRL(parseInt(r[5])):'—')+'</div>'
+          +'</div>';
+      }).join('')}</div>
+    `);
+  }
+
+  // ── SEÇÃO 12: SOCIAL DM ──
+  if(D.socialDM&&D.socialDM.length){
+    html+=renderSection(12,'Social DM — CQL → Lead → Opp',`
+      <div style="overflow-x:auto"><table class="intel-table">
+        <thead><tr><th>Linha</th><th>MQL</th><th>SAL</th><th>Opp</th><th>Ganhos</th><th>CR MQL→Opp</th><th>Ticket</th></tr></thead>
+        <tbody>${D.socialDM.map(r=>{
+          const cr=parseFloat(r[5])||0;
+          return '<tr><td style="font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+r[0]+'">'+(r[0]||'—')+'</td>'
+            +'<td>'+(parseInt(r[1])||0)+'</td><td>'+(parseInt(r[2])||0)+'</td><td>'+(parseInt(r[3])||0)+'</td>'
+            +'<td style="color:var(--green);font-weight:700">'+(parseInt(r[4])||0)+'</td>'
+            +'<td class="'+(cr>=50?'pg':cr>=25?'pm':'pl')+'" style="font-weight:700">'+cr+'%</td>'
+            +'<td>'+(parseInt(r[6])?fmtBRL(parseInt(r[6])):'—')+'</td></tr>';
+        }).join('')}</tbody>
+      </table></div>
+    `);
+  }
+
+  // ── SEÇÃO 13: PERFIL ICP ──
+  if(D.icp&&D.icp.length){
+    html+=renderSection(13,'Perfil ICP — Conversão e Velocidade',`
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Win rate, ticket e velocidade por perfil (A-M)</div>
+      <div style="overflow-x:auto"><table class="intel-table">
+        <thead><tr><th>Perfil</th><th>Deals</th><th>Ganhos</th><th>Win Rate</th><th>Ticket</th><th>Vel. Média</th></tr></thead>
+        <tbody>${D.icp.map(r=>{
+          const wr=parseFloat(r[3])||0;
+          return '<tr><td style="font-weight:700;font-size:14px;color:var(--accent)">'+(r[0]||'—')+'</td>'
+            +'<td>'+(parseInt(r[1])||0)+'</td>'
+            +'<td style="color:var(--green);font-weight:700">'+(parseInt(r[2])||0)+'</td>'
+            +'<td class="'+(wr>=15?'pg':wr>=5?'pm':'pl')+'" style="font-weight:700">'+wr+'%</td>'
+            +'<td>'+fmtBRL(parseInt(r[4])||0)+'</td>'
+            +'<td>'+(r[5]||'—')+'d</td></tr>';
+        }).join('')}</tbody>
+      </table></div>
+    `);
+  }
+
+  // ── SEÇÃO 14: PIPELINE PONDERADO ──
+  if(D.pipeline&&D.pipeline.length){
+    let totalBruto=0,totalPond=0;
+    D.pipeline.forEach(r=>{totalBruto+=parseInt(r[2])||0;totalPond+=parseInt(r[3])||0;});
+    const pipeStages=D.pipeline.map(r=>{
+      const bruto=parseInt(r[2])||0;const pond=parseInt(r[3])||0;
+      return {fase:r[0],deals:parseInt(r[1])||0,bruto,pond,ticket:parseInt(r[4])||0};
+    });
+    const maxBruto=Math.max(...pipeStages.map(s=>s.bruto),1);
+    html+=renderSection(14,'Pipeline Ponderado — Receita por Fase',`
+      <div style="display:flex;gap:16px;margin-bottom:12px">
+        <div style="padding:10px 16px;background:var(--bg2);border-radius:8px"><span style="font-size:10px;color:var(--text3)">Receita Bruta</span><div style="font-size:18px;font-weight:700">${fmtBRL(totalBruto)}</div></div>
+        <div style="padding:10px 16px;background:var(--bg2);border-radius:8px;border:1px solid var(--accent)"><span style="font-size:10px;color:var(--text3)">Receita Ponderada</span><div style="font-size:18px;font-weight:700;color:var(--accent)">${fmtBRL(totalPond)}</div></div>
+      </div>
+      ${pipeStages.map(s=>{
+        const wBruto=Math.max(4,(s.bruto/maxBruto)*100);
+        const wPond=Math.max(4,(s.pond/maxBruto)*100);
+        return '<div style="margin-bottom:6px">'
+          +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">'
+          +'<span style="width:80px;font-size:11px;font-weight:600;color:var(--text2);text-align:right">'+s.fase+'</span>'
+          +'<div style="flex:1;position:relative;height:20px">'
+          +'<div style="position:absolute;height:20px;width:'+wBruto+'%;background:var(--bg3);border-radius:4px;opacity:.5"></div>'
+          +'<div style="position:absolute;height:20px;width:'+wPond+'%;background:var(--accent);border-radius:4px;display:flex;align-items:center;padding-left:6px"><span style="font-size:10px;font-weight:700;color:#fff">'+fmtBRL(s.pond)+'</span></div>'
+          +'</div>'
+          +'<span style="width:60px;font-size:10px;color:var(--text3);text-align:right">'+s.deals+' deals</span>'
+          +'</div></div>';
+      }).join('')}
+    `);
+  }
+
+  // ── SEÇÃO 15: ABANDONO DE CARRINHO ──
+  if(D.abandono&&D.abandono.length){
+    html+=renderSection(15,'Abandono de Carrinho — Recuperação',`
+      <div style="overflow-x:auto"><table class="intel-table">
+        <thead><tr><th>Linha</th><th>Abandonos</th><th>Contatados</th><th>Recuperados</th><th>Taxa Rec.</th><th>Receita Rec.</th></tr></thead>
+        <tbody>${D.abandono.map(r=>{
+          const taxa=parseFloat(r[4])||0;
+          return '<tr><td style="font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+r[0]+'">'+(r[0]||'—')+'</td>'
+            +'<td>'+(parseInt(r[1])||0)+'</td><td>'+(parseInt(r[2])||0)+'</td>'
+            +'<td style="color:var(--green);font-weight:700">'+(parseInt(r[3])||0)+'</td>'
+            +'<td class="'+(taxa>=10?'pg':taxa>=3?'pm':'pl')+'" style="font-weight:700">'+taxa+'%</td>'
+            +'<td style="font-weight:600">'+fmtBRL(parseInt(r[5])||0)+'</td></tr>';
+        }).join('')}</tbody>
+      </table></div>
+    `);
   }
 
   ct.innerHTML=html;
