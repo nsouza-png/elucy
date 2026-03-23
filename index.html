@@ -1928,7 +1928,9 @@ function renderLiveDeals(rows,cols){
     di.className=classes;
     di.id='di-'+id;
     di.setAttribute('data-live','1');
+    di.setAttribute('data-dealid',deal_id||'');
     di.innerHTML=`
+      <span style="display:none">${deal_id||''}</span>
       <div class="di-name">${nome}</div>
       <div class="di-co">${empresa}${cargo?' · '+cargo:''}</div>
       <div class="di-meta">
