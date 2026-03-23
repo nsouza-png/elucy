@@ -1869,13 +1869,14 @@ function renderLiveDeals(rows,cols){
 
   rows.forEach((row,idx)=>{
     const id='live-'+idx;
+    const deal_id=g(row,'deal_id')||'';
     const emailLead=g(row,'email')||'';
     // Nome do contato — persons_overview.nome via JOIN (contact_name), fallback email
     const contactName=(g(row,'contact_name')||'').trim();
     let nome='';
     if(contactName) nome=contactName;
     else if(emailLead) nome=emailLead.split('@')[0].replace(/[._-]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-    else nome='Lead '+(idx+1);
+    else nome=deal_id?('Deal #'+deal_id):('Lead '+(idx+1));
     // Empresa: domínio do email
     const empresa=emailLead?emailLead.split('@')[1]||'—':'—';
     const cargo=g(row,'cargo')||'';
@@ -1891,7 +1892,6 @@ function renderLiveDeals(rows,cols){
     const canal=resolveCanal(linhaReceita,utm);
     // Valor da oportunidade (time de dados)
     const revenueRaw=parseFloat(g(row,'revenue'))||0;
-    const deal_id=g(row,'deal_id');
     const temp=calcTemp(row);
     const tc=tempClass(temp);
     const tl=tempLabel(temp);
