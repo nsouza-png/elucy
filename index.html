@@ -99,13 +99,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .op-pill{background:var(--gdim);border:1px solid var(--green);border-radius:4px;padding:2px 7px;font-size:10px;color:var(--green);font-weight:700;display:none}
 .op-pill.show{display:inline-block}
 /* History panel — expandable & copyable */
-.hist-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:13px;overflow:hidden}
+.hist-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:13px}
 .hist-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:.12s}
 .hist-header:hover{background:var(--bg3)}
 .hist-header-title{font-family:var(--font-title);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2)}
 .hist-header-count{font-size:10px;color:var(--accent2);font-weight:700}
 .hist-list{max-height:0;overflow:hidden;transition:max-height .3s ease}
-.hist-panel.open .hist-list{max-height:600px;overflow-y:auto}
+.hist-panel.open .hist-list{max-height:2000px;overflow-y:auto}
 .hist-item{display:flex;align-items:flex-start;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:.12s}
 .hist-item:last-child{border-bottom:none}
 .hist-item:hover{background:var(--bg3)}
@@ -114,7 +114,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .hist-item-type{font-size:11px;font-weight:700;color:var(--accent2)}
 .hist-item-preview{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
 .hist-item-ts{font-size:10px;color:var(--text2);flex-shrink:0;margin-left:auto}
-.hist-expanded{display:none;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin:6px 14px 10px;font-size:12px;line-height:1.6;white-space:pre-wrap;max-height:200px;overflow-y:auto;position:relative}
+.hist-expanded{display:none;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px 10px 12px;margin:0 14px 10px;font-size:12px;line-height:1.6;white-space:pre-wrap;max-height:400px;overflow-y:auto;position:relative}
 .hist-expanded.show{display:block}
 .hist-copy-btn{position:absolute;top:6px;right:6px;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg4);color:var(--text2);cursor:pointer;transition:.12s}
 .hist-copy-btn:hover{border-color:var(--accent);color:var(--accent2);background:var(--adim)}
@@ -2376,7 +2376,7 @@ function renderDealHistory(targetId, interactions){
     const output=i.output||i.content||'';
     const preview=output.replace(/[\n\r]+/g,' ').slice(0,80);
     const hid='hexp-'+targetId+'-'+idx;
-    return '<div class="hist-item" onclick="toggleHistExpanded(\''+hid+'\')">'+
+    return '<div class="hist-item" data-hid="'+hid+'" onclick="toggleHistExpanded(this.dataset.hid)">'+
       '<span class="hist-item-icon">'+icon+'</span>'+
       '<div class="hist-item-body"><div class="hist-item-type">'+escHtml(label)+'</div>'+
       (preview?'<div class="hist-item-preview">'+escHtml(preview)+'…</div>':'')+
@@ -2389,8 +2389,14 @@ function toggleHistPanel(id){
   if(panel) panel.classList.toggle('open');
 }
 function toggleHistExpanded(hid){
+  if(!hid) return;
   const el=document.getElementById(hid);
-  if(el) el.classList.toggle('show');
+  if(!el) return;
+  el.classList.toggle('show');
+  // Scroll into view when opening
+  if(el.classList.contains('show')){
+    setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
+  }
 }
 function clipText(text){
   navigator.clipboard.writeText(text).then(()=>showSyncToast('ok','Copiado!')).catch(()=>{});
