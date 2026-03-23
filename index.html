@@ -1291,6 +1291,14 @@ async function loadEfficiencyMetrics(sb,email){
       window._EFFICIENCY_METRICS=JSON.parse(data.report);
     }
   }catch(e){/* fallback to local calc */}
+  // Load operator meta mensal
+  try{
+    const {data:op}=await sb.from('operators')
+      .select('meta_mensal')
+      .eq('email',email)
+      .maybeSingle();
+    if(op&&op.meta_mensal) window._OPERATOR_META=op.meta_mensal;
+  }catch(e){/* meta not available */}
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
@@ -3039,8 +3047,24 @@ function renderIntelligence(){
   // ── CALCULOS ──
   const total=deals.length;
   const byEtapa={},byTier={},byCanal={},bySignal={},byLinha={},byCargo={};
+  const byCanalCate={};
   let totalDelta=0,deltaCount=0;
   let slaRisk=0,irondome=0,buyCount=0,riskCount=0,stallCount=0;
+
+  // Mapeamento linha_de_receita → canal Cate (com metas CR %)
+  const CANAL_CR={'DM Social':63.89,'Instagram':36.69,'Chat':33.33,'Facebook Ads':32.41,'Lead K':29.20,'Outros':27.32,'Skills':21.77,'Abandono':21.51,'Incompleto':16.86};
+  function linhaToCanalCate(linha){
+    const l=(linha||'').toLowerCase();
+    if(!l||l==='sem linha') return 'Incompleto';
+    if(l.includes('social dm')||l.includes('perfil k')) return 'DM Social';
+    if(l.includes('instagram')) return 'Instagram';
+    if(l.includes('chat')) return 'Chat';
+    if(l.includes('google')||l.includes('paid')||l.includes('facebook')) return 'Facebook Ads';
+    if(l.includes('lead k')||l.includes('iscas')) return 'Lead K';
+    if(l.includes('skills')||l.includes('skill')) return 'Skills';
+    if(l.includes('abandono')) return 'Abandono';
+    return 'Outros';
+  }
 
   deals.forEach(d=>{
     const etapa=(d._etapa||d.etapa||'').toLowerCase();
@@ -3050,6 +3074,8 @@ function renderIntelligence(){
     const linha=d.linhaReceita||'Sem linha';
     const cargo=d.cargo||'Sem cargo';
     const delta=d._delta||d.delta||0;
+    const canalCate=linhaToCanalCate(linha);
+    byCanalCate[canalCate]=(byCanalCate[canalCate]||0)+1;
 
     byEtapa[etapa]=(byEtapa[etapa]||0)+1;
     byTier[tier]=(byTier[tier]||0)+1;
@@ -3080,6 +3106,23 @@ function renderIntelligence(){
   // Top canais
   const canalData=Object.entries(byCanal).sort((a,b)=>b[1]-a[1]).slice(0,6);
   const maxCanal=Math.max(...canalData.map(c=>c[1]),1);
+
+  // Potencial vs Realizado (lógica Cate)
+  const em=window._EFFICIENCY_METRICS||{};
+  const metaMensal=window._OPERATOR_META||0;
+  const nOPPReal=em.opp||0;
+  const nSALReal=em.sal||0;
+  const cateCanais=Object.entries(byCanalCate).sort((a,b)=>b[1]-a[1]);
+  let potTotal=0;
+  const cateRows=cateCanais.map(([c,sal])=>{
+    const cr=CANAL_CR[c]||27.32;
+    const pot=sal*cr/100;
+    potTotal+=pot;
+    return {canal:c,sal,cr,pot};
+  });
+  const gapTotal=potTotal-nOPPReal;
+  const aprovPct=potTotal>0?Math.round(nOPPReal/potTotal*100):0;
+  const metaPct=metaMensal>0?Math.round(nOPPReal/metaMensal*100):0;
 
   // Top linhas
   const linhaData=Object.entries(byLinha).sort((a,b)=>b[1]-a[1]).slice(0,6);
@@ -3205,6 +3248,23 @@ function renderIntelligence(){
         })()}
       </div>
     `)}
+    ${renderSection(3,'Potencial vs Realizado — Eficiência por Canal',`
+      <div class="intel-kpi-row">
+        <div class="intel-kpi"><div class="intel-kpi-v">${nSALReal||Object.values(byCanalCate).reduce((a,b)=>a+b,0)}</div><div class="intel-kpi-l">SAL Recebido</div></div>
+        <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--accent2)">${potTotal.toFixed(1)}</div><div class="intel-kpi-l">Potencial</div></div>
+        <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--green)">${nOPPReal}</div><div class="intel-kpi-l">Realizado</div></div>
+        <div class="intel-kpi"><div class="intel-kpi-v" style="color:${gapTotal>0?'var(--red)':'var(--green)'}">${gapTotal>0?'-':'+'} ${Math.abs(gapTotal).toFixed(1)}</div><div class="intel-kpi-l">Gap</div></div>
+        <div class="intel-kpi"><div class="intel-kpi-v" style="color:${aprovPct>=100?'var(--green)':aprovPct>=80?'var(--yellow)':'var(--red)'}">${aprovPct}%</div><div class="intel-kpi-l">Aproveitamento</div></div>
+        ${metaMensal?'<div class="intel-kpi"><div class="intel-kpi-v" style="color:'+(metaPct>=100?'var(--green)':metaPct>=70?'var(--yellow)':'var(--red)')+'">'+metaPct+'%</div><div class="intel-kpi-l">'+nOPPReal+'/'+metaMensal+' Meta</div></div>':''}
+      </div>
+      <div class="intel-title" style="margin-top:10px">Potencial por Canal <span style="font-weight:400;color:var(--text2);font-size:11px">(SAL × Meta CR)</span></div>
+      ${cateRows.map(r=>{
+        const realEstim=Math.round(r.pot);
+        const barColor=r.pot<=0?'':'background:linear-gradient(90deg,rgba(91,141,239,0.3),rgba(91,141,239,0.6))';
+        return '<div class="intel-bar-row"><span class="intel-bar-label" title="CR meta: '+r.cr+'%">'+r.canal+'</span><div class="intel-bar-bg"><div class="intel-bar-fill" style="width:'+Math.max(5,r.sal/Math.max(...cateRows.map(x=>x.sal),1)*100)+'%;'+barColor+'"><span class="intel-bar-v">'+r.sal+' SAL</span></div></div><span class="intel-bar-pct" title="Potencial: '+r.pot.toFixed(1)+' opps">'+r.cr+'% → '+r.pot.toFixed(1)+'</span></div>';
+      }).join('')}
+      <div style="font-size:11px;color:var(--text2);margin-top:8px;padding:6px 10px;background:rgba(255,255,255,0.03);border-radius:6px"><strong>Metodologia:</strong> Potencial = SAL recebido × Meta CR do canal | Gap = Potencial − Realizado | Aproveitamento = Realizado / Potencial</div>
+    `)}
     <div class="intel-grid">
       ${renderCard('Eficiência por Tier',tierData.map(t=>`
         <div class="intel-bar-row">
@@ -3233,7 +3293,7 @@ function renderIntelligence(){
           <span class="intel-bar-pct">${Math.round(n/total*100)}%</span>
         </div>`).join(''))}
     </div>
-    ${renderSection(4,'Comportamento do Operador',`
+    ${renderSection(5,'Comportamento do Operador',`
       <div class="intel-kpi-row">
         <div class="intel-kpi"><div class="intel-kpi-v">${avgDelta}</div><div class="intel-kpi-l">Delta médio (dias)</div><div class="intel-kpi-d ${avgDelta<=3?'pg':avgDelta<=5?'pm':'pl'}">${avgDelta<=3?'Saudável':avgDelta<=5?'Atenção':'Crítico'}</div></div>
         <div class="intel-kpi"><div class="intel-kpi-v">${avgTemp}</div><div class="intel-kpi-l">Temp. média</div><div class="intel-kpi-d ${avgTemp>=60?'pg':avgTemp>=40?'pm':'pl'}">${avgTemp>=60?'Bom':avgTemp>=40?'Regular':'Baixo'}</div></div>
@@ -3251,7 +3311,7 @@ function renderIntelligence(){
         </div>`;
       }).join('')}
     `)}
-    ${renderSection(5,'Inteligência ELUCi — Leitura Operacional',`
+    ${renderSection(6,'Inteligência ELUCi — Leitura Operacional',`
       ${insights.length?insights.map(i=>`
         <div class="intel-insight intel-insight-${i.type}">
           <div class="intel-insight-label">${i.label}</div>
