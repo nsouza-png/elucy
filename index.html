@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ELUCi Cockpit</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a1628'/><text x='50' y='68' font-size='42' font-weight='bold' text-anchor='middle' fill='%234a9eff' font-family='system-ui'>Ei</text></svg>">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a1628'/><text x='50' y='68' font-size='42' font-weight='bold' text-anchor='middle' fill='%234a9eff' font-family='system-ui'>Ei</text></svg>">
+<title>ELUCY — Sales Engagement</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2304080f'/><text x='50' y='66' font-size='36' font-weight='900' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='2'>EC</text><rect x='28' y='72' width='44' height='14' rx='4' fill='%235b8def'/><text x='50' y='82' font-size='9' font-weight='800' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>BY G4</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2304080f'/><text x='50' y='66' font-size='36' font-weight='900' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='2'>EC</text><rect x='28' y='72' width='44' height='14' rx='4' fill='%235b8def'/><text x='50' y='82' font-size='9' font-weight='800' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>BY G4</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Bungee&display=swap" rel="stylesheet">
 <!-- Supabase JS SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -28,7 +28,7 @@ if(!window.IS_REMOTE){
 body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 0%,rgba(91,141,239,.04) 0%,transparent 60%),radial-gradient(ellipse at 80% 100%,rgba(52,211,153,.03) 0%,transparent 50%);color:var(--text);font-family:var(--font-body);height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:14px}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.14)}
 #topbar{height:52px;background:rgba(8,14,26,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;gap:10px;flex-shrink:0;z-index:10}
-.logo{font-family:var(--font-title);font-size:15px;font-weight:800;color:var(--accent);margin-right:10px;text-transform:uppercase;letter-spacing:1.5px;text-shadow:0 0 20px rgba(91,141,239,.3)}.logo em{color:var(--accent2);font-style:italic;font-weight:400}
+.logo{display:flex;align-items:center;gap:8px;margin-right:10px}.logo-name{font-family:var(--font-title);font-size:17px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:2px;text-shadow:0 0 24px rgba(91,141,239,.25)}.logo-badge{background:linear-gradient(135deg,var(--accent),#4a7de8);color:#fff;font-size:8px;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:1.2px;text-transform:uppercase;line-height:1.3}
 .ntab{padding:6px 14px;border-radius:8px;font-size:12px;color:var(--text2);cursor:pointer;transition:.2s;border:none;background:none;font-family:inherit;font-weight:500}.ntab:hover{color:var(--text);background:rgba(255,255,255,.04)}.ntab.on{color:var(--accent2);background:var(--adim);font-weight:600;box-shadow:0 0 12px rgba(91,141,239,.08)}
 .tbr{margin-left:auto;display:flex;align-items:center;gap:10px}
 .chip{display:flex;align-items:center;gap:6px;background:var(--glass);border:1px solid var(--border);border-radius:20px;padding:3px 12px 3px 5px;font-size:12px}.av{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#4a7de8);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;box-shadow:0 2px 8px rgba(91,141,239,.25)}.chip-name{font-weight:600}.chip-lvl{color:var(--accent2);font-size:11px}
@@ -301,7 +301,7 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 0%,rgb
 #auth-screen,#pending-screen{position:fixed;inset:0;background:var(--bg);background-image:radial-gradient(ellipse at 50% 30%,rgba(91,141,239,.06) 0%,transparent 60%);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:0}
 #auth-screen.hidden,#pending-screen.hidden{display:none}
 .auth-card{background:rgba(12,21,37,.8);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:44px;max-width:380px;width:90%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.4)}
-.auth-logo{font-family:var(--font-title);font-size:24px;font-weight:900;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:2.5px;text-shadow:0 0 30px rgba(91,141,239,.3)}.auth-logo em{color:var(--accent2);font-style:italic;font-weight:400}
+.auth-logo{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px}.auth-logo-name{font-family:var(--font-title);font-size:28px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:3px;text-shadow:0 0 30px rgba(91,141,239,.25)}.auth-logo-badge{background:linear-gradient(135deg,var(--accent),#4a7de8);color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:5px;letter-spacing:1.2px;text-transform:uppercase}
 .auth-sub{font-size:13px;color:var(--text2);margin-bottom:28px;line-height:1.5}
 .auth-form{display:flex;flex-direction:column;gap:10px;margin-bottom:4px}
 .auth-field{display:flex;flex-direction:column}
@@ -380,8 +380,8 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 0%,rgb
 <!-- ── AUTH: Login email/senha ─────────────────────────────── -->
 <div id="auth-screen" class="hidden">
   <div class="auth-card">
-    <div class="auth-logo">ELUCi <em>Cockpit</em></div>
-    <div class="auth-sub">Sales Engagement System — G4 Educação<br>Entre com seu e-mail G4 para acessar.</div>
+    <div class="auth-logo"><span class="auth-logo-name">ELUCY</span><span class="auth-logo-badge">BY G4</span></div>
+    <div class="auth-sub">Sales Engagement System<br>Entre com seu e-mail G4 para acessar.</div>
     <div class="auth-form">
       <div class="auth-field">
         <input class="auth-input" id="auth-email" type="email" placeholder="seu@g4educacao.com" autocomplete="username">
@@ -408,8 +408,8 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 0%,rgb
   </div>
 </div>
 <div id="topbar">
-  <span class="logo">ELUCi <em>Cockpit</em></span>
-  <span style="font-size:10px;color:var(--text2);margin-left:-4px;letter-spacing:.3px">Conversation Intelligence</span>
+  <span class="logo"><span class="logo-name">ELUCY</span><span class="logo-badge">BY G4</span></span>
+  <span style="font-size:10px;color:var(--text2);margin-left:-2px;letter-spacing:.3px">Sales Engagement</span>
   <button class="ntab on" onclick="setScreen('home',this)">Pipeline</button>
   <button class="ntab" onclick="setScreen('reports',this)">Relatórios</button>
   <button class="ntab" onclick="setScreen('intelligence',this)">Inteligência</button>
@@ -850,7 +850,7 @@ function confirmDVL(id){
     const co=document.getElementById('co-'+id);
     const wa=document.getElementById('ct-'+id+'-wa');
     if(co) co.style.display='block';
-    if(wa) wa.textContent='ELUCi gerando copy calibrada pelo motor…';
+    if(wa) wa.textContent='ELUCY gerando copy calibrada pelo motor…';
     requestElucyCopy(mergedDeal.deal_id, mergedDeal, id, mergedDeal.canal||'WhatsApp');
     co&&co.scrollIntoView({behavior:'smooth',block:'start'});
   } else {
@@ -1909,7 +1909,7 @@ function renderLiveDeals(rows,cols){
     const irondome=delta>10;
     const classes='di'+(slaRisk?' sla':'')+(irondome?' dome':'');
 
-    // Valor ELUCi — calculado por SPICED: tier + cargo + etapa + delta + event_skipped
+    // Valor ELUCY — calculado por SPICED: tier + cargo + etapa + delta + event_skipped
     const elucyValor=calcElucyValor({tier,cargo,etapa,delta,skipped:String(g(row,'event_skipped')).toLowerCase()==='true'});
     // Forecast delta: divergência entre modelo de dados e modelo Elucy
     const forecastDelta=revenueRaw>0?elucyValor-revenueRaw:null;
@@ -2206,7 +2206,7 @@ async function requestElucyAnalysis(deal_id, dealData, targetId){
   }
   const reportEl=document.getElementById('er-'+targetId);
   if(reportEl){
-    reportEl.innerHTML='<div class="er-loading"><span class="elucy-pulse">ELUCi analisando deal '+escHtml(deal_id)+'...</span></div>';
+    reportEl.innerHTML='<div class="er-loading"><span class="elucy-pulse">ELUCY analisando deal '+escHtml(deal_id)+'...</span></div>';
     reportEl.style.display='block';
   }
 
@@ -2261,7 +2261,7 @@ async function requestElucyCopy(deal_id, dealData, targetId, canal){
   const copyEl=document.getElementById('co-'+targetId);
   if(copyEl){
     const wa=document.getElementById('ct-'+targetId+'-wa');
-    if(wa) wa.textContent='ELUCi gerando copy...';
+    if(wa) wa.textContent='ELUCY gerando copy...';
   }
 
   if(window.IS_REMOTE){
@@ -2362,7 +2362,7 @@ async function requestBusinessAnalysis(id){
     return;
   }
   baEl.style.display='block';
-  baEl.innerHTML='<div class="ba-h"><span class="ba-badge">ANÁLISE</span><span class="ba-htitle">Análise de Mercado</span></div><div class="ba-b"><span class="elucy-pulse">ELUCi analisando setor do deal...</span></div>';
+  baEl.innerHTML='<div class="ba-h"><span class="ba-badge">ANÁLISE</span><span class="ba-htitle">Análise de Mercado</span></div><div class="ba-b"><span class="elucy-pulse">ELUCY analisando setor do deal...</span></div>';
 
   // Monta o setor a partir do deal
   const setor=deal.linhaReceita||deal.canal||'educação executiva B2B';
@@ -2500,7 +2500,7 @@ async function requestNotaCRM(id){
     notaEl.style.display=notaEl.style.display==='none'?'block':'none';
     return;
   }
-  notaEl.innerHTML='<div class="ba-h"><span class="ba-badge" style="background:var(--gdim);color:var(--green)">CRM</span><span class="ba-htitle">Nota de Qualificação</span></div><div class="ba-b"><span class="elucy-pulse">ELUCi gerando nota de qualificação...</span></div>';
+  notaEl.innerHTML='<div class="ba-h"><span class="ba-badge" style="background:var(--gdim);color:var(--green)">CRM</span><span class="ba-htitle">Nota de Qualificação</span></div><div class="ba-b"><span class="elucy-pulse">ELUCY gerando nota de qualificação...</span></div>';
   notaEl.style.display='block';
   notaEl.scrollIntoView({behavior:'smooth',block:'nearest'});
   if(window.IS_REMOTE){
@@ -2767,7 +2767,7 @@ function injectElucyReport(targetId, report){
   const gov=extractSection(report,'GOVERNANCE FLAGS');
   const verdict=extractSection(report,'ELUCI VERDICT');
   reportEl.innerHTML=`
-    <div class="er-h"><span class="er-badge">ELUCI REPORT</span><span class="er-htitle">Deal Analisado pelo Motor ELUCi</span><span class="er-dqi elucy-live">LIVE</span></div>
+    <div class="er-h"><span class="er-badge">ELUCI REPORT</span><span class="er-htitle">Deal Analisado pelo Motor ELUCY</span><span class="er-dqi elucy-live">LIVE</span></div>
     ${context?`<div class="er-b"><div class="er-bl">ELUCI CONTEXT</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(context)}</pre></div></div>`:''}
     ${diagnostic?`<div class="er-b"><div class="er-bl">DIAGNOSTIC CORE</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(diagnostic)}</pre></div></div>`:''}
     ${directive?`<div class="er-b"><div class="er-bl">STRATEGIC DIRECTIVE</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(directive)}</pre></div></div>`:''}
@@ -2856,16 +2856,16 @@ function selectLiveDeal(id,d){
         <div class="ic"><div class="ic-l">Dia FUP</div><div class="ic-v">${d.dd}</div></div>
         <div class="ic"><div class="ic-l">Deal ID</div><div class="ic-v" style="font-size:11px">${d.deal_id||'—'}</div></div>
         <div class="ic"><div class="ic-l">Valor G4 Dados</div><div class="ic-v" style="color:var(--green)">${fmtBRL(d.revenueRaw)}</div><div class="ic-s">Time de dados</div></div>
-        <div class="ic"><div class="ic-l">Valor ELUCi</div><div class="ic-v" style="color:var(--accent2)">${fmtBRL(d.elucyValor)}</div><div class="ic-s">${d.forecastDelta!=null?(d.forecastDelta>=0?'▲ +'+fmtBRL(d.forecastDelta):'▼ '+fmtBRL(d.forecastDelta))+' vs G4 Dados':'Sem ref. dados'}</div></div>
+        <div class="ic"><div class="ic-l">Valor ELUCY</div><div class="ic-v" style="color:var(--accent2)">${fmtBRL(d.elucyValor)}</div><div class="ic-s">${d.forecastDelta!=null?(d.forecastDelta>=0?'▲ +'+fmtBRL(d.forecastDelta):'▼ '+fmtBRL(d.forecastDelta))+' vs G4 Dados':'Sem ref. dados'}</div></div>
       </div>
       <div class="recom">
-        <div class="recom-l">Recomendação ELUCi <span class="elucy-badge">MOTOR ATIVO</span></div>
+        <div class="recom-l">Recomendação ELUCY <span class="elucy-badge">MOTOR ATIVO</span></div>
         <div class="recom-t" id="recom-${id}">${buildRecomText(d)}</div>
       </div>
       ${(d._urgency||0)>=60?`<div class="alrt al-d">SLA em risco — deal sem avanço por ${d._delta||d.delta||0} dias.</div>`:''}
       ${d._signal==='DOME'?`<div class="alrt al-w">Iron Dome ativo — +10 dias sem resposta. Copy bloqueada até revisão manual.</div>`:''}
       <div class="row">
-        <button class="btn bp" onclick="showCopy('${id}')">Gerar Copy via ELUCi</button>
+        <button class="btn bp" onclick="showCopy('${id}')">Gerar Copy via ELUCY</button>
         <button class="btn bs" onclick="toggleER('${id}')">ELUCI Report</button>
         <button class="btn bs" onclick="requestBusinessAnalysis('${id}')" style="border-color:var(--clay);color:var(--clay)">Análise de Mercado</button>
         <button class="wa-conv-btn" onclick="toggleWaPanel('${id}')">💬 Conversa</button>
@@ -2988,11 +2988,11 @@ function regenCopy(id){
   if(!deal) return;
   const wa=document.getElementById('ct-'+id+'-wa');
   if(wa){
-    wa.textContent='ELUCi gerando nova variação…';
+    wa.textContent='ELUCY gerando nova variação…';
     // Dispara para o motor Elucy via postMessage
     requestElucyCopy(deal.deal_id||id, deal, id, deal.canal||'WhatsApp');
   }
-  showSyncToast('ok','Regenerando copy via motor ELUCi…');
+  showSyncToast('ok','Regenerando copy via motor ELUCY…');
 }
 
 // ── QUICK ACTIONS ────────────────────────────────────────────────────
@@ -3205,7 +3205,7 @@ function renderIntelligence(){
         <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--yellow)">${stallCount}</div><div class="intel-kpi-l">Travados</div></div>
         <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--red)">${riskCount}</div><div class="intel-kpi-l">Em risco</div></div>
         <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--red)">${irondome}</div><div class="intel-kpi-l">Iron Dome</div></div>
-        <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--accent2)">${fmtBRL(totalValor)}</div><div class="intel-kpi-l">Pipeline ELUCi</div></div>
+        <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--accent2)">${fmtBRL(totalValor)}</div><div class="intel-kpi-l">Pipeline ELUCY</div></div>
       </div>
     `)}
     ${renderSection(2,'Conversão — Funil por Etapa',`
@@ -3311,7 +3311,7 @@ function renderIntelligence(){
         </div>`;
       }).join('')}
     `)}
-    ${renderSection(6,'Inteligência ELUCi — Leitura Operacional',`
+    ${renderSection(6,'Inteligência ELUCY — Leitura Operacional',`
       ${insights.length?insights.map(i=>`
         <div class="intel-insight intel-insight-${i.type}">
           <div class="intel-insight-label">${i.label}</div>
