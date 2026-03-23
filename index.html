@@ -118,6 +118,30 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .hist-expanded.show{display:block}
 .hist-copy-btn{position:absolute;top:6px;right:6px;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg4);color:var(--text2);cursor:pointer;transition:.12s}
 .hist-copy-btn:hover{border-color:var(--accent);color:var(--accent2);background:var(--adim)}
+/* WhatsApp conversation panel */
+.wa-conv-btn{padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--green);color:var(--green);background:transparent;transition:.15s}
+.wa-conv-btn:hover{background:var(--gdim);color:#4ade80}
+.wa-panel{display:none;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);margin-top:8px;overflow:hidden}
+.wa-panel.show{display:block}
+.wa-panel-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)}
+.wa-panel-title{font-family:var(--font-title);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--green)}
+.wa-panel-close{font-size:11px;cursor:pointer;color:var(--text2);border:none;background:none;padding:2px 6px}
+.wa-panel-close:hover{color:var(--red)}
+.wa-paste-area{width:100%;min-height:100px;max-height:180px;background:var(--bg);border:none;color:var(--text);font-size:12px;font-family:var(--font-body);padding:12px;resize:vertical;line-height:1.5;outline:none}
+.wa-paste-area::placeholder{color:var(--text2)}
+.wa-paste-actions{display:flex;gap:8px;padding:8px 14px;border-top:1px solid var(--border);align-items:center}
+.wa-paste-actions .btn{font-size:11px;padding:5px 12px}
+.wa-msg-count{font-size:10px;color:var(--text2);margin-left:auto}
+.wa-chat{max-height:360px;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.wa-bubble{max-width:80%;padding:7px 11px;border-radius:8px;font-size:12px;line-height:1.5;word-wrap:break-word;position:relative}
+.wa-bubble.lead{background:#1a3a2a;border:1px solid #2d5a3e;align-self:flex-start;border-bottom-left-radius:2px}
+.wa-bubble.sdr{background:var(--bg3);border:1px solid var(--border);align-self:flex-end;border-bottom-right-radius:2px}
+.wa-bubble-name{font-size:10px;font-weight:700;margin-bottom:2px}
+.wa-bubble.lead .wa-bubble-name{color:var(--green)}
+.wa-bubble.sdr .wa-bubble-name{color:var(--accent2)}
+.wa-bubble-ts{font-size:9px;color:var(--text2);text-align:right;margin-top:2px}
+.wa-bubble-text{white-space:pre-wrap}
+.wa-saved-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;background:var(--gdim);color:var(--green);border:1px solid rgba(34,197,94,.3)}
 /* Notification system */
 .notif-btn{position:relative;padding:5px 8px;border-radius:6px;font-size:14px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);transition:.15s;line-height:1}
 .notif-btn:hover{border-color:var(--accent);color:var(--accent2)}
@@ -2372,6 +2396,175 @@ function clipText(text){
   navigator.clipboard.writeText(text).then(()=>showSyncToast('ok','Copiado!')).catch(()=>{});
 }
 
+// ── WHATSAPP CONVERSATION FLOW ──────────────────────────────────────
+
+function toggleWaPanel(id){
+  const panel=document.getElementById('wa-panel-'+id);
+  if(!panel) return;
+  const isOpen=panel.classList.contains('show');
+  if(isOpen){panel.classList.remove('show');return;}
+  panel.classList.add('show');
+  // Carregar conversa salva do Supabase se ainda não carregou
+  const chat=document.getElementById('wa-chat-'+id);
+  if(chat&&!chat.dataset.loaded){
+    loadWaConversation(id);
+  }
+}
+
+function parseWhatsAppMessages(raw){
+  // Formatos comuns:
+  // [23/03/2026, 07:00:00] Nome: mensagem
+  // 23/03/2026 07:00 - Nome: mensagem
+  // 23/03/26, 07:00 - Nome: mensagem
+  const lines=raw.split('\n');
+  const msgs=[];
+  const re1=/^\[(\d{1,2}\/\d{1,2}\/\d{2,4}),?\s*(\d{1,2}:\d{2}(?::\d{2})?)\]\s*([^:]+):\s*(.+)/;
+  const re2=/^(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(\d{1,2}:\d{2}(?::\d{2})?)\s*[-–]\s*([^:]+):\s*(.+)/;
+  let current=null;
+  for(const line of lines){
+    const m=line.match(re1)||line.match(re2);
+    if(m){
+      if(current) msgs.push(current);
+      current={date:m[1],time:m[2],sender:m[3].trim(),text:m[4]};
+    } else if(current&&line.trim()){
+      current.text+='\n'+line;
+    }
+  }
+  if(current) msgs.push(current);
+  return msgs;
+}
+
+function classifyMsgSender(msgs, dealData){
+  // Identifica qual remetente é o lead e qual é o SDR
+  // Heurística: nome que mais se parece com o lead (dealData.nome) = lead
+  const leadName=(dealData&&dealData.nome||'').toLowerCase().split(' ')[0];
+  const senders={};
+  msgs.forEach(m=>{const s=m.sender.toLowerCase();senders[s]=(senders[s]||0)+1;});
+  const names=Object.keys(senders);
+  if(names.length<=1) return msgs.map(m=>({...m,role:'lead'}));
+  // Melhor match para lead
+  let leadSender=null;
+  let bestScore=0;
+  for(const name of names){
+    const first=name.split(' ')[0];
+    if(leadName&&first.includes(leadName)){leadSender=name;bestScore=2;}
+    else if(!leadSender&&bestScore<1){leadSender=name;bestScore=1;}
+  }
+  // Se não achou match, assume o que tem menos mensagens = lead (SDR fala mais)
+  if(names.length===2&&bestScore<2){
+    const [a,b]=names;
+    leadSender=senders[a]<=senders[b]?a:b;
+  }
+  return msgs.map(m=>({...m,role:m.sender.toLowerCase()===leadSender?'lead':'sdr'}));
+}
+
+async function processWaConversation(id){
+  const textarea=document.getElementById('wa-paste-'+id);
+  const raw=(textarea&&textarea.value||'').trim();
+  if(!raw){showSyncToast('err','Cole a conversa antes de salvar.');return;}
+  const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
+  if(!deal||!deal.deal_id){showSyncToast('err','Deal sem deal_id.');return;}
+  // Parse
+  let msgs=parseWhatsAppMessages(raw);
+  if(!msgs.length){
+    // Fallback: se não parseou, salva como bloco único
+    msgs=[{date:'',time:'',sender:'SDR',text:raw,role:'sdr'}];
+  } else {
+    msgs=classifyMsgSender(msgs, deal);
+  }
+  const countEl=document.getElementById('wa-count-'+id);
+  if(countEl) countEl.textContent=msgs.length+' mensagen'+(msgs.length!==1?'s':'');
+  const sb=getSB();
+  const email=_currentUser&&_currentUser.email;
+  if(!sb||!email){showSyncToast('err','Supabase não conectado.');return;}
+  // Inserir cada mensagem como registro individual
+  const records=msgs.map((m,i)=>({
+    deal_id:String(deal.deal_id),
+    operator_id:email,
+    source_type:m.role==='lead'?'whatsapp_msg_lead':'whatsapp_msg_sdr',
+    content:JSON.stringify({sender:m.sender,text:m.text,date:m.date,time:m.time,index:i,role:m.role})
+  }));
+  // Também salvar bloco bruto como enrichment para o worker
+  records.push({
+    deal_id:String(deal.deal_id),
+    operator_id:email,
+    source_type:'whatsapp_raw',
+    content:raw
+  });
+  showSyncToast('ok','Salvando '+msgs.length+' mensagens...');
+  const {data,error}=await sb.from('lead_enrichments').insert(records).select();
+  if(error){
+    showSyncToast('err','Erro ao salvar: '+error.message);
+    return;
+  }
+  showSyncToast('ok',msgs.length+' mensagens salvas!');
+  // Esconder textarea, mostrar chat visual
+  textarea.style.display='none';
+  renderWaChat(id, msgs);
+  // Badge de salvo
+  const badge=document.getElementById('wa-badge-'+id);
+  if(badge) badge.innerHTML='<span class="wa-saved-badge">✓ '+msgs.length+' msgs</span>';
+  // Log atividade
+  logActivity('whatsapp_pasted',deal.deal_id,{msg_count:msgs.length});
+  logDealInteraction(deal.deal_id,'enrichment','Conversa WhatsApp colada: '+msgs.length+' mensagens');
+}
+
+function renderWaChat(id, msgs){
+  const chat=document.getElementById('wa-chat-'+id);
+  if(!chat) return;
+  chat.dataset.loaded='1';
+  if(!msgs.length){
+    chat.innerHTML='<div style="padding:16px;text-align:center;color:var(--text2);font-size:12px">Nenhuma conversa registrada.</div>';
+    return;
+  }
+  chat.innerHTML=msgs.map(m=>{
+    const cls=m.role==='lead'?'lead':'sdr';
+    const name=escHtml(m.sender||cls.toUpperCase());
+    const text=escHtml(m.text||'');
+    const ts=m.date&&m.time?(m.date+' '+m.time):'';
+    return '<div class="wa-bubble '+cls+'">'+
+      '<div class="wa-bubble-name">'+name+'</div>'+
+      '<div class="wa-bubble-text">'+text+'</div>'+
+      (ts?'<div class="wa-bubble-ts">'+ts+'</div>':'')+
+      '</div>';
+  }).join('');
+  chat.scrollTop=chat.scrollHeight;
+}
+
+async function loadWaConversation(id){
+  const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
+  if(!deal||!deal.deal_id) return;
+  const sb=getSB();
+  const email=_currentUser&&_currentUser.email;
+  if(!sb||!email) return;
+  const {data,error}=await sb.from('lead_enrichments')
+    .select('*')
+    .eq('deal_id',String(deal.deal_id))
+    .eq('operator_id',email)
+    .in('source_type',['whatsapp_msg_lead','whatsapp_msg_sdr'])
+    .order('created_at',{ascending:true});
+  if(error||!data||!data.length) return;
+  // Parsear registros em mensagens
+  const msgs=data.map(row=>{
+    try{
+      const c=JSON.parse(row.content);
+      return {sender:c.sender||'',text:c.text||'',date:c.date||'',time:c.time||'',role:c.role||'lead'};
+    }catch(e){
+      return {sender:'',text:row.content,date:'',time:'',role:row.source_type==='whatsapp_msg_lead'?'lead':'sdr'};
+    }
+  });
+  if(msgs.length){
+    renderWaChat(id, msgs);
+    // Esconder textarea, mostrar badge
+    const textarea=document.getElementById('wa-paste-'+id);
+    if(textarea) textarea.style.display='none';
+    const badge=document.getElementById('wa-badge-'+id);
+    if(badge) badge.innerHTML='<span class="wa-saved-badge">✓ '+msgs.length+' msgs</span>';
+    const countEl=document.getElementById('wa-count-'+id);
+    if(countEl) countEl.textContent=msgs.length+' mensagen'+(msgs.length!==1?'s':'');
+  }
+}
+
 function injectElucyReport(targetId, report){
   const reportEl=document.getElementById('er-'+targetId);
   if(!reportEl) return;
@@ -2485,6 +2678,21 @@ function selectLiveDeal(id,d){
         <button class="btn bp" onclick="showCopy('${id}')">Gerar Copy via ELUCi</button>
         <button class="btn bs" onclick="toggleER('${id}')">ELUCI Report</button>
         <button class="btn bs" onclick="requestBusinessAnalysis('${id}')" style="border-color:var(--clay);color:var(--clay)">Análise de Mercado</button>
+        <button class="wa-conv-btn" onclick="toggleWaPanel('${id}')">💬 Conversa</button>
+      </div>
+      <div class="wa-panel" id="wa-panel-${id}">
+        <div class="wa-panel-header">
+          <span class="wa-panel-title">Conversa WhatsApp</span>
+          <span id="wa-badge-${id}"></span>
+          <button class="wa-panel-close" onclick="toggleWaPanel('${id}')">✕</button>
+        </div>
+        <div class="wa-chat" id="wa-chat-${id}"></div>
+        <textarea class="wa-paste-area" id="wa-paste-${id}" placeholder="Cole aqui a conversa do WhatsApp com o lead...&#10;&#10;Formato aceito:&#10;[23/03/2026, 07:00:00] Nome: mensagem&#10;ou&#10;23/03/2026 07:00 - Nome: mensagem"></textarea>
+        <div class="wa-paste-actions">
+          <button class="btn bsuc btn-sm" onclick="processWaConversation('${id}')">Salvar conversa</button>
+          <button class="btn bs btn-sm" onclick="document.getElementById('wa-paste-${id}').value='';document.getElementById('wa-paste-${id}').style.display='block'">Limpar</button>
+          <span class="wa-msg-count" id="wa-count-${id}"></span>
+        </div>
       </div>
     </div>
     <div class="er" id="er-${id}" style="display:none">
