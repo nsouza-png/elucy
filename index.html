@@ -3173,44 +3173,27 @@ function renderIntelligence(){
       <div class="intel-title" style="margin-top:14px">Eficiência — Conversão por Fase <span id="ef-source" style="font-weight:400;color:var(--text2);font-size:11px"></span></div>
       <div class="intel-kpi-row" id="efficiency-kpis">
         ${(()=>{
-          // Calcula eficiência dos deals CRIADOS NO MÊS ATUAL (fonte: Supabase/HubSpot)
-          // Filtra por createdAtCrm para refletir apenas o funil do mês
+          // Eficiência: prefere dados do Databricks (cache) — fallback cálculo local
+          const em=window._EFFICIENCY_METRICS||{};
           const now=new Date();
-          const monthStart=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
           const monthLabel=(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getFullYear();
-          const monthDeals=allDeals.filter(d=>{
-            const dt=d.createdAtCrm||'';
-            if(!dt) return false;
-            return dt.slice(0,10)>=monthStart;
-          });
-          const oppEtapas=['nova oportunidade','(não usar) nova oportunidade','negociação','negociacao','em negociação','em negociacao','fechamento','entrevista agendada'];
-          const mqlEtapas=['novo lead','novo lead '];
           let nMQL,nSAL,nOPP,crMqlSal,crSalOpp,src;
-          // MQL = deals criados no mês
-          nMQL=monthDeals.length;
-          // SAL = deals que saíram de MQL
-          nSAL=monthDeals.filter(d=>{
-            const et=(d._etapa||d.etapa||'').toLowerCase().trim();
-            const s=(d.statusDeal||'').toLowerCase();
-            if(s==='ganho'||s==='perdido') return true;
-            if(mqlEtapas.includes(et)) return false;
-            return et.length>0;
-          }).length;
-          // OPP = deals em etapas pós-agendamento + Ganho + Perdidos de OPP
-          nOPP=monthDeals.filter(d=>{
-            const et=(d._etapa||d.etapa||'').toLowerCase().trim();
-            const s=(d.statusDeal||'').toLowerCase();
-            if(s==='ganho') return true;
-            if(oppEtapas.includes(et)) return true;
-            if(s==='perdido'){
-              const f=(d._fase||d.fase||'').toLowerCase();
-              return f==='oportunidade'||f==='negociação'||f==='negociacao';
-            }
-            return false;
-          }).length;
-          crMqlSal=nMQL>0?((nSAL/nMQL)*100).toFixed(1):'0';
-          crSalOpp=nSAL>0?((nOPP/nSAL)*100).toFixed(1):'0';
-          src='Criados em '+monthLabel+' — '+nMQL+' deals';
+          if(em.mql!=null&&em.sal!=null&&em.opp!=null){
+            nMQL=em.mql; nSAL=em.sal; nOPP=em.opp;
+            crMqlSal=em.cr_mql_sal!=null?Number(em.cr_mql_sal).toFixed(1):(nMQL>0?((nSAL/nMQL)*100).toFixed(1):'0');
+            crSalOpp=em.cr_sal_opp!=null?Number(em.cr_sal_opp).toFixed(1):(nSAL>0?((nOPP/nSAL)*100).toFixed(1):'0');
+            src='Databricks — '+monthLabel+(em.ganho!=null?' — '+em.ganho+' ganhos':'');
+          } else {
+            const monthStart=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
+            const monthDeals=allDeals.filter(d=>{const dt=d.createdAtCrm||'';return dt&&dt.slice(0,10)>=monthStart;});
+            nMQL=monthDeals.length;
+            nSAL=monthDeals.filter(d=>{const et=(d._etapa||d.etapa||'').toLowerCase().trim();const s=(d.statusDeal||'').toLowerCase();if(s==='ganho'||s==='perdido') return true;if(['novo lead','novo lead '].includes(et)) return false;return et.length>0;}).length;
+            const oppEtapas=['nova oportunidade','(não usar) nova oportunidade','negociação','negociacao','em negociação','em negociacao','fechamento','entrevista agendada'];
+            nOPP=monthDeals.filter(d=>{const et=(d._etapa||d.etapa||'').toLowerCase().trim();const s=(d.statusDeal||'').toLowerCase();if(s==='ganho') return true;if(oppEtapas.includes(et)) return true;if(s==='perdido'){const f=(d._fase||d.fase||'').toLowerCase();return f==='oportunidade'||f==='negociação'||f==='negociacao';}return false;}).length;
+            crMqlSal=nMQL>0?((nSAL/nMQL)*100).toFixed(1):'0';
+            crSalOpp=nSAL>0?((nOPP/nSAL)*100).toFixed(1):'0';
+            src='Local — '+monthLabel;
+          }
           setTimeout(()=>{const el=document.getElementById('ef-source');if(el) el.textContent='('+src+')';},0);
           return '<div class="intel-kpi"><div class="intel-kpi-v">'+nMQL+'</div><div class="intel-kpi-l"># MQL</div></div>'+
             '<div class="intel-kpi"><div class="intel-kpi-v" style="font-size:13px;font-weight:800;color:var(--green)">'+crMqlSal+'%</div><div class="intel-kpi-l">MQL → SAL</div></div>'+
