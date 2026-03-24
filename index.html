@@ -2488,6 +2488,74 @@ const REQUEST_PROMPTS = {
   coaching: 'Analise a performance do operador neste deal e gere feedback de coaching. Inclua: o que fez bem, onde errou, próxima ação recomendada, score de execução.'
 };
 
+// Carrega histórico completo de interações do deal para enriquecer o LLM
+async function loadDealFullHistory(dealId){
+  const sb=getSB();
+  const email=_currentUser&&_currentUser.email;
+  if(!sb||!email||!dealId) return '';
+  try{
+    // 1. Conversas WhatsApp salvas pelo SDR
+    const {data:waData}=await sb.from('deal_interactions')
+      .select('content,created_at,interaction_type')
+      .eq('deal_id',dealId).eq('operator_id',email)
+      .in('interaction_type',['whatsapp_msg_sdr','whatsapp_msg_lead'])
+      .order('created_at',{ascending:true}).limit(50);
+    // 2. Copys e análises anteriores
+    const {data:prevData}=await sb.from('deal_interactions')
+      .select('interaction_type,content,created_at')
+      .eq('deal_id',dealId).eq('operator_id',email)
+      .in('interaction_type',['copy','analysis','note_crm'])
+      .order('created_at',{ascending:false}).limit(5);
+    // 3. Engagement timeline do Databricks (salvo no elucy_cache pelo sync)
+    const {data:engData}=await sb.from('elucy_cache')
+      .select('report')
+      .eq('deal_id','_eng_'+dealId)
+      .eq('operator_email',email)
+      .limit(1);
+
+    let histParts=[];
+
+    // Monta conversa WhatsApp
+    if(waData&&waData.length){
+      let waLines=waData.map(m=>{
+        try{
+          const c=JSON.parse(m.content);
+          const role=m.interaction_type==='whatsapp_msg_lead'?'LEAD':'SDR';
+          return `[${c.date||''} ${c.time||''}] ${role}: ${c.text||''}`;
+        }catch(e){return m.content;}
+      });
+      histParts.push('CONVERSA WHATSAPP (mais recente primeiro):\n'+waLines.join('\n'));
+    }
+
+    // Monta engagement timeline
+    if(engData&&engData.length&&engData[0].report){
+      try{
+        const timeline=JSON.parse(engData[0].report);
+        if(Array.isArray(timeline)&&timeline.length){
+          const tLines=timeline.slice(0,20).map(e=>{
+            const dt=e.created_at?new Date(e.created_at).toLocaleDateString('pt-BR'):'?';
+            const dur=e.call_duration_ms>0?` (${Math.round(e.call_duration_ms/1000)}s)`:'';
+            return `${dt} — ${e.type}${dur} (${e.owner_name||'?'})`;
+          });
+          histParts.push('TIMELINE DE ATIVIDADES CRM ('+timeline.length+' registros):\n'+tLines.join('\n'));
+        }
+      }catch(e){}
+    }
+
+    // Copys anteriores (resumo)
+    if(prevData&&prevData.length){
+      const prevLines=prevData.map(p=>{
+        const dt=new Date(p.created_at).toLocaleDateString('pt-BR');
+        const snippet=(p.content||'').slice(0,200).replace(/\n/g,' ');
+        return `[${dt}] ${p.interaction_type}: ${snippet}...`;
+      });
+      histParts.push('OUTPUTS ANTERIORES DO ELUCY:\n'+prevLines.join('\n'));
+    }
+
+    return histParts.length?'\n\n[HISTÓRICO DE INTERAÇÕES]\n'+histParts.join('\n\n'):'';
+  }catch(e){console.warn('loadDealFullHistory error:',e);return '';}
+}
+
 async function callIntelligenceAPI(dealData, requestType, extraContext){
   const apiKey = window.ELUCY_API_KEY;
   if(!apiKey) throw new Error('API key não configurada');
@@ -2503,9 +2571,12 @@ async function callIntelligenceAPI(dealData, requestType, extraContext){
   });
   const systemPrompt = systemParts.join('\n\n');
 
+  // Carrega histórico completo para enriquecer contexto
+  const history = await loadDealFullHistory(dealData.deal_id);
+
   const dealCtx = buildDealContext(dealData);
   const prompt = REQUEST_PROMPTS[requestType] || REQUEST_PROMPTS.analyze;
-  const userMsg = dealCtx + '\n\n' + prompt + (extraContext ? '\n\nCONTEXTO EXTRA: '+extraContext : '');
+  const userMsg = dealCtx + history + '\n\n' + prompt + (extraContext ? '\n\nCONTEXTO EXTRA: '+extraContext : '');
 
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
