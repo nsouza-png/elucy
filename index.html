@@ -1292,6 +1292,8 @@ function getSB(){
 async function supabaseSignOut(){
   const sb=getSB(); if(sb) await sb.auth.signOut();
   _currentUser=null;
+  localStorage.removeItem('elucy_operator_email');
+  localStorage.removeItem('elucy_qualificador_name');
   showAuthScreen();
 }
 
@@ -1316,6 +1318,10 @@ function showCockpit(user){
   document.getElementById('topbar').style.display='';
   document.getElementById('main').style.display='';
   _currentUser=user;
+  // Governança: seta operador no localStorage a partir do auth (modo remoto)
+  if(window.IS_REMOTE && user.email){
+    localStorage.setItem('elucy_operator_email', user.email);
+  }
   // Aplica nome do usuário logado no chip
   const nome=(user.user_metadata&&user.user_metadata.full_name)||user.email.split('@')[0];
   const init=nome.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
@@ -1625,9 +1631,9 @@ function openSettings(){
         <div class="modal-s" style="font-weight:600;margin-bottom:6px">Operador</div>
         <div class="modal-f">
           <label class="modal-l">E-mail corporativo</label>
-          <input class="modal-i" id="op-email-input" type="email" placeholder="nome@g4educacao.com" value="${saved}" autocomplete="email">
+          <input class="modal-i" id="op-email-input" type="email" placeholder="nome@g4educacao.com" value="${saved}" autocomplete="email" ${window.IS_REMOTE?'disabled style="opacity:0.6;cursor:not-allowed"':''}>
         </div>
-        <div class="modal-note">Usado como filtro no funil_comercial. Nunca enviado a terceiros.</div>
+        <div class="modal-note">${window.IS_REMOTE?'Definido automaticamente pelo login. Faça logout para trocar de conta.':'Usado como filtro no funil_comercial. Nunca enviado a terceiros.'}</div>
       </div>
 
       <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
@@ -1671,8 +1677,10 @@ function closeSettings(){
 }
 
 function saveOperator(){
+  // Governança: no modo remoto, email vem do auth — não pode ser editado
+  const emailSource = window.IS_REMOTE && _currentUser ? _currentUser.email : null;
   const input=document.getElementById('op-email-input');
-  const email=(input?input.value:'').trim();
+  const email=emailSource || (input?input.value:'').trim();
   if(!email||!email.includes('@')){
     showModalStatus('err','E-mail inválido. Use o formato nome@domínio.com');
     return;
