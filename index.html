@@ -1991,6 +1991,13 @@ function renderLiveDeals(rows,cols){
   if(!list) return;
   list.innerHTML='';
 
+  // V3: Filtrar deals pós-handoff (etapas do closer, não do SDR)
+  const POST_HANDOFF_ETAPAS=['fechamento','negociação','negociacao','nova oportunidade','(não usar) nova oportunidade','self checkout'];
+  rows=rows.filter(row=>{
+    const etapa=(g(row,'etapa_atual_no_pipeline')||'').toLowerCase().trim();
+    return !POST_HANDOFF_ETAPAS.includes(etapa);
+  });
+
   rows.forEach((row,idx)=>{
     const id='live-'+idx;
     const deal_id=g(row,'deal_id')||'';
