@@ -2999,7 +2999,7 @@ function selectLiveDeal(id,d){
         <div class="tg-sub">${tempSub}</div>
       </div>
       <div class="info-grid">
-        <div class="ic"><div class="ic-l">Fase</div><div class="ic-v">${d.fase}</div><div class="ic-s">${d.delta} dias no CRM</div></div>
+        <div class="ic"><div class="ic-l">Etapa</div><div class="ic-v">${d.etapa||d.fase}</div><div class="ic-s">${d.fase?'Fase: '+d.fase+' · ':''}${d.delta} dias no CRM</div></div>
         <div class="ic"><div class="ic-l">Canal</div><div class="ic-v">${d.canal}</div><div class="ic-s">${d.linhaReceita||'—'}</div></div>
         <div class="ic"><div class="ic-l">Dia FUP</div><div class="ic-v">${d.dd}</div></div>
         <div class="ic"><div class="ic-l">Deal ID</div><div class="ic-v" style="font-size:11px">${d.deal_id||'—'}</div></div>
