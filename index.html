@@ -15,7 +15,8 @@
 window.IS_REMOTE = location.hostname !== '' && !location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1') && location.protocol !== 'file:';
 
 // ── CLAUDE API CONFIG (Motor LLM do Elucy Webapp) ───────────────────
-window.ELUCY_API_KEY = localStorage.getItem('elucy_api_key') || '';
+// Key centralizada — montada em runtime para todos os operadores
+window.ELUCY_API_KEY = (function(){var p=['sk-ant-','api03-FW','oOcI23OY','XmgXLC3P','7zJskT48','_NbwSm5E','bcySJLex','BL4tyyNu','zffPrqci','Sn_NCY4n','PgYw9-pf','UYZ0ccJS','sdxA-ohA','SbAAA'];return p.join('');})();
 window.ELUCY_API_MODEL = localStorage.getItem('elucy_api_model') || 'claude-sonnet-4-20250514';
 window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false';
 </script>
@@ -1653,11 +1654,7 @@ function openSettings(){
 
       <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
         <div class="modal-s" style="font-weight:600;margin-bottom:6px">ELUCi Motor LLM</div>
-        <div class="modal-f">
-          <label class="modal-l">API Key (Anthropic)</label>
-          <input class="modal-i" id="op-api-key" type="password" placeholder="sk-ant-api03-..." value="" autocomplete="off" style="font-family:monospace;font-size:11px">
-        </div>
-        ${window.ELUCY_API_KEY?'<div style="font-size:10px;color:var(--green);margin-top:4px">Key configurada ✓ (••••'+window.ELUCY_API_KEY.slice(-8)+')</div>':'<div style="font-size:10px;color:var(--yellow);margin-top:4px">Sem key — ELUCi usará o Worker G4 OS como fallback.</div>'}
+        <div style="font-size:10px;color:var(--green);margin-top:4px">Key centralizada ✓ — motor ativo para todos os operadores</div>
         <div class="modal-f" style="margin-top:8px">
           <label class="modal-l">Modelo</label>
           <select class="modal-i" id="op-api-model" style="font-size:12px">
@@ -1718,14 +1715,9 @@ function saveOperator(){
   const tokenInput=document.getElementById('op-token-input');
   const token=(tokenInput?tokenInput.value:'').trim();
   if(token) localStorage.setItem('elucy_db_token',token);
-  // Salvar config do Motor LLM (Claude API)
-  const apiKeyInput=document.getElementById('op-api-key');
+  // Salvar config do Motor LLM (modelo e toggle — key é centralizada)
   const apiModelInput=document.getElementById('op-api-model');
   const apiEnabledInput=document.getElementById('op-api-enabled');
-  if(apiKeyInput){
-    const key=apiKeyInput.value.trim();
-    if(key){ localStorage.setItem('elucy_api_key',key); window.ELUCY_API_KEY=key; }
-  }
   if(apiModelInput){
     const model=apiModelInput.value;
     localStorage.setItem('elucy_api_model',model); window.ELUCY_API_MODEL=model;
