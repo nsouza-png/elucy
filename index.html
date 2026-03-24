@@ -2760,6 +2760,25 @@ REGRAS: Dados BR prioritários. Cite fonte+ano. Marque confiança [Alta]/[Média
     const sb=getSB();
     const email=_currentUser&&_currentUser.email;
     if(!sb||!email) return;
+
+    // ── FAST PATH: Intelligence API com MCPs de business_analysis ──
+    if(window.ELUCY_API_ENABLED && window.ELUCY_API_KEY){
+      try {
+        const apiResult = await callIntelligenceAPI(deal, 'business_analysis', prompt);
+        if(apiResult && apiResult.intelligence){
+          const output = typeof apiResult.intelligence === 'string' ? apiResult.intelligence : JSON.stringify(apiResult.intelligence, null, 2);
+          let html=escHtml(output).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/^(#+)\s*(.+)$/gm,(m,h,t)=>'<strong style="color:var(--clay)">'+t+'</strong>').replace(/\n/g,'<br>');
+          baEl.innerHTML='<div class="ba-h"><span class="ba-badge">ANÁLISE</span><span class="ba-htitle">Análise de Mercado</span><button class="hist-copy-btn" onclick="event.stopPropagation();clipText(document.getElementById(\'ba-content-'+id+'\').innerText)" style="position:static;margin-left:auto">Copiar</button></div><div class="ba-b" id="ba-content-'+id+'">'+html+'</div>';
+          logActivity('business_analysis_generated', deal.deal_id);
+          saveAPIResponse(deal.deal_id, 'business_analysis', output);
+          return;
+        }
+      } catch(apiErr){
+        console.warn('Intelligence API falhou para business_analysis, fallback para worker:', apiErr.message);
+      }
+    }
+
+    // ── FALLBACK: Supabase worker queue ──
     initRealtimeSubscription();
     const {data,error}=await sb.from('cockpit_requests').insert({
       operator_id: email,
@@ -2882,6 +2901,24 @@ async function requestNotaCRM(id){
     const sb=getSB();
     const email=_currentUser&&_currentUser.email;
     if(!sb||!email) return;
+
+    // ── FAST PATH: Intelligence API com MCPs de note ──
+    if(window.ELUCY_API_ENABLED && window.ELUCY_API_KEY){
+      try {
+        const apiResult = await callIntelligenceAPI(deal, 'note', '');
+        if(apiResult && apiResult.intelligence){
+          const output = typeof apiResult.intelligence === 'string' ? apiResult.intelligence : JSON.stringify(apiResult.intelligence, null, 2);
+          injectNotaCRM(id, output);
+          logActivity('note_generated', deal.deal_id);
+          saveAPIResponse(deal.deal_id, 'note', output);
+          return;
+        }
+      } catch(apiErr){
+        console.warn('Intelligence API falhou para note, fallback para worker:', apiErr.message);
+      }
+    }
+
+    // ── FALLBACK: Supabase worker queue ──
     initRealtimeSubscription();
     const {data,error}=await sb.from('cockpit_requests').insert({
       operator_id: email,
