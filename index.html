@@ -61,7 +61,7 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .bar{background:var(--bg4);border-radius:4px;height:6px;overflow:hidden}.bf{height:100%;border-radius:4px}.bf-h{background:linear-gradient(90deg,#f59e0b,#22c55e)}.bf-w{background:linear-gradient(90deg,#ef4444,#f59e0b)}.bf-c{background:#ef4444}
 .recom{background:rgba(91,141,239,.06);border:1px solid rgba(91,141,239,.15);border-radius:var(--r);padding:13px 15px;margin-bottom:14px;box-shadow:0 0 16px rgba(91,141,239,.04)}.recom-l{font-size:10px;color:var(--accent2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}.recom-t{font-size:13px;line-height:1.55}
 .alrt{padding:10px 13px;border-radius:var(--r);font-size:12px;margin-bottom:11px;line-height:1.5}.al-w{background:var(--ydim);border:1px solid var(--yellow);color:var(--yellow)}.al-d{background:var(--rdim);border:1px solid var(--red);color:var(--red)}.al-i{background:var(--adim);border:1px solid var(--accent);color:var(--accent2)}
-.row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:10px;margin-bottom:4px}
 .er{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:14px}.er-h{background:var(--bg4);padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}.er-badge{background:var(--accent);color:#fff;font-size:9px;font-weight:900;padding:3px 7px;border-radius:4px;letter-spacing:1.5px}.er-htitle{font-size:13px;font-weight:700}.er-dqi{margin-left:auto;font-size:12px;font-weight:800;color:var(--accent2)}
 .er-b{padding:12px 17px;border-bottom:1px solid var(--border)}.er-b:last-child{border-bottom:none}.er-bl{font-size:10px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;display:flex;align-items:center;gap:5px}.er-bl::before{content:"";width:3px;height:10px;background:var(--accent);border-radius:2px;display:inline-block;flex-shrink:0}.er-bt{font-size:12px;line-height:1.65}.er-bt p{margin-bottom:4px}.er-bt p:last-child{margin-bottom:0}
 .ef{display:inline-flex;align-items:center;border-radius:4px;padding:2px 6px;font-size:11px;font-weight:600;margin:2px 2px 2px 0}.ef-w{background:var(--ydim);border:1px solid var(--yellow);color:var(--yellow)}.ef-g{background:var(--gdim);border:1px solid var(--green);color:var(--green)}.ef-r{background:var(--rdim);border:1px solid var(--red);color:var(--red)}
@@ -217,6 +217,10 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 /* WhatsApp conversation panel */
 .wa-conv-btn{padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--green);color:var(--green);background:transparent;transition:.15s}
 .wa-conv-btn:hover{background:var(--gdim);color:#4ade80}
+.btn-on{background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important;box-shadow:0 2px 8px rgba(91,141,239,.25)}
+.btn-on[data-color="clay"]{background:var(--clay)!important;border-color:var(--clay)!important}
+.btn-on[data-color="green"]{background:var(--green)!important;border-color:var(--green)!important}
+.wa-conv-btn.btn-on{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important;box-shadow:0 2px 8px rgba(74,222,128,.25)}
 .wa-panel{display:none;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);margin-top:8px;overflow:hidden}
 .wa-panel.show{display:block}
 .wa-panel-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)}
@@ -965,11 +969,13 @@ function selectDeal(id){
   setScreen('pipeline',null);
 }
 
-function toggleER(id){
+function toggleER(id,btnEl){
   const r=document.getElementById('er-'+id);
   if(!r) return;
   const isHidden=r.style.display==='none'||r.style.display==='';
   r.style.display=isHidden?'block':'none';
+  const btn=btnEl||document.getElementById('btn-er-'+id);
+  if(btn) btn.classList.toggle('btn-on',isHidden);
   if(isHidden){
     // Dispara análise Elucy se ainda não tiver conteúdo real
     const hasContent=r.querySelector('.er-h')||r.querySelector('.er-loading[style*="block"]');
@@ -985,7 +991,7 @@ function toggleER(id){
   }
 }
 
-function showCopy(id){
+function showCopy(id,btnEl){
   const dvl=document.getElementById('dvl-'+id);
   if(!dvl) return;
   document.getElementById('menu-'+id).style.display='none';
@@ -2300,6 +2306,8 @@ function injectBusinessAnalysis(targetId, output){
   if(!baEl) return;
   baEl.innerHTML='<div class="ba-h"><span class="ba-badge">ANÁLISE</span><span class="ba-htitle">Análise de Mercado</span><button class="hist-copy-btn" onclick="event.stopPropagation();clipText(document.getElementById(\'ba-content-'+targetId+'\').innerText)" style="position:static;margin-left:auto">Copiar</button></div><div class="ba-b" id="ba-content-'+targetId+'">'+renderMd(output)+'</div>';
   baEl.style.display='block';
+  const btn=document.getElementById('btn-ba-'+targetId);
+  if(btn) btn.classList.add('btn-on');
 }
 
 // ── NOTIFICATION SYSTEM ──
@@ -2768,17 +2776,21 @@ async function logDealInteraction(dealId, interactionType, content, metadata){
 }
 
 // ── BUSINESS ANALYSIS (prompt McKinsey otimizado) ──
-async function requestBusinessAnalysis(id){
+async function requestBusinessAnalysis(id,btnEl){
   const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
   if(!deal){showSyncToast('err','Selecione um deal primeiro.');return;}
   const baEl=document.getElementById('ba-'+id);
   if(!baEl) return;
+  const btn=btnEl||document.getElementById('btn-ba-'+id);
   // Toggle — se já tem conteúdo, mostra/esconde
   if(baEl.querySelector('.ba-h')){
-    baEl.style.display=baEl.style.display==='none'?'block':'none';
+    const showing=baEl.style.display==='none';
+    baEl.style.display=showing?'block':'none';
+    if(btn) btn.classList.toggle('btn-on',showing);
     return;
   }
   baEl.style.display='block';
+  if(btn) btn.classList.add('btn-on');
   baEl.innerHTML='<div class="ba-h"><span class="ba-badge">ANÁLISE</span><span class="ba-htitle">Análise de Mercado</span></div><div class="ba-b"><span class="elucy-pulse">ELUCY analisando setor do deal...</span></div>';
 
   // Monta o setor a partir do deal
@@ -2992,16 +3004,20 @@ function histWhatsApp(targetId, text){
 
 // ── NOTA DE QUALIFICAÇÃO CRM ──────────────────────────────────────
 
-async function requestNotaCRM(id){
+async function requestNotaCRM(id,btnEl){
   const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
   if(!deal){showSyncToast('err','Selecione um deal primeiro.');return;}
   const notaEl=document.getElementById('nota-'+id);
   if(!notaEl) return;
+  const btn=btnEl||document.getElementById('btn-nota-'+id);
   // Toggle se já tem conteúdo
   if(notaEl.dataset.loaded==='1'){
-    notaEl.style.display=notaEl.style.display==='none'?'block':'none';
+    const showing=notaEl.style.display==='none';
+    notaEl.style.display=showing?'block':'none';
+    if(btn) btn.classList.toggle('btn-on',showing);
     return;
   }
+  if(btn) btn.classList.add('btn-on');
   notaEl.innerHTML='<div class="ba-h"><span class="ba-badge" style="background:var(--gdim);color:var(--green)">CRM</span><span class="ba-htitle">Nota de Qualificação</span></div><div class="ba-b"><span class="elucy-pulse">ELUCY gerando nota de qualificação...</span></div>';
   notaEl.style.display='block';
   notaEl.scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -3052,6 +3068,8 @@ function injectNotaCRM(targetId, output){
   notaEl.dataset.loaded='1';
   notaEl.innerHTML='<div class="ba-h"><span class="ba-badge" style="background:var(--gdim);color:var(--green)">CRM</span><span class="ba-htitle">Nota de Qualificação</span><button class="hist-copy-btn" onclick="event.stopPropagation();clipText(document.getElementById(\'nota-content-'+targetId+'\').innerText)" style="position:static;margin-left:auto">Copiar</button></div><div class="ba-b" id="nota-content-'+targetId+'">'+renderMd(output)+'</div>';
   notaEl.style.display='block';
+  const btn=document.getElementById('btn-nota-'+targetId);
+  if(btn) btn.classList.add('btn-on');
 }
 function renderNotaRich(text){
   const lines=text.split('\n');
@@ -3107,12 +3125,14 @@ function renderNotaRich(text){
 
 // ── WHATSAPP CONVERSATION FLOW ──────────────────────────────────────
 
-function toggleWaPanel(id){
+function toggleWaPanel(id,btnEl){
   const panel=document.getElementById('wa-panel-'+id);
   if(!panel) return;
   const isOpen=panel.classList.contains('show');
-  if(isOpen){panel.classList.remove('show');return;}
+  const btn=btnEl||document.getElementById('btn-wa-'+id);
+  if(isOpen){panel.classList.remove('show');if(btn)btn.classList.remove('btn-on');return;}
   panel.classList.add('show');
+  if(btn) btn.classList.add('btn-on');
   // Carregar conversa salva do Supabase se ainda não carregou
   const chat=document.getElementById('wa-chat-'+id);
   if(chat&&!chat.dataset.loaded){
@@ -3297,6 +3317,8 @@ function injectElucyReport(targetId, report){
     ${!context&&!directive?`<div class="er-b"><div class="er-bl">ANÁLISE COMPLETA</div><div class="er-bt">${renderMd(report)}</div></div>`:''}
   `;
   reportEl.style.display='block';
+  const btn=document.getElementById('btn-er-'+targetId);
+  if(btn) btn.classList.add('btn-on');
 }
 
 function injectElucyCopy(targetId, copyWA, copyCRM){
@@ -3439,11 +3461,11 @@ function selectLiveDeal(id,d){
       ${(d._urgency||0)>=60?`<div class="alrt al-d">SLA em risco — deal sem avanço por ${d._delta||d.delta||0} dias.</div>`:''}
       ${d._signal==='DOME'?`<div class="alrt al-w">Iron Dome ativo — +10 dias sem resposta. Copy bloqueada até revisão manual.</div>`:''}
       <div class="row">
-        <button class="btn bp" onclick="showCopy('${id}')">Gerar Copy via ELUCY</button>
-        <button class="btn bs" onclick="toggleER('${id}')">ELUCI Report</button>
-        <button class="btn bs" onclick="requestBusinessAnalysis('${id}')" style="border-color:var(--clay);color:var(--clay)">Análise de Mercado</button>
-        <button class="wa-conv-btn" onclick="toggleWaPanel('${id}')">💬 Conversa</button>
-        <button class="btn bs btn-sm" onclick="requestNotaCRM('${id}')" style="border-color:var(--green);color:var(--green)">📝 Nota CRM</button>
+        <button class="btn bp" onclick="showCopy('${id}',this)">Gerar Copy via ELUCY</button>
+        <button class="btn bs" id="btn-er-${id}" onclick="toggleER('${id}',this)">ELUCI Report</button>
+        <button class="btn bs" id="btn-ba-${id}" data-color="clay" onclick="requestBusinessAnalysis('${id}',this)" style="border-color:var(--clay);color:var(--clay)">Análise de Mercado</button>
+        <button class="wa-conv-btn" id="btn-wa-${id}" onclick="toggleWaPanel('${id}',this)">💬 Conversa</button>
+        <button class="btn bs btn-sm" id="btn-nota-${id}" data-color="green" onclick="requestNotaCRM('${id}',this)" style="border-color:var(--green);color:var(--green)">📝 Nota CRM</button>
       </div>
       <div class="ba" id="nota-${id}" style="display:none"></div>
       <div class="wa-panel" id="wa-panel-${id}">
