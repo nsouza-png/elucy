@@ -98,6 +98,79 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .btn-settings:hover{border-color:var(--border2);color:var(--text)}
 .op-pill{background:var(--gdim);border:1px solid var(--green);border-radius:4px;padding:2px 7px;font-size:10px;color:var(--green);font-weight:700;display:none}
 .op-pill.show{display:inline-block}
+/* V3: Tab count badge */
+.tab-count{background:var(--rdim);color:var(--red);font-size:9px;font-weight:800;padding:1px 5px;border-radius:8px;margin-left:3px}
+.tab-count:empty{display:none}
+/* V3: Home screen */
+.home-loading{padding:40px;text-align:center;color:var(--text2);font-size:13px}
+.home-block{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px;margin-bottom:14px}
+.home-block-title{font-family:var(--font-title);font-size:13px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.home-count{background:var(--adim);color:var(--accent2);font-size:10px;font-weight:800;padding:2px 7px;border-radius:8px}
+.home-focus-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.home-focus-mode{font-size:14px;font-weight:700;color:var(--accent2);display:flex;align-items:center;gap:6px}
+.home-fm-icon{font-size:16px}
+.home-fm-btn{padding:4px 10px;border-radius:6px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.12s}
+.home-fm-btn:hover{border-color:var(--accent);color:var(--accent2)}
+.home-meta-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.home-meta{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px}
+.home-meta-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.home-meta-value{font-size:14px;font-weight:700;margin-bottom:5px}
+.home-tasks{display:flex;flex-direction:column;gap:4px}
+.home-task-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--r);cursor:pointer;transition:.12s;border:1px solid var(--border)}
+.home-task-item:hover{background:var(--bg3);border-color:var(--border2)}
+.home-task-name{font-size:12px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-task-why{font-size:10px;color:var(--text2)}
+.home-more-btn{width:100%;padding:8px;margin-top:8px;border-radius:var(--r);font-size:11px;font-weight:600;border:1px solid var(--accent);background:var(--adim);color:var(--accent2);cursor:pointer;transition:.12s}
+.home-more-btn:hover{background:var(--accent);color:#fff}
+.home-empty{padding:16px;text-align:center;font-size:12px;color:var(--text2)}
+.home-perf-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.home-perf-kpi{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center}
+.home-perf-v{font-size:22px;font-weight:800;line-height:1.2}
+.home-perf-l{font-size:10px;color:var(--text2);margin-top:3px}
+.home-insight{border-radius:var(--r);padding:10px 12px;margin-bottom:6px;font-size:12px;line-height:1.5}
+.home-insight-good{background:var(--gdim);border:1px solid var(--green);color:var(--green)}
+.home-insight-warn{background:var(--ydim);border:1px solid var(--yellow);color:var(--yellow)}
+.home-insight-bad{background:var(--rdim);border:1px solid var(--red);color:var(--red)}
+.home-insight-msg{font-weight:600;margin-bottom:2px}
+.home-insight-sug{font-size:11px;opacity:.8}
+/* V3: Task Runner */
+.task-empty{padding:40px;text-align:center;font-size:13px;color:var(--text2)}
+.task-stats{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.task-stat-chip{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--bg3)}
+.task-cards{display:flex;flex-direction:column;gap:8px}
+.task-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px;cursor:pointer;transition:.15s}
+.task-card:hover{border-color:var(--accent);background:var(--bg3)}
+.task-card-top{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.task-type-badge{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.task-c-accent{background:var(--adim);color:var(--accent2);border:1px solid var(--accent)}
+.task-c-green{background:var(--gdim);color:var(--green);border:1px solid var(--green)}
+.task-c-yellow{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}
+.task-c-red{background:var(--rdim);color:var(--red);border:1px solid var(--red)}
+.task-c-accent2{background:rgba(108,180,255,.12);color:var(--accent2);border:1px solid var(--accent2)}
+.task-c-text2{background:var(--bg4);color:var(--text2);border:1px solid var(--border)}
+.task-priority{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 6px;border-radius:3px}
+.task-p-critical{background:var(--rdim);color:var(--red)}
+.task-p-high{background:var(--ydim);color:var(--yellow)}
+.task-p-medium{background:var(--adim);color:var(--accent2)}
+.task-p-normal{background:var(--bg4);color:var(--text2)}
+.task-p-low{color:var(--text2)}
+.task-aging{font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;margin-left:auto}
+.task-aging-critical{background:var(--rdim);color:var(--red)}
+.task-aging-high{background:var(--ydim);color:var(--yellow)}
+.task-aging-medium{background:var(--adim);color:var(--accent2)}
+.task-card-name{font-size:14px;font-weight:700;margin-bottom:2px}
+.task-card-co{font-size:11px;color:var(--text2);margin-bottom:8px}
+.task-card-meta{display:flex;gap:8px;font-size:11px;color:var(--text2);margin-bottom:10px}
+.task-card-meta span{background:var(--bg4);padding:2px 6px;border-radius:3px}
+.task-card-actions{display:flex;gap:6px}
+.task-btn{padding:5px 10px;border-radius:6px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.12s}
+.task-btn:hover{border-color:var(--accent);color:var(--accent2);background:var(--adim)}
+.task-btn-next{margin-left:auto;border-color:var(--accent);color:var(--accent2);background:var(--adim)}
+.task-btn-next:hover{background:var(--accent);color:#fff}
+/* V3: Filter chips */
+.fchip{padding:4px 10px;border-radius:6px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.12s}
+.fchip:hover{border-color:var(--accent);color:var(--accent2)}
+.fchip.on{background:var(--adim);border-color:var(--accent);color:var(--accent2)}
 /* History panel — expandable & copyable */
 .hist-panel{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:14px}
 .hist-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:.12s}
@@ -411,10 +484,12 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 <div id="topbar">
   <span class="logo"><span class="logo-name">ELUCY</span><span class="logo-badge">BY G4</span></span>
   <span style="font-size:10px;color:var(--text2);margin-left:-2px;letter-spacing:.3px">Sales Engagement</span>
-  <button class="ntab on" onclick="setScreen('home',this)">Pipeline</button>
-  <button class="ntab" onclick="setScreen('reports',this)">Relatórios</button>
-  <button class="ntab" onclick="setScreen('intelligence',this)">Inteligência</button>
-  <button class="ntab" onclick="setScreen('dm',this)">DM War Room</button>
+  <button class="ntab on" onclick="setScreen('home',this)">Home</button>
+  <button class="ntab" onclick="setScreen('pipeline',this)">Pipeline</button>
+  <button class="ntab" onclick="setScreen('tasks',this)">Tasks <span class="tab-count" id="task-count"></span></button>
+  <button class="ntab" onclick="setScreen('dm',this)">DM</button>
+  <button class="ntab" onclick="setScreen('reports',this)">Reports</button>
+  <button class="ntab" onclick="setScreen('intelligence',this)">Intel</button>
   <div class="tbr">
     <span class="op-pill" id="op-pill">CRM Sincronizado</span>
     <span class="streak-badge">🔥 7 dias</span>
@@ -524,14 +599,43 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
     </div>
   </div>
   <div id="ct">
+    <!-- V3: HOME — tela inicial operacional -->
     <div class="screen on" id="screen-home">
+      <div id="home-content">
+        <div class="home-loading">Carregando Home operacional...</div>
+      </div>
+    </div>
+
+    <!-- V3: PIPELINE — explorar deals (antigo home) -->
+    <div class="screen" id="screen-pipeline">
       <div class="empty" id="empty-state">
-        <div class="e-ic">📋</div>
+        <div class="e-ic">&#128203;</div>
         <div class="e-t">Selecione um deal</div>
         <div class="e-s">Clique em qualquer lead na lista ao lado para ver o contexto completo e gerar a copy.</div>
       </div>
       <!-- Deal screens carregados dinamicamente via selectLiveDeal() -->
-    </div><!-- /screen-home -->
+    </div>
+
+    <!-- V3: TASKS — FUP Task Runner -->
+    <div class="screen" id="screen-tasks">
+      <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:3px">Task Runner</div>
+          <div style="font-size:12px;color:var(--text2)">Execute tarefas em serie por prioridade e focus mode</div>
+        </div>
+        <div class="task-filters" id="task-filters">
+          <span class="fchip on" data-tfilter="all" onclick="window._filterTasks(null,this)">Todas</span>
+          <span class="fchip" data-tfilter="follow_up" onclick="window._filterTasks('follow_up',this)">FUP</span>
+          <span class="fchip" data-tfilter="social_dm" onclick="window._filterTasks('social_dm',this)">DM</span>
+          <span class="fchip" data-tfilter="reativacao" onclick="window._filterTasks('reativacao',this)">Reativ.</span>
+          <span class="fchip" data-tfilter="handoff_prep" onclick="window._filterTasks('handoff_prep',this)">Handoff</span>
+          <span class="fchip" data-tfilter="no_show_recovery" onclick="window._filterTasks('no_show_recovery',this)">No-Show</span>
+        </div>
+      </div>
+      <div id="task-runner-list">
+        <div class="task-empty">Carregue o pipeline para ver as tarefas.</div>
+      </div>
+    </div>
     <div class="screen" id="screen-reports">
       <div style="margin-bottom:16px">
         <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:3px">Relatorios</div>
@@ -780,18 +884,28 @@ let cur=null;
 function setScreen(n,el){
   document.querySelectorAll('#ct > .screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
-  const screenMap={home:'screen-home',reports:'screen-reports',intelligence:'screen-intelligence',dm:'screen-dm'};
+  const screenMap={home:'screen-home',pipeline:'screen-pipeline',tasks:'screen-tasks',reports:'screen-reports',intelligence:'screen-intelligence',dm:'screen-dm'};
   const target=document.getElementById(screenMap[n]||'screen-home');
   if(target) target.classList.add('on');
   if(el){ el.classList.add('on'); }
   else {
     const tabs=document.querySelectorAll('.ntab');
-    const idx=n==='home'?0:n==='reports'?1:n==='intelligence'?2:3;
+    const tabMap={home:0,pipeline:1,tasks:2,dm:3,reports:4,intelligence:5};
+    const idx=tabMap[n]!=null?tabMap[n]:0;
     if(tabs[idx]) tabs[idx].classList.add('on');
   }
+  if(n==='home' && window.renderHome) window.renderHome();
+  if(n==='tasks' && window.renderTaskRunner) window.renderTaskRunner();
   if(n==='intelligence') renderIntelligence();
   if(n==='reports') loadReportsScreen();
 }
+
+// V3: Task filter handler
+window._filterTasks = function(type, el){
+  document.querySelectorAll('#task-filters .fchip').forEach(c=>c.classList.remove('on'));
+  if(el) el.classList.add('on');
+  if(window.renderTaskRunner) window.renderTaskRunner(type);
+};
 
 function selectDeal(id){
   cur=id;
@@ -799,13 +913,13 @@ function selectDeal(id){
   const di=document.getElementById('di-'+id);
   if(di) di.classList.add('on');
   document.getElementById('empty-state').style.display='none';
-  document.querySelectorAll('#screen-home > .screen').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('#screen-pipeline > .screen').forEach(s=>s.classList.remove('on'));
   const ds=document.getElementById('deal-'+id);
   if(ds) ds.classList.add('on');
   // reset sub-panels
   document.querySelectorAll('[id^="er-"],[id^="dvl-"],[id^="menu-"],[id^="co-"],[id^="dma-"]').forEach(e=>e.style.display='none');
-  // ensure home screen + tab active via setScreen
-  setScreen('home',null);
+  // ensure pipeline screen + tab active via setScreen
+  setScreen('pipeline',null);
 }
 
 function toggleER(id){
@@ -2826,7 +2940,7 @@ function selectLiveDeal(id,d){
   const di=document.getElementById('di-'+id);
   if(di) di.classList.add('on');
   document.getElementById('empty-state').style.display='none';
-  document.querySelectorAll('#screen-home > .screen').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('#screen-pipeline > .screen').forEach(s=>s.classList.remove('on'));
   // Remove previous live card if exists
   const old=document.getElementById('deal-'+id);
   if(old) old.remove();
@@ -2948,8 +3062,8 @@ function selectLiveDeal(id,d){
       </div>
       <div class="hist-list" id="hist-list-${id}"></div>
     </div>`;
-  document.getElementById('screen-home').appendChild(dealCard);
-  setScreen('home',null);
+  document.getElementById('screen-pipeline').appendChild(dealCard);
+  setScreen('pipeline',null);
   // Carrega histórico do deal
   if(d.deal_id && window.IS_REMOTE) loadDealHistory(d.deal_id, id);
 }
