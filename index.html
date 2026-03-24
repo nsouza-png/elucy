@@ -297,6 +297,30 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .ba-htitle{font-family:var(--font-title);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
 .ba-b{padding:14px 17px;font-size:12px;line-height:1.7;white-space:pre-wrap}
 .ba-b h3,.ba-b strong{color:var(--accent2)}.ba-b table{width:100%;border-collapse:collapse;margin:8px 0}.ba-b th,.ba-b td{padding:5px 8px;border:1px solid var(--border);font-size:11px;text-align:left}.ba-b th{background:var(--bg3);color:var(--text2)}
+/* ── Markdown Renderer Styles ── */
+.md-body{font-size:12.5px;line-height:1.75;color:var(--text)}
+.md-body p.md-p{margin:0 0 6px}
+.md-body strong{color:var(--accent2)}
+.md-body em{color:var(--text2);font-style:italic}
+.md-h1{font-size:15px;font-weight:800;color:var(--accent);margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.md-h2{font-size:14px;font-weight:700;color:var(--accent);margin:14px 0 6px}
+.md-h3{font-size:13px;font-weight:700;color:var(--accent2);margin:12px 0 4px}
+.md-h4{font-size:12px;font-weight:600;color:var(--text);margin:10px 0 3px}
+.md-section{display:inline-block;background:var(--adim);border:1px solid var(--accent);border-radius:4px;padding:2px 10px;font-size:11px;font-weight:800;color:var(--accent2);margin:10px 0 6px;letter-spacing:.5px}
+.md-li{padding:3px 0 3px 14px;border-left:2px solid var(--border2);margin:2px 0}
+.md-li .md-num{color:var(--accent);font-weight:700;margin-right:2px}
+.md-hr{border:none;border-top:1px solid var(--border);margin:10px 0}
+.md-code{background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-family:'Consolas','Monaco',monospace;font-size:11px;color:var(--accent2)}
+.md-na{color:var(--yellow);font-style:italic;font-weight:600}
+.md-conf{font-weight:700;font-size:11px;padding:1px 4px;border-radius:3px}
+.md-conf-h{color:var(--green);background:var(--gdim)}
+.md-conf-m{color:var(--yellow);background:var(--ydim)}
+.md-conf-l{color:var(--red);background:var(--rdim)}
+.md-table{width:100%;border-collapse:collapse;margin:8px 0;font-size:11.5px}
+.md-table th{background:var(--bg4);color:var(--accent2);font-weight:700;padding:6px 10px;border:1px solid var(--border2);text-align:left}
+.md-table td{padding:5px 10px;border:1px solid var(--border);color:var(--text)}
+.md-table tr:hover td{background:var(--bg3)}
+/* ── end md styles ── */
 /* ELUCi motor styles */
 .elucy-badge{background:var(--adim);border:1px solid var(--accent);border-radius:3px;padding:1px 6px;font-size:9px;font-weight:800;color:var(--accent2);margin-left:6px;vertical-align:middle}
 .elucy-live{background:var(--gdim)!important;border-color:var(--green)!important;color:var(--green)!important}
@@ -2261,16 +2285,7 @@ function handleElucyResponse(row, pending){
 function injectBusinessAnalysis(targetId, output){
   const baEl=document.getElementById('ba-'+targetId);
   if(!baEl) return;
-  // Simple markdown-to-html for tables and headers
-  let html=escHtml(output)
-    .replace(/^### (.+)$/gm,'<h3 style="color:var(--accent2);margin:10px 0 4px;font-size:13px;font-weight:700">$1</h3>')
-    .replace(/^## (.+)$/gm,'<h3 style="color:var(--accent);margin:12px 0 6px;font-size:14px;font-weight:800">$1</h3>')
-    .replace(/^\*\*(.+?)\*\*/gm,'<strong>$1</strong>')
-    .replace(/^- (.+)$/gm,'<div style="padding:2px 0 2px 12px;border-left:2px solid var(--border)">$1</div>')
-    .replace(/\[Alta\]/g,'<span style="color:var(--green);font-weight:700">[Alta]</span>')
-    .replace(/\[Média\]/g,'<span style="color:var(--yellow);font-weight:700">[Média]</span>')
-    .replace(/\[Baixa\]/g,'<span style="color:var(--red);font-weight:700">[Baixa]</span>');
-  baEl.innerHTML='<div class="ba-h"><span class="ba-badge">ANÁLISE</span><span class="ba-htitle">Análise de Mercado</span><button class="hist-copy-btn" onclick="event.stopPropagation();clipText(document.getElementById(\'ba-content-'+targetId+'\').innerText)" style="position:static;margin-left:auto">Copiar</button></div><div class="ba-b" id="ba-content-'+targetId+'">'+html+'</div>';
+  baEl.innerHTML='<div class="ba-h"><span class="ba-badge">ANÁLISE</span><span class="ba-htitle">Análise de Mercado</span><button class="hist-copy-btn" onclick="event.stopPropagation();clipText(document.getElementById(\'ba-content-'+targetId+'\').innerText)" style="position:static;margin-left:auto">Copiar</button></div><div class="ba-b" id="ba-content-'+targetId+'">'+renderMd(output)+'</div>';
   baEl.style.display='block';
 }
 
@@ -2538,6 +2553,7 @@ async function requestElucyAnalysis(deal_id, dealData, targetId){
           injectElucyReport(targetId, output);
           logActivity('analysis_generated', deal_id);
           saveAPIResponse(deal_id, 'analyze', output);
+          logDealInteraction(deal_id, 'analysis', output);
           return;
         }
       } catch(apiErr) {
@@ -2609,11 +2625,12 @@ async function requestElucyCopy(deal_id, dealData, targetId, canal){
             ? apiResult.intelligence
             : (apiResult.intelligence.suggestedApproach || JSON.stringify(apiResult.intelligence));
           const waEl = document.getElementById('ct-'+targetId+'-wa');
-          if(waEl) waEl.textContent = output;
+          if(waEl) waEl.innerHTML = renderMd(output);
           const crmEl = document.getElementById('ct-'+targetId+'-crm');
-          if(crmEl) crmEl.textContent = output;
+          if(crmEl) crmEl.innerHTML = renderMd(output);
           logActivity('copy_generated', deal_id, {canal: canal||'WhatsApp'});
           saveAPIResponse(deal_id, 'copy', output);
+          logDealInteraction(deal_id, 'copy', output, {canal: canal||'WhatsApp'});
           return;
         }
       } catch(apiErr) {
@@ -2767,10 +2784,10 @@ REGRAS: Dados BR prioritários. Cite fonte+ano. Marque confiança [Alta]/[Média
         const apiResult = await callIntelligenceAPI(deal, 'business_analysis', prompt);
         if(apiResult && apiResult.intelligence){
           const output = typeof apiResult.intelligence === 'string' ? apiResult.intelligence : JSON.stringify(apiResult.intelligence, null, 2);
-          let html=escHtml(output).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/^(#+)\s*(.+)$/gm,(m,h,t)=>'<strong style="color:var(--clay)">'+t+'</strong>').replace(/\n/g,'<br>');
-          baEl.innerHTML='<div class="ba-h"><span class="ba-badge">ANÁLISE</span><span class="ba-htitle">Análise de Mercado</span><button class="hist-copy-btn" onclick="event.stopPropagation();clipText(document.getElementById(\'ba-content-'+id+'\').innerText)" style="position:static;margin-left:auto">Copiar</button></div><div class="ba-b" id="ba-content-'+id+'">'+html+'</div>';
+          baEl.innerHTML='<div class="ba-h"><span class="ba-badge">ANÁLISE</span><span class="ba-htitle">Análise de Mercado</span><button class="hist-copy-btn" onclick="event.stopPropagation();clipText(document.getElementById(\'ba-content-'+id+'\').innerText)" style="position:static;margin-left:auto">Copiar</button></div><div class="ba-b" id="ba-content-'+id+'">'+renderMd(output)+'</div>';
           logActivity('business_analysis_generated', deal.deal_id);
           saveAPIResponse(deal.deal_id, 'business_analysis', output);
+          logDealInteraction(deal.deal_id, 'business_analysis', output);
           return;
         }
       } catch(apiErr){
@@ -2820,6 +2837,45 @@ async function loadDealHistory(dealId, targetId){
   }catch(e){}
 }
 
+// ── AUTO-LOAD CACHED OUTPUTS (persiste entre reloads) ────────────────
+async function loadDealCache(dealId, targetId){
+  const sb=getSB();
+  const email=_currentUser&&_currentUser.email;
+  if(!sb||!email||!window.IS_REMOTE) return;
+  try{
+    const {data}=await sb.from('deal_interactions')
+      .select('interaction_type,content,created_at')
+      .eq('deal_id',dealId)
+      .eq('operator_id',email)
+      .in('interaction_type',['analysis','copy','business_analysis','note_crm'])
+      .order('created_at',{ascending:false})
+      .limit(50);
+    if(!data||!data.length) return;
+    const latest={};
+    data.forEach(row=>{
+      if(!latest[row.interaction_type]) latest[row.interaction_type]=row;
+    });
+    if(latest.analysis && latest.analysis.content){
+      ELUCY_CACHE[dealId]=latest.analysis.content;
+      injectElucyReport(targetId, latest.analysis.content);
+    }
+    if(latest.copy && latest.copy.content){
+      const waEl=document.getElementById('ct-'+targetId+'-wa');
+      const crmEl=document.getElementById('ct-'+targetId+'-crm');
+      const coEl=document.getElementById('co-'+targetId);
+      if(waEl) waEl.innerHTML=renderMd(latest.copy.content);
+      if(crmEl) crmEl.innerHTML=renderMd(latest.copy.content);
+      if(coEl) coEl.style.display='block';
+    }
+    if(latest.business_analysis && latest.business_analysis.content){
+      injectBusinessAnalysis(targetId, latest.business_analysis.content);
+    }
+    if(latest.note_crm && latest.note_crm.content){
+      injectNotaCRM(targetId, latest.note_crm.content);
+    }
+  }catch(e){ console.warn('loadDealCache error:', e); }
+}
+
 function renderDealHistory(targetId, interactions){
   const listEl=document.getElementById('hist-list-'+targetId);
   const countEl=document.getElementById('hist-count-'+targetId);
@@ -2840,9 +2896,9 @@ function renderDealHistory(targetId, interactions){
       '<div class="hist-item-body"><div class="hist-item-type">'+escHtml(label)+'</div>'+
       (preview?'<div class="hist-item-preview">'+escHtml(preview)+'…</div>':'')+
       '</div><span class="hist-item-ts">'+ts+'</span></div>'+
-      (output?'<div class="hist-expanded" id="'+hid+'"><button class="hist-copy-btn" onclick="event.stopPropagation();clipText(this.parentElement.querySelector(\'.hist-content\').textContent)">Copiar</button>'+
-      (i.interaction_type==='copy'||i.interaction_type==='dm'?'<button class="hist-copy-btn" onclick="event.stopPropagation();histWhatsApp(\''+targetId+'\',this.parentElement.querySelector(\'.hist-content\').textContent)" style="right:60px;border-color:#25d366;color:#25d366">📱 WA</button>':'')+
-      '<div class="hist-content">'+escHtml(output)+'</div></div>':'');
+      (output?'<div class="hist-expanded" id="'+hid+'"><button class="hist-copy-btn" onclick="event.stopPropagation();clipText(this.parentElement.querySelector(\'.hist-content\').innerText)">Copiar</button>'+
+      (i.interaction_type==='copy'||i.interaction_type==='dm'?'<button class="hist-copy-btn" onclick="event.stopPropagation();histWhatsApp(\''+targetId+'\',this.parentElement.querySelector(\'.hist-content\').innerText)" style="right:60px;border-color:#25d366;color:#25d366">📱 WA</button>':'')+
+      '<div class="hist-content">'+renderMd(output)+'</div></div>':'');
   }).join('');
 }
 function toggleHistPanel(id){
@@ -2911,6 +2967,7 @@ async function requestNotaCRM(id){
           injectNotaCRM(id, output);
           logActivity('note_generated', deal.deal_id);
           saveAPIResponse(deal.deal_id, 'note', output);
+          logDealInteraction(deal.deal_id, 'note_crm', output);
           return;
         }
       } catch(apiErr){
@@ -2941,9 +2998,7 @@ function injectNotaCRM(targetId, output){
   const notaEl=document.getElementById('nota-'+targetId);
   if(!notaEl) return;
   notaEl.dataset.loaded='1';
-  // Rich rendering: parse markdown-like structure into styled HTML
-  let html=renderNotaRich(output);
-  notaEl.innerHTML='<div class="nota-crm-card"><div class="nota-crm-header"><span class="nota-crm-badge">CRM</span><span class="nota-crm-title">Nota de Qualificação</span><button class="hist-copy-btn" onclick="event.stopPropagation();clipText(document.getElementById(\'nota-content-'+targetId+'\').innerText)" style="position:static;margin-left:auto">Copiar</button></div><div class="nota-crm-body" id="nota-content-'+targetId+'">'+html+'</div></div>';
+  notaEl.innerHTML='<div class="ba-h"><span class="ba-badge" style="background:var(--gdim);color:var(--green)">CRM</span><span class="ba-htitle">Nota de Qualificação</span><button class="hist-copy-btn" onclick="event.stopPropagation();clipText(document.getElementById(\'nota-content-'+targetId+'\').innerText)" style="position:static;margin-left:auto">Copiar</button></div><div class="ba-b" id="nota-content-'+targetId+'">'+renderMd(output)+'</div>';
   notaEl.style.display='block';
 }
 function renderNotaRich(text){
@@ -3179,15 +3234,15 @@ function injectElucyReport(targetId, report){
   const gov=extractSection(report,'GOVERNANCE FLAGS');
   const verdict=extractSection(report,'ELUCI VERDICT');
   reportEl.innerHTML=`
-    <div class="er-h"><span class="er-badge">ELUCI REPORT</span><span class="er-htitle">Deal Analisado pelo Motor ELUCY</span><span class="er-dqi elucy-live">LIVE</span></div>
-    ${context?`<div class="er-b"><div class="er-bl">ELUCI CONTEXT</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(context)}</pre></div></div>`:''}
-    ${diagnostic?`<div class="er-b"><div class="er-bl">DIAGNOSTIC CORE</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(diagnostic)}</pre></div></div>`:''}
-    ${directive?`<div class="er-b"><div class="er-bl">STRATEGIC DIRECTIVE</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(directive)}</pre></div></div>`:''}
-    ${nba?`<div class="er-b"><div class="er-bl">NEXT BEST ACTION</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(nba)}</pre></div></div>`:''}
-    ${bench?`<div class="er-b" style="border-left:3px solid var(--blue)"><div class="er-bl" style="color:var(--blue)">BENCHMARK CANAL</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(bench)}</pre></div></div>`:''}
-    ${gov?`<div class="er-b"><div class="er-bl">GOVERNANCE FLAGS</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(gov)}</pre></div></div>`:''}
-    ${verdict?`<div class="er-v"><div class="ev-s">V</div><div class="ev-t"><strong>ELUCI VERDICT</strong><br>${escHtml(verdict)}</div></div>`:''}
-    ${!context&&!directive?`<div class="er-b"><div class="er-bl">ANÁLISE COMPLETA</div><div class="er-bt"><pre style="white-space:pre-wrap;font-size:11px;font-family:inherit">${escHtml(report)}</pre></div></div>`:''}
+    <div class="er-h"><span class="er-badge">ELUCI REPORT</span><span class="er-htitle">Deal Analisado pelo Motor ELUCi</span><span class="er-dqi elucy-live">LIVE</span></div>
+    ${context?`<div class="er-b"><div class="er-bl">ELUCI CONTEXT</div><div class="er-bt">${renderMd(context)}</div></div>`:''}
+    ${diagnostic?`<div class="er-b"><div class="er-bl">DIAGNOSTIC CORE</div><div class="er-bt">${renderMd(diagnostic)}</div></div>`:''}
+    ${directive?`<div class="er-b"><div class="er-bl">STRATEGIC DIRECTIVE</div><div class="er-bt">${renderMd(directive)}</div></div>`:''}
+    ${nba?`<div class="er-b"><div class="er-bl">NEXT BEST ACTION</div><div class="er-bt">${renderMd(nba)}</div></div>`:''}
+    ${bench?`<div class="er-b" style="border-left:3px solid var(--blue)"><div class="er-bl" style="color:var(--blue)">BENCHMARK CANAL</div><div class="er-bt">${renderMd(bench)}</div></div>`:''}
+    ${gov?`<div class="er-b"><div class="er-bl">GOVERNANCE FLAGS</div><div class="er-bt">${renderMd(gov)}</div></div>`:''}
+    ${verdict?`<div class="er-v"><div class="ev-s">V</div><div class="ev-t"><strong>ELUCI VERDICT</strong><br>${renderMd(verdict)}</div></div>`:''}
+    ${!context&&!directive?`<div class="er-b"><div class="er-bl">ANÁLISE COMPLETA</div><div class="er-bt">${renderMd(report)}</div></div>`:''}
   `;
   reportEl.style.display='block';
 }
@@ -3209,6 +3264,53 @@ function extractSection(text, sectionName){
 
 function escHtml(s){
   return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── MARKDOWN RENDERER (LLM output → HTML bonito) ────────────────────
+function renderMd(raw){
+  if(!raw) return '';
+  let s = escHtml(raw);
+  s = s.replace(/((?:^\|.+\|$\n?)+)/gm, function(block){
+    const rows = block.trim().split('\n').filter(r=>r.trim());
+    if(rows.length<2) return block;
+    const sepIdx = rows.findIndex(r=>/^\|[\s\-:|]+\|$/.test(r));
+    let html='<table class="md-table"><thead><tr>';
+    const hdr = (sepIdx>0?rows[0]:rows[0]).replace(/^\||\|$/g,'').split('|');
+    hdr.forEach(c=>{ html+='<th>'+c.trim()+'</th>'; });
+    html+='</tr></thead><tbody>';
+    const startRow = sepIdx>=0 ? sepIdx+1 : 1;
+    for(let i=startRow;i<rows.length;i++){
+      const cells=rows[i].replace(/^\||\|$/g,'').split('|');
+      html+='<tr>';
+      cells.forEach(c=>{ html+='<td>'+c.trim()+'</td>'; });
+      html+='</tr>';
+    }
+    html+='</tbody></table>';
+    return html;
+  });
+  s = s.replace(/^#### (.+)$/gm,'<h4 class="md-h4">$1</h4>');
+  s = s.replace(/^### (.+)$/gm,'<h3 class="md-h3">$1</h3>');
+  s = s.replace(/^## (.+)$/gm,'<h2 class="md-h2">$1</h2>');
+  s = s.replace(/^# (.+)$/gm,'<h1 class="md-h1">$1</h1>');
+  s = s.replace(/\[(ELUCI CONTEXT|DIAGNOSTIC CORE|STRATEGIC DIRECTIVE|NEXT BEST ACTION|BENCHMARK CANAL|GOVERNANCE FLAGS|ELUCI VERDICT|NOTA DE QUALIFICAÇÃO[^\]]*|ELUCY —[^\]]*|FOLLOWUP[^\]]*)\]/g,
+    '<div class="md-section">$1</div>');
+  s = s.replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>');
+  s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  s = s.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g,'<em>$1</em>');
+  s = s.replace(/\[Alta\]/g,'<span class="md-conf md-conf-h">[Alta]</span>');
+  s = s.replace(/\[Média\]/g,'<span class="md-conf md-conf-m">[Média]</span>');
+  s = s.replace(/\[Baixa\]/g,'<span class="md-conf md-conf-l">[Baixa]</span>');
+  s = s.replace(/🔴|❌/g,'<span style="color:var(--red)">$&</span>');
+  s = s.replace(/🟡|⚠️/g,'<span style="color:var(--yellow)">$&</span>');
+  s = s.replace(/🟢|✅/g,'<span style="color:var(--green)">$&</span>');
+  s = s.replace(/^- (.+)$/gm,'<div class="md-li">$1</div>');
+  s = s.replace(/^(\d+)\. (.+)$/gm,'<div class="md-li"><span class="md-num">$1.</span> $2</div>');
+  s = s.replace(/^(━+|---+|\*\*\*+)$/gm,'<hr class="md-hr">');
+  s = s.replace(/`([^`]+)`/g,'<code class="md-code">$1</code>');
+  s = s.replace(/NAO_INFORMADO/g,'<span class="md-na">NAO_INFORMADO</span>');
+  s = s.replace(/\n\n/g,'</p><p class="md-p">');
+  s = s.replace(/\n/g,'<br>');
+  return '<div class="md-body"><p class="md-p">'+s+'</p></div>';
 }
 
 // Ouve respostas do Elucy vindas do G4 OS (local mode only)
@@ -3360,7 +3462,10 @@ function selectLiveDeal(id,d){
   document.getElementById('screen-pipeline').appendChild(dealCard);
   setScreen('pipeline',null);
   // Carrega histórico do deal
-  if(d.deal_id && window.IS_REMOTE) loadDealHistory(d.deal_id, id);
+  if(d.deal_id && window.IS_REMOTE){
+    loadDealHistory(d.deal_id, id);
+    loadDealCache(d.deal_id, id);
+  }
 }
 
 // ── WHATSAPP DEEP LINK ──
