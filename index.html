@@ -13,6 +13,10 @@
 <script>
 // Detecta se está rodando em GitHub Pages ou localmente
 window.IS_REMOTE = location.hostname !== '' && !location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1') && location.protocol !== 'file:';
+
+// ── INTELLIGENCE API CONFIG ──────────────────────────────────────────
+window.ELUCY_API_URL = localStorage.getItem('elucy_api_url') || 'https://ais-dev-p5y5aiegz6tlbpnz7o2es7-539675322859.us-east1.run.app/api/leads/ingest';
+window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false';
 </script>
 <script>
 // Só carrega cockpit-data.js em ambiente local (G4 OS)
@@ -1647,6 +1651,21 @@ function openSettings(){
       </div>
 
       <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
+        <div class="modal-s" style="font-weight:600;margin-bottom:6px">Intelligence API</div>
+        <div class="modal-f">
+          <label class="modal-l">URL da API</label>
+          <input class="modal-i" id="op-api-url" type="url" placeholder="https://..." value="${window.ELUCY_API_URL||''}" style="font-family:monospace;font-size:11px">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+          <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer">
+            <input type="checkbox" id="op-api-enabled" ${window.ELUCY_API_ENABLED?'checked':''}>
+            Motor LLM remoto ativo
+          </label>
+        </div>
+        <div class="modal-note">API do SDR Intelligence Hub. Quando ativo, o Cockpit chama a API diretamente em vez do Worker G4 OS. Se falhar, cai no fallback automático.</div>
+      </div>
+
+      <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
         <div class="modal-s" style="font-weight:600;margin-bottom:6px">Integrações</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <a href="https://web.whatsapp.com" target="_blank" rel="noopener" class="btn bs btn-sm" style="text-decoration:none;display:flex;align-items:center;gap:4px">
@@ -1689,6 +1708,18 @@ function saveOperator(){
   const tokenInput=document.getElementById('op-token-input');
   const token=(tokenInput?tokenInput.value:'').trim();
   if(token) localStorage.setItem('elucy_db_token',token);
+  // Salvar config da Intelligence API
+  const apiUrlInput=document.getElementById('op-api-url');
+  const apiEnabledInput=document.getElementById('op-api-enabled');
+  if(apiUrlInput){
+    const apiUrl=apiUrlInput.value.trim();
+    if(apiUrl){ localStorage.setItem('elucy_api_url',apiUrl); window.ELUCY_API_URL=apiUrl; }
+  }
+  if(apiEnabledInput){
+    const enabled=apiEnabledInput.checked;
+    localStorage.setItem('elucy_api_enabled',enabled?'true':'false');
+    window.ELUCY_API_ENABLED=enabled;
+  }
   // Limpa cache de nome se o email mudou (força novo lookup)
   const prev=localStorage.getItem('elucy_operator_email');
   if(prev!==email) localStorage.removeItem('elucy_qualificador_name');
@@ -2334,6 +2365,68 @@ function showNotificationBadge(n){
   showSyncToast('ok',n.title||'Conteúdo pronto');
 }
 
+// ── INTELLIGENCE API — MOTOR LLM REMOTO ──────────────────────────────
+async function callIntelligenceAPI(dealData, requestType, extraContext){
+  const url = window.ELUCY_API_URL;
+  if(!url) throw new Error('API URL não configurada');
+  const sdrId = getOperatorId() || 'anonymous';
+  const body = {
+    sdrId: sdrId,
+    leadData: {
+      name: dealData.contact_name || '',
+      company: dealData.faixa_de_faturamento || dealData.p_segmento || '',
+      role: dealData.cargo || '',
+      email: dealData.email_lead || '',
+      linkedin: ''
+    },
+    context: JSON.stringify({
+      request_type: requestType,
+      deal_id: dealData.deal_id || '',
+      fase: dealData.fase_atual_no_processo || '',
+      etapa: dealData.etapa_atual_no_pipeline || '',
+      tier: dealData.tier_da_oportunidade || '',
+      delta_t: dealData.delta_t || 0,
+      linha_receita: dealData.linha_de_receita_vigente || '',
+      grupo_receita: dealData.grupo_de_receita || '',
+      proprietario: dealData.proprietario_name || '',
+      qualificador: dealData.qualificador_name || '',
+      canal_marketing: dealData.canal_de_marketing || '',
+      utm_medium: dealData.utm_medium || '',
+      revenue: dealData.revenue || 0,
+      perfil: dealData.perfil || '',
+      segmento: dealData.p_segmento || '',
+      cluster_rfm: dealData.p_cluster_rfm || '',
+      primeiro_produto: dealData.p_primeiro_produto || '',
+      ultimo_produto: dealData.p_ultimo_produto || '',
+      pa_cliente: dealData.p_pa_cliente || 'false',
+      faixa_funcionarios: dealData.faixa_de_funcionarios || '',
+      extra: extraContext || ''
+    })
+  };
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if(!resp.ok) throw new Error('API retornou ' + resp.status);
+  return await resp.json();
+}
+
+async function saveAPIResponse(dealId, requestType, output){
+  const sb = getSB();
+  const email = _currentUser && _currentUser.email;
+  if(!sb || !email || !window.IS_REMOTE) return;
+  try {
+    await sb.from('cockpit_responses').insert({
+      operator_id: email,
+      deal_id: dealId,
+      request_type: requestType,
+      output: typeof output === 'string' ? output : JSON.stringify(output),
+      model_used: 'intelligence-api-v1'
+    });
+  } catch(e) { console.warn('Erro ao salvar resposta API:', e); }
+}
+
 async function requestElucyAnalysis(deal_id, dealData, targetId){
   if(ELUCY_CACHE[deal_id]){
     injectElucyReport(targetId, ELUCY_CACHE[deal_id]);
@@ -2346,10 +2439,30 @@ async function requestElucyAnalysis(deal_id, dealData, targetId){
   }
 
   if(window.IS_REMOTE){
-    // Remote mode: INSERT into cockpit_requests via Supabase
     const sb=getSB();
     const email=_currentUser&&_currentUser.email;
     if(!sb||!email) return;
+
+    // ── FAST PATH: Intelligence API ──
+    if(window.ELUCY_API_ENABLED && window.ELUCY_API_URL){
+      try {
+        const apiResult = await callIntelligenceAPI(dealData, 'analyze', '');
+        if(apiResult && apiResult.intelligence){
+          const output = typeof apiResult.intelligence === 'string'
+            ? apiResult.intelligence
+            : JSON.stringify(apiResult.intelligence, null, 2);
+          ELUCY_CACHE[deal_id] = output;
+          injectElucyReport(targetId, output);
+          logActivity('analysis_generated', deal_id);
+          saveAPIResponse(deal_id, 'analyze', output);
+          return;
+        }
+      } catch(apiErr) {
+        console.warn('Intelligence API falhou, fallback para worker:', apiErr.message);
+      }
+    }
+
+    // ── FALLBACK: Supabase worker queue ──
     initRealtimeSubscription();
     const {data,error}=await sb.from('cockpit_requests').insert({
       operator_id: email,
@@ -2403,6 +2516,29 @@ async function requestElucyCopy(deal_id, dealData, targetId, canal){
     const sb=getSB();
     const email=_currentUser&&_currentUser.email;
     if(!sb||!email) return;
+
+    // ── FAST PATH: Intelligence API ──
+    if(window.ELUCY_API_ENABLED && window.ELUCY_API_URL){
+      try {
+        const apiResult = await callIntelligenceAPI(dealData, 'copy', 'canal:'+(canal||'WhatsApp'));
+        if(apiResult && apiResult.intelligence){
+          const output = typeof apiResult.intelligence === 'string'
+            ? apiResult.intelligence
+            : (apiResult.intelligence.suggestedApproach || JSON.stringify(apiResult.intelligence));
+          const waEl = document.getElementById('ct-'+targetId+'-wa');
+          if(waEl) waEl.textContent = output;
+          const crmEl = document.getElementById('ct-'+targetId+'-crm');
+          if(crmEl) crmEl.textContent = output;
+          logActivity('copy_generated', deal_id, {canal: canal||'WhatsApp'});
+          saveAPIResponse(deal_id, 'copy', output);
+          return;
+        }
+      } catch(apiErr) {
+        console.warn('Intelligence API falhou, fallback para worker:', apiErr.message);
+      }
+    }
+
+    // ── FALLBACK: Supabase worker queue ──
     initRealtimeSubscription();
     const {data,error}=await sb.from('cockpit_requests').insert({
       operator_id: email,
