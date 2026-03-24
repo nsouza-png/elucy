@@ -241,6 +241,9 @@ window.calcEfficiencyByChannel = calcEfficiencyByChannel;
 
 function enrichDealContext(deal){
   if(!deal._revLine) deal._revLine = resolveRevenueLine(deal);
+  // Resolve delta real antes de aging/opp (usa created_at como fallback)
+  if(!deal._delta&&!deal.delta) deal._delta = resolveRealDelta(deal);
+  deal.delta = deal._delta || deal.delta || 0;
   if(!deal._aging) deal._aging = calcAgingRisk(deal);
   if(!deal._oppValue){
     var ov = calcOpportunityValue(deal);
@@ -249,6 +252,8 @@ function enrichDealContext(deal){
   }
   deal._persona = resolvePersona(deal.tier||deal._tier);
   deal._framework = resolveFramework(deal.tier||deal._tier);
+  // Timeline Intelligence — métricas temporais completas
+  deal._timeline = calcTimelineIntelligence(deal);
   // Next best action
   deal._nextAction = deriveNextAction(deal);
   return deal;
@@ -1309,6 +1314,207 @@ async function updateTodayStats(){
 window.updateTodayStats = updateTodayStats;
 setInterval(function(){ if(getOperatorId()) updateTodayStats(); },60000);
 setTimeout(function(){ if(getOperatorId()) updateTodayStats(); },2000);
+
+// ==================================================================
+// LAYER 8 — TIMELINE INTELLIGENCE ENGINE
+// Extrai métricas temporais do event stream do funil_comercial.
+// Cada deal tem N eventos (MQL, SAL, Conectado, task, call...).
+// O sync traz apenas o último snapshot; este motor reconstroi
+// inteligência a partir de created_at, event_timestamp e delta_t.
+// ==================================================================
+
+// Resolve delta real: Databricks delta_t > calc via created_at_crm > 0
+function resolveRealDelta(deal){
+  var d=parseInt(deal.delta_t||deal.delta||deal._delta)||0;
+  if(!d){
+    var crmDate=deal.created_at_crm||deal.createdAtCrm||deal.created_at||'';
+    if(crmDate){ var dt=new Date(crmDate); if(!isNaN(dt)){ d=Math.max(0,Math.floor((Date.now()-dt.getTime())/86400000)); } }
+  }
+  return d;
+}
+window.resolveRealDelta = resolveRealDelta;
+
+// Calcula todas as métricas temporais derivadas de um deal
+function calcTimelineIntelligence(deal){
+  var now=Date.now();
+  var created=deal.created_at_crm||deal.createdAtCrm||deal.created_at||'';
+  var createdMs=created?new Date(created).getTime():0;
+  var closedAt=deal.closed_at||'';
+  var closedMs=closedAt?new Date(closedAt).getTime():0;
+  var delta=resolveRealDelta(deal);
+  var etapa=(deal.etapa||deal.etapa_atual_no_pipeline||deal._etapa||'').toLowerCase();
+  var fase=(deal.fase||deal.fase_atual_no_processo||deal._fase||'').toLowerCase();
+  var status=(deal.statusDeal||deal.status_do_deal||'').toLowerCase();
+  var revLine=deal._revLine||resolveRevenueLine(deal);
+  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.imersao;
+
+  // ── IDADE DO DEAL ──
+  var ageDays=delta;
+  var ageWeeks=Math.floor(ageDays/7);
+  var ageBucket=ageDays<=3?'fresh':ageDays<=7?'active':ageDays<=14?'warm':ageDays<=21?'cooling':'stale';
+
+  // ── VELOCIDADE DE PROGRESSÃO ──
+  // Mapa de ordem de etapas do SDR
+  var ETAPA_ORDER={'novo lead':1,'dia 01':2,'dia 02':3,'dia 03':4,'dia 04':5,'dia 05':6,'dia 06':7,'conectados':8,'agendamento':9,'reagendamento':10,'entrevista agendada':11};
+  var currentStageOrder=ETAPA_ORDER[etapa]||0;
+  // Velocidade: etapas avançadas / dias. Mais alto = mais rápido
+  var velocity=ageDays>0&&currentStageOrder>0?Math.round(currentStageOrder/ageDays*100)/100:0;
+  // Benchmark médio: ~1 etapa a cada 2 dias = 0.5
+  var velocityLabel=velocity>=1.0?'Acelerado':velocity>=0.5?'Normal':velocity>=0.2?'Lento':'Parado';
+  var velocityScore=velocity>=1.0?100:velocity>=0.5?75:velocity>=0.2?50:velocity>0?25:0;
+
+  // ── SLA E RISCO TEMPORAL ──
+  var riskAfter=lc.risk_after||3;
+  var daysOverSLA=Math.max(0,ageDays-riskAfter);
+  var slaStatus=ageDays<=riskAfter?'on_track':ageDays<=riskAfter*2?'at_risk':ageDays<=riskAfter*3?'overdue':'critical';
+  var slaLabel=slaStatus==='on_track'?'No prazo':slaStatus==='at_risk'?'Atenção':slaStatus==='overdue'?'Atrasado':'Crítico';
+  // Dias restantes estimados até SLA (negativo = já passou)
+  var daysToSLA=riskAfter-ageDays;
+
+  // ── JANELA DE AÇÃO (Action Window) ──
+  // Quanto tempo o SDR tem antes de o deal esfriar demais
+  var actionWindowDays=Math.max(0,riskAfter*2-ageDays);
+  var actionUrgency=actionWindowDays<=0?'expired':actionWindowDays<=1?'today':actionWindowDays<=3?'this_week':'comfortable';
+  var actionLabel=actionUrgency==='expired'?'Janela fechada':actionUrgency==='today'?'Agir HOJE':actionUrgency==='this_week'?'Esta semana':'Confortável';
+
+  // ── TEMPO NA ETAPA ATUAL ──
+  // Se delta_t do Databricks é entre transições, usa ele; senão estima via idade total
+  var daysInCurrentStage=parseInt(deal.delta_t)||0;
+  if(!daysInCurrentStage) daysInCurrentStage=ageDays; // fallback: todo tempo na mesma etapa
+  var stageStagnation=daysInCurrentStage>riskAfter*2?'stagnant':daysInCurrentStage>riskAfter?'slow':'healthy';
+
+  // ── PROBABILIDADE DE CONVERSÃO DECAÍDA POR TEMPO ──
+  var baseProbability=STAGE_PROB[etapa]||0.10;
+  // Decai exponencialmente após SLA: prob * e^(-0.05 * daysOverSLA)
+  var timeDecay=daysOverSLA>0?Math.exp(-0.05*daysOverSLA):1.0;
+  var adjustedProbability=Math.round(baseProbability*timeDecay*1000)/1000;
+  // Probability trend: se delta estiver crescendo sem avançar de etapa
+  var probTrend=timeDecay>=0.9?'stable':timeDecay>=0.7?'declining':timeDecay>=0.4?'dropping':'collapsing';
+
+  // ── DATA DE CRIAÇÃO FORMATADA ──
+  var createdDate='';
+  var createdAgo='';
+  if(createdMs){
+    var cd=new Date(createdMs);
+    createdDate=cd.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+    createdAgo=ageDays===0?'hoje':ageDays===1?'ontem':ageDays+'d atrás';
+  }
+
+  // ── DATA DE FECHAMENTO (se deal fechado) ──
+  var closedDate='';
+  var timeToClose=0;
+  if(closedMs&&createdMs){
+    closedDate=new Date(closedMs).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+    timeToClose=Math.floor((closedMs-createdMs)/86400000);
+  }
+
+  // ── PREVISÃO DE FECHAMENTO (se deal aberto) ──
+  // Baseado na velocidade atual + etapas restantes até Entrevista Agendada
+  var etapasRestantes=Math.max(0,11-currentStageOrder); // 11 = Entrevista Agendada
+  var estimatedDaysToClose=velocity>0?Math.round(etapasRestantes/velocity):etapasRestantes*3;
+  var estimatedCloseDate='';
+  if(status!=='perdido'&&status!=='ganho'&&createdMs){
+    var ecd=new Date(now+estimatedDaysToClose*86400000);
+    estimatedCloseDate=ecd.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  }
+
+  // ── MELHOR HORÁRIO PARA CONTATO (baseado no created_at) ──
+  var bestContactHour='';
+  if(createdMs){
+    var h=new Date(createdMs).getHours();
+    bestContactHour=h<12?'Manhã ('+h+'h criado)':'Tarde ('+(h>18?h-12:h)+'h criado)';
+  }
+
+  // ── DIA DA SEMANA DE CRIAÇÃO ──
+  var createdDayOfWeek='';
+  if(createdMs){
+    var days=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    createdDayOfWeek=days[new Date(createdMs).getDay()];
+  }
+
+  // ── SCORE COMPOSTO DE TIMING ──
+  // 0-100: combina velocidade, SLA, probabilidade ajustada, janela de ação
+  var timingScore=Math.round(
+    velocityScore*0.25 +
+    (slaStatus==='on_track'?100:slaStatus==='at_risk'?60:slaStatus==='overdue'?30:10)*0.25 +
+    (adjustedProbability*100/0.55)*0.25 + // normalizado pelo max (entrevista agendada = 0.55)
+    (actionUrgency==='comfortable'?100:actionUrgency==='this_week'?70:actionUrgency==='today'?40:10)*0.25
+  );
+  timingScore=Math.min(100,Math.max(0,timingScore));
+
+  // ── NEXT ACTION TEMPORAL ──
+  var nextActionTemporal='';
+  if(status==='perdido'||status==='ganho'){
+    nextActionTemporal='Deal fechado em '+closedDate;
+  } else if(actionUrgency==='expired'){
+    nextActionTemporal='Janela expirada ('+ageDays+'d). Considerar reativação ou perda.';
+  } else if(actionUrgency==='today'){
+    nextActionTemporal='URGENTE: última janela. Contato imediato.';
+  } else if(slaStatus==='overdue'){
+    nextActionTemporal='SLA estourado há '+daysOverSLA+'d. Priorizar.';
+  } else if(slaStatus==='at_risk'){
+    nextActionTemporal='SLA em '+Math.abs(daysToSLA)+'d. Agendar ação.';
+  } else if(velocityLabel==='Parado'){
+    nextActionTemporal='Sem avanço de etapa. Mudar abordagem.';
+  } else {
+    nextActionTemporal='No ritmo. Próxima ação em ~'+Math.max(1,daysToSLA)+'d.';
+  }
+
+  return {
+    // Idade
+    ageDays:ageDays, ageWeeks:ageWeeks, ageBucket:ageBucket,
+    // Velocidade
+    velocity:velocity, velocityLabel:velocityLabel, velocityScore:velocityScore,
+    currentStageOrder:currentStageOrder,
+    // SLA
+    riskAfter:riskAfter, daysOverSLA:daysOverSLA, daysToSLA:daysToSLA,
+    slaStatus:slaStatus, slaLabel:slaLabel,
+    // Janela de ação
+    actionWindowDays:actionWindowDays, actionUrgency:actionUrgency, actionLabel:actionLabel,
+    // Estagnação
+    daysInCurrentStage:daysInCurrentStage, stageStagnation:stageStagnation,
+    // Probabilidade
+    baseProbability:baseProbability, timeDecay:timeDecay,
+    adjustedProbability:adjustedProbability, probTrend:probTrend,
+    // Datas
+    createdDate:createdDate, createdAgo:createdAgo,
+    closedDate:closedDate, timeToClose:timeToClose,
+    estimatedCloseDate:estimatedCloseDate, estimatedDaysToClose:estimatedDaysToClose,
+    // Padrões de contato
+    bestContactHour:bestContactHour, createdDayOfWeek:createdDayOfWeek,
+    // Score
+    timingScore:timingScore,
+    // Ação
+    nextActionTemporal:nextActionTemporal
+  };
+}
+window.calcTimelineIntelligence = calcTimelineIntelligence;
+
+// Versão batch: calcula para todos os deals e retorna analytics agregados
+function calcPipelineTimingAnalytics(allDeals){
+  if(!allDeals||!allDeals.length) return null;
+  var timelines=allDeals.map(function(d){ return calcTimelineIntelligence(d); });
+  var open=timelines.filter(function(t){ return t.ageBucket!=='closed'; });
+  var avgAge=open.length?Math.round(open.reduce(function(s,t){return s+t.ageDays;},0)/open.length):0;
+  var avgVelocity=open.length?Math.round(open.reduce(function(s,t){return s+t.velocity;},0)/open.length*100)/100:0;
+  var avgTimingScore=open.length?Math.round(open.reduce(function(s,t){return s+t.timingScore;},0)/open.length):0;
+  var slaBreaches=open.filter(function(t){return t.slaStatus==='overdue'||t.slaStatus==='critical';}).length;
+  var actionToday=open.filter(function(t){return t.actionUrgency==='today'||t.actionUrgency==='expired';}).length;
+  var stagnant=open.filter(function(t){return t.stageStagnation==='stagnant';}).length;
+  var byBucket={fresh:0,active:0,warm:0,cooling:0,stale:0};
+  open.forEach(function(t){ byBucket[t.ageBucket]=(byBucket[t.ageBucket]||0)+1; });
+  var bySLA={on_track:0,at_risk:0,overdue:0,critical:0};
+  open.forEach(function(t){ bySLA[t.slaStatus]=(bySLA[t.slaStatus]||0)+1; });
+  var avgProbability=open.length?Math.round(open.reduce(function(s,t){return s+t.adjustedProbability;},0)/open.length*1000)/1000:0;
+  return {
+    totalDeals:allDeals.length, openDeals:open.length,
+    avgAge:avgAge, avgVelocity:avgVelocity, avgTimingScore:avgTimingScore,
+    avgAdjustedProbability:avgProbability,
+    slaBreaches:slaBreaches, actionToday:actionToday, stagnantDeals:stagnant,
+    byAgeBucket:byBucket, bySLA:bySLA
+  };
+}
+window.calcPipelineTimingAnalytics = calcPipelineTimingAnalytics;
 
 // ==================================================================
 // INIT
