@@ -1967,11 +1967,19 @@ const COL={};
 function renderLiveDeals(rows,cols){
   cols.forEach((c,i)=>COL[c.name]=i);
   function g(row,name){const i=COL[name];return i!=null?row[i]||'':'';}
+  function resolveDelta(row){
+    let d=parseInt(g(row,'delta_t'))||0;
+    if(!d){
+      const crmDate=g(row,'created_at_crm')||g(row,'created_at')||'';
+      if(crmDate){ const dt=new Date(crmDate); if(!isNaN(dt)){ d=Math.max(0,Math.floor((Date.now()-dt.getTime())/86400000)); } }
+    }
+    return d;
+  }
   function tempClass(score){return score>=70?'th':score>=40?'tw':'tc';}
   function tempLabel(score){return score>=70?'Quente':score>=40?'Morno':'Frio';}
   function calcTemp(row){
     const etapa=g(row,'etapa_atual_no_pipeline')||'';
-    const delta=parseInt(g(row,'delta_t'))||0;
+    const delta=resolveDelta(row);
     const skipped=String(g(row,'event_skipped')).toLowerCase()==='true';
     // Base por etapa
     let t=50;
@@ -2057,7 +2065,7 @@ function renderLiveDeals(rows,cols){
     const statusDeal=g(row,'status_do_deal')||'';
     const motivoLost=g(row,'motivo_lost')||'';
     const tier=(g(row,'tier_da_oportunidade')||'').toLowerCase();
-    const delta=parseInt(g(row,'delta_t'))||0;
+    const delta=resolveDelta(row);
     // Canal: derivado da linha_de_receita_vigente (canônico) com fallback utm_medium
     const linhaReceita=g(row,'linha_de_receita_vigente')||'';
     const utm=g(row,'utm_medium')||'';
@@ -2132,8 +2140,8 @@ function renderLiveDeals(rows,cols){
   // Update stats (apenas deals abertos)
   const openRows=rows.filter(r=>{const s=(g(r,'status_do_deal')||'').toLowerCase();return s!=='perdido'&&s!=='ganho';});
   const ativos=openRows.length;
-  const slaCount=openRows.filter(r=>(parseInt(g(r,'delta_t'))||0)>7).length;
-  const acaoHoje=openRows.filter(r=>{const d=parseInt(g(r,'delta_t'))||0;return d>=0&&d<=3;}).length;
+  const slaCount=openRows.filter(r=>resolveDelta(r)>7).length;
+  const acaoHoje=openRows.filter(r=>{const d=resolveDelta(r);return d>=0&&d<=3;}).length;
   const sa=document.getElementById('stat-ativos');if(sa) sa.textContent=ativos;
   const sac=document.getElementById('stat-acao');if(sac) sac.textContent=acaoHoje;
   const ss=document.getElementById('stat-sla');if(ss) ss.textContent=slaCount;
