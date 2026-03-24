@@ -14,8 +14,9 @@
 // Detecta se está rodando em GitHub Pages ou localmente
 window.IS_REMOTE = location.hostname !== '' && !location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1') && location.protocol !== 'file:';
 
-// ── INTELLIGENCE API CONFIG ──────────────────────────────────────────
-window.ELUCY_API_URL = localStorage.getItem('elucy_api_url') || 'https://ais-dev-p5y5aiegz6tlbpnz7o2es7-539675322859.us-east1.run.app/api/leads/ingest';
+// ── CLAUDE API CONFIG (Motor LLM do Elucy Webapp) ───────────────────
+window.ELUCY_API_KEY = localStorage.getItem('elucy_api_key') || '';
+window.ELUCY_API_MODEL = localStorage.getItem('elucy_api_model') || 'claude-sonnet-4-20250514';
 window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false';
 </script>
 <script>
@@ -1651,18 +1652,27 @@ function openSettings(){
       </div>
 
       <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
-        <div class="modal-s" style="font-weight:600;margin-bottom:6px">Intelligence API</div>
+        <div class="modal-s" style="font-weight:600;margin-bottom:6px">ELUCi Motor LLM</div>
         <div class="modal-f">
-          <label class="modal-l">URL da API</label>
-          <input class="modal-i" id="op-api-url" type="url" placeholder="https://..." value="${window.ELUCY_API_URL||''}" style="font-family:monospace;font-size:11px">
+          <label class="modal-l">API Key (Anthropic)</label>
+          <input class="modal-i" id="op-api-key" type="password" placeholder="sk-ant-api03-..." value="" autocomplete="off" style="font-family:monospace;font-size:11px">
+        </div>
+        ${window.ELUCY_API_KEY?'<div style="font-size:10px;color:var(--green);margin-top:4px">Key configurada ✓ (••••'+window.ELUCY_API_KEY.slice(-8)+')</div>':'<div style="font-size:10px;color:var(--yellow);margin-top:4px">Sem key — ELUCi usará o Worker G4 OS como fallback.</div>'}
+        <div class="modal-f" style="margin-top:8px">
+          <label class="modal-l">Modelo</label>
+          <select class="modal-i" id="op-api-model" style="font-size:12px">
+            <option value="claude-sonnet-4-20250514" ${window.ELUCY_API_MODEL==='claude-sonnet-4-20250514'?'selected':''}>Claude Sonnet 4 (rápido)</option>
+            <option value="claude-opus-4-20250514" ${window.ELUCY_API_MODEL==='claude-opus-4-20250514'?'selected':''}>Claude Opus 4 (profundo)</option>
+            <option value="claude-haiku-4-5-20251001" ${window.ELUCY_API_MODEL==='claude-haiku-4-5-20251001'?'selected':''}>Claude Haiku 4.5 (econômico)</option>
+          </select>
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
           <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer">
             <input type="checkbox" id="op-api-enabled" ${window.ELUCY_API_ENABLED?'checked':''}>
-            Motor LLM remoto ativo
+            Motor LLM direto ativo
           </label>
         </div>
-        <div class="modal-note">API do SDR Intelligence Hub. Quando ativo, o Cockpit chama a API diretamente em vez do Worker G4 OS. Se falhar, cai no fallback automático.</div>
+        <div class="modal-note">Claude API direta com todos os 40 MCPs do Elucy. Quando ativo, análises e copys são geradas em tempo real sem depender do G4 OS. Fallback automático para o Worker se falhar.</div>
       </div>
 
       <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
@@ -1708,12 +1718,17 @@ function saveOperator(){
   const tokenInput=document.getElementById('op-token-input');
   const token=(tokenInput?tokenInput.value:'').trim();
   if(token) localStorage.setItem('elucy_db_token',token);
-  // Salvar config da Intelligence API
-  const apiUrlInput=document.getElementById('op-api-url');
+  // Salvar config do Motor LLM (Claude API)
+  const apiKeyInput=document.getElementById('op-api-key');
+  const apiModelInput=document.getElementById('op-api-model');
   const apiEnabledInput=document.getElementById('op-api-enabled');
-  if(apiUrlInput){
-    const apiUrl=apiUrlInput.value.trim();
-    if(apiUrl){ localStorage.setItem('elucy_api_url',apiUrl); window.ELUCY_API_URL=apiUrl; }
+  if(apiKeyInput){
+    const key=apiKeyInput.value.trim();
+    if(key){ localStorage.setItem('elucy_api_key',key); window.ELUCY_API_KEY=key; }
+  }
+  if(apiModelInput){
+    const model=apiModelInput.value;
+    localStorage.setItem('elucy_api_model',model); window.ELUCY_API_MODEL=model;
   }
   if(apiEnabledInput){
     const enabled=apiEnabledInput.checked;
@@ -2376,51 +2391,116 @@ function showNotificationBadge(n){
   showSyncToast('ok',n.title||'Conteúdo pronto');
 }
 
-// ── INTELLIGENCE API — MOTOR LLM REMOTO ──────────────────────────────
+// ── CLAUDE API — MOTOR LLM DO ELUCY WEBAPP ──────────────────────────
+
+let _mcpBundle = null;
+async function loadMCPBundle(){
+  if(_mcpBundle) return _mcpBundle;
+  try {
+    const resp = await fetch('mcps.json');
+    if(resp.ok) _mcpBundle = await resp.json();
+  } catch(e){ console.warn('Erro ao carregar MCPs:', e); }
+  return _mcpBundle || {};
+}
+
+const MCP_MAP = {
+  analyze: ['eluci-core','lead-profile','output-schema','signals','strategy','cse-engine','behavior','segments','conversion','iron-dome'],
+  copy: ['eluci-core','playbooks','playbook-sdr','cse-engine','blde','fip','sdr-social-dm','behavior','signals','output-schema'],
+  note: ['eluci-core','output-schema','data-contract','validation-forms','funnel','lead-profile','guardrails'],
+  business_analysis: ['eluci-core','strategy','revops-gtm','produtos-g4','bench-canais','segments','revenue-line-matrix'],
+  dm_copy: ['eluci-core','sdr-social-dm','fip','blde','behavior','playbook-sdr','signals'],
+  coaching: ['eluci-core','sdr-coaching','training-scenarios','playbook-sdr','guardrails']
+};
+
+function buildDealContext(dealData){
+  const t = dealData._timeline || {};
+  return `DEAL CONTEXT:
+- deal_id: ${dealData.deal_id||''}
+- contact_name: ${dealData.contact_name||dealData.nome||''}
+- cargo: ${dealData.cargo||''}
+- empresa/email: ${dealData.emailLead||dealData.email_lead||dealData.empresa||''}
+- faixa_faturamento: ${dealData.faixa_de_faturamento||''}
+- faixa_funcionarios: ${dealData.faixa_de_funcionarios||dealData.faixaFunc||''}
+- perfil: ${dealData.perfil||''}
+- etapa_pipeline: ${dealData.etapa||dealData.etapa_atual_no_pipeline||''}
+- fase_processo: ${dealData.fase||dealData.fase_atual_no_processo||''}
+- tier: ${dealData.tier||dealData.tier_da_oportunidade||''}
+- delta_t: ${dealData.delta||dealData._delta||0} dias
+- canal: ${dealData.canal||''}
+- linha_receita: ${dealData.linhaReceita||dealData.linha_de_receita_vigente||''}
+- grupo_receita: ${dealData.grupo_de_receita||''}
+- utm_medium: ${dealData.utm_medium||''}
+- proprietario: ${dealData.proprietario_name||''}
+- qualificador: ${dealData.qualificador_name||''}
+- canal_marketing: ${dealData.canal_de_marketing||''}
+- revenue: ${dealData.revenueRaw||dealData.revenue||0}
+- status_deal: ${dealData.statusDeal||dealData.status_do_deal||''}
+- motivo_lost: ${dealData.motivoLost||dealData.motivo_lost||''}
+- created_at_crm: ${dealData.createdAtCrm||dealData.created_at_crm||''}
+- p_segmento: ${dealData.p_segmento||''}
+- p_cluster_rfm: ${dealData.p_cluster_rfm||''}
+- p_primeiro_produto: ${dealData.p_primeiro_produto||''}
+- p_ultimo_produto: ${dealData.p_ultimo_produto||''}
+- p_pa_cliente: ${dealData.p_pa_cliente||'false'}
+- p_negociacoes_ganhas: ${dealData.p_negociacoes_ganhas||0}
+- p_receita_total: ${dealData.p_receita_total||0}
+TIMELINE INTELLIGENCE:
+- age_days: ${t.ageDays||0} | velocity: ${t.velocity||0} etapas/dia (${t.velocityLabel||'?'})
+- sla: ${t.slaLabel||'?'} (${t.daysToSLA||0}d) | timing_score: ${t.timingScore||0}/100
+- prob_ajustada: ${t.adjustedProbability?Math.round(t.adjustedProbability*100)+'%':'?'} | action: ${t.actionLabel||'?'}
+- estimated_close: ${t.estimatedCloseDate||'?'}`;
+}
+
+const REQUEST_PROMPTS = {
+  analyze: 'Gere um [ELUCI REPORT] completo para este deal. Inclua: DIAGNÓSTICO (situação atual com dados do CRM), QUALIFICAÇÃO (ICP fit, tier assessment, persona), RISCO (aging, SLA, sinais), ESTRATÉGIA (framework recomendado, próximos 3 passos), PREVISÃO (probabilidade ajustada, valor estimado). Formato: backstage para o operador (clínico, bullet points, sem filtro).',
+  copy: 'Gere a próxima mensagem de follow-up para este deal. Canal indicado no context. Formato: FRONTSTAGE (texto pronto para copiar e colar, tom do canal, sem termos internos). Adicione uma versão WhatsApp e uma nota CRM curta.',
+  note: 'Gere uma nota de qualificação CRM para este deal. Formato canônico do output-schema. Preencha todos os campos com dados disponíveis. Marque NAO_INFORMADO onde faltar dado. Inclua DQI score.',
+  business_analysis: 'Gere uma análise de mercado/setor para o segmento deste deal. Inclua: PANORAMA DO SETOR, TOP PLAYERS, TENDÊNCIAS, LACUNAS, JOGADAS ESTRATÉGICAS. Dados BR prioritários. Cite confiança [Alta]/[Média]/[Baixa].',
+  dm_copy: 'Gere uma copy de Social DM (Instagram) para este deal. Tom do founder (definido pelo utm_medium). Objetivo: tensão de custo de inação. PROIBIDO: mencionar G4, produto, preço, call anterior.',
+  coaching: 'Analise a performance do operador neste deal e gere feedback de coaching. Inclua: o que fez bem, onde errou, próxima ação recomendada, score de execução.'
+};
+
 async function callIntelligenceAPI(dealData, requestType, extraContext){
-  const url = window.ELUCY_API_URL;
-  if(!url) throw new Error('API URL não configurada');
-  const sdrId = getOperatorId() || 'anonymous';
-  const body = {
-    sdrId: sdrId,
-    leadData: {
-      name: dealData.contact_name || '',
-      company: dealData.faixa_de_faturamento || dealData.p_segmento || '',
-      role: dealData.cargo || '',
-      email: dealData.email_lead || '',
-      linkedin: ''
-    },
-    context: JSON.stringify({
-      request_type: requestType,
-      deal_id: dealData.deal_id || '',
-      fase: dealData.fase_atual_no_processo || '',
-      etapa: dealData.etapa_atual_no_pipeline || '',
-      tier: dealData.tier_da_oportunidade || '',
-      delta_t: dealData.delta_t || 0,
-      linha_receita: dealData.linha_de_receita_vigente || '',
-      grupo_receita: dealData.grupo_de_receita || '',
-      proprietario: dealData.proprietario_name || '',
-      qualificador: dealData.qualificador_name || '',
-      canal_marketing: dealData.canal_de_marketing || '',
-      utm_medium: dealData.utm_medium || '',
-      revenue: dealData.revenue || 0,
-      perfil: dealData.perfil || '',
-      segmento: dealData.p_segmento || '',
-      cluster_rfm: dealData.p_cluster_rfm || '',
-      primeiro_produto: dealData.p_primeiro_produto || '',
-      ultimo_produto: dealData.p_ultimo_produto || '',
-      pa_cliente: dealData.p_pa_cliente || 'false',
-      faixa_funcionarios: dealData.faixa_de_funcionarios || '',
-      extra: extraContext || ''
-    })
-  };
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+  const apiKey = window.ELUCY_API_KEY;
+  if(!apiKey) throw new Error('API key não configurada');
+  const model = window.ELUCY_API_MODEL || 'claude-sonnet-4-20250514';
+
+  const bundle = await loadMCPBundle();
+  const mcpSlugs = MCP_MAP[requestType] || MCP_MAP.analyze;
+  let systemParts = [];
+  mcpSlugs.forEach(slug => {
+    if(bundle[slug] && bundle[slug].content){
+      systemParts.push('<document name="'+slug+'">\n'+bundle[slug].content+'\n</document>');
+    }
   });
-  if(!resp.ok) throw new Error('API retornou ' + resp.status);
-  return await resp.json();
+  const systemPrompt = systemParts.join('\n\n');
+
+  const dealCtx = buildDealContext(dealData);
+  const prompt = REQUEST_PROMPTS[requestType] || REQUEST_PROMPTS.analyze;
+  const userMsg = dealCtx + '\n\n' + prompt + (extraContext ? '\n\nCONTEXTO EXTRA: '+extraContext : '');
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: model,
+      max_tokens: 4096,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userMsg }]
+    })
+  });
+  if(!resp.ok){
+    const errBody = await resp.text().catch(()=>'');
+    throw new Error('Claude API ' + resp.status + ': ' + errBody.slice(0,200));
+  }
+  const result = await resp.json();
+  const text = (result.content || []).filter(c=>c.type==='text').map(c=>c.text).join('\n');
+  return { intelligence: text, model: result.model, usage: result.usage };
 }
 
 async function saveAPIResponse(dealId, requestType, output){
@@ -2455,7 +2535,7 @@ async function requestElucyAnalysis(deal_id, dealData, targetId){
     if(!sb||!email) return;
 
     // ── FAST PATH: Intelligence API ──
-    if(window.ELUCY_API_ENABLED && window.ELUCY_API_URL){
+    if(window.ELUCY_API_ENABLED && window.ELUCY_API_KEY){
       try {
         const apiResult = await callIntelligenceAPI(dealData, 'analyze', '');
         if(apiResult && apiResult.intelligence){
@@ -2529,7 +2609,7 @@ async function requestElucyCopy(deal_id, dealData, targetId, canal){
     if(!sb||!email) return;
 
     // ── FAST PATH: Intelligence API ──
-    if(window.ELUCY_API_ENABLED && window.ELUCY_API_URL){
+    if(window.ELUCY_API_ENABLED && window.ELUCY_API_KEY){
       try {
         const apiResult = await callIntelligenceAPI(dealData, 'copy', 'canal:'+(canal||'WhatsApp'));
         if(apiResult && apiResult.intelligence){
