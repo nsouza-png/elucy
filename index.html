@@ -354,7 +354,16 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .elucy-pulse{font-size:12px;color:var(--accent2);font-weight:600;animation:elucy-blink 1.2s ease-in-out infinite}
 @keyframes elucy-blink{0%,100%{opacity:1}50%{opacity:.35}}
 /* Filtros e ordenação */
-.sb-filters{padding:6px 14px 8px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:5px}
+.sb-filters-toggle{display:flex;align-items:center;justify-content:space-between;padding:6px 14px;cursor:pointer;border-bottom:1px solid var(--border);flex-shrink:0;user-select:none}
+.sb-filters-toggle:hover{background:var(--bg3)}
+.tgl-arrow{font-size:11px;color:var(--text2);transition:transform .2s}.tgl-arrow.up{transform:rotate(180deg)}
+.sb-filters{padding:6px 14px 8px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:5px;overflow:hidden;transition:max-height .25s ease,padding .25s ease;max-height:300px}
+.sb-filters.collapsed{max-height:0;padding-top:0;padding-bottom:0;border-bottom:none}
+.ig-toggle{display:flex;align-items:center;justify-content:space-between;padding:8px 0;cursor:pointer;user-select:none;margin-bottom:4px}
+.ig-toggle:hover .ig-toggle-label{color:var(--text)}
+.ig-toggle-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.ig-toggle .tgl-arrow{font-size:10px}
+.info-grid.collapsed{display:none}
 .filter-row{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
 .filter-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;width:100%}
 .fchip{padding:4px 10px;border-radius:14px;font-size:10px;font-weight:600;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;transition:.12s}
@@ -586,7 +595,11 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
     <div class="sb-search">
       <input class="srch" id="srch-input" placeholder="Buscar lead..." oninput="applyFilters()">
     </div>
-    <div class="sb-filters">
+    <div class="sb-filters-toggle" onclick="document.getElementById('sb-filters-body').classList.toggle('collapsed');this.querySelector('.tgl-arrow').classList.toggle('up')">
+      <span style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Filtros</span>
+      <span class="tgl-arrow">▾</span>
+    </div>
+    <div class="sb-filters" id="sb-filters-body">
       <div class="filter-row">
         <span class="filter-label">Etapa</span>
         <span class="fchip on" data-filter="etapa" data-val="todos" onclick="toggleFilter(this,'etapa')">Todos</span>
@@ -3363,6 +3376,10 @@ function selectLiveDeal(id,d){
         <div class="tg-row"><span class="tg-lbl">Temperatura do Deal</span><span class="tgv ${tgvClass}">${d.temp}</span></div>
         <div class="bar"><div class="bf ${barClass}" style="width:${d.temp}%"></div></div>
         <div class="tg-sub">${tempSub}</div>
+      </div>
+      <div class="ig-toggle" onclick="this.nextElementSibling.classList.toggle('collapsed');this.querySelector('.tgl-arrow').classList.toggle('up')">
+        <span class="ig-toggle-label">Detalhes do Deal</span>
+        <span class="tgl-arrow">▾</span>
       </div>
       <div class="info-grid">
         <div class="ic"><div class="ic-l">Etapa</div><div class="ic-v">${d.etapa||d.fase}</div><div class="ic-s">${d.fase?'Fase: '+d.fase+' · ':''}${d.delta} dias no CRM${d._timeline?' · Criado '+d._timeline.createdDate:''}</div></div>
