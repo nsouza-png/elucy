@@ -2473,10 +2473,10 @@ TIMELINE INTELLIGENCE:
 
 const REQUEST_PROMPTS = {
   analyze: 'Gere um [ELUCI REPORT] completo para este deal. Inclua: DIAGNÓSTICO (situação atual com dados do CRM), QUALIFICAÇÃO (ICP fit, tier assessment, persona), RISCO (aging, SLA, sinais), ESTRATÉGIA (framework recomendado, próximos 3 passos), PREVISÃO (probabilidade ajustada, valor estimado). Formato: backstage para o operador (clínico, bullet points, sem filtro).',
-  copy: 'Gere a próxima mensagem de follow-up para este deal. Canal indicado no context. Formato: FRONTSTAGE (texto pronto para copiar e colar, tom do canal, sem termos internos). Adicione uma versão WhatsApp e uma nota CRM curta.',
+  copy: 'Gere a próxima mensagem de follow-up para este deal. Canal indicado no context.\n\nFORMATO OBRIGATÓRIO — use exatamente estes headers separadores:\n\nVERSÃO WHATSAPP:\n(texto pronto para copiar e colar direto no WhatsApp — sem formatação markdown, sem termos internos, tom do canal, curto e direto)\n\nNOTA CRM:\n(nota curta para registrar no CRM — ação executada, próximo passo, DQI)\n\nIMPORTANTE: A versão WhatsApp deve ser APENAS o texto da mensagem. Sem headers, sem análise, sem contexto backstage. O operador vai copiar e colar direto.',
   note: 'Gere uma nota de qualificação CRM para este deal. Formato canônico do output-schema. Preencha todos os campos com dados disponíveis. Marque NAO_INFORMADO onde faltar dado. Inclua DQI score.',
   business_analysis: 'Gere uma análise de mercado/setor para o segmento deste deal. Inclua: PANORAMA DO SETOR, TOP PLAYERS, TENDÊNCIAS, LACUNAS, JOGADAS ESTRATÉGICAS. Dados BR prioritários. Cite confiança [Alta]/[Média]/[Baixa].',
-  dm_copy: 'Gere uma copy de Social DM (Instagram) para este deal. Tom do founder (definido pelo utm_medium). Objetivo: tensão de custo de inação. PROIBIDO: mencionar G4, produto, preço, call anterior.',
+  dm_copy: 'Gere uma copy de Social DM (Instagram) para este deal. Tom do founder (definido pelo utm_medium). Objetivo: tensão de custo de inação. PROIBIDO: mencionar G4, produto, preço, call anterior.\n\nFORMATO OBRIGATÓRIO:\n\nDM PRONTO PARA COLAR:\n(texto da DM direto, sem formatação, sem headers — copiar e colar no Instagram)\n\nNOTA CRM:\n(nota curta para CRM)',
   coaching: 'Analise a performance do operador neste deal e gere feedback de coaching. Inclua: o que fez bem, onde errou, próxima ação recomendada, score de execução.'
 };
 
@@ -2617,6 +2617,36 @@ async function requestElucyAnalysis(deal_id, dealData, targetId){
   }
 }
 
+// Extrai seções do output de copy: WhatsApp msg separada de nota CRM e backstage
+function parseCopyOutput(raw){
+  if(!raw) return {wa:'',crm:'',full:''};
+  let wa='', crm='', full=raw;
+  const waPatterns = [
+    /(?:VERS[ÃA]O\s+WHATSAPP|MENSAGEM\s+WHATSAPP|WHATSAPP)\s*:?\s*\n([\s\S]*?)(?=\n(?:VERS[ÃA]O\s+EMAIL|NOTA\s+CRM|NOTA\s+DE\s+QUALIFICA|CRM\s*:|EMAIL|DM\s+PRONTO|\[D\d|━|---|\*\*\*|$))/i,
+    /📱\s*(?:WhatsApp|WA)\s*:?\s*\n([\s\S]*?)(?=\n(?:📝|📋|NOTA|EMAIL|CRM|\[D\d|━|---|\*\*\*|$))/i
+  ];
+  for(const pat of waPatterns){
+    const m = raw.match(pat);
+    if(m && m[1] && m[1].trim().length > 20){ wa = m[1].trim(); break; }
+  }
+  const crmPatterns = [
+    /(?:NOTA\s+CRM|NOTA\s+DE\s+QUALIFICA[ÇC][ÃA]O)\s*:?\s*\n([\s\S]*?)$/i,
+    /📝\s*(?:Nota\s+CRM|CRM)\s*:?\s*\n([\s\S]*?)$/i,
+    /\[D\d[^\]]*\]\s*\n?([\s\S]*?)$/i
+  ];
+  for(const pat of crmPatterns){
+    const m = raw.match(pat);
+    if(m && m[1] && m[1].trim().length > 10){ crm = m[1].trim(); break; }
+  }
+  if(!wa){
+    const dmMatch = raw.match(/DM\s+PRONTO\s+PARA\s+COLAR\s*:?\s*\n([\s\S]*?)(?=\n(?:NOTA|CRM|━|---|\*\*\*|$))/i);
+    if(dmMatch && dmMatch[1]) wa = dmMatch[1].trim();
+  }
+  if(!wa) wa = raw;
+  if(!crm) crm = raw;
+  return {wa, crm, full: raw};
+}
+
 async function requestElucyCopy(deal_id, dealData, targetId, canal){
   const copyEl=document.getElementById('co-'+targetId);
   if(copyEl){
@@ -2637,10 +2667,13 @@ async function requestElucyCopy(deal_id, dealData, targetId, canal){
           const output = typeof apiResult.intelligence === 'string'
             ? apiResult.intelligence
             : (apiResult.intelligence.suggestedApproach || JSON.stringify(apiResult.intelligence));
+          const parsed = parseCopyOutput(output);
           const waEl = document.getElementById('ct-'+targetId+'-wa');
-          if(waEl) waEl.innerHTML = renderMd(output);
+          if(waEl) waEl.innerHTML = renderMd(parsed.wa);
           const crmEl = document.getElementById('ct-'+targetId+'-crm');
-          if(crmEl) crmEl.innerHTML = renderMd(output);
+          if(crmEl) crmEl.innerHTML = renderMd(parsed.crm);
+          const coEl = document.getElementById('co-'+targetId);
+          if(coEl) coEl.style.display='block';
           logActivity('copy_generated', deal_id, {canal: canal||'WhatsApp'});
           saveAPIResponse(deal_id, 'copy', output);
           logDealInteraction(deal_id, 'copy', output, {canal: canal||'WhatsApp'});
@@ -2873,11 +2906,12 @@ async function loadDealCache(dealId, targetId){
       injectElucyReport(targetId, latest.analysis.content);
     }
     if(latest.copy && latest.copy.content){
+      const parsed=parseCopyOutput(latest.copy.content);
       const waEl=document.getElementById('ct-'+targetId+'-wa');
       const crmEl=document.getElementById('ct-'+targetId+'-crm');
       const coEl=document.getElementById('co-'+targetId);
-      if(waEl) waEl.innerHTML=renderMd(latest.copy.content);
-      if(crmEl) crmEl.innerHTML=renderMd(latest.copy.content);
+      if(waEl) waEl.innerHTML=renderMd(parsed.wa);
+      if(crmEl) crmEl.innerHTML=renderMd(parsed.crm);
       if(coEl) coEl.style.display='block';
     }
     if(latest.business_analysis && latest.business_analysis.content){
