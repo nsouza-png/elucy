@@ -2981,8 +2981,13 @@ function histWhatsApp(targetId, text){
   let num=phone.replace(/\D/g,'');
   if(num.length===10||num.length===11) num='55'+num;
   const encoded=encodeURIComponent(msg);
-  if(num) window.open('https://api.whatsapp.com/send?phone='+num+'&text='+encoded,'_blank');
-  else window.open('https://api.whatsapp.com/send?text='+encoded,'_blank');
+  if(num){
+    window.open('https://api.whatsapp.com/send?phone='+num+'&text='+encoded,'_blank');
+  } else {
+    navigator.clipboard.writeText(msg).catch(()=>{});
+    window.open('https://api.whatsapp.com/send?text='+encoded,'_blank');
+    showSyncToast('warn','Telefone do lead indisponível — texto copiado.');
+  }
 }
 
 // ── NOTA DE QUALIFICAÇÃO CRM ──────────────────────────────────────
@@ -3524,13 +3529,19 @@ function openWhatsApp(id, phone){
   // Pega o texto da copy atual
   const el=document.getElementById('ct-'+id+'-wa');
   const text=el?el.textContent||el.innerText:'';
-  // Normalizar telefone: remover tudo que não é dígito
-  let num=(phone||'').replace(/\D/g,'');
+  // Normalizar telefone: tentar param, depois deal map
+  let raw=phone||'';
+  if(!raw){
+    const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
+    raw=(deal&&(deal.telefone||deal.p_telefone))||'';
+  }
+  let num=raw.replace(/\D/g,'');
   if(!num){
-    // Sem telefone — copia e abre wa.me sem número
+    // Sem telefone — copia texto e abre wa.me sem número
+    if(text){navigator.clipboard.writeText(text).catch(()=>{});}
     const encoded=encodeURIComponent(text);
     window.open('https://api.whatsapp.com/send?text='+encoded,'_blank');
-    showSyncToast('ok','WhatsApp aberto (sem número do lead).');
+    showSyncToast('warn','Telefone do lead indisponível — texto copiado. Cole no chat do lead.');
     return;
   }
   // Garantir código de país BR
