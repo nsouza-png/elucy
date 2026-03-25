@@ -729,7 +729,7 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
       <span style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Filtros</span>
       <span class="tgl-arrow">▾</span>
     </div>
-    <div class="sb-filters" id="sb-filters-body">
+    <div class="sb-filters collapsed" id="sb-filters-body">
       <div class="filter-row">
         <span class="filter-label">Etapa</span>
         <span class="fchip on" data-filter="etapa" data-val="todos" onclick="toggleFilter(this,'etapa')">Todos</span>
@@ -3726,7 +3726,7 @@ function selectLiveDeal(id,d){
         <span class="ig-toggle-label">Detalhes do Deal</span>
         <span class="tgl-arrow">▾</span>
       </div>
-      <div class="info-grid">
+      <div class="info-grid collapsed">
         <div class="ic"><div class="ic-l">Etapa</div><div class="ic-v">${d.etapa||d.fase}</div><div class="ic-s">${d.fase?'Fase: '+d.fase+' · ':''}${d.delta} dias no CRM${d._timeline?' · Criado '+d._timeline.createdDate:''}</div></div>
         <div class="ic"><div class="ic-l">Canal</div><div class="ic-v">${d.canal}</div><div class="ic-s">${d.linhaReceita||d.utm_medium||'—'}</div></div>
         <div class="ic"><div class="ic-l">Dia FUP</div><div class="ic-v">${d.dd}</div><div class="ic-s">${d._timeline?d._timeline.actionLabel:''}</div></div>
