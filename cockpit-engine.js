@@ -609,6 +609,21 @@ window.texDisp = function(btn){
 
 // Skip: go to next without logging
 window.texSkip = function(){
+  var t = _texQueue[_texIdx];
+  // V5: persist skip to deal_tasks
+  if(t){
+    var sb = window._sb ? window._sb() : null;
+    var opId = window.getOperatorId ? window.getOperatorId() : null;
+    if(sb && opId){
+      sb.from('deal_tasks')
+        .update({ task_status:'skipped', completed_at: new Date().toISOString(), disposition:'skipped_by_operator' })
+        .eq('deal_id', t.deal.deal_id || t.id)
+        .eq('operator_email', opId)
+        .eq('task_type', t.taskType)
+        .in('task_status', ['pending','ready','in_progress'])
+        .then(function(res){ if(res.error) console.warn('[task-persist] skip error:', res.error.message); });
+    }
+  }
   if(_texIdx < _texQueue.length - 1){
     _texIdx++;
     _texUpdateUI();
@@ -653,6 +668,22 @@ window.texComplete = function(){
         elapsed_seconds: _texSeconds
       })
     }).then(function(){});
+  }
+
+  // V5: persist completion to deal_tasks
+  if(sb && opId){
+    sb.from('deal_tasks')
+      .update({
+        task_status: 'completed',
+        completed_at: new Date().toISOString(),
+        disposition: _texDisposition || 'resolved',
+        result_payload: JSON.stringify({ elapsed_seconds: _texSeconds, dealName: t.deal.nome })
+      })
+      .eq('deal_id', t.deal.deal_id || t.id)
+      .eq('operator_email', opId)
+      .eq('task_type', t.taskType)
+      .in('task_status', ['pending','ready','in_progress'])
+      .then(function(res){ if(res.error) console.warn('[task-persist] complete error:', res.error.message); });
   }
 
   // Advance cadence step if this task is from a cadence
