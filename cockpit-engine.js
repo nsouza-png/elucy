@@ -1,9 +1,10 @@
 // ==================================================================
-// ELUCY COCKPIT ENGINE v6.0 — 13-Layer Architecture
+// ELUCY COCKPIT ENGINE v7.0 — 14-Layer Architecture
 // 1. Operator Context | 2. Taxonomy Core | 3. Runtime Deal Context
 // 4. Task Execution | 5. Analytics | 6. UI State | 7. Product Intelligence
 // 8. Cadence Engine | 9. Runtime Sync | 10. Taxonomy Loader
 // 11. DM Touchpoints | 12. Snapshot Scheduler | 13. V6 Forecast Calculator
+// 14. Operator Performance Model
 // Incluir APOS cockpit.html carregar (antes do </body>)
 // ==================================================================
 
@@ -2987,6 +2988,472 @@ async function syncForecastRuntime(){
 }
 window.syncForecastRuntime = syncForecastRuntime;
 
-console.log('[cockpit-engine v6.0] 13-Layer Architecture loaded — V6 Forecast Engine');
+// ==================================================================
+// LAYER 14 — OPERATOR PERFORMANCE MODEL
+// 6 blocos: Volume, Conversao, Velocidade/Disciplina, Qualidade (DQI),
+// Forecast Quality, Impacto em Receita. Score final ponderado.
+// Spec: 7 perguntas do SDR respondidas com metricas objetivas.
+// ==================================================================
+
+// Normalization helper: clamp to [0, 1]
+function _norm(val, max){ return Math.max(0, Math.min(1, (val||0) / Math.max(max, 1))); }
+function _pct(num, den){ return den > 0 ? num / den : 0; }
+
+async function calcOperatorPerformance(periodType, periodKey){
+  var sb = _sb(); if(!sb) return null;
+  var email = getOperatorId(); if(!email) return null;
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var deals = Object.keys(map).map(function(k){ return map[k]; });
+
+  // ---- Fetch activity_log for this operator (current month or period) ----
+  var actFilter = {};
+  var now = new Date();
+  if(!periodType) periodType = 'monthly';
+  if(!periodKey) periodKey = now.toISOString().slice(0,7); // 2026-03
+
+  var startDate, endDate;
+  if(periodType === 'daily'){
+    startDate = periodKey + 'T00:00:00'; endDate = periodKey + 'T23:59:59';
+  } else if(periodType === 'weekly'){
+    // periodKey = 2026-W13 — approximate start
+    startDate = periodKey.replace(/W(\d+)/, function(m,w){
+      var d = new Date(parseInt(periodKey), 0, 1 + (parseInt(w)-1)*7);
+      return d.toISOString().slice(0,10);
+    }) + 'T00:00:00';
+    endDate = now.toISOString();
+  } else {
+    startDate = periodKey + '-01T00:00:00';
+    endDate = periodKey + '-31T23:59:59';
+  }
+
+  var actRes = await sb.from('activity_log')
+    .select('activity_type,deal_id,created_at,metadata')
+    .eq('operator_id', email)
+    .gte('created_at', startDate)
+    .lte('created_at', endDate);
+  var activities = (actRes.data || []);
+
+  // ---- Fetch deal_runtime for this operator ----
+  var rtRes = await sb.from('deal_runtime')
+    .select('deal_id,current_stage,aging_days,risk_state,signal_state,temperature_score,value_score,next_best_action,show_state,last_touch_at')
+    .eq('operator_email', email);
+  var runtimeDeals = (rtRes.data || []);
+
+  // ---- Fetch forecast_runtime ----
+  var fcRes = await sb.from('forecast_runtime')
+    .select('deal_id,forecast_score_adjusted,forecast_confidence,forecast_value,confidence_level,note_weight,show_weight,next_step_weight')
+    .eq('operator_email', email);
+  var forecasts = (fcRes.data || []);
+
+  // ---- Fetch note_analysis for quality ----
+  var naRes = await sb.from('note_analysis')
+    .select('deal_id,quality_score,sentiment,pain_detected,authority_identified,next_step_clear,advancement_signal')
+    .eq('operator_email', email);
+  var noteAnalyses = (naRes.data || []);
+  var noteByDeal = {};
+  noteAnalyses.forEach(function(n){ noteByDeal[n.deal_id] = n; });
+
+  // ---- Fetch deals for conversion data ----
+  var dealsRes = await sb.from('deals')
+    .select('deal_id,fase_atual_no_processo,etapa_atual_no_pipeline,status_do_deal,revenue,valor_da_oportunidade,created_at_crm')
+    .eq('operator_email', email);
+  var allDeals = (dealsRes.data || []);
+
+  // ==================================================
+  // BLOCO 1: VOLUME OPERACIONAL
+  // ==================================================
+  var vol = { deals_trabalhados:0, fups:0, dms:0, calls:0, notes:0, analyses:0, copies:0, meetings_booked:0, handoffs:0, meetings_realized:0 };
+  var dealsTrabalhados = {};
+  activities.forEach(function(a){
+    var t = a.activity_type || '';
+    if(a.deal_id) dealsTrabalhados[a.deal_id] = true;
+    if(t === 'fup_sent' || t === 'task_completed') vol.fups++;
+    if(t === 'dm_generated' || t === 'dm_sent') vol.dms++;
+    if(t === 'call_logged') vol.calls++;
+    if(t === 'note_created') vol.notes++;
+    if(t === 'analysis_generated') vol.analyses++;
+    if(t === 'copy_generated') vol.copies++;
+    if(t === 'meeting_booked') vol.meetings_booked++;
+    if(t === 'meeting_realized' || t === 'meeting_completed') vol.meetings_realized++;
+    if(t === 'handoff_done') vol.handoffs++;
+    if(t === 'deal_opened') dealsTrabalhados[a.deal_id] = true;
+  });
+  vol.deals_trabalhados = Object.keys(dealsTrabalhados).length;
+
+  // Metas por periodo
+  var metaMensal = _operatorCtx.meta_mensal || { fups:300, qualificacoes:100, handoffs:40 };
+  var daysInPeriod = periodType === 'daily' ? 1 : periodType === 'weekly' ? 5 : 22;
+  var metaFups = Math.ceil(metaMensal.fups / 22 * daysInPeriod);
+  var metaQual = Math.ceil(metaMensal.qualificacoes / 22 * daysInPeriod);
+  var metaHandoffs = Math.ceil(metaMensal.handoffs / 22 * daysInPeriod);
+
+  var volume_score = +(
+    ( _norm(vol.deals_trabalhados, metaQual)
+    + _norm(vol.fups, metaFups)
+    + _norm(vol.dms, Math.ceil(metaFups * 0.3))
+    + _norm(vol.analyses + vol.copies, Math.ceil(metaQual * 0.5))
+    + _norm(vol.notes, Math.ceil(metaQual * 0.7))
+    ) / 5
+  ).toFixed(4);
+
+  // ==================================================
+  // BLOCO 2: CONVERSAO
+  // ==================================================
+  var funnel = { mql:0, sal:0, conectado:0, agendamento:0, show:0, opp:0, won:0, lost:0 };
+  allDeals.forEach(function(d){
+    var fase = (d.fase_atual_no_processo || '').toLowerCase();
+    var etapa = (d.etapa_atual_no_pipeline || '').toLowerCase();
+    var status = (d.status_do_deal || '').toLowerCase();
+    funnel.mql++;
+    if(fase !== 'mql') funnel.sal++;
+    if(etapa === 'conectados' || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('oportunidade') || etapa.includes('negociacao')) funnel.conectado++;
+    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('oportunidade') || etapa.includes('negociacao')) funnel.agendamento++;
+    if(status === 'ganho' || etapa.includes('oportunidade') || etapa.includes('negociacao')) funnel.opp++;
+    if(status === 'ganho') funnel.won++;
+    if(status === 'perdido') funnel.lost++;
+  });
+  // Show rate from deal_runtime
+  var showCount = 0;
+  runtimeDeals.forEach(function(r){
+    if(r.show_state === 'attended' || r.show_state === 'completed') showCount++;
+  });
+  funnel.show = showCount;
+
+  var cr = {
+    mql_sal: _pct(funnel.sal, funnel.mql),
+    sal_conectado: _pct(funnel.conectado, funnel.sal),
+    conectado_agendamento: _pct(funnel.agendamento, funnel.conectado),
+    agendamento_show: _pct(funnel.show, funnel.agendamento),
+    show_opp: _pct(funnel.opp, Math.max(funnel.show, 1)),
+    opp_won: _pct(funnel.won, funnel.opp)
+  };
+
+  var conversion_score = +(
+    ( Math.min(1, cr.mql_sal) * 0.20
+    + Math.min(1, cr.conectado_agendamento) * 0.25
+    + Math.min(1, cr.agendamento_show) * 0.30
+    + Math.min(1, cr.show_opp) * 0.25
+    )
+  ).toFixed(4);
+
+  // ==================================================
+  // BLOCO 3: VELOCIDADE / DISCIPLINA
+  // ==================================================
+  var agingSum = 0, agingCount = 0, slaRisk = 0, inactive = 0;
+  var touchDelaySum = 0, touchDelayCount = 0;
+  runtimeDeals.forEach(function(r){
+    if(!r.aging_days && r.aging_days !== 0) return;
+    agingSum += r.aging_days; agingCount++;
+    var revLine = 'imersao'; // default
+    var riskAfter = (REVENUE_LINES[revLine] || {}).risk_after || 3;
+    if(r.aging_days > riskAfter * 2) slaRisk++;
+    if(!r.last_touch_at) inactive++;
+    else {
+      var daysSinceTouch = Math.floor((Date.now() - new Date(r.last_touch_at).getTime()) / 86400000);
+      if(daysSinceTouch > 3) inactive++;
+      touchDelaySum += daysSinceTouch; touchDelayCount++;
+    }
+  });
+  var activeDeals = Math.max(runtimeDeals.length, 1);
+  var aging_avg = agingCount > 0 ? +(agingSum / agingCount).toFixed(1) : 0;
+  var touch_delay_avg = touchDelayCount > 0 ? +(touchDelaySum / touchDelayCount).toFixed(1) : 0;
+  var sla_risk_rate = +(slaRisk / activeDeals).toFixed(4);
+  var inactive_rate = +(inactive / activeDeals).toFixed(4);
+
+  // Speed: lower aging = better (normalize inversely, max 30 days = score 0)
+  var speed_score = +(1 - _norm(aging_avg, 30)).toFixed(4);
+  // Discipline: lower risk/inactive = better
+  var discipline_score = +(1 - Math.min(1, (sla_risk_rate * 0.5 + inactive_rate * 0.3 + _norm(aging_avg, 20) * 0.2))).toFixed(4);
+
+  // ==================================================
+  // BLOCO 4: QUALIDADE OPERACIONAL (DQI)
+  // ==================================================
+  var totalActive = Math.max(runtimeDeals.length, 1);
+  var qm = { good_notes:0, next_step:0, authority:0, pain:0, meeting_logged:0, no_show_treated:0, handoff_good:0 };
+
+  runtimeDeals.forEach(function(r){
+    var na = noteByDeal[r.deal_id];
+    if(na){
+      if(na.quality_score >= 60) qm.good_notes++;
+      if(na.next_step_clear) qm.next_step++;
+      if(na.authority_identified) qm.authority++;
+      if(na.pain_detected) qm.pain++;
+    }
+    if(r.next_best_action && r.next_best_action !== 'follow_up') qm.next_step++;
+    if(r.show_state === 'attended' || r.show_state === 'completed') qm.meeting_logged++;
+    if(r.show_state === 'no_show' && r.next_best_action) qm.no_show_treated++;
+  });
+
+  var notes_quality_pct = +(_pct(qm.good_notes, totalActive) * 100).toFixed(1);
+  var next_step_pct = +(_pct(qm.next_step, totalActive) * 100).toFixed(1);
+  var authority_pct = +(_pct(qm.authority, totalActive) * 100).toFixed(1);
+  var pain_pct = +(_pct(qm.pain, totalActive) * 100).toFixed(1);
+  var meeting_pct = +(_pct(qm.meeting_logged, totalActive) * 100).toFixed(1);
+  var noshow_pct = +(_pct(qm.no_show_treated, Math.max(1, runtimeDeals.filter(function(r){ return r.show_state === 'no_show'; }).length)) * 100).toFixed(1);
+  var handoff_pct = +(_pct(vol.handoffs, Math.max(1, funnel.agendamento)) * 100).toFixed(1);
+
+  var dqi = +(
+    _pct(notes_quality_pct, 100) * 0.20
+    + _pct(next_step_pct, 100) * 0.20
+    + _pct(authority_pct, 100) * 0.15
+    + _pct(pain_pct, 100) * 0.15
+    + _pct(meeting_pct, 100) * 0.10
+    + _pct(noshow_pct, 100) * 0.10
+    + _pct(handoff_pct, 100) * 0.10
+  ).toFixed(4);
+
+  // ==================================================
+  // BLOCO 5: FORECAST QUALITY
+  // ==================================================
+  var fcConfSum = 0, fcCount = 0, inflated = 0, noContext = 0;
+  forecasts.forEach(function(f){
+    fcConfSum += (f.forecast_confidence || 0); fcCount++;
+    if(f.forecast_score_adjusted > 0.60 && f.confidence_level === 'low') inflated++;
+    if(f.note_weight === 1.0 && f.next_step_weight === 1.0 && f.show_weight === 1.0) noContext++;
+  });
+  var fcActive = Math.max(fcCount, 1);
+  var forecast_confidence_avg = +(fcConfSum / fcActive).toFixed(4);
+  var inflated_pipeline_rate = +(inflated / fcActive).toFixed(4);
+  var no_context_rate = +(noContext / fcActive).toFixed(4);
+
+  var forecast_quality_score = +(
+    forecast_confidence_avg * 0.35
+    + (1 - inflated_pipeline_rate) * 0.25
+    + (1 - no_context_rate) * 0.20
+    + 0.20 // forecast_error_rate placeholder (requires historical comparison)
+  ).toFixed(4);
+
+  // ==================================================
+  // BLOCO 6: IMPACTO EM RECEITA
+  // ==================================================
+  var revenue_influenced = 0, ticket_sum = 0, ticket_count = 0;
+  var forecast_value_total = 0;
+  allDeals.forEach(function(d){
+    var status = (d.status_do_deal || '').toLowerCase();
+    var rev = parseFloat(d.revenue || d.valor_da_oportunidade || 0);
+    if(status === 'ganho' && rev > 0){ revenue_influenced += rev; ticket_sum += rev; ticket_count++; }
+  });
+  forecasts.forEach(function(f){ forecast_value_total += (f.forecast_value || 0); });
+
+  var avg_ticket_val = ticket_count > 0 ? +(ticket_sum / ticket_count).toFixed(2) : 0;
+  var revenue_per_deal = vol.deals_trabalhados > 0 ? +(revenue_influenced / vol.deals_trabalhados).toFixed(2) : 0;
+  var revenue_per_handoff = vol.handoffs > 0 ? +(revenue_influenced / vol.handoffs).toFixed(2) : 0;
+
+  // Normalize revenue metrics (benchmarks: 100k influenced, 5k/deal, 20k/handoff, 15k ticket)
+  var revenue_score = +(
+    _norm(revenue_influenced, 100000) * 0.40
+    + _norm(revenue_per_handoff, 20000) * 0.30
+    + _norm(avg_ticket_val, 15000) * 0.15
+    + _norm(revenue_per_deal, 5000) * 0.15
+  ).toFixed(4);
+
+  // ==================================================
+  // SCORE FINAL (7 componentes ponderados)
+  // ==================================================
+  var final_score = +(
+    (volume_score * 0.15)
+    + (conversion_score * 0.25)
+    + (speed_score * 0.10)
+    + (discipline_score * 0.10)
+    + (dqi * 0.15)
+    + (forecast_quality_score * 0.15)
+    + (revenue_score * 0.10)
+  ).toFixed(4);
+
+  // Scale to 0-100
+  var final_100 = +(final_score * 100).toFixed(1);
+
+  var performance_band = final_100 >= 90 ? 'elite' : final_100 >= 75 ? 'forte' : final_100 >= 60 ? 'estavel' : final_100 >= 45 ? 'atencao' : 'critico';
+
+  // ==================================================
+  // ALERTAS AUTOMATICOS
+  // ==================================================
+  var alerts = [];
+  if(dqi < 0.60) alerts.push({ type:'warning', msg:'DQI abaixo de 60 — melhorar contexto qualitativo dos deals' });
+  if(aging_avg > 10) alerts.push({ type:'warning', msg:'Aging medio alto ('+aging_avg+' dias) — acelerar pipeline' });
+  if(no_context_rate > 0.50) alerts.push({ type:'warning', msg:'Mais de 50% dos deals sem contexto qualitativo no forecast' });
+  if(inactive_rate > 0.30) alerts.push({ type:'warning', msg:'Taxa de inatividade alta ('+Math.round(inactive_rate*100)+'%) — deals sem interacao recente' });
+  if(forecast_confidence_avg < 0.40) alerts.push({ type:'warning', msg:'Confianca media do forecast baixa — enriquecer dados dos deals' });
+  if(conversion_score < 0.25) alerts.push({ type:'alert', msg:'Conversao critica — revisar abordagem e qualificacao' });
+  if(volume_score > 0.80 && conversion_score < 0.30) alerts.push({ type:'insight', msg:'Alta atividade com baixa conversao — foco em qualidade, nao volume' });
+  if(speed_score < 0.40) alerts.push({ type:'alert', msg:'Velocidade critica — ativar modo velocidade' });
+
+  var result = {
+    operator_email: email,
+    period_type: periodType,
+    period_key: periodKey,
+    // Bloco 1
+    volume_score: +volume_score,
+    deals_trabalhados: vol.deals_trabalhados,
+    fups_count: vol.fups,
+    dms_count: vol.dms,
+    calls_count: vol.calls,
+    notes_count: vol.notes,
+    analyses_generated: vol.analyses,
+    copies_generated: vol.copies,
+    meetings_booked: vol.meetings_booked,
+    meetings_realized: vol.meetings_realized,
+    handoffs_count: vol.handoffs,
+    // Bloco 2
+    conversion_score: +conversion_score,
+    mql_count: funnel.mql,
+    sal_count: funnel.sal,
+    opp_count: funnel.opp,
+    ganho_count: funnel.won,
+    perdido_count: funnel.lost,
+    cr_mql_sal: +(cr.mql_sal * 100).toFixed(2),
+    cr_sal_conectado: +(cr.sal_conectado * 100).toFixed(2),
+    cr_conectado_agendamento: +(cr.conectado_agendamento * 100).toFixed(2),
+    cr_agendamento_show: +(cr.agendamento_show * 100).toFixed(2),
+    cr_show_opp: +(cr.show_opp * 100).toFixed(2),
+    cr_sal_opp: +(cr.opp_won * 100).toFixed(2),
+    cr_opp_ganho: +(cr.opp_won * 100).toFixed(2),
+    // Bloco 3
+    speed_score: +speed_score,
+    discipline_score: +discipline_score,
+    time_to_first_contact_avg: 0, // requires first_touch tracking
+    touch_delay_avg: touch_delay_avg,
+    aging_avg: aging_avg,
+    sla_risk_rate: +sla_risk_rate,
+    sla_risk_count: slaRisk,
+    inactive_rate: +inactive_rate,
+    // Bloco 4
+    dqi: +dqi,
+    dqi_score: +(dqi * 100).toFixed(1),
+    notes_quality_pct: notes_quality_pct,
+    next_step_pct: next_step_pct,
+    authority_identified_pct: authority_pct,
+    pain_clarity_pct: pain_pct,
+    meeting_logging_pct: meeting_pct,
+    no_show_treatment_pct: noshow_pct,
+    handoff_quality_pct: handoff_pct,
+    // Bloco 5
+    forecast_quality_score: +forecast_quality_score,
+    forecast_confidence_avg: +forecast_confidence_avg,
+    inflated_pipeline_rate: +inflated_pipeline_rate,
+    no_context_rate: +no_context_rate,
+    forecast_error_rate: 0, // requires historical data
+    // Bloco 6
+    revenue_score: +revenue_score,
+    revenue_influenced: revenue_influenced,
+    revenue_per_deal: revenue_per_deal,
+    revenue_per_handoff: revenue_per_handoff,
+    avg_ticket: avg_ticket_val,
+    forecast_value_total: forecast_value_total,
+    pipeline_value: forecast_value_total,
+    ganho_value: revenue_influenced,
+    // Final
+    final_score: +final_score,
+    overall_score: final_100,
+    performance_band: performance_band,
+    alerts: alerts,
+    formula_version: 'v7.0',
+    source: 'cockpit_engine'
+  };
+
+  console.log('[performance] ' + email + ' | score: ' + final_100 + ' (' + performance_band + ') | vol:' + volume_score + ' conv:' + conversion_score + ' spd:' + speed_score + ' disc:' + discipline_score + ' dqi:' + dqi + ' fc:' + forecast_quality_score + ' rev:' + revenue_score);
+  return result;
+}
+window.calcOperatorPerformance = calcOperatorPerformance;
+
+// Sync to Supabase operator_efficiency
+async function syncOperatorEfficiency(periodType, periodKey){
+  var sb = _sb(); if(!sb) return null;
+  var perf = await calcOperatorPerformance(periodType, periodKey);
+  if(!perf) return null;
+
+  var row = {
+    operator_email: perf.operator_email,
+    period_type: perf.period_type,
+    period_key: perf.period_key,
+    // Volume
+    volume_score: perf.volume_score,
+    deals_trabalhados: perf.deals_trabalhados,
+    fups_count: perf.fups_count,
+    dms_count: perf.dms_count,
+    calls_count: perf.calls_count,
+    notes_count: perf.notes_count,
+    analyses_generated: perf.analyses_generated,
+    copies_generated: perf.copies_generated,
+    meetings_booked: perf.meetings_booked,
+    meetings_realized: perf.meetings_realized,
+    handoffs_count: perf.handoffs_count,
+    // Conversion
+    conversion_score: perf.conversion_score,
+    mql_count: perf.mql_count,
+    sal_count: perf.sal_count,
+    opp_count: perf.opp_count,
+    ganho_count: perf.ganho_count,
+    perdido_count: perf.perdido_count,
+    cr_mql_sal: perf.cr_mql_sal,
+    cr_sal_conectado: perf.cr_sal_conectado,
+    cr_sal_opp: perf.cr_sal_opp,
+    cr_conectado_agendamento: perf.cr_conectado_agendamento,
+    cr_agendamento_show: perf.cr_agendamento_show,
+    cr_show_opp: perf.cr_show_opp,
+    cr_opp_ganho: perf.cr_opp_ganho,
+    // Speed
+    speed_score: perf.speed_score,
+    discipline_score: perf.discipline_score,
+    time_to_first_contact_avg: perf.time_to_first_contact_avg,
+    touch_delay_avg: perf.touch_delay_avg,
+    aging_avg: perf.aging_avg,
+    sla_risk_rate: perf.sla_risk_rate,
+    sla_risk_count: perf.sla_risk_count,
+    inactive_rate: perf.inactive_rate,
+    // DQI
+    dqi: perf.dqi,
+    dqi_score: perf.dqi_score,
+    notes_quality_pct: perf.notes_quality_pct,
+    next_step_pct: perf.next_step_pct,
+    authority_identified_pct: perf.authority_identified_pct,
+    pain_clarity_pct: perf.pain_clarity_pct,
+    meeting_logging_pct: perf.meeting_logging_pct,
+    no_show_treatment_pct: perf.no_show_treatment_pct,
+    handoff_quality_pct: perf.handoff_quality_pct,
+    // Forecast
+    forecast_quality_score: perf.forecast_quality_score,
+    forecast_confidence_avg: perf.forecast_confidence_avg,
+    inflated_pipeline_rate: perf.inflated_pipeline_rate,
+    no_context_rate: perf.no_context_rate,
+    forecast_error_rate: perf.forecast_error_rate,
+    // Revenue
+    revenue_score: perf.revenue_score,
+    revenue_influenced: perf.revenue_influenced,
+    revenue_per_deal: perf.revenue_per_deal,
+    revenue_per_handoff: perf.revenue_per_handoff,
+    avg_ticket: perf.avg_ticket,
+    forecast_value_total: perf.forecast_value_total,
+    pipeline_value: perf.pipeline_value,
+    ganho_value: perf.ganho_value,
+    // Final
+    final_score: perf.final_score,
+    overall_score: perf.overall_score,
+    performance_band: perf.performance_band,
+    alerts: JSON.stringify(perf.alerts),
+    formula_version: perf.formula_version,
+    source: perf.source,
+    metrics_json: JSON.stringify({
+      volume: { deals:perf.deals_trabalhados, fups:perf.fups_count, dms:perf.dms_count, notes:perf.notes_count, analyses:perf.analyses_generated, copies:perf.copies_generated, meetings:perf.meetings_booked, handoffs:perf.handoffs_count },
+      funnel: { mql:perf.mql_count, sal:perf.sal_count, opp:perf.opp_count, won:perf.ganho_count, lost:perf.perdido_count },
+      speed: { aging_avg:perf.aging_avg, touch_delay:perf.touch_delay_avg, sla_risk:perf.sla_risk_rate, inactive:perf.inactive_rate }
+    }),
+    scores_json: JSON.stringify({
+      volume:perf.volume_score, conversion:perf.conversion_score, speed:perf.speed_score,
+      discipline:perf.discipline_score, dqi:perf.dqi, forecast:perf.forecast_quality_score,
+      revenue:perf.revenue_score, final:perf.final_score
+    }),
+    updated_at: new Date().toISOString()
+  };
+
+  var res = await sb.from('operator_efficiency')
+    .upsert(row, { onConflict:'operator_email,period_type,period_key' });
+  if(res.error) console.warn('[performance-sync] error:', res.error.message);
+  else console.log('[performance-sync] ' + perf.operator_email + ' ' + perf.period_type + ':' + perf.period_key + ' synced (score: ' + perf.overall_score + ')');
+  return perf;
+}
+window.syncOperatorEfficiency = syncOperatorEfficiency;
+
+console.log('[cockpit-engine v7.0] 14-Layer Architecture loaded — Operator Performance Model');
 
 })();

@@ -1564,7 +1564,8 @@ async function loadDealsFromSupabase(email){
       if(window.syncDealRuntime) await window.syncDealRuntime();
       if(window.syncForecastRuntime) await window.syncForecastRuntime();
       if(window.syncDailySnapshot) await window.syncDailySnapshot();
-      console.log('[boot] V6 engine layers initialized');
+      if(window.syncOperatorEfficiency) await window.syncOperatorEfficiency();
+      console.log('[boot] V7 engine layers initialized');
     } catch(e){ console.warn('[boot] engine init error:', e.message); }
   })();
 }
