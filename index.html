@@ -2310,6 +2310,9 @@ function renderLiveDeals(rows,cols){
 
   // Focus panel — top 5 por urgência
   renderFocusPanel();
+
+  // V5 Runtime Sync — persiste estado enriquecido em deal_runtime
+  if(window.syncDealRuntime) window.syncDealRuntime().catch(function(e){ console.warn('[runtime-sync] error:', e.message); });
 }
 
 function renderFocusPanel(){

@@ -2459,6 +2459,91 @@ window.cancelCadenceEnrollment = cancelCadenceEnrollment;
 // Init cadences after operator loads
 var _origBoot = window._bootEngine;
 
-console.log('[cockpit-engine v3.1] 8-Layer Architecture loaded — +Cadence Engine');
+// ==================================================================
+// LAYER 9 — RUNTIME SYNC
+// Persiste enrichDealContext() em deal_runtime (Supabase)
+// Regra V5: toda UI avançada lê de deal_runtime, não de deals
+// ==================================================================
+
+var STAGE_ORDER_MAP = {
+  'novo lead':0,'dia 01':1,'dia 02':2,'dia 03':3,'dia 04':4,'dia 05':5,'dia 06':6,
+  'conectados':7,'agendamento':8,'reagendamento':9,'entrevista agendada':10,
+  'negociacao':11,'oportunidade':12,'ganho':13,'perdido':14
+};
+
+function _dealToRuntime(id, d, email){
+  var etapa = (d.etapa||d._etapa||'').toLowerCase();
+  var aging = d._aging || {};
+  var nba = d._nextAction || {};
+  return {
+    deal_id: id,
+    operator_email: email,
+    current_stage: d.etapa || d._etapa || d.fase || null,
+    current_stage_order: STAGE_ORDER_MAP[etapa] != null ? STAGE_ORDER_MAP[etapa] : 99,
+    revenue_line: d._revLine || d.linhaReceita || null,
+    channel: d.canal || d.utm_medium || null,
+    persona: d._persona || null,
+    framework_in_use: d._framework || null,
+    aging_days: d._delta || d.delta || 0,
+    aging_band: aging.riskLevel === 'critical' ? 'critical' : aging.isAtRisk ? 'red' : (d._delta||0) > 3 ? 'yellow' : 'green',
+    risk_state: aging.riskLevel || 'none',
+    signal_state: d._signal || 'NEUTRAL',
+    temperature_score: d._temp || d.temp || 0,
+    urgency_score: d._urgency || 0,
+    value_score: d._oppValue || d.elucyValor || 0,
+    priority_score: d._urgency || 0,
+    touchpoint_state: null,
+    fup_state: 'none',
+    show_state: 'unknown',
+    last_touch_at: d.last_interaction_at || null,
+    last_touch_type: null,
+    next_best_action: nba.type || null,
+    nba_reason: nba.label || null,
+    runtime_payload: JSON.stringify({
+      oppBreakdown: d._oppBreakdown || null,
+      timeline: d._timeline || null,
+      tier: d.tier || d._tier || null,
+      contact_name: d.contact_name || d.nome || null,
+      empresa: d.empresa || null,
+      statusDeal: d.statusDeal || null
+    })
+  };
+}
+
+async function syncDealRuntime(){
+  var sb = _sb(); if(!sb) return;
+  var email = getOperatorId(); if(!email) return;
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var keys = Object.keys(map);
+  if(!keys.length) return;
+
+  var rows = [];
+  keys.forEach(function(id){
+    var d = map[id];
+    enrichDealContext(d);
+    rows.push(_dealToRuntime(id, d, email));
+  });
+
+  // Upsert in chunks of 50
+  var CHUNK = 50;
+  var synced = 0;
+  for(var i = 0; i < rows.length; i += CHUNK){
+    var chunk = rows.slice(i, i + CHUNK);
+    try {
+      var res = await sb.from('deal_runtime')
+        .upsert(chunk, { onConflict: 'deal_id,operator_email' });
+      if(res.error) console.warn('[runtime-sync] chunk error:', res.error.message);
+      else synced += chunk.length;
+    } catch(e){
+      console.warn('[runtime-sync] chunk exception:', e.message);
+    }
+  }
+  console.log('[runtime-sync] ' + synced + '/' + rows.length + ' deals synced to deal_runtime');
+  return synced;
+}
+
+window.syncDealRuntime = syncDealRuntime;
+
+console.log('[cockpit-engine v3.1] 8-Layer Architecture loaded — +Cadence Engine +Runtime Sync');
 
 })();
