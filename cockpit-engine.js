@@ -2583,6 +2583,7 @@ window.syncDealRuntime = syncDealRuntime;
 async function loadTaxonomy(){
   var sb = _sb(); if(!sb) return;
   try {
+    // Revenue Lines
     var rl = await sb.from('taxonomy_revenue_lines').select('line_slug,line_label,base_metric,risk_after_days,line_weight').eq('is_active',true);
     if(rl.data && rl.data.length){
       rl.data.forEach(function(r){
@@ -2590,11 +2591,13 @@ async function loadTaxonomy(){
       });
       console.log('[taxonomy] revenue_lines loaded: '+rl.data.length);
     }
+    // Kill Switches
     var ks = await sb.from('kill_switches').select('switch_slug,is_enabled');
     if(ks.data && ks.data.length){
       ks.data.forEach(function(k){ KILL_SWITCHES[k.switch_slug] = k.is_enabled; });
       console.log('[taxonomy] kill_switches loaded: '+ks.data.length);
     }
+    // Focus Modes
     var fm = await sb.from('focus_modes').select('mode_slug,mode_label,icon,priority_task_types').eq('is_active',true);
     if(fm.data && fm.data.length){
       fm.data.forEach(function(f){
@@ -2608,27 +2611,35 @@ window.loadTaxonomy = loadTaxonomy;
 
 // ==================================================================
 // LAYER 11 — DM TOUCHPOINTS MIGRATION (V5)
+// Usa social_dm_touchpoints em vez de deal_interactions para DMs
 // ==================================================================
 
 var _origSaveDMTouchpoint = window.saveDMTouchpoint || saveDMTouchpoint;
 async function saveDMTouchpointV5(leadId, tpType, description, channel, framework){
   var sb = _sb(); if(!sb) return _origSaveDMTouchpoint(leadId, tpType, description);
   var opId = getOperatorId(); if(!opId) return;
+  // Count existing touchpoints for this lead
   var countRes = await sb.from('social_dm_touchpoints').select('id', {count:'exact'}).eq('lead_id', leadId);
   var tpNumber = (countRes.count || 0) + 1;
   var res = await sb.from('social_dm_touchpoints').insert({
-    lead_id: leadId, operator_email: opId, touchpoint_number: tpNumber,
-    touchpoint_type: tpType || 'outbound_dm', channel: channel || 'instagram',
-    direction: 'outbound', content_preview: (description||'').substring(0,200),
+    lead_id: leadId,
+    operator_email: opId,
+    touchpoint_number: tpNumber,
+    touchpoint_type: tpType || 'outbound_dm',
+    channel: channel || 'instagram',
+    direction: 'outbound',
+    content_preview: (description||'').substring(0,200),
     copy_framework: framework || null
   });
   if(res.error) console.warn('[dm-tp] insert error:', res.error.message);
 }
+// Override global
 if(typeof saveDMTouchpoint === 'function') saveDMTouchpoint = saveDMTouchpointV5;
 window.saveDMTouchpoint = saveDMTouchpointV5;
 
 // ==================================================================
 // LAYER 12 — SNAPSHOT SCHEDULER (V5)
+// Gera daily snapshot local e envia ao analytics_snapshots
 // ==================================================================
 
 async function syncDailySnapshot(){
@@ -2679,6 +2690,301 @@ async function syncDailySnapshot(){
 }
 window.syncDailySnapshot = syncDailySnapshot;
 
-console.log('[cockpit-engine v5.0] 12-Layer Architecture loaded — V5 Schema Complete');
+// ==================================================================
+// LAYER 13 — V6 FORECAST CALCULATOR
+// Qualitative Forecast Engine: combina quantitativo (stage/aging/velocity)
+// com pesos qualitativos (show/note/authority/urgency/behavior/next_step)
+// Gera forecast_score_adjusted, confidence, e explainability completa.
+// Sync resultado para forecast_runtime + forecast_events no Supabase.
+// ==================================================================
+
+function calcForecastV6(deal){
+  var etapa = (deal.etapa||deal._etapa||'').toLowerCase();
+  var aging = deal._aging || calcAgingRisk(deal);
+  var delta = deal._delta || deal.delta || 0;
+  var revLine = deal._revLine || resolveRevenueLine(deal);
+  var lc = REVENUE_LINES[revLine] || REVENUE_LINES.imersao;
+  var ra = lc.risk_after;
+
+  // --- QUANTITATIVE BASELINE ---
+  var stage_prob = STAGE_PROB[etapa] || 0.10;
+  var aging_factor = delta > ra*4 ? 0.40 : delta > ra*3 ? 0.55 : delta > ra*2 ? 0.70 : delta > ra ? 0.85 : 1.0;
+  var velocity_factor = 1.0;
+  if(deal._timeline){
+    var tl = deal._timeline;
+    if(tl.avgDaysPerStage < 2) velocity_factor = 1.15;
+    else if(tl.avgDaysPerStage < 4) velocity_factor = 1.05;
+    else if(tl.avgDaysPerStage > 10) velocity_factor = 0.80;
+    else if(tl.avgDaysPerStage > 7) velocity_factor = 0.90;
+  }
+  var engagement_factor = 1.0;
+  var tp = deal._touchpoints || 0;
+  if(tp >= 5) engagement_factor = 1.15;
+  else if(tp >= 3) engagement_factor = 1.05;
+  else if(tp === 0) engagement_factor = 0.70;
+
+  var quantitative_score = +(stage_prob * aging_factor * velocity_factor * engagement_factor).toFixed(4);
+
+  // --- QUALITATIVE WEIGHTS (V6) ---
+  // Each weight defaults to 1.0, adjusted by signals detected in meetings/notes/runtime
+  var show_weight = 1.0;
+  var note_weight = 1.0;
+  var authority_weight = 1.0;
+  var urgency_weight = 1.0;
+  var behavior_weight = 1.0;
+  var next_step_weight = 1.0;
+  var no_show_penalty = 0;
+  var positive_signals = [];
+  var risk_signals = [];
+
+  // Show weight: based on meeting attendance
+  var showState = (deal._showState || deal.show_state || 'unknown').toLowerCase();
+  if(showState === 'attended' || showState === 'completed'){
+    show_weight = 1.20; positive_signals.push('Meeting attended');
+  } else if(showState === 'no_show'){
+    show_weight = 0.50; no_show_penalty = 0.15; risk_signals.push('No-show detected');
+  } else if(showState === 'rescheduled'){
+    show_weight = 0.85; risk_signals.push('Meeting rescheduled');
+  }
+
+  // Note weight: based on note_analysis quality/sentiment
+  if(deal._noteAnalysis){
+    var na = deal._noteAnalysis;
+    if(na.quality_score >= 70){ note_weight = 1.20; positive_signals.push('High quality notes ('+na.quality_score+')'); }
+    else if(na.quality_score >= 40) note_weight = 1.0;
+    else if(na.quality_score > 0){ note_weight = 0.80; risk_signals.push('Low quality notes'); }
+    if(na.sentiment === 'positive'){ note_weight *= 1.10; positive_signals.push('Positive sentiment'); }
+    else if(na.sentiment === 'negative'){ note_weight *= 0.80; risk_signals.push('Negative sentiment'); }
+    if(na.advancement_signal) positive_signals.push('Advancement signal detected');
+    if(na.pain_detected) positive_signals.push('Pain confirmed');
+  }
+
+  // Authority weight: based on cargo/decision_maker
+  var cargo = (deal.cargo || '').toLowerCase();
+  if(cargo.includes('ceo') || cargo.includes('presidente') || cargo.includes('fundador') || cargo.includes('socio')){
+    authority_weight = 1.25; positive_signals.push('C-Level authority');
+    // Kill switch: CEO de MEI downgrade
+    if((deal.faturamento||deal.porte||'').toLowerCase().includes('mei')){
+      authority_weight = 0.70; risk_signals.push('CEO MEI authority downgrade');
+    }
+  } else if(cargo.includes('diretor') || cargo.includes('vp')){
+    authority_weight = 1.15; positive_signals.push('Director-level authority');
+  } else if(cargo.includes('gerente')){
+    authority_weight = 0.95;
+  } else if(cargo.includes('coordenador') || cargo.includes('analista')){
+    authority_weight = 0.75; risk_signals.push('Low authority level');
+  }
+
+  // Urgency weight: based on aging + signal state
+  var signal = deal._signal || 'NEUTRAL';
+  if(signal === 'HOT'){ urgency_weight = 1.20; positive_signals.push('HOT signal'); }
+  else if(signal === 'DOME'){ urgency_weight = 0.60; risk_signals.push('Iron Dome active'); }
+  else if(signal === 'WARM') urgency_weight = 1.05;
+  if(aging.riskLevel === 'critical'){ urgency_weight *= 0.70; risk_signals.push('Critical aging ('+delta+' days)'); }
+  else if(aging.riskLevel === 'high'){ urgency_weight *= 0.85; risk_signals.push('High aging risk'); }
+
+  // Behavior weight: event_skipped + touchpoint engagement
+  var skipped = String(deal.event_skipped || deal.eventSkipped || '').toLowerCase() === 'true';
+  if(!skipped){ behavior_weight = 1.10; positive_signals.push('No events skipped'); }
+  else { behavior_weight = 0.85; risk_signals.push('Event skipped'); }
+  if(tp >= 5) behavior_weight *= 1.10;
+  else if(tp === 0){ behavior_weight *= 0.70; risk_signals.push('Zero touchpoints'); }
+
+  // Next step weight: based on _nextAction clarity
+  var nba = deal._nextAction || {};
+  if(nba.priority === 'critical'){ next_step_weight = 0.80; risk_signals.push('Critical next action needed'); }
+  else if(nba.type === 'handoff_prep'){ next_step_weight = 1.15; positive_signals.push('Ready for handoff'); }
+  else if(nba.type === 'agendamento'){ next_step_weight = 1.10; positive_signals.push('Meeting scheduling phase'); }
+
+  // Clamp weights to [0.3, 1.5]
+  function clamp(v){ return Math.max(0.3, Math.min(1.5, v)); }
+  show_weight = clamp(show_weight);
+  note_weight = clamp(+note_weight.toFixed(4));
+  authority_weight = clamp(authority_weight);
+  urgency_weight = clamp(+urgency_weight.toFixed(4));
+  behavior_weight = clamp(+behavior_weight.toFixed(4));
+  next_step_weight = clamp(next_step_weight);
+  no_show_penalty = Math.min(0.30, Math.max(0, no_show_penalty));
+
+  // --- COMBINED SCORE ---
+  var qualitative_weight = +(show_weight * note_weight * authority_weight * urgency_weight * behavior_weight * next_step_weight).toFixed(4);
+  qualitative_weight = Math.max(0.10, Math.min(2.50, qualitative_weight));
+
+  var forecast_score_raw = +quantitative_score.toFixed(4);
+  var forecast_score_adjusted = +((forecast_score_raw * qualitative_weight) - no_show_penalty).toFixed(4);
+  forecast_score_adjusted = Math.max(0, Math.min(1.0, forecast_score_adjusted));
+
+  // --- CONFIDENCE ---
+  var data_points = 0;
+  if(deal._noteAnalysis) data_points += 2;
+  if(showState !== 'unknown') data_points += 2;
+  if(tp > 0) data_points += Math.min(3, tp);
+  if(deal._timeline && deal._timeline.stagesVisited > 1) data_points += 1;
+  if(cargo) data_points += 1;
+  // confidence: 0-1 based on data richness
+  var forecast_confidence = +(Math.min(1.0, data_points / 10)).toFixed(4);
+  var confidence_level = forecast_confidence >= 0.7 ? 'high' : forecast_confidence >= 0.4 ? 'medium' : 'low';
+
+  // --- FORECAST VALUE ---
+  var tier = (deal.tier || deal._tier || '').toLowerCase();
+  var ticket = TIER_BASE[tier] || 6000;
+  var forecast_value = Math.round(ticket * forecast_score_adjusted);
+
+  // --- REASON ---
+  var reason_main = '';
+  var reason_secondary = '';
+  if(forecast_score_adjusted >= 0.60) reason_main = 'Deal com alta probabilidade — sinais qualitativos fortes';
+  else if(forecast_score_adjusted >= 0.35) reason_main = 'Deal em zona de trabalho — qualificacao em andamento';
+  else if(forecast_score_adjusted >= 0.15) reason_main = 'Deal com risco — sinais fracos ou aging alto';
+  else reason_main = 'Deal com baixa probabilidade — considerar reativacao ou loss';
+  if(risk_signals.length) reason_secondary = 'Riscos: ' + risk_signals.slice(0,3).join(', ');
+  else if(positive_signals.length) reason_secondary = 'Destaques: ' + positive_signals.slice(0,3).join(', ');
+
+  // --- NEXT ACTION DERIVED ---
+  var next_action = nba.type || 'follow_up';
+  var next_action_reason = nba.label || '';
+  if(forecast_score_adjusted < 0.10 && confidence_level !== 'low'){
+    next_action = 'forecast_repair'; next_action_reason = 'Forecast muito baixo com confianca '+confidence_level+' — revisar deal';
+  }
+
+  return {
+    stage_probability_v6: stage_prob,
+    quantitative_score: quantitative_score,
+    qualitative_weight: qualitative_weight,
+    show_weight: show_weight,
+    note_weight: note_weight,
+    authority_weight: authority_weight,
+    urgency_weight: urgency_weight,
+    no_show_penalty: no_show_penalty,
+    behavior_weight: behavior_weight,
+    next_step_weight: next_step_weight,
+    forecast_score_raw: forecast_score_raw,
+    forecast_score_adjusted: forecast_score_adjusted,
+    forecast_confidence: forecast_confidence,
+    confidence_level: confidence_level,
+    forecast_value: forecast_value,
+    reason_main: reason_main,
+    reason_secondary: reason_secondary,
+    positive_signals: positive_signals,
+    risk_signals: risk_signals,
+    next_action: next_action,
+    next_action_reason: next_action_reason,
+    explain_json: {
+      quantitative: { stage_prob:stage_prob, aging_factor:aging_factor, velocity_factor:velocity_factor, engagement_factor:engagement_factor },
+      qualitative: { show_weight:show_weight, note_weight:note_weight, authority_weight:authority_weight, urgency_weight:urgency_weight, behavior_weight:behavior_weight, next_step_weight:next_step_weight },
+      no_show_penalty: no_show_penalty,
+      data_points: data_points,
+      signals: { positive:positive_signals, risk:risk_signals }
+    }
+  };
+}
+window.calcForecastV6 = calcForecastV6;
+
+// Attach forecast to enrichDealContext
+var _origEnrichDealContext = enrichDealContext;
+function enrichDealContextV6(deal){
+  _origEnrichDealContext(deal);
+  if(!deal._forecastV6) deal._forecastV6 = calcForecastV6(deal);
+  return deal;
+}
+window.enrichDealContext = enrichDealContextV6;
+
+// Sync forecast_runtime for all active deals
+async function syncForecastRuntime(){
+  var sb = _sb(); if(!sb) return;
+  var email = getOperatorId(); if(!email) return;
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var keys = Object.keys(map);
+  if(!keys.length) return;
+
+  var rows = [];
+  var events = [];
+  keys.forEach(function(id){
+    var d = map[id];
+    if((d.statusDeal||'').toLowerCase()==='perdido'||(d.statusDeal||'').toLowerCase()==='ganho') return;
+    enrichDealContextV6(d);
+    var f = d._forecastV6; if(!f) return;
+
+    rows.push({
+      deal_id: id,
+      operator_email: email,
+      stage_probability: f.stage_probability_v6,
+      aging_factor: f.explain_json.quantitative.aging_factor,
+      velocity_factor: f.explain_json.quantitative.velocity_factor,
+      engagement_factor: f.explain_json.quantitative.engagement_factor,
+      quantitative_score: f.quantitative_score,
+      qualitative_score: f.qualitative_weight,
+      raw_score: f.forecast_score_raw,
+      adjusted_score: f.forecast_score_adjusted,
+      confidence_level: f.confidence_level,
+      data_points_count: f.explain_json.data_points,
+      predicted_outcome: f.forecast_score_adjusted >= 0.50 ? 'likely_win' : f.forecast_score_adjusted >= 0.25 ? 'working' : 'at_risk',
+      predicted_value: f.forecast_value,
+      formula_version: 'v6.0',
+      // V6 columns
+      forecast_version: 'v6',
+      stage_probability_v6: f.stage_probability_v6,
+      qualitative_weight: f.qualitative_weight,
+      show_weight: f.show_weight,
+      note_weight: f.note_weight,
+      authority_weight: f.authority_weight,
+      urgency_weight: f.urgency_weight,
+      no_show_penalty: f.no_show_penalty,
+      behavior_weight: f.behavior_weight,
+      next_step_weight: f.next_step_weight,
+      forecast_score_raw: f.forecast_score_raw,
+      forecast_score_adjusted: f.forecast_score_adjusted,
+      forecast_confidence: f.forecast_confidence,
+      forecast_value: f.forecast_value,
+      reason_main: f.reason_main,
+      reason_secondary: f.reason_secondary,
+      positive_signals: JSON.stringify(f.positive_signals),
+      risk_signals: JSON.stringify(f.risk_signals),
+      next_action: f.next_action,
+      next_action_reason: f.next_action_reason,
+      explain_json: JSON.stringify(f.explain_json),
+      updated_at: new Date().toISOString()
+    });
+
+    // Forecast event for audit trail
+    events.push({
+      deal_id: id,
+      event_type: 'forecast_calc',
+      source_entity: 'cockpit_engine',
+      source_id: email,
+      delta_forecast: f.forecast_score_adjusted,
+      reason: f.reason_main,
+      payload: JSON.stringify({ adjusted:f.forecast_score_adjusted, confidence:f.forecast_confidence, version:'v6' })
+    });
+  });
+
+  // Upsert forecast_runtime in chunks
+  var CHUNK = 50;
+  var synced = 0;
+  for(var i = 0; i < rows.length; i += CHUNK){
+    var chunk = rows.slice(i, i + CHUNK);
+    try {
+      var res = await sb.from('forecast_runtime').upsert(chunk, { onConflict:'deal_id,operator_email' });
+      if(res.error) console.warn('[forecast-sync] chunk error:', res.error.message);
+      else synced += chunk.length;
+    } catch(e){ console.warn('[forecast-sync] exception:', e.message); }
+  }
+
+  // Insert forecast_events (audit — no upsert, always append)
+  if(events.length){
+    for(var j = 0; j < events.length; j += CHUNK){
+      var evChunk = events.slice(j, j + CHUNK);
+      try {
+        await sb.from('forecast_events').insert(evChunk);
+      } catch(e){ console.warn('[forecast-events] insert error:', e.message); }
+    }
+  }
+
+  console.log('[forecast-sync] ' + synced + '/' + rows.length + ' deals forecast synced (v6)');
+  return synced;
+}
+window.syncForecastRuntime = syncForecastRuntime;
+
+console.log('[cockpit-engine v6.0] 13-Layer Architecture loaded — V6 Forecast Engine');
 
 })();
