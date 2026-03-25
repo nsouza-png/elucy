@@ -1,10 +1,10 @@
 // ==================================================================
-// ELUCY COCKPIT ENGINE v7.0 — 14-Layer Architecture
+// ELUCY COCKPIT ENGINE v8.0 — 15-Layer Architecture
 // 1. Operator Context | 2. Taxonomy Core | 3. Runtime Deal Context
 // 4. Task Execution | 5. Analytics | 6. UI State | 7. Product Intelligence
 // 8. Cadence Engine | 9. Runtime Sync | 10. Taxonomy Loader
 // 11. DM Touchpoints | 12. Snapshot Scheduler | 13. V6 Forecast Calculator
-// 14. Operator Performance Model
+// 14. Operator Performance Model | 15. Performance Report V3
 // Incluir APOS cockpit.html carregar (antes do </body>)
 // ==================================================================
 
@@ -3535,6 +3535,469 @@ async function syncOperatorEfficiency(periodType, periodKey){
 }
 window.syncOperatorEfficiency = syncOperatorEfficiency;
 
-console.log('[cockpit-engine v7.0] 14-Layer Architecture loaded — Operator Performance Model');
+// ==================================================================
+// LAYER 15 — PERFORMANCE REPORT V3
+// 8 blocos: Meta, Volume, Conversão, Linha, Velocidade, Qualidade, Forecast, Receita
+// ==================================================================
+
+async function calcPerformanceReportV3(periodType, periodKey){
+  var sb = window._supabaseClient || (window.supabase && window.supabase.createClient ? null : null);
+  if(!sb && window.getSB) sb = window.getSB();
+  if(!sb) { console.warn('[perf-v3] no supabase'); return null; }
+  var email = _operatorCtx.email;
+  var qname = _operatorCtx.qualificador_name;
+  if(!email) { console.warn('[perf-v3] no operator email'); return null; }
+
+  periodType = periodType || 'month';
+  var now = new Date();
+  periodKey = periodKey || now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var dealIds = Object.keys(map);
+  var deals = dealIds.map(function(id){ return map[id]; });
+
+  // ── BLOCK 1: META ──
+  var meta = {
+    target_sal: _operatorCtx.meta_mensal || 40,
+    target_opp: Math.round((_operatorCtx.meta_mensal || 40) * 0.35),
+    target_revenue: 180000
+  };
+
+  // ── Fetch activity_log for volume ──
+  var monthStart = periodKey + '-01';
+  var actData = [];
+  try {
+    var actRes = await sb.from('activity_log').select('*')
+      .eq('operator_email', email)
+      .gte('created_at', monthStart + 'T00:00:00')
+      .limit(2000);
+    if(actRes.data) actData = actRes.data;
+  } catch(e){}
+
+  // ── Fetch deal_runtime for speed/quality ──
+  var runtimeData = [];
+  try {
+    var rtRes = await sb.from('deal_runtime').select('*')
+      .eq('operator_email', email)
+      .limit(500);
+    if(rtRes.data) runtimeData = rtRes.data;
+  } catch(e){}
+
+  // ── Fetch forecast_runtime ──
+  var forecastData = [];
+  try {
+    var fRes = await sb.from('forecast_runtime').select('*')
+      .eq('operator_email', email)
+      .limit(500);
+    if(fRes.data) forecastData = fRes.data;
+  } catch(e){}
+
+  // ── Fetch note_analysis for quality ──
+  var noteData = [];
+  try {
+    var nRes = await sb.from('note_analysis').select('*')
+      .eq('operator_email', email)
+      .limit(500);
+    if(nRes.data) noteData = nRes.data;
+  } catch(e){}
+
+  // ── BLOCK 2: VOLUME ──
+  var volume = {
+    deals_worked: 0, fups_sent: 0, dms_sent: 0,
+    analyses_generated: 0, notes_created: 0,
+    meetings_booked: 0, handoffs: 0
+  };
+  var dealsWorkedSet = {};
+  actData.forEach(function(a){
+    if(a.entity_type === 'deal' && a.entity_id) dealsWorkedSet[a.entity_id] = true;
+    var t = a.activity_type || '';
+    if(t === 'fup_sent' || t === 'copy_generated') volume.fups_sent++;
+    if(t === 'dm_generated' || t === 'dm_sent') volume.dms_sent++;
+    if(t === 'analysis_generated') volume.analyses_generated++;
+    if(t === 'note_created' || t === 'note_crm_generated') volume.notes_created++;
+    if(t === 'meeting_booked') volume.meetings_booked++;
+    if(t === 'handoff_done') volume.handoffs++;
+  });
+  volume.deals_worked = Object.keys(dealsWorkedSet).length;
+
+  // ── BLOCK 3: CONVERSÃO ──
+  var funnel = { mql:0, sal:0, connected:0, scheduled:0, show:0, opp:0, won:0, lost:0 };
+  deals.forEach(function(d){
+    funnel.mql++;
+    var etapa = (d.etapa || d.fase || d.fase_atual_no_processo || '').toLowerCase();
+    if(etapa.includes('dia ') || etapa.includes('conectad') || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade') || etapa.includes('negoc')) funnel.sal++;
+    if(etapa.includes('conectad')) funnel.connected++;
+    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend')) funnel.scheduled++;
+    if(etapa.includes('entrevista')) funnel.show++;
+    if(etapa.includes('oportunidade') || etapa.includes('negoc')) funnel.opp++;
+    var status = (d.statusDeal || d.status_do_deal || '').toLowerCase();
+    if(status === 'ganho' || status === 'won') funnel.won++;
+    if(status === 'perdido' || status === 'lost') funnel.lost++;
+  });
+  var conversion = {
+    mql_sal: funnel.mql > 0 ? funnel.sal / funnel.mql : 0,
+    sal_connected: funnel.sal > 0 ? funnel.connected / funnel.sal : 0,
+    connected_scheduled: funnel.connected > 0 ? funnel.scheduled / funnel.connected : 0,
+    scheduled_show: funnel.scheduled > 0 ? funnel.show / funnel.scheduled : 0,
+    show_opp: funnel.show > 0 ? funnel.opp / funnel.show : 0,
+    opp_won: funnel.opp > 0 ? funnel.won / funnel.opp : 0
+  };
+
+  // ── BLOCK 4: EFICIÊNCIA POR LINHA ──
+  var linePerf = {};
+  deals.forEach(function(d){
+    var rl = d._revLine || resolveRevenueLine(d);
+    if(!linePerf[rl]) linePerf[rl] = { leads:0, sal:0, connected:0, scheduled:0, show:0, opp:0, won:0, lost:0, tickets:[], aging:[] };
+    var lp = linePerf[rl];
+    lp.leads++;
+    var etapa = (d.etapa || d.fase || '').toLowerCase();
+    if(etapa.includes('dia ') || etapa.includes('conectad') || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade')) lp.sal++;
+    if(etapa.includes('conectad')) lp.connected++;
+    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend')) lp.scheduled++;
+    if(etapa.includes('entrevista')) lp.show++;
+    if(etapa.includes('oportunidade')) lp.opp++;
+    var status = (d.statusDeal || d.status_do_deal || '').toLowerCase();
+    if(status === 'ganho') lp.won++;
+    if(status === 'perdido') lp.lost++;
+    if(d.revenueRaw) lp.tickets.push(Number(d.revenueRaw) || 0);
+    lp.aging.push(Number(d.delta || d._delta || 0));
+  });
+
+  // ── BLOCK 5: VELOCIDADE / DISCIPLINA ──
+  var agingArr = deals.map(function(d){ return Number(d.delta || d._delta || 0); });
+  var avgAging = agingArr.length > 0 ? agingArr.reduce(function(a,b){return a+b;},0) / agingArr.length : 0;
+  var slaRiskCount = deals.filter(function(d){ return (d._urgency || 0) >= 60; }).length;
+  var slaRiskRate = deals.length > 0 ? slaRiskCount / deals.length : 0;
+  var inactiveCount = runtimeData.filter(function(r){
+    if(!r.last_touch_at) return true;
+    var diff = (Date.now() - new Date(r.last_touch_at).getTime()) / (1000*60*60*24);
+    return diff > 5;
+  }).length;
+  var inactiveRate = deals.length > 0 ? inactiveCount / deals.length : 0;
+
+  var speed = {
+    avg_aging_days: Math.round(avgAging * 10) / 10,
+    sla_risk_rate: Math.round(slaRiskRate * 1000) / 1000,
+    inactive_rate: Math.round(inactiveRate * 1000) / 1000,
+    deals_sla_risk: slaRiskCount,
+    deals_inactive: inactiveCount
+  };
+
+  // ── BLOCK 6: QUALIDADE OPERACIONAL ──
+  var totalDeals = deals.length || 1;
+  var dealsWithNote = 0, dealsWithNextStep = 0, dealsWithAuthority = 0, dealsWithPain = 0;
+  var dealsWithMeeting = 0, dealsWithNoShowTreated = 0;
+
+  runtimeData.forEach(function(r){
+    var payload = r.runtime_payload || {};
+    if(typeof payload === 'string') try { payload = JSON.parse(payload); } catch(e){ payload = {}; }
+    if(payload.note_quality === 'good') dealsWithNote++;
+    if(r.next_best_action) dealsWithNextStep++;
+    if(r.persona) dealsWithAuthority++;
+    if(payload.pain_detected === 'true' || payload.pain_detected === true) dealsWithPain++;
+    if(r.show_state && r.show_state !== 'unknown') dealsWithMeeting++;
+    if(r.show_state === 'no_show' && payload.no_show_treated) dealsWithNoShowTreated++;
+  });
+
+  var notesQualityRate = dealsWithNote / totalDeals;
+  var nextStepRate = dealsWithNextStep / totalDeals;
+  var authorityRate = dealsWithAuthority / totalDeals;
+  var painRate = dealsWithPain / totalDeals;
+  var meetingRate = dealsWithMeeting / totalDeals;
+  var noShowTreatRate = runtimeData.filter(function(r){return r.show_state==='no_show';}).length > 0
+    ? dealsWithNoShowTreated / runtimeData.filter(function(r){return r.show_state==='no_show';}).length : 1;
+
+  var dqi = (notesQualityRate * 0.20) + (nextStepRate * 0.20) + (authorityRate * 0.15)
+    + (painRate * 0.15) + (meetingRate * 0.10) + (noShowTreatRate * 0.10) + (0.5 * 0.10);
+
+  var quality = {
+    dqi: Math.round(dqi * 1000) / 1000,
+    notes_quality_rate: Math.round(notesQualityRate * 1000) / 1000,
+    next_step_rate: Math.round(nextStepRate * 1000) / 1000,
+    authority_rate: Math.round(authorityRate * 1000) / 1000,
+    pain_rate: Math.round(painRate * 1000) / 1000,
+    meeting_logging_rate: Math.round(meetingRate * 1000) / 1000,
+    no_show_treatment_rate: Math.round(noShowTreatRate * 1000) / 1000
+  };
+
+  // ── BLOCK 7: FORECAST QUALITY ──
+  var fcAvg = 0, fcInflated = 0, fcLowCtx = 0, fcTotal = 0, fcValue = 0;
+  forecastData.forEach(function(f){
+    fcTotal++;
+    fcAvg += (f.forecast_confidence || 0);
+    fcValue += (f.forecast_value || 0);
+    if(f.forecast_score_adjusted < f.forecast_score_raw) fcInflated++;
+    if(!f.reason_main || f.reason_main === '') fcLowCtx++;
+  });
+  var forecastConfidenceAvg = fcTotal > 0 ? fcAvg / fcTotal : 0;
+  var inflatedRate = fcTotal > 0 ? fcInflated / fcTotal : 0;
+  var lowCtxRate = fcTotal > 0 ? fcLowCtx / fcTotal : 0;
+  var forecastQualityScore = (forecastConfidenceAvg * 0.35)
+    + ((1 - inflatedRate) * 0.25) + ((1 - lowCtxRate) * 0.20) + (0.8 * 0.20);
+
+  var forecast = {
+    forecast_confidence_avg: Math.round(forecastConfidenceAvg * 1000) / 1000,
+    inflated_pipeline_rate: Math.round(inflatedRate * 1000) / 1000,
+    low_context_rate: Math.round(lowCtxRate * 1000) / 1000,
+    forecast_value_total: Math.round(fcValue),
+    deals_with_forecast: fcTotal,
+    forecast_quality_score: Math.round(forecastQualityScore * 1000) / 1000
+  };
+
+  // ── BLOCK 8: RECEITA ──
+  var revenueInfluenced = 0;
+  deals.forEach(function(d){
+    var status = (d.statusDeal || d.status_do_deal || '').toLowerCase();
+    if(status === 'ganho' || status === 'won') revenueInfluenced += (Number(d.revenueRaw) || 0);
+  });
+  var revenue = {
+    revenue_influenced: Math.round(revenueInfluenced),
+    revenue_per_deal: volume.deals_worked > 0 ? Math.round(revenueInfluenced / volume.deals_worked) : 0,
+    revenue_per_handoff: volume.handoffs > 0 ? Math.round(revenueInfluenced / volume.handoffs) : 0,
+    forecast_value: Math.round(fcValue)
+  };
+
+  // ── SCORES ──
+  meta.actual_sal = funnel.sal;
+  meta.actual_opp = funnel.opp;
+  meta.actual_revenue = revenueInfluenced;
+  meta.achievement_rate = meta.target_sal > 0 ? Math.round((funnel.sal / meta.target_sal) * 1000) / 1000 : 0;
+
+  var volumeScore = Math.min(1, (volume.deals_worked / Math.max(totalDeals, 1)) * 0.4
+    + (volume.fups_sent / Math.max(totalDeals, 1)) * 0.3
+    + Math.min(volume.handoffs / Math.max(meta.target_opp, 1), 1) * 0.3);
+  var conversionScore = (conversion.mql_sal * 0.15 + conversion.sal_connected * 0.20
+    + conversion.connected_scheduled * 0.20 + conversion.scheduled_show * 0.20
+    + conversion.show_opp * 0.15 + conversion.opp_won * 0.10);
+  var speedScore = Math.max(0, 1 - (speed.sla_risk_rate * 0.5) - (speed.inactive_rate * 0.3) - (Math.min(avgAging, 15) / 15 * 0.2));
+  var qualityScore = dqi;
+  var forecastScore = forecastQualityScore;
+  var revenueScore = Math.min(1, meta.achievement_rate);
+
+  var finalScore = (volumeScore * 0.15) + (conversionScore * 0.25) + (speedScore * 0.10)
+    + (speedScore * 0.10) + (qualityScore * 0.15) + (forecastScore * 0.15) + (revenueScore * 0.10);
+  finalScore = Math.round(Math.min(1, finalScore) * 100);
+
+  var band = finalScore >= 90 ? 'elite' : finalScore >= 75 ? 'forte' : finalScore >= 60 ? 'estavel' : finalScore >= 45 ? 'atencao' : 'critico';
+
+  var report = {
+    operator_email: email,
+    qualificador_name: qname,
+    period_type: periodType,
+    period_key: periodKey,
+    meta: meta,
+    volume: volume,
+    conversion: conversion,
+    funnel: funnel,
+    linePerf: linePerf,
+    speed: speed,
+    quality: quality,
+    forecast: forecast,
+    revenue: revenue,
+    scores: {
+      volume: Math.round(volumeScore * 100),
+      conversion: Math.round(conversionScore * 100),
+      speed: Math.round(speedScore * 100),
+      quality: Math.round(qualityScore * 100),
+      forecast: Math.round(forecastScore * 100),
+      revenue: Math.round(revenueScore * 100),
+      final: finalScore
+    },
+    band: band
+  };
+
+  // ── PERSIST ──
+  try {
+    await sb.from('operator_performance_reports').upsert({
+      operator_email: email,
+      qualificador_name: qname,
+      period_type: periodType,
+      period_key: periodKey,
+      meta_json: meta,
+      volume_json: volume,
+      conversion_json: conversion,
+      line_efficiency_json: linePerf,
+      speed_json: speed,
+      quality_json: quality,
+      forecast_json: forecast,
+      revenue_json: revenue,
+      volume_score: volumeScore,
+      conversion_score: conversionScore,
+      speed_score: speedScore,
+      quality_score: qualityScore,
+      forecast_score: forecastScore,
+      revenue_score: revenueScore,
+      final_score: finalScore / 100
+    }, { onConflict: 'operator_email,period_type,period_key' });
+  } catch(e){ console.warn('[perf-v3] persist error:', e.message); }
+
+  // ── PERSIST LINE PERFORMANCE ──
+  try {
+    var lineRows = Object.keys(linePerf).map(function(rl){
+      var lp = linePerf[rl];
+      var avgT = lp.tickets.length > 0 ? lp.tickets.reduce(function(a,b){return a+b;},0) / lp.tickets.length : 0;
+      var avgA = lp.aging.length > 0 ? lp.aging.reduce(function(a,b){return a+b;},0) / lp.aging.length : 0;
+      return {
+        operator_email: email, qualificador_name: qname, revenue_line: rl,
+        period_type: periodType, period_key: periodKey,
+        leads_count: lp.leads, sal_count: lp.sal, connected_count: lp.connected,
+        scheduled_count: lp.scheduled, show_count: lp.show, opp_count: lp.opp,
+        won_count: lp.won, lost_count: lp.lost,
+        avg_ticket: Math.round(avgT), pipeline_value: Math.round(lp.tickets.reduce(function(a,b){return a+b;},0)),
+        won_value: 0, avg_aging_days: Math.round(avgA * 10) / 10,
+        cr_mql_sal: lp.leads > 0 ? lp.sal / lp.leads : 0,
+        cr_sal_connected: lp.sal > 0 ? lp.connected / lp.sal : 0,
+        cr_connected_scheduled: lp.connected > 0 ? lp.scheduled / lp.connected : 0,
+        cr_scheduled_show: lp.scheduled > 0 ? lp.show / lp.scheduled : 0,
+        cr_show_opp: lp.show > 0 ? lp.opp / lp.show : 0,
+        cr_opp_won: lp.opp > 0 ? lp.won / lp.opp : 0
+      };
+    });
+    if(lineRows.length > 0) await sb.from('operator_line_performance').upsert(lineRows);
+  } catch(e){ console.warn('[perf-v3] line persist error:', e.message); }
+
+  console.log('[perf-v3] report generated — score: ' + finalScore + ' (' + band + ')');
+  return report;
+}
+window.calcPerformanceReportV3 = calcPerformanceReportV3;
+
+// ── UI RENDERER ──
+function renderPerformanceReportV3(report, containerId){
+  var el = document.getElementById(containerId || 'perf-report-v3');
+  if(!el || !report) return;
+
+  var s = report.scores;
+  var bandColors = { elite:'var(--gold)', forte:'var(--green)', estavel:'var(--accent)', atencao:'var(--yellow)', critico:'var(--red)' };
+  var bandColor = bandColors[report.band] || 'var(--text)';
+
+  var html = '';
+
+  // ── Header: Score + Band ──
+  html += '<div class="pv3-header">';
+  html += '<div class="pv3-score-ring" style="border-color:'+bandColor+'"><span class="pv3-score-num">'+s.final+'</span><span class="pv3-score-label">'+report.band.toUpperCase()+'</span></div>';
+  html += '<div class="pv3-header-info"><div class="pv3-op-name">'+_escHtml(report.qualificador_name || report.operator_email)+'</div>';
+  html += '<div class="pv3-period">'+report.period_key+' · '+report.period_type+'</div></div>';
+  html += '<div class="pv3-scores-mini">';
+  ['volume','conversion','speed','quality','forecast','revenue'].forEach(function(k){
+    html += '<div class="pv3-sm"><div class="pv3-sm-v">'+s[k]+'</div><div class="pv3-sm-l">'+k.charAt(0).toUpperCase()+k.slice(1)+'</div></div>';
+  });
+  html += '</div></div>';
+
+  // ── Faixa 1: Meta ──
+  var m = report.meta;
+  html += '<div class="pv3-section"><div class="pv3-sec-title">Meta e Progresso</div>';
+  html += '<div class="pv3-kpi-row">';
+  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+m.actual_sal+'/'+m.target_sal+'</div><div class="pv3-kpi-l">SAL</div></div>';
+  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+m.actual_opp+'/'+m.target_opp+'</div><div class="pv3-kpi-l">OPP</div></div>';
+  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+(Math.round(m.achievement_rate * 100))+'%</div><div class="pv3-kpi-l">Atingimento</div></div>';
+  html += '</div></div>';
+
+  // ── Faixa 2: Funil ──
+  var f = report.funnel;
+  html += '<div class="pv3-section"><div class="pv3-sec-title">Funil</div>';
+  html += '<div class="pv3-funnel">';
+  var funnelStages = [
+    {k:'mql',l:'MQL'},{k:'sal',l:'SAL'},{k:'connected',l:'Conect.'},{k:'scheduled',l:'Agend.'},
+    {k:'show',l:'Show'},{k:'opp',l:'OPP'},{k:'won',l:'Won'}
+  ];
+  var maxF = Math.max(f.mql, 1);
+  funnelStages.forEach(function(st){
+    var pct = Math.round((f[st.k] / maxF) * 100);
+    html += '<div class="pv3-funnel-bar"><div class="pv3-fb-fill" style="width:'+pct+'%"></div>';
+    html += '<div class="pv3-fb-label">'+st.l+' <b>'+f[st.k]+'</b></div></div>';
+  });
+  html += '</div></div>';
+
+  // ── Faixa 3: Conversão ──
+  var c = report.conversion;
+  html += '<div class="pv3-section"><div class="pv3-sec-title">Conversão por Etapa</div>';
+  html += '<div class="pv3-kpi-row">';
+  [['mql_sal','MQL→SAL'],['sal_connected','SAL→Con.'],['connected_scheduled','Con.→Ag.'],
+   ['scheduled_show','Ag.→Show'],['show_opp','Show→OPP'],['opp_won','OPP→Won']].forEach(function(pair){
+    var val = Math.round((c[pair[0]] || 0) * 100);
+    html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+val+'%</div><div class="pv3-kpi-l">'+pair[1]+'</div></div>';
+  });
+  html += '</div></div>';
+
+  // ── Faixa 4: Volume ──
+  var v = report.volume;
+  html += '<div class="pv3-section"><div class="pv3-sec-title">Volume Operacional</div>';
+  html += '<div class="pv3-kpi-row">';
+  [['deals_worked','Deals'],['fups_sent','FUPs'],['dms_sent','DMs'],['analyses_generated','Análises'],
+   ['notes_created','Notes'],['meetings_booked','Reuniões'],['handoffs','Handoffs']].forEach(function(pair){
+    html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+v[pair[0]]+'</div><div class="pv3-kpi-l">'+pair[1]+'</div></div>';
+  });
+  html += '</div></div>';
+
+  // ── Faixa 5: Velocidade ──
+  var sp = report.speed;
+  html += '<div class="pv3-section"><div class="pv3-sec-title">Velocidade / Disciplina</div>';
+  html += '<div class="pv3-kpi-row">';
+  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+sp.avg_aging_days+'d</div><div class="pv3-kpi-l">Aging Médio</div></div>';
+  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+Math.round(sp.sla_risk_rate*100)+'%</div><div class="pv3-kpi-l">SLA Risk</div></div>';
+  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+sp.deals_sla_risk+'</div><div class="pv3-kpi-l">Deals SLA</div></div>';
+  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+Math.round(sp.inactive_rate*100)+'%</div><div class="pv3-kpi-l">Inativos</div></div>';
+  html += '</div></div>';
+
+  // ── Faixa 6: Qualidade ──
+  var q = report.quality;
+  html += '<div class="pv3-section"><div class="pv3-sec-title">Qualidade Operacional · DQI '+Math.round(q.dqi*100)+'</div>';
+  html += '<div class="pv3-qual-bars">';
+  [['notes_quality_rate','Notes Quality'],['next_step_rate','Next Step'],['authority_rate','Authority'],
+   ['pain_rate','Pain Clarity'],['meeting_logging_rate','Meetings'],['no_show_treatment_rate','No-Show']].forEach(function(pair){
+    var pct = Math.round((q[pair[0]] || 0) * 100);
+    var col = pct >= 70 ? 'var(--green)' : pct >= 50 ? 'var(--yellow)' : 'var(--red)';
+    html += '<div class="pv3-qbar"><div class="pv3-qbar-label">'+pair[1]+'</div><div class="pv3-qbar-track"><div class="pv3-qbar-fill" style="width:'+pct+'%;background:'+col+'"></div></div><div class="pv3-qbar-val">'+pct+'%</div></div>';
+  });
+  html += '</div></div>';
+
+  // ── Faixa 7: Forecast ──
+  var fc = report.forecast;
+  html += '<div class="pv3-section"><div class="pv3-sec-title">Forecast Quality</div>';
+  html += '<div class="pv3-kpi-row">';
+  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+Math.round(fc.forecast_confidence_avg*100)+'%</div><div class="pv3-kpi-l">Confidence</div></div>';
+  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+Math.round(fc.inflated_pipeline_rate*100)+'%</div><div class="pv3-kpi-l">Inflado</div></div>';
+  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+Math.round(fc.low_context_rate*100)+'%</div><div class="pv3-kpi-l">Sem Contexto</div></div>';
+  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+fc.deals_with_forecast+'</div><div class="pv3-kpi-l">Com Forecast</div></div>';
+  html += '</div></div>';
+
+  // ── Faixa 8: Receita ──
+  var r = report.revenue;
+  var fmtBRL = window.fmtBRL || function(v){return 'R$ '+(v||0).toLocaleString('pt-BR');};
+  html += '<div class="pv3-section"><div class="pv3-sec-title">Impacto em Receita</div>';
+  html += '<div class="pv3-kpi-row">';
+  html += '<div class="pv3-kpi"><div class="pv3-kpi-v" style="color:var(--green)">'+fmtBRL(r.revenue_influenced)+'</div><div class="pv3-kpi-l">Receita Influenciada</div></div>';
+  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+fmtBRL(r.revenue_per_deal)+'</div><div class="pv3-kpi-l">Rev/Deal</div></div>';
+  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+fmtBRL(r.revenue_per_handoff)+'</div><div class="pv3-kpi-l">Rev/Handoff</div></div>';
+  html += '</div></div>';
+
+  // ── Faixa 9: Linha de Receita breakdown ──
+  var lp = report.linePerf;
+  var rlKeys = Object.keys(lp).sort(function(a,b){ return (lp[b].leads||0)-(lp[a].leads||0); });
+  if(rlKeys.length > 0){
+    html += '<div class="pv3-section"><div class="pv3-sec-title">Eficiência por Linha de Receita</div>';
+    html += '<div class="pv3-line-table"><table><thead><tr>';
+    html += '<th>Linha</th><th>Leads</th><th>SAL</th><th>Con.</th><th>Ag.</th><th>Show</th><th>OPP</th><th>Won</th><th>CR M→S</th><th>Aging</th>';
+    html += '</tr></thead><tbody>';
+    rlKeys.forEach(function(rl){
+      var l = lp[rl];
+      var cfg = REVENUE_LINES[rl] || { label: rl };
+      var avgA = l.aging.length > 0 ? Math.round(l.aging.reduce(function(a,b){return a+b;},0) / l.aging.length * 10) / 10 : 0;
+      html += '<tr>';
+      html += '<td><b>'+_escHtml(cfg.label)+'</b></td>';
+      html += '<td>'+l.leads+'</td><td>'+l.sal+'</td><td>'+l.connected+'</td><td>'+l.scheduled+'</td>';
+      html += '<td>'+l.show+'</td><td>'+l.opp+'</td><td>'+l.won+'</td>';
+      html += '<td>'+(l.leads>0?Math.round(l.sal/l.leads*100):0)+'%</td>';
+      html += '<td>'+avgA+'d</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div></div>';
+  }
+
+  el.innerHTML = html;
+}
+window.renderPerformanceReportV3 = renderPerformanceReportV3;
+
+console.log('[cockpit-engine v8.0] 15-Layer Architecture loaded — Performance Report V3');
 
 })();

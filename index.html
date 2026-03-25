@@ -425,6 +425,31 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 /* ELUCi motor styles */
 .elucy-badge{background:var(--adim);border:1px solid var(--accent);border-radius:3px;padding:1px 6px;font-size:9px;font-weight:800;color:var(--accent2);margin-left:6px;vertical-align:middle}
 .elucy-live{background:var(--gdim)!important;border-color:var(--green)!important;color:var(--green)!important}
+/* Performance Report V3 */
+.pv3-header{display:flex;align-items:center;gap:16px;padding:16px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:14px}
+.pv3-score-ring{width:72px;height:72px;border-radius:50%;border:3px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.pv3-score-num{font-size:24px;font-weight:900;line-height:1;color:#fff}.pv3-score-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+.pv3-header-info{flex:1}.pv3-op-name{font-size:15px;font-weight:800;color:#fff}.pv3-period{font-size:11px;color:var(--text2);margin-top:2px}
+.pv3-scores-mini{display:flex;gap:8px}.pv3-sm{text-align:center;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 8px;min-width:52px}
+.pv3-sm-v{font-size:14px;font-weight:800;color:#fff}.pv3-sm-l{font-size:9px;color:var(--text2);font-weight:500}
+.pv3-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px;margin-bottom:10px}
+.pv3-sec-title{font-family:var(--font-title);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent2);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.pv3-sec-title::before{content:"";width:3px;height:12px;background:var(--accent);border-radius:2px}
+.pv3-kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:8px}
+.pv3-kpi{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px;text-align:center}
+.pv3-kpi-v{font-size:16px;font-weight:800;color:#fff;line-height:1.3}.pv3-kpi-l{font-size:9px;color:var(--text2);font-weight:500;margin-top:2px}
+.pv3-funnel{display:flex;flex-direction:column;gap:4px}
+.pv3-funnel-bar{position:relative;height:24px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.pv3-fb-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;min-width:2px}
+.pv3-fb-label{position:absolute;top:0;left:8px;height:100%;display:flex;align-items:center;font-size:11px;font-weight:600;color:#fff}
+.pv3-qual-bars{display:flex;flex-direction:column;gap:6px}
+.pv3-qbar{display:flex;align-items:center;gap:8px}.pv3-qbar-label{width:100px;font-size:11px;color:var(--text2);flex-shrink:0}
+.pv3-qbar-track{flex:1;height:10px;background:var(--bg4);border-radius:3px;overflow:hidden}.pv3-qbar-fill{height:100%;border-radius:3px;min-width:2px}
+.pv3-qbar-val{width:36px;text-align:right;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.pv3-line-table{overflow-x:auto}.pv3-line-table table{width:100%;border-collapse:collapse;font-size:11px}
+.pv3-line-table th{text-align:left;padding:6px 8px;font-weight:700;color:var(--text2);border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+.pv3-line-table td{padding:5px 8px;border-bottom:1px solid var(--border);color:var(--text)}
+.pv3-line-table tr:hover{background:rgba(255,255,255,.02)}
 /* Intelligence dashboard */
 .intel-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
 .intel-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:15px;overflow:hidden}
@@ -825,10 +850,12 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
         <span class="intel-dim" onclick="window._intelDim('channel',this)">Canal</span>
         <span class="intel-dim" onclick="window._intelDim('task',this)">Tasks</span>
         <span class="intel-dim" onclick="window._intelDim('value',this)">Valor</span>
+        <span class="intel-dim" onclick="window._intelDim('performance',this)" style="border-color:var(--gold);color:var(--gold)">Performance V3</span>
       </div>
       <div id="intel-content">
         <div class="intel-empty">Carregue o pipeline para visualizar a análise de inteligência.</div>
       </div>
+      <div id="perf-report-v3" style="display:none"></div>
     </div>
 <!-- ── SCREEN: DM WAR ROOM ────────────────────────────────────────── -->
 <div class="screen" id="screen-dm">
@@ -3883,6 +3910,20 @@ window._intelDim=function(dim,el){
   _intelCurrentDim=dim;
   document.querySelectorAll('.intel-dim').forEach(function(c){c.classList.remove('on');});
   if(el) el.classList.add('on');
+  var perfEl=document.getElementById('perf-report-v3');
+  var intelEl=document.getElementById('intel-content');
+  if(dim==='performance'){
+    if(intelEl) intelEl.style.display='none';
+    if(perfEl){ perfEl.style.display='block'; perfEl.innerHTML='<div style="padding:20px;color:var(--text2)">Calculando Performance Report V3...</div>'; }
+    if(window.calcPerformanceReportV3){
+      window.calcPerformanceReportV3().then(function(report){
+        if(report && window.renderPerformanceReportV3) window.renderPerformanceReportV3(report);
+      });
+    }
+    return;
+  }
+  if(intelEl) intelEl.style.display='block';
+  if(perfEl) perfEl.style.display='none';
   renderIntelligence();
 };
 
