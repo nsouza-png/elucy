@@ -203,21 +203,23 @@ function calcConversionByLine(allDeals){
   var byLine={};
   allDeals.forEach(function(d){
     var line=d._revLine||resolveRevenueLine(d);
-    if(!byLine[line]) byLine[line]={mql:0,sal:0,opp:0,won:0,lost:0,total_value:0};
+    if(!byLine[line]) byLine[line]={leads:0,qualified:0,opp:0,won:0,lost:0,total_value:0};
     var s=byLine[line]; var status=(d.statusDeal||'').toLowerCase(); var fase=(d._fase||d.fase||'').toLowerCase();
-    s.mql++;
-    if(status==='ganho'){ s.sal++;s.opp++;s.won++;s.total_value+=(d.revenueRaw||0); }
+    s.leads++;
+    if(status==='ganho'){ s.qualified++;s.opp++;s.won++;s.total_value+=(d.revenueRaw||0); }
     else if(status==='perdido'||fase==='perdido'){
       var m=(d.motivoLost||d.motivo_lost||'').toLowerCase();
-      if(m.indexOf('[validacao]')!==0) s.sal++;
+      if(m.indexOf('[validacao]')!==0) s.qualified++;
       if(m.indexOf('[negociacao]')===0||m.indexOf('[im]')===0) s.opp++;
       s.lost++;
-    } else { if(fase!=='mql') s.sal++; if(fase==='oportunidade'||fase==='negociacao') s.opp++; }
+    } else { if(fase!=='mql'&&fase) s.qualified++; if(fase==='oportunidade'||fase==='negociacao'||fase==='negociação') s.opp++; }
   });
   Object.keys(byLine).forEach(function(k){ var s=byLine[k];
-    s.cr_mql_sal=s.mql>0?Math.round(s.sal/s.mql*1000)/10:0;
-    s.cr_sal_opp=s.sal>0?Math.round(s.opp/s.sal*1000)/10:0;
-    s.cr_mql_opp=s.mql>0?Math.round(s.opp/s.mql*1000)/10:0;
+    // Backward compat aliases for existing consumers
+    s.mql=s.leads; s.sal=s.qualified;
+    s.cr_mql_sal=s.leads>0?Math.round(s.qualified/s.leads*1000)/10:0;
+    s.cr_sal_opp=s.qualified>0?Math.round(s.opp/s.qualified*1000)/10:0;
+    s.cr_mql_opp=s.leads>0?Math.round(s.opp/s.leads*1000)/10:0;
     s.avg_ticket=s.won>0?Math.round(s.total_value/s.won):0;
   });
   return byLine;
@@ -1287,7 +1289,7 @@ function analyzeProductUsage(){
   });
   if(bestLine && bestCR > 0){
     insights.push({ type:'opportunity', severity:'info',
-      message:'Linha mais promissora: '+(REVENUE_LINES[bestLine]?REVENUE_LINES[bestLine].label:bestLine)+' com '+bestCR+'% de conversao MQL-SAL',
+      message:'Linha mais promissora: '+(REVENUE_LINES[bestLine]?REVENUE_LINES[bestLine].label:bestLine)+' com '+bestCR+'% de conversao Lead-Qualificado',
       suggestion:'Priorize deals dessa linha no focus mode'
     });
   }
@@ -1474,9 +1476,9 @@ async function renderHome(){
     + '</div>'
     + '<div class="home-meta-grid">'
     + '<div class="home-meta"><div class="home-meta-label">FUPs</div><div class="home-meta-value">'+(todayStats.fups||0)+' / '+meta.fups+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(fupPct>=100?' done':'')+'" style="width:'+fupPct+'%"></div></div></div>'
-    + '<div class="home-meta"><div class="home-meta-label">Qualificacoes</div><div class="home-meta-value">'+(todayStats.qualificacoes||0)+' / '+meta.qualificacoes+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(qualPct>=100?' done':'')+'" style="width:'+qualPct+'%"></div></div></div>'
+    + '<div class="home-meta"><div class="home-meta-label">Qualificações</div><div class="home-meta-value">'+(todayStats.qualificacoes||0)+' / '+meta.qualificacoes+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(qualPct>=100?' done':'')+'" style="width:'+qualPct+'%"></div></div></div>'
     + '<div class="home-meta"><div class="home-meta-label">Handoffs</div><div class="home-meta-value">'+(todayStats.handoffs||0)+' / '+meta.handoffs+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(handPct>=100?' done':'')+'" style="width:'+handPct+'%"></div></div></div>'
-    + '<div class="home-meta"><div class="home-meta-label">OPP Mensal</div><div class="home-meta-value">'+oppActual+' / '+oppTarget+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(oppPct>=100?' done':'')+'" style="width:'+oppPct+'%"></div></div></div>'
+    + '<div class="home-meta"><div class="home-meta-label">Oportunidades (mês)</div><div class="home-meta-value">'+oppActual+' / '+oppTarget+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(oppPct>=100?' done':'')+'" style="width:'+oppPct+'%"></div></div></div>'
     + '</div></div>';
 
   // BLOCO 2 — Tarefas criticas
@@ -3197,18 +3199,20 @@ async function calcOperatorPerformance(periodType, periodKey){
   ).toFixed(4);
 
   // ==================================================
-  // BLOCO 2: CONVERSAO
+  // BLOCO 2: CONVERSAO (funil de qualificação)
+  // fase_atual_no_processo = classificação (SAL, Conectado, Agendado, Oportunidade...)
+  // etapa_atual_no_pipeline = etapa operacional (Novo Lead, Dia 02, Conectados, Agendamento...)
   // ==================================================
   var funnel = { mql:0, sal:0, conectado:0, agendamento:0, show:0, opp:0, won:0, lost:0 };
   allDeals.forEach(function(d){
     var fase = (d.fase_atual_no_processo || '').toLowerCase();
     var etapa = (d.etapa_atual_no_pipeline || '').toLowerCase();
     var status = (d.status_do_deal || '').toLowerCase();
-    funnel.mql++;
-    if(fase !== 'mql') funnel.sal++;
-    if(etapa === 'conectados' || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('oportunidade') || etapa.includes('negociacao')) funnel.conectado++;
-    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('oportunidade') || etapa.includes('negociacao')) funnel.agendamento++;
-    if(status === 'ganho' || etapa.includes('oportunidade') || etapa.includes('negociacao')) funnel.opp++;
+    funnel.mql++; // mql = total leads (persistence key)
+    if(fase && fase !== 'mql') funnel.sal++; // sal = qualificados (persistence key)
+    if(etapa === 'conectados' || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('oportunidade') || etapa.includes('negociacao') || etapa.includes('fechamento')) funnel.conectado++;
+    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('oportunidade') || etapa.includes('negociacao') || etapa.includes('fechamento')) funnel.agendamento++;
+    if(fase === 'oportunidade' || fase === 'negociação' || fase === 'negociacao' || status === 'ganho') funnel.opp++;
     if(status === 'ganho') funnel.won++;
     if(status === 'perdido') funnel.lost++;
   });
@@ -3641,22 +3645,32 @@ async function calcPerformanceReportV3(periodType, periodKey){
   volume.deals_worked = Object.keys(dealsWorkedSet).length;
 
   // ── BLOCK 3: CONVERSÃO ──
-  var funnel = { mql:0, sal:0, connected:0, scheduled:0, show:0, opp:0, won:0, lost:0 };
+  // Taxonomia: fase_atual_no_processo = classificação de qualificação (SAL, Conectado, Agendado, Oportunidade, Ganho, Perdido)
+  //            etapa_atual_no_pipeline = etapa operacional (Novo Lead, Dia 02-05, Conectados, Agendamento, Entrevista, etc.)
+  var funnel = { leads:0, qualified:0, connected:0, scheduled:0, show:0, opp:0, won:0, lost:0 };
   deals.forEach(function(d){
-    funnel.mql++;
-    var etapa = (d.etapa || d.fase || d.fase_atual_no_processo || '').toLowerCase();
-    if(etapa.includes('dia ') || etapa.includes('conectad') || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade') || etapa.includes('negoc')) funnel.sal++;
-    if(etapa.includes('conectad')) funnel.connected++;
-    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend')) funnel.scheduled++;
-    if(etapa.includes('entrevista')) funnel.show++;
-    if(etapa.includes('oportunidade') || etapa.includes('negoc')) funnel.opp++;
+    funnel.leads++;
+    var fase = (d._fase || d.fase || d.fase_atual_no_processo || '').toLowerCase();
+    var etapa = (d.etapa || d.etapa_atual_no_pipeline || '').toLowerCase();
     var status = (d.statusDeal || d.status_do_deal || '').toLowerCase();
+    // Qualificado = qualquer deal que saiu de MQL (fase != null e != vazio)
+    if(fase && fase !== 'mql') funnel.qualified++;
+    // Conectado = etapa de pipeline indica contato feito
+    if(etapa.includes('conectad') || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade') || etapa.includes('negoc') || etapa.includes('fechamento')) funnel.connected++;
+    // Agendado = etapa indica agendamento/entrevista
+    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade') || etapa.includes('negoc') || etapa.includes('fechamento')) funnel.scheduled++;
+    // Show = entrevista realizada
+    if(etapa.includes('entrevista') || etapa.includes('oportunidade') || etapa.includes('negoc') || etapa.includes('fechamento')) funnel.show++;
+    // Oportunidade = fase de qualificação indica oportunidade real
+    if(fase === 'oportunidade' || fase === 'negociação' || fase === 'negociacao' || status === 'ganho') funnel.opp++;
     if(status === 'ganho' || status === 'won') funnel.won++;
     if(status === 'perdido' || status === 'lost') funnel.lost++;
   });
+  // Alias for backward compat with persistence keys
+  funnel.mql = funnel.leads; funnel.sal = funnel.qualified;
   var conversion = {
-    mql_sal: funnel.mql > 0 ? funnel.sal / funnel.mql : 0,
-    sal_connected: funnel.sal > 0 ? funnel.connected / funnel.sal : 0,
+    mql_sal: funnel.leads > 0 ? funnel.qualified / funnel.leads : 0,
+    sal_connected: funnel.qualified > 0 ? funnel.connected / funnel.qualified : 0,
     connected_scheduled: funnel.connected > 0 ? funnel.scheduled / funnel.connected : 0,
     scheduled_show: funnel.scheduled > 0 ? funnel.show / funnel.scheduled : 0,
     show_opp: funnel.show > 0 ? funnel.opp / funnel.show : 0,
@@ -3667,15 +3681,16 @@ async function calcPerformanceReportV3(periodType, periodKey){
   var linePerf = {};
   deals.forEach(function(d){
     var rl = d._revLine || resolveRevenueLine(d);
-    if(!linePerf[rl]) linePerf[rl] = { leads:0, sal:0, connected:0, scheduled:0, show:0, opp:0, won:0, lost:0, tickets:[], aging:[] };
+    if(!linePerf[rl]) linePerf[rl] = { leads:0, qualified:0, connected:0, scheduled:0, show:0, opp:0, won:0, lost:0, tickets:[], aging:[] };
     var lp = linePerf[rl];
     lp.leads++;
-    var etapa = (d.etapa || d.fase || '').toLowerCase();
-    if(etapa.includes('dia ') || etapa.includes('conectad') || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade')) lp.sal++;
-    if(etapa.includes('conectad')) lp.connected++;
-    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend')) lp.scheduled++;
-    if(etapa.includes('entrevista')) lp.show++;
-    if(etapa.includes('oportunidade')) lp.opp++;
+    var fase = (d._fase || d.fase || d.fase_atual_no_processo || '').toLowerCase();
+    var etapa = (d.etapa || d.etapa_atual_no_pipeline || '').toLowerCase();
+    if(fase && fase !== 'mql') lp.qualified++;
+    if(etapa.includes('conectad') || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade') || etapa.includes('negoc') || etapa.includes('fechamento')) lp.connected++;
+    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade') || etapa.includes('negoc') || etapa.includes('fechamento')) lp.scheduled++;
+    if(etapa.includes('entrevista') || etapa.includes('oportunidade') || etapa.includes('negoc') || etapa.includes('fechamento')) lp.show++;
+    if(fase === 'oportunidade' || fase === 'negociação' || fase === 'negociacao' || (d.statusDeal||d.status_do_deal||'').toLowerCase() === 'ganho') lp.opp++;
     var status = (d.statusDeal || d.status_do_deal || '').toLowerCase();
     if(status === 'ganho') lp.won++;
     if(status === 'perdido') lp.lost++;
@@ -3860,13 +3875,13 @@ async function calcPerformanceReportV3(periodType, periodKey){
       return {
         operator_email: email, qualificador_name: qname, revenue_line: rl,
         period_type: periodType, period_key: periodKey,
-        leads_count: lp.leads, sal_count: lp.sal, connected_count: lp.connected,
+        leads_count: lp.leads, sal_count: lp.qualified||0, connected_count: lp.connected,
         scheduled_count: lp.scheduled, show_count: lp.show, opp_count: lp.opp,
         won_count: lp.won, lost_count: lp.lost,
         avg_ticket: Math.round(avgT), pipeline_value: Math.round(lp.tickets.reduce(function(a,b){return a+b;},0)),
         won_value: 0, avg_aging_days: Math.round(avgA * 10) / 10,
-        cr_mql_sal: lp.leads > 0 ? lp.sal / lp.leads : 0,
-        cr_sal_connected: lp.sal > 0 ? lp.connected / lp.sal : 0,
+        cr_mql_sal: lp.leads > 0 ? (lp.qualified||0) / lp.leads : 0,
+        cr_sal_connected: (lp.qualified||0) > 0 ? lp.connected / (lp.qualified||1) : 0,
         cr_connected_scheduled: lp.connected > 0 ? lp.scheduled / lp.connected : 0,
         cr_scheduled_show: lp.scheduled > 0 ? lp.show / lp.scheduled : 0,
         cr_show_opp: lp.show > 0 ? lp.opp / lp.show : 0,
@@ -3907,18 +3922,18 @@ function renderPerformanceReportV3(report, containerId){
   var m = report.meta;
   html += '<div class="pv3-section"><div class="pv3-sec-title">Meta e Progresso</div>';
   html += '<div class="pv3-kpi-row">';
-  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+m.actual_sal+'/'+m.target_sal+'</div><div class="pv3-kpi-l">SAL</div></div>';
-  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+m.actual_opp+'/'+m.target_opp+'</div><div class="pv3-kpi-l">OPP</div></div>';
+  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+m.actual_sal+'/'+m.target_sal+'</div><div class="pv3-kpi-l">Qualificados</div></div>';
+  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+m.actual_opp+'/'+m.target_opp+'</div><div class="pv3-kpi-l">Oportunidades</div></div>';
   html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+(Math.round(m.achievement_rate * 100))+'%</div><div class="pv3-kpi-l">Atingimento</div></div>';
   html += '</div></div>';
 
   // ── Faixa 2: Funil ──
   var f = report.funnel;
-  html += '<div class="pv3-section"><div class="pv3-sec-title">Funil</div>';
+  html += '<div class="pv3-section"><div class="pv3-sec-title">Funil de Qualificação</div>';
   html += '<div class="pv3-funnel">';
   var funnelStages = [
-    {k:'mql',l:'MQL'},{k:'sal',l:'SAL'},{k:'connected',l:'Conect.'},{k:'scheduled',l:'Agend.'},
-    {k:'show',l:'Show'},{k:'opp',l:'OPP'},{k:'won',l:'Won'}
+    {k:'mql',l:'Leads'},{k:'sal',l:'Qualificados'},{k:'connected',l:'Conectados'},{k:'scheduled',l:'Agendados'},
+    {k:'show',l:'Show'},{k:'opp',l:'Oportunidades'},{k:'won',l:'Ganhos'}
   ];
   var maxF = Math.max(f.mql, 1);
   funnelStages.forEach(function(st){
@@ -3930,10 +3945,10 @@ function renderPerformanceReportV3(report, containerId){
 
   // ── Faixa 3: Conversão ──
   var c = report.conversion;
-  html += '<div class="pv3-section"><div class="pv3-sec-title">Conversão por Etapa</div>';
+  html += '<div class="pv3-section"><div class="pv3-sec-title">Conversão por Fase</div>';
   html += '<div class="pv3-kpi-row">';
-  [['mql_sal','MQL→SAL'],['sal_connected','SAL→Con.'],['connected_scheduled','Con.→Ag.'],
-   ['scheduled_show','Ag.→Show'],['show_opp','Show→OPP'],['opp_won','OPP→Won']].forEach(function(pair){
+  [['mql_sal','Lead→Qualif.'],['sal_connected','Qualif.→Conect.'],['connected_scheduled','Conect.→Agend.'],
+   ['scheduled_show','Agend.→Show'],['show_opp','Show→Oport.'],['opp_won','Oport.→Ganho']].forEach(function(pair){
     var val = Math.round((c[pair[0]] || 0) * 100);
     html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+val+'%</div><div class="pv3-kpi-l">'+pair[1]+'</div></div>';
   });
@@ -3997,7 +4012,7 @@ function renderPerformanceReportV3(report, containerId){
   if(rlKeys.length > 0){
     html += '<div class="pv3-section"><div class="pv3-sec-title">Eficiência por Linha de Receita</div>';
     html += '<div class="pv3-line-table"><table><thead><tr>';
-    html += '<th>Linha</th><th>Leads</th><th>SAL</th><th>Con.</th><th>Ag.</th><th>Show</th><th>OPP</th><th>Won</th><th>CR M→S</th><th>Aging</th>';
+    html += '<th>Linha</th><th>Leads</th><th>Qualif.</th><th>Conect.</th><th>Agend.</th><th>Show</th><th>Oport.</th><th>Ganhos</th><th>CR L→Q</th><th>Aging</th>';
     html += '</tr></thead><tbody>';
     rlKeys.forEach(function(rl){
       var l = lp[rl];
@@ -4005,9 +4020,9 @@ function renderPerformanceReportV3(report, containerId){
       var avgA = l.aging.length > 0 ? Math.round(l.aging.reduce(function(a,b){return a+b;},0) / l.aging.length * 10) / 10 : 0;
       html += '<tr>';
       html += '<td><b>'+_escHtml(cfg.label)+'</b></td>';
-      html += '<td>'+l.leads+'</td><td>'+l.sal+'</td><td>'+l.connected+'</td><td>'+l.scheduled+'</td>';
+      html += '<td>'+l.leads+'</td><td>'+(l.qualified||0)+'</td><td>'+l.connected+'</td><td>'+l.scheduled+'</td>';
       html += '<td>'+l.show+'</td><td>'+l.opp+'</td><td>'+l.won+'</td>';
-      html += '<td>'+(l.leads>0?Math.round(l.sal/l.leads*100):0)+'%</td>';
+      html += '<td>'+(l.leads>0?Math.round((l.qualified||0)/l.leads*100):0)+'%</td>';
       html += '<td>'+avgA+'d</td>';
       html += '</tr>';
     });

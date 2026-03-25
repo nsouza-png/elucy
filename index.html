@@ -734,7 +734,7 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
       <div class="filter-row">
         <span class="filter-label">Etapa</span>
         <span class="fchip on" data-filter="etapa" data-val="todos" onclick="toggleFilter(this,'etapa')">Todos</span>
-        <span class="fchip" data-filter="etapa" data-val="Novo Lead" onclick="toggleFilter(this,'etapa')">MQL</span>
+        <span class="fchip" data-filter="etapa" data-val="Novo Lead" onclick="toggleFilter(this,'etapa')">Novo Lead</span>
         <span class="fchip" data-filter="etapa" data-val="Dia 01" onclick="toggleFilter(this,'etapa')">D1</span>
         <span class="fchip" data-filter="etapa" data-val="Dia 02" onclick="toggleFilter(this,'etapa')">D2</span>
         <span class="fchip" data-filter="etapa" data-val="Dia 03" onclick="toggleFilter(this,'etapa')">D3</span>
@@ -4261,7 +4261,7 @@ function renderCard(title,content){
 }
 
 function fmtEtapa(e){
-  const map={'novo lead':'MQL','dia 01':'D1','dia 02':'D2','dia 03':'D3','dia 04':'D4','dia 05':'D5','dia 06':'D6','conectados':'Conectado','agendamento':'Agendamento','reagendamento':'Reagendamento','entrevista agendada':'Entrevista'};
+  const map={'novo lead':'Novo Lead','dia 01':'D1','dia 02':'D2','dia 03':'D3','dia 04':'D4','dia 05':'D5','dia 06':'D6','conectados':'Conectado','agendamento':'Agendamento','reagendamento':'Reagendamento','entrevista agendada':'Entrevista'};
   return map[(e||'').toLowerCase()]||e;
 }
 
