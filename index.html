@@ -1103,8 +1103,10 @@ function showCopy(id,btnEl){
     // Task Runner context — no DVL Gate, go straight to copy generation
     const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
     if(deal && (deal.deal_id||id)!=='—'){
+      const coEl=document.getElementById('co-'+id);
+      if(coEl) coEl.style.display='block';
       requestElucyCopy(deal.deal_id||id, deal, id, deal.canal||'WhatsApp');
-      if(btnEl){btnEl.textContent='Gerando...';btnEl.disabled=true;setTimeout(function(){btnEl.textContent='Gerar Copy via ELUCY';btnEl.disabled=false;},5000);}
+      if(btnEl){btnEl.textContent='Gerando...';btnEl.disabled=true;setTimeout(function(){btnEl.textContent='Gerar Copy via ELUCY';btnEl.disabled=false;},15000);}
     }
     return;
   }
@@ -2878,9 +2880,9 @@ async function requestElucyCopy(deal_id, dealData, targetId, canal){
             : (apiResult.intelligence.suggestedApproach || JSON.stringify(apiResult.intelligence));
           const parsed = parseCopyOutput(output);
           const waEl = document.getElementById('ct-'+targetId+'-wa');
-          if(waEl) waEl.innerHTML = renderMd(parsed.wa);
+          if(waEl) waEl.innerText = parsed.wa;
           const crmEl = document.getElementById('ct-'+targetId+'-crm');
-          if(crmEl) crmEl.innerHTML = renderMd(parsed.crm);
+          if(crmEl) crmEl.innerText = parsed.crm;
           const coEl = document.getElementById('co-'+targetId);
           if(coEl) coEl.style.display='block';
           logActivity('copy_generated', deal_id, {canal: canal||'WhatsApp'});
@@ -3123,8 +3125,8 @@ async function loadDealCache(dealId, targetId){
       const waEl=document.getElementById('ct-'+targetId+'-wa');
       const crmEl=document.getElementById('ct-'+targetId+'-crm');
       const coEl=document.getElementById('co-'+targetId);
-      if(waEl) waEl.innerHTML=renderMd(parsed.wa);
-      if(crmEl) crmEl.innerHTML=renderMd(parsed.crm);
+      if(waEl) waEl.innerText=parsed.wa;
+      if(crmEl) crmEl.innerText=parsed.crm;
       if(coEl) coEl.style.display='block';
     }
     if(latest.business_analysis && latest.business_analysis.content){
@@ -3527,8 +3529,8 @@ function injectElucyCopy(targetId, copyWA, copyCRM){
   const wa=document.getElementById('ct-'+targetId+'-wa');
   const crm=document.getElementById('ct-'+targetId+'-crm');
   const co=document.getElementById('co-'+targetId);
-  if(wa&&copyWA) wa.textContent=copyWA;
-  if(crm&&copyCRM) crm.textContent=copyCRM;
+  if(wa&&copyWA) wa.innerText=copyWA;
+  if(crm&&copyCRM) crm.innerText=copyCRM;
   if(co) co.style.display='block';
 }
 
