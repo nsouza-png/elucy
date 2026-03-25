@@ -213,6 +213,23 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .tex-act-done{background:var(--green);color:#fff}
 .tex-act-done:hover{filter:brightness(1.1)}
 @media(max-width:900px){.tex-body{flex-direction:column}.tex-sidebar{width:100%}}
+/* ── Cadence Engine UI ────────────────────────────────────── */
+.task-card-cad{border-left:3px solid var(--accent)}
+.task-cad-badge{font-size:9px;font-weight:700;color:var(--accent2);background:var(--adim);padding:2px 6px;border-radius:3px;margin-left:auto}
+.cad-enroll{display:flex;gap:6px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.cad-select{padding:5px 8px;border-radius:6px;font-size:11px;border:1px solid var(--border);background:var(--bg3);color:var(--text);flex:1}
+.cad-progress{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.cad-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.cad-name{font-size:12px;font-weight:700;color:var(--text)}
+.cad-status{font-size:10px;font-weight:600;color:var(--accent2)}
+.cad-steps{display:flex;gap:3px;margin-bottom:8px;flex-wrap:wrap}
+.cad-step{display:flex;flex-direction:column;align-items:center;padding:4px 6px;border-radius:4px;background:var(--bg4);border:1px solid var(--border);min-width:36px;transition:.12s}
+.cad-step.done{background:var(--gdim);border-color:var(--green);opacity:.7}
+.cad-step.done .cad-step-icon::after{content:'✓';position:absolute;font-size:8px;color:var(--green);top:-2px;right:-4px}
+.cad-step.current{background:var(--adim);border-color:var(--accent);box-shadow:0 0 8px rgba(91,141,239,.3)}
+.cad-step-icon{font-size:14px;position:relative}
+.cad-step-day{font-size:8px;font-weight:700;color:var(--text2)}
+.cad-actions{display:flex;gap:6px}
 .task-btn-next:hover{background:var(--accent);color:#fff}
 /* V3: Filter chips */
 .fchip{padding:4px 10px;border-radius:6px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.12s}
@@ -3580,6 +3597,7 @@ function selectLiveDeal(id,d){
         <button class="wa-conv-btn" id="btn-wa-${id}" onclick="toggleWaPanel('${id}',this)">💬 Conversa</button>
         <button class="btn bs btn-sm" id="btn-nota-${id}" data-color="green" onclick="requestNotaCRM('${id}',this)" style="border-color:var(--green);color:var(--green)">📝 Nota CRM</button>
       </div>
+      <div id="cad-ui-${id}">${window.cadenceBuildUI?window.cadenceBuildUI(id):''}</div>
       <div class="ba" id="nota-${id}" style="display:none"></div>
       <div class="wa-panel" id="wa-panel-${id}">
         <div class="wa-panel-header">
