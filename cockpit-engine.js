@@ -56,7 +56,11 @@ async function initOperatorContext(){
     _operatorCtx.role=data.role||'sdr';
     _operatorCtx.squad=data.squad||'';
     _operatorCtx.focus_mode=data.focus_mode||'velocidade';
-    if(data.meta_mensal) try{ Object.assign(_operatorCtx.meta_mensal,JSON.parse(data.meta_mensal)); }catch(e){}
+    if(data.meta_mensal){
+      var mm=data.meta_mensal;
+      if(typeof mm==='string') try{ mm=JSON.parse(mm); }catch(e){ mm=null; }
+      if(mm&&typeof mm==='object') Object.assign(_operatorCtx.meta_mensal,mm);
+    }
     _operatorCtx.permissions.can_view_team=data.role==='leader'||data.role==='manager';
     _operatorCtx.permissions.can_approve=data.role==='leader'||data.role==='manager';
     _operatorCtx.permissions.is_leader=data.role==='leader';
@@ -77,7 +81,7 @@ async function saveOperatorSettings(settings){
   const update={};
   if(settings.focus_mode){ update.focus_mode=settings.focus_mode; _operatorCtx.focus_mode=settings.focus_mode; }
   if(settings.meta_mensal){
-    update.meta_mensal=JSON.stringify(settings.meta_mensal);
+    update.meta_mensal=settings.meta_mensal;
     Object.assign(_operatorCtx.meta_mensal,settings.meta_mensal);
     _operatorCtx.meta_diaria.fups=Math.ceil(_operatorCtx.meta_mensal.fups/22);
     _operatorCtx.meta_diaria.qualificacoes=Math.ceil(_operatorCtx.meta_mensal.qualificacoes/22);
@@ -3214,7 +3218,7 @@ async function calcOperatorPerformance(periodType, periodKey){
 
   // ---- Fetch deals for conversion data ----
   var dealsRes = await sb.from('deals')
-    .select('deal_id,fase_atual_no_processo,etapa_atual_no_pipeline,status_do_deal,revenue,valor_da_oportunidade,created_at_crm')
+    .select('deal_id,fase_atual_no_processo,etapa_atual_no_pipeline,status_do_deal,revenue,valor_da_oportunidade,created_at_crm,linha_de_receita_vigente,grupo_de_receita,utm_medium,canal_de_marketing')
     .eq('operator_email', email);
   var allDeals = (dealsRes.data || []);
 

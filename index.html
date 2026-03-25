@@ -2330,6 +2330,7 @@ function renderLiveDeals(rows,cols){
     const delta=resolveDelta(row);
     // Canal: derivado da linha_de_receita_vigente (canônico) com fallback utm_medium
     const linhaReceita=g(row,'linha_de_receita_vigente')||'';
+    const grupoReceita=g(row,'grupo_de_receita')||'';
     const utm=g(row,'utm_medium')||'';
     const canal=resolveCanal(linhaReceita,utm);
     // Valor da oportunidade (time de dados)
@@ -2355,7 +2356,7 @@ function renderLiveDeals(rows,cols){
     const faixaFunc=g(row,'faixa_de_funcionarios')||'';
     const closedAt=g(row,'closed_at')||'';
     const dealObj={nome,nomeNegocio,contact_name:contactName,empresa:emailLead||empresa,cargo,fase,faseAnterior,etapa,tier,delta,canal,deal_id,temp,tc,tl,dd,emailLead,
-      linhaReceita,revenueRaw,elucyValor,forecastDelta,statusDeal,motivoLost,createdAtCrm,closedAt,
+      linhaReceita,grupoReceita,revenueRaw,elucyValor,forecastDelta,statusDeal,motivoLost,createdAtCrm,closedAt,
       created_at_crm:createdAtCrm, closed_at:closedAt,
       utm_medium:utm,conta_founder:contaFounder,telefone,faixaFunc,
       _fase:fase,_etapa:etapa,_tier:tier,_delta:delta,_temp:temp};
