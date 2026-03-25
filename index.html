@@ -445,6 +445,11 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .intel-section-title{font-family:var(--font-title);font-size:14px;font-weight:800;margin-bottom:10px;color:var(--text);display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:1px}
 .intel-section-num{background:var(--accent);color:#fff;width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0}
 .intel-empty{text-align:center;padding:40px;color:var(--text2);font-size:13px}
+.intel-dims{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.intel-dim{padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.15s;text-transform:uppercase;letter-spacing:.5px}
+.intel-dim:hover{border-color:var(--accent);color:var(--accent2)}
+.intel-dim.on{background:var(--adim);border-color:var(--accent);color:var(--accent2)}
+.intel-loading{text-align:center;padding:30px;color:var(--text2);font-size:12px}
 .er-loading{padding:16px;text-align:center}
 .elucy-pulse{font-size:12px;color:var(--accent2);font-weight:600;animation:elucy-blink 1.2s ease-in-out infinite}
 @keyframes elucy-blink{0%,100%{opacity:1}50%{opacity:.35}}
@@ -805,6 +810,15 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
       <div style="margin-bottom:16px">
         <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:3px">Inteligência Operacional</div>
         <div style="font-size:12px;color:var(--text2)" id="intel-subtitle">Análise automática do pipeline — carregue deals para ativar</div>
+      </div>
+      <div class="intel-dims" id="intel-dims">
+        <span class="intel-dim on" onclick="window._intelDim('global',this)">Global</span>
+        <span class="intel-dim" onclick="window._intelDim('operator',this)">Operador</span>
+        <span class="intel-dim" onclick="window._intelDim('line',this)">Linha</span>
+        <span class="intel-dim" onclick="window._intelDim('stage',this)">Etapa</span>
+        <span class="intel-dim" onclick="window._intelDim('channel',this)">Canal</span>
+        <span class="intel-dim" onclick="window._intelDim('task',this)">Tasks</span>
+        <span class="intel-dim" onclick="window._intelDim('value',this)">Valor</span>
       </div>
       <div id="intel-content">
         <div class="intel-empty">Carregue o pipeline para visualizar a análise de inteligência.</div>
@@ -3798,6 +3812,16 @@ function quickNote(id){
 
 // ── INTELLIGENCE ENGINE — Dashboard Inteligente ──────────────────────
 
+// ── INTELLIGENCE: Dimensioned Analytics (V4 Enterprise) ──────────
+var _intelCurrentDim='global';
+
+window._intelDim=function(dim,el){
+  _intelCurrentDim=dim;
+  document.querySelectorAll('.intel-dim').forEach(function(c){c.classList.remove('on');});
+  if(el) el.classList.add('on');
+  renderIntelligence();
+};
+
 function renderIntelligence(){
   const map=window._COCKPIT_DEAL_MAP;
   const ct=document.getElementById('intel-content');
@@ -3808,285 +3832,299 @@ function renderIntelligence(){
     ct.innerHTML='<div class="intel-empty">Nenhum deal carregado. Sincronize o pipeline primeiro.</div>';
     return;
   }
-  // Separa deals abertos (pipeline ativo) de fechados (para eficiência)
+  const AE=window.AnalyticsEngine;
+  if(!AE){ct.innerHTML='<div class="intel-empty">Analytics Engine não carregado.</div>';return;}
   const deals=allDeals.filter(d=>{const s=(d.statusDeal||'').toLowerCase();return s!=='perdido'&&s!=='ganho'&&s!=='desqualificado';});
-  if(sub) sub.textContent=deals.length+' deals ativos — '+new Date().toLocaleDateString('pt-BR');
+  if(sub) sub.textContent=deals.length+' deals ativos — '+new Date().toLocaleDateString('pt-BR')+' — dim: '+_intelCurrentDim.toUpperCase();
 
-  // ── CALCULOS ──
-  const total=deals.length;
-  const byEtapa={},byTier={},byCanal={},bySignal={},byLinha={},byCargo={};
-  const byCanalCate={};
-  let totalDelta=0,deltaCount=0;
-  let slaRisk=0,irondome=0,buyCount=0,riskCount=0,stallCount=0;
+  ct.innerHTML='<div class="intel-loading">Calculando...</div>';
+  var dim=_intelCurrentDim;
 
-  // Mapeamento linha_de_receita → canal Cate (com metas CR %)
-  const CANAL_CR={'DM Social':63.89,'Instagram':36.69,'Chat':33.33,'Facebook Ads':32.41,'Lead K':29.20,'Outros':27.32,'Skills':21.77,'Abandono':21.51,'Incompleto':16.86};
-  function linhaToCanalCate(linha){
-    const l=(linha||'').toLowerCase();
-    if(!l||l==='sem linha') return 'Incompleto';
-    if(l.includes('social dm')||l.includes('perfil k')) return 'DM Social';
-    if(l.includes('instagram')) return 'Instagram';
-    if(l.includes('chat')) return 'Chat';
-    if(l.includes('google')||l.includes('paid')||l.includes('facebook')) return 'Facebook Ads';
-    if(l.includes('lead k')||l.includes('iscas')) return 'Lead K';
-    if(l.includes('skills')||l.includes('skill')) return 'Skills';
-    if(l.includes('abandono')) return 'Abandono';
-    return 'Outros';
-  }
+  if(dim==='global') _renderGlobal(ct,AE,allDeals,deals);
+  else if(dim==='operator') _renderOperator(ct,AE);
+  else if(dim==='line') _renderLine(ct,AE);
+  else if(dim==='stage') _renderStage(ct,AE);
+  else if(dim==='channel') _renderChannel(ct,AE);
+  else if(dim==='task') _renderTask(ct,AE);
+  else if(dim==='value') _renderValue(ct,AE);
+}
 
-  deals.forEach(d=>{
-    const etapa=(d._etapa||d.etapa||'').toLowerCase();
-    const tier=(d._tier||d.tier||'').toLowerCase();
-    const canal=d.canal||'Direto';
-    const signal=d._signal||'';
-    const linha=d.linhaReceita||'Sem linha';
-    const cargo=d.cargo||'Sem cargo';
-    const delta=d._delta||d.delta||0;
-    const canalCate=linhaToCanalCate(linha);
-    byCanalCate[canalCate]=(byCanalCate[canalCate]||0)+1;
+function _iBar(label,count,max,total,extraStyle){
+  return '<div class="intel-bar-row"><span class="intel-bar-label" title="'+label+'">'+(label.length>24?label.slice(0,24)+'...':label)+'</span><div class="intel-bar-bg"><div class="intel-bar-fill" style="width:'+Math.max(5,count/Math.max(max,1)*100)+'%;'+(extraStyle||'')+'"><span class="intel-bar-v">'+count+'</span></div></div><span class="intel-bar-pct">'+Math.round(count/Math.max(total,1)*100)+'%</span></div>';
+}
+function _iKpi(value,label,color){return '<div class="intel-kpi"><div class="intel-kpi-v"'+(color?' style="color:'+color+'"':'')+'>'+(typeof value==='number'&&value>=1000?fmtBRL(value):value)+'</div><div class="intel-kpi-l">'+label+'</div></div>';}
 
-    byEtapa[etapa]=(byEtapa[etapa]||0)+1;
-    byTier[tier]=(byTier[tier]||0)+1;
-    byCanal[canal]=(byCanal[canal]||0)+1;
-    bySignal[signal]=(bySignal[signal]||0)+1;
-    byLinha[linha]=(byLinha[linha]||0)+1;
-    byCargo[cargo]=(byCargo[cargo]||0)+1;
-    totalDelta+=delta; deltaCount++;
-    if(delta>7) slaRisk++;
-    if(delta>10) irondome++;
-    if(signal==='BUY') buyCount++;
-    if(signal==='RISK') riskCount++;
-    if(signal==='STALL') stallCount++;
+// ── GLOBAL ──
+function _renderGlobal(ct,AE,allDeals,deals){
+  AE.calcGlobal(30).then(function(g){
+    var o=g.operator;var total=deals.length;
+    var buyCount=deals.filter(function(d){return d._signal==='BUY';}).length;
+    var stallCount=deals.filter(function(d){return d._signal==='STALL';}).length;
+    var riskCount=deals.filter(function(d){return d._signal==='RISK';}).length;
+    var irondome=deals.filter(function(d){return (d._delta||d.delta||0)>10;}).length;
+    var totalValor=deals.reduce(function(s,d){return s+(d.elucyValor||0);},0);
+
+    var html='';
+    // Overview KPIs
+    html+=renderSection(1,'Overview',
+      '<div class="intel-kpi-row">'+
+      _iKpi(total,'Deals ativos','var(--accent2)')+
+      _iKpi(o.scores.overall+'/100','Score Operador','var(--accent2)')+
+      _iKpi(o.scores.dqi+'/100','DQI','var(--green)')+
+      _iKpi(fmtBRL(totalValor),'Pipeline ELUCY','var(--accent2)')+
+      _iKpi(o.pipeline.avgAging+'d','Aging médio',o.pipeline.avgAging>5?'var(--red)':o.pipeline.avgAging>3?'var(--yellow)':'var(--green)')+
+      _iKpi(o.pipeline.atRisk,'Em risco','var(--red)')+
+      '</div>');
+
+    // Score breakdown
+    html+=renderSection(2,'Score — 5 Componentes',
+      '<div class="intel-kpi-row">'+
+      _iKpi(o.scores.qualification+'%','Qualificação')+
+      _iKpi(o.scores.handoff+'%','Handoff')+
+      _iKpi(o.scores.winRate+'%','Win Rate')+
+      _iKpi(o.scores.speed+'%','Velocidade')+
+      _iKpi(o.scores.dqi+'%','DQI')+
+      '</div>'+
+      '<div style="font-size:10px;color:var(--text2);margin-top:6px">Score = Qualificação×0.2 + Handoff×0.3 + WinRate×0.3 + Speed×0.1 + DQI×0.1</div>');
+
+    // By Line summary
+    var lineData=g.byLine.data;
+    var lineKeys=Object.keys(lineData).sort(function(a,b){return lineData[b].active-lineData[a].active;});
+    var maxLine=Math.max.apply(null,lineKeys.map(function(k){return lineData[k].active;}).concat([1]));
+    html+=renderSection(3,'Pipeline por Linha de Receita',
+      lineKeys.map(function(k){return _iBar(k,lineData[k].active,maxLine,total);}).join(''));
+
+    // By Stage summary
+    var stageData=g.byStage.data;
+    var stageKeys=Object.keys(stageData).sort(function(a,b){return (stageData[a].order||99)-(stageData[b].order||99);});
+    var maxStage=Math.max.apply(null,stageKeys.map(function(k){return stageData[k].count;}).concat([1]));
+    html+=renderSection(4,'Pipeline por Etapa',
+      stageKeys.map(function(k){return _iBar(fmtEtapa(k),stageData[k].count,maxStage,g.overview.totalDeals);}).join(''));
+
+    // Signals
+    html+=renderSection(5,'Sinais',
+      '<div class="intel-kpi-row">'+
+      _iKpi(buyCount,'BUY','var(--green)')+
+      _iKpi(stallCount,'STALL','var(--yellow)')+
+      _iKpi(riskCount,'RISK','var(--red)')+
+      _iKpi(irondome,'Iron Dome','var(--red)')+
+      '</div>');
+
+    // Activity summary
+    html+=renderSection(6,'Atividade (30d)',
+      '<div class="intel-kpi-row">'+
+      _iKpi(o.metrics.total,'Total ações')+
+      _iKpi(o.metrics.fups,'Follow-ups')+
+      _iKpi(o.metrics.analyses,'Análises')+
+      _iKpi(o.metrics.copies,'Copies')+
+      _iKpi(o.metrics.dvl,'DVL')+
+      _iKpi(o.metrics.dms,'DMs')+
+      _iKpi(o.metrics.notes,'Notas CRM')+
+      _iKpi(o.metrics.uniqueDeals,'Deals tocados')+
+      '</div>');
+
+    ct.innerHTML=html;
+  });
+}
+
+// ── OPERATOR ──
+function _renderOperator(ct,AE){
+  AE.calcByOperator(30).then(function(o){
+    var html='';
+    // Score
+    html+=renderSection(1,'Score do Operador',
+      '<div style="text-align:center;margin-bottom:14px"><div style="font-size:48px;font-weight:900;color:var(--accent2)">'+o.scores.overall+'</div><div style="font-size:12px;color:var(--text2)">de 100</div></div>'+
+      '<div class="intel-kpi-row">'+
+      _iKpi(o.scores.qualification+'%','Qualificação')+
+      _iKpi(o.scores.handoff+'%','Handoff')+
+      _iKpi(o.scores.winRate+'%','Win Rate')+
+      _iKpi(o.scores.speed+'%','Velocidade')+
+      _iKpi(o.scores.dqi+'%','DQI')+
+      '</div>');
+
+    // Pipeline health
+    html+=renderSection(2,'Saúde do Pipeline',
+      '<div class="intel-kpi-row">'+
+      _iKpi(o.pipeline.activeDeals,'Deals ativos','var(--accent2)')+
+      _iKpi(o.pipeline.avgAging+'d','Aging médio',o.pipeline.avgAging>5?'var(--red)':'var(--green)')+
+      _iKpi(o.pipeline.atRisk,'Em risco','var(--red)')+
+      '</div>');
+
+    // Activity breakdown
+    html+=renderSection(3,'Ações ('+o.period+'d)',
+      '<div class="intel-kpi-row">'+
+      _iKpi(o.metrics.total,'Total')+
+      _iKpi(o.metrics.fups,'FUPs')+
+      _iKpi(o.metrics.analyses,'Análises')+
+      _iKpi(o.metrics.copies,'Copies')+
+      _iKpi(o.metrics.dvl,'DVL')+
+      _iKpi(o.metrics.dms,'DMs')+
+      _iKpi(o.metrics.notes,'Notas')+
+      _iKpi(o.metrics.enrichments,'Enrichments')+
+      '</div>');
+
+    // Activity by day
+    var days=Object.keys(o.byDay).sort();
+    var maxDay=Math.max.apply(null,days.map(function(d){return o.byDay[d];}).concat([1]));
+    if(days.length){
+      html+=renderSection(4,'Atividade por Dia',
+        days.slice(-14).map(function(d){return _iBar(d.slice(5),o.byDay[d],maxDay,o.metrics.total);}).join(''));
+    }
+
+    ct.innerHTML=html;
+  });
+}
+
+// ── LINE ──
+function _renderLine(ct,AE){
+  var data=AE.calcByLine().data;
+  var speed=AE.calcSpeed().data;
+  var keys=Object.keys(data).sort(function(a,b){return data[b].active-data[a].active;});
+  var total=keys.reduce(function(s,k){return s+data[k].active;},0);
+  var maxActive=Math.max.apply(null,keys.map(function(k){return data[k].active;}).concat([1]));
+
+  var html='';
+  // Summary bar
+  html+=renderSection(1,'Deals Ativos por Linha',
+    keys.map(function(k){return _iBar(k,data[k].active,maxActive,total);}).join(''));
+
+  // Table
+  html+=renderSection(2,'Detalhamento por Linha',
+    '<table class="intel-table"><thead><tr><th>Linha</th><th>Ativos</th><th>Ganhos</th><th>Perdidos</th><th>Win%</th><th>Aging</th><th>Risco</th><th>Valor</th><th>Veloc.</th></tr></thead><tbody>'+
+    keys.map(function(k){
+      var d=data[k];
+      var v=speed[k]?speed[k].avgVelocity:'—';
+      return '<tr><td style="font-weight:600">'+k+'</td><td>'+d.active+'</td><td style="color:var(--green)">'+d.won+'</td><td style="color:var(--red)">'+d.lost+'</td><td>'+d.winRate+'%</td><td>'+d.avgAging+'d</td><td style="color:var(--red)">'+d.atRisk+'</td><td>'+fmtBRL(d.totalValue)+'</td><td>'+v+'</td></tr>';
+    }).join('')+'</tbody></table>');
+
+  // DQI by line (async)
+  AE.calcDQI(30).then(function(dqi){
+    var dqiData=dqi.data;
+    var dqiKeys=Object.keys(dqiData).sort(function(a,b){return dqiData[b].avgDQI-dqiData[a].avgDQI;});
+    if(dqiKeys.length){
+      var dqiHtml=renderSection(3,'DQI por Linha',
+        '<div class="intel-kpi-row">'+dqiKeys.map(function(k){return _iKpi(dqiData[k].avgDQI,k+' ('+dqiData[k].deals+'d)',dqiData[k].avgDQI>=60?'var(--green)':dqiData[k].avgDQI>=30?'var(--yellow)':'var(--red)');}).join('')+'</div>');
+      ct.innerHTML+=dqiHtml;
+    }
   });
 
-  const avgDelta=deltaCount?Math.round(totalDelta/deltaCount*10)/10:0;
+  ct.innerHTML=html;
+}
 
-  // Etapas do funil em ordem
-  const funnelOrder=['novo lead','dia 01','dia 02','dia 03','dia 04','dia 05','dia 06','conectados','agendamento','reagendamento','entrevista agendada'];
-  const funnelData=funnelOrder.map(e=>({name:e,count:byEtapa[e]||0})).filter(e=>e.count>0);
-  const maxFunnel=Math.max(...funnelData.map(e=>e.count),1);
+// ── STAGE ──
+function _renderStage(ct,AE){
+  var data=AE.calcByStage().data;
+  var keys=Object.keys(data).sort(function(a,b){return (data[a].order||99)-(data[b].order||99);});
+  var total=keys.reduce(function(s,k){return s+data[k].count;},0);
+  var maxCount=Math.max.apply(null,keys.map(function(k){return data[k].count;}).concat([1]));
 
-  // Top tiers
-  const tierOrder=['diamond','gold','silver','bronze'];
-  const tierData=tierOrder.map(t=>({name:t,count:byTier[t]||0})).filter(t=>t.count>0);
-  const maxTier=Math.max(...tierData.map(t=>t.count),1);
+  var html='';
+  // Funnel
+  html+=renderSection(1,'Funil por Etapa',
+    keys.map(function(k){return _iBar(fmtEtapa(k),data[k].count,maxCount,total);}).join(''));
 
-  // Top canais
-  const canalData=Object.entries(byCanal).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  const maxCanal=Math.max(...canalData.map(c=>c[1]),1);
+  // Table
+  html+=renderSection(2,'Detalhamento por Etapa',
+    '<table class="intel-table"><thead><tr><th>Etapa</th><th>Deals</th><th>Aging</th><th>Valor</th><th>Risco</th></tr></thead><tbody>'+
+    keys.map(function(k){
+      var d=data[k];
+      return '<tr><td style="font-weight:600">'+fmtEtapa(k)+'</td><td>'+d.count+'</td><td>'+d.avgAging+'d</td><td>'+fmtBRL(d.totalValue)+'</td><td style="color:var(--red)">'+d.atRisk+'</td></tr>';
+    }).join('')+'</tbody></table>');
 
-  // Potencial vs Realizado (lógica Cate)
-  const em=window._EFFICIENCY_METRICS||{};
-  const metaMensal=window._OPERATOR_META||0;
-  const nOPPReal=em.opp||0;
-  const nSALReal=em.sal||0;
-  const cateCanais=Object.entries(byCanalCate).sort((a,b)=>b[1]-a[1]);
-  let potTotal=0;
-  const cateRows=cateCanais.map(([c,sal])=>{
-    const cr=CANAL_CR[c]||27.32;
-    const pot=sal*cr/100;
-    potTotal+=pot;
-    return {canal:c,sal,cr,pot};
-  });
-  const gapTotal=potTotal-nOPPReal;
-  const aprovPct=potTotal>0?Math.round(nOPPReal/potTotal*100):0;
-  const metaPct=metaMensal>0?Math.round(nOPPReal/metaMensal*100):0;
+  // Tier distribution per stage
+  html+=renderSection(3,'Tier por Etapa',
+    '<div class="intel-grid">'+keys.filter(function(k){return Object.keys(data[k].byTier).length>0;}).map(function(k){
+      var tiers=data[k].byTier;
+      var tierKeys=Object.keys(tiers).sort(function(a,b){return tiers[b]-tiers[a];});
+      var maxT=Math.max.apply(null,tierKeys.map(function(t){return tiers[t];}).concat([1]));
+      return renderCard(fmtEtapa(k),tierKeys.map(function(t){return _iBar(t.toUpperCase(),tiers[t],maxT,data[k].count,t==='diamond'?'background:linear-gradient(90deg,#f59e0b,#fbbf24)':'');}).join(''));
+    }).join('')+'</div>');
 
-  // Top linhas
-  const linhaData=Object.entries(byLinha).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  const maxLinha=Math.max(...linhaData.map(l=>l[1]),1);
+  ct.innerHTML=html;
+}
 
-  // Top cargos
-  const cargoData=Object.entries(byCargo).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  const maxCargo=Math.max(...cargoData.map(c=>c[1]),1);
+// ── CHANNEL ──
+function _renderChannel(ct,AE){
+  var data=AE.calcByChannel().data;
+  var keys=Object.keys(data).sort(function(a,b){return data[b].active-data[a].active;});
+  var total=keys.reduce(function(s,k){return s+data[k].active;},0);
+  var maxActive=Math.max.apply(null,keys.map(function(k){return data[k].active;}).concat([1]));
 
-  // Temperatura média
-  const avgTemp=Math.round(deals.reduce((s,d)=>(s+(d._temp||d.temp||0)),0)/total);
+  var html='';
+  html+=renderSection(1,'Deals por Canal',
+    keys.map(function(k){return _iBar(k,data[k].active,maxActive,total);}).join(''));
 
-  // Valor total pipeline (Elucy)
-  const totalValor=deals.reduce((s,d)=>(s+(d.elucyValor||0)),0);
+  html+=renderSection(2,'Detalhamento por Canal',
+    '<table class="intel-table"><thead><tr><th>Canal</th><th>Ativos</th><th>Ganhos</th><th>Perdidos</th><th>Win%</th><th>Aging</th><th>Valor</th></tr></thead><tbody>'+
+    keys.map(function(k){
+      var d=data[k];
+      return '<tr><td style="font-weight:600">'+k+'</td><td>'+d.active+'</td><td style="color:var(--green)">'+d.won+'</td><td style="color:var(--red)">'+d.lost+'</td><td>'+d.winRate+'%</td><td>'+d.avgAging+'d</td><td>'+fmtBRL(d.totalValue)+'</td></tr>';
+    }).join('')+'</tbody></table>');
 
-  // Comportamento — delta por etapa
-  const deltaByEtapa={};
-  deals.forEach(d=>{
-    const e=(d._etapa||d.etapa||'').toLowerCase();
-    if(!deltaByEtapa[e]) deltaByEtapa[e]={sum:0,count:0};
-    deltaByEtapa[e].sum+=(d._delta||d.delta||0);
-    deltaByEtapa[e].count++;
-  });
+  ct.innerHTML=html;
+}
 
-  // ── INSIGHTS INTELIGENTES ──
-  const insights=[];
+// ── TASK ──
+function _renderTask(ct,AE){
+  var data=AE.calcByTask().data;
+  var keys=Object.keys(data).sort(function(a,b){return data[b].count-data[a].count;});
+  var totalTasks=keys.reduce(function(s,k){return s+data[k].count;},0);
+  var maxCount=Math.max.apply(null,keys.map(function(k){return data[k].count;}).concat([1]));
 
-  // Onde perde mais (etapa com mais deals SLA risco)
-  const slaByEtapa={};
-  deals.filter(d=>(d._delta||d.delta||0)>7).forEach(d=>{
-    const e=(d._etapa||d.etapa||'').toLowerCase();
-    slaByEtapa[e]=(slaByEtapa[e]||0)+1;
-  });
-  const worstEtapa=Object.entries(slaByEtapa).sort((a,b)=>b[1]-a[1])[0];
-  if(worstEtapa) insights.push({type:'bad',label:'Gargalo detectado',text:`Você tem ${worstEtapa[1]} deal(s) em SLA risco na etapa "${fmtEtapa(worstEtapa[0])}". Revise a abordagem nessa fase — possivelmente falta de follow-up ou qualificação insuficiente.`});
+  var html='';
+  html+=renderSection(1,'Distribuição de Tasks — '+totalTasks+' total',
+    keys.map(function(k){return _iBar(data[k].label||k,data[k].count,maxCount,totalTasks);}).join(''));
 
-  // Qual tier converte mais (baseado em temperatura média)
-  const tempByTier={};
-  deals.forEach(d=>{
-    const t=(d._tier||d.tier||'').toLowerCase();
-    if(!tempByTier[t]) tempByTier[t]={sum:0,count:0};
-    tempByTier[t].sum+=(d._temp||d.temp||0);
-    tempByTier[t].count++;
-  });
-  const bestTier=Object.entries(tempByTier).sort((a,b)=>(b[1].sum/b[1].count)-(a[1].sum/a[1].count))[0];
-  if(bestTier) insights.push({type:'good',label:'Melhor perfil',text:`Tier "${bestTier[0].toUpperCase()}" tem a maior temperatura média (${Math.round(bestTier[1].sum/bestTier[1].count)}/100). Priorize esses deals no pipeline diário.`});
+  html+=renderSection(2,'Prioridade por Tipo',
+    '<table class="intel-table"><thead><tr><th>Tipo</th><th>Total</th><th>Critical</th><th>High</th><th>Urgência</th></tr></thead><tbody>'+
+    keys.map(function(k){
+      var d=data[k];
+      return '<tr><td style="font-weight:600">'+(d.label||k)+'</td><td>'+d.count+'</td><td style="color:var(--red)">'+d.critical+'</td><td style="color:var(--yellow)">'+d.high+'</td><td>'+d.avgUrgency+'</td></tr>';
+    }).join('')+'</tbody></table>');
 
-  // Qual canal performa melhor
-  const tempByCanal={};
-  deals.forEach(d=>{
-    const c=d.canal||'Direto';
-    if(!tempByCanal[c]) tempByCanal[c]={sum:0,count:0};
-    tempByCanal[c].sum+=(d._temp||d.temp||0);
-    tempByCanal[c].count++;
-  });
-  const bestCanal=Object.entries(tempByCanal).filter(c=>c[1].count>=2).sort((a,b)=>(b[1].sum/b[1].count)-(a[1].sum/a[1].count))[0];
-  if(bestCanal) insights.push({type:'good',label:'Melhor canal',text:`"${bestCanal[0]}" tem a melhor performance (temp. média ${Math.round(bestCanal[1].sum/bestCanal[1].count)}/100, ${bestCanal[1].count} deals). Concentre esforço nesse canal.`});
+  ct.innerHTML=html;
+}
 
-  // Iron Dome ativo
-  if(irondome>0) insights.push({type:'bad',label:'Iron Dome',text:`${irondome} deal(s) com +10 dias sem resposta. Esses deals precisam de revisão estratégica completa antes de novas tentativas.`});
+// ── VALUE ──
+function _renderValue(ct,AE){
+  var data=AE.calcValue();
+  var html='';
 
-  // Distribuição de sinais
-  if(stallCount>total*0.3) insights.push({type:'warn',label:'Padrão de stall',text:`${Math.round(stallCount/total*100)}% dos seus deals estão travados (STALL). Isso indica falta de urgência ou objeção não mapeada. Use Challenger Reframe nos deals com +5 dias.`});
+  // Total
+  html+=renderSection(1,'Pipeline Total',
+    '<div class="intel-kpi-row">'+
+    _iKpi(fmtBRL(data.totalValue),'Valor total','var(--accent2)')+
+    _iKpi(data.totalActive,'Deals ativos')+
+    _iKpi(data.totalActive>0?fmtBRL(Math.round(data.totalValue/data.totalActive)):'R$ 0','Ticket médio','var(--green)')+
+    '</div>');
 
-  if(buyCount>0) insights.push({type:'good',label:'Oportunidade quente',text:`${buyCount} deal(s) com sinal de compra ativo (BUY). Execute fechamento imediato — a janela é de 48h.`});
+  // By Line
+  var lineKeys=Object.keys(data.byLine).sort(function(a,b){return data.byLine[b].total-data.byLine[a].total;});
+  var maxLineVal=Math.max.apply(null,lineKeys.map(function(k){return data.byLine[k].total;}).concat([1]));
+  html+=renderSection(2,'Valor por Linha',
+    lineKeys.map(function(k){
+      var v=data.byLine[k];
+      return '<div class="intel-bar-row"><span class="intel-bar-label" title="'+k+'">'+(k.length>22?k.slice(0,22)+'...':k)+'</span><div class="intel-bar-bg"><div class="intel-bar-fill" style="width:'+Math.max(5,v.total/maxLineVal*100)+'%;background:linear-gradient(90deg,rgba(34,197,94,0.4),rgba(34,197,94,0.7))"><span class="intel-bar-v">'+fmtBRL(v.total)+'</span></div></div><span class="intel-bar-pct">'+v.count+' deals</span></div>';
+    }).join(''));
 
-  // Comportamento — delta médio alto
-  if(avgDelta>5) insights.push({type:'warn',label:'Velocidade do pipeline',text:`Delta médio de ${avgDelta} dias entre fases. Benchmark saudável é <3 dias para SDR. Aumente a cadência de FUPs.`});
+  // By Stage
+  var stageKeys=Object.keys(data.byStage).sort(function(a,b){return data.byStage[b].total-data.byStage[a].total;});
+  var maxStageVal=Math.max.apply(null,stageKeys.map(function(k){return data.byStage[k].total;}).concat([1]));
+  html+=renderSection(3,'Valor por Etapa',
+    stageKeys.map(function(k){
+      var v=data.byStage[k];
+      return '<div class="intel-bar-row"><span class="intel-bar-label">'+fmtEtapa(k)+'</span><div class="intel-bar-bg"><div class="intel-bar-fill" style="width:'+Math.max(5,v.total/maxStageVal*100)+'%;background:linear-gradient(90deg,rgba(91,141,239,0.4),rgba(91,141,239,0.7))"><span class="intel-bar-v">'+fmtBRL(v.total)+'</span></div></div><span class="intel-bar-pct">'+v.count+' deals</span></div>';
+    }).join(''));
 
-  // Concentração em fase inicial
-  const iniciais=(byEtapa['dia 01']||0)+(byEtapa['dia 02']||0)+(byEtapa['dia 03']||0)+(byEtapa['novo lead']||0);
-  if(iniciais>total*0.5) insights.push({type:'warn',label:'Pipeline parado no topo',text:`${Math.round(iniciais/total*100)}% dos deals ainda estão em prospecção (D1-D3/MQL). O funil precisa de mais deals avançando para Conectado/Agendado.`});
+  // By Tier
+  var tierKeys=Object.keys(data.byTier).sort(function(a,b){return data.byTier[b].total-data.byTier[a].total;});
+  html+=renderSection(4,'Valor por Tier',
+    '<div class="intel-kpi-row">'+tierKeys.map(function(k){
+      var v=data.byTier[k];
+      return _iKpi(fmtBRL(v.total),k.toUpperCase()+' ('+v.count+')',k==='diamond'?'#f59e0b':k==='gold'?'#a78bfa':'var(--text)');
+    }).join('')+'</div>');
 
-  // ── RENDER HTML ──
-  ct.innerHTML=`
-    ${renderSection(1,'Volume',`
-      <div class="intel-kpi-row">
-        <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--accent2)">${total}</div><div class="intel-kpi-l">Deals ativos</div></div>
-        <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--green)">${buyCount}</div><div class="intel-kpi-l">Sinal BUY</div></div>
-        <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--yellow)">${stallCount}</div><div class="intel-kpi-l">Travados</div></div>
-        <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--red)">${riskCount}</div><div class="intel-kpi-l">Em risco</div></div>
-        <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--red)">${irondome}</div><div class="intel-kpi-l">Iron Dome</div></div>
-        <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--accent2)">${fmtBRL(totalValor)}</div><div class="intel-kpi-l">Pipeline ELUCY</div></div>
-      </div>
-    `)}
-    ${renderSection(2,'Conversão — Funil por Etapa',`
-      ${funnelData.map(e=>`
-        <div class="intel-bar-row">
-          <span class="intel-bar-label">${fmtEtapa(e.name)}</span>
-          <div class="intel-bar-bg"><div class="intel-bar-fill" style="width:${Math.max(5,e.count/maxFunnel*100)}%"><span class="intel-bar-v">${e.count}</span></div></div>
-          <span class="intel-bar-pct">${Math.round(e.count/total*100)}%</span>
-        </div>`).join('')}
-      <div class="intel-title" style="margin-top:14px">Eficiência — Conversão por Fase <span id="ef-source" style="font-weight:400;color:var(--text2);font-size:11px"></span></div>
-      <div class="intel-kpi-row" id="efficiency-kpis">
-        ${(()=>{
-          // Eficiência: prefere dados do Databricks (cache) — fallback cálculo local
-          const em=window._EFFICIENCY_METRICS||{};
-          const now=new Date();
-          const monthLabel=(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getFullYear();
-          let nMQL,nSAL,nOPP,crMqlSal,crSalOpp,src;
-          if(em.mql!=null&&em.sal!=null&&em.opp!=null){
-            nMQL=em.mql; nSAL=em.sal; nOPP=em.opp;
-            crMqlSal=em.cr_mql_sal!=null?Number(em.cr_mql_sal).toFixed(1):(nMQL>0?((nSAL/nMQL)*100).toFixed(1):'0');
-            crSalOpp=em.cr_sal_opp!=null?Number(em.cr_sal_opp).toFixed(1):(nSAL>0?((nOPP/nSAL)*100).toFixed(1):'0');
-            src='Databricks — '+monthLabel+(em.ganho!=null?' — '+em.ganho+' ganhos':'');
-          } else {
-            const monthStart=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
-            const monthDeals=allDeals.filter(d=>{const dt=d.createdAtCrm||'';return dt&&dt.slice(0,10)>=monthStart;});
-            nMQL=monthDeals.length;
-            nSAL=monthDeals.filter(d=>{const et=(d._etapa||d.etapa||'').toLowerCase().trim();const s=(d.statusDeal||'').toLowerCase();if(s==='ganho'||s==='perdido') return true;if(['novo lead','novo lead '].includes(et)) return false;return et.length>0;}).length;
-            const oppEtapas=['nova oportunidade','(não usar) nova oportunidade','negociação','negociacao','em negociação','em negociacao','fechamento','entrevista agendada'];
-            nOPP=monthDeals.filter(d=>{const et=(d._etapa||d.etapa||'').toLowerCase().trim();const s=(d.statusDeal||'').toLowerCase();if(s==='ganho') return true;if(oppEtapas.includes(et)) return true;if(s==='perdido'){const f=(d._fase||d.fase||'').toLowerCase();return f==='oportunidade'||f==='negociação'||f==='negociacao';}return false;}).length;
-            crMqlSal=nMQL>0?((nSAL/nMQL)*100).toFixed(1):'0';
-            crSalOpp=nSAL>0?((nOPP/nSAL)*100).toFixed(1):'0';
-            src='Local — '+monthLabel;
-          }
-          setTimeout(()=>{const el=document.getElementById('ef-source');if(el) el.textContent='('+src+')';},0);
-          return '<div class="intel-kpi"><div class="intel-kpi-v">'+nMQL+'</div><div class="intel-kpi-l"># MQL</div></div>'+
-            '<div class="intel-kpi"><div class="intel-kpi-v" style="font-size:13px;font-weight:800;color:var(--green)">'+crMqlSal+'%</div><div class="intel-kpi-l">MQL → SAL</div></div>'+
-            '<div class="intel-kpi"><div class="intel-kpi-v">'+nSAL+'</div><div class="intel-kpi-l"># SAL</div></div>'+
-            '<div class="intel-kpi"><div class="intel-kpi-v" style="font-size:13px;font-weight:800;color:var(--accent2)">'+crSalOpp+'%</div><div class="intel-kpi-l">SAL → OPP</div></div>'+
-            '<div class="intel-kpi"><div class="intel-kpi-v">'+nOPP+'</div><div class="intel-kpi-l"># OPP</div></div>';
-        })()}
-      </div>
-    `)}
-    ${renderSection(3,'Potencial vs Realizado — Eficiência por Canal',`
-      <div class="intel-kpi-row">
-        <div class="intel-kpi"><div class="intel-kpi-v">${nSALReal||Object.values(byCanalCate).reduce((a,b)=>a+b,0)}</div><div class="intel-kpi-l">SAL Recebido</div></div>
-        <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--accent2)">${potTotal.toFixed(1)}</div><div class="intel-kpi-l">Potencial</div></div>
-        <div class="intel-kpi"><div class="intel-kpi-v" style="color:var(--green)">${nOPPReal}</div><div class="intel-kpi-l">Realizado</div></div>
-        <div class="intel-kpi"><div class="intel-kpi-v" style="color:${gapTotal>0?'var(--red)':'var(--green)'}">${gapTotal>0?'-':'+'} ${Math.abs(gapTotal).toFixed(1)}</div><div class="intel-kpi-l">Gap</div></div>
-        <div class="intel-kpi"><div class="intel-kpi-v" style="color:${aprovPct>=100?'var(--green)':aprovPct>=80?'var(--yellow)':'var(--red)'}">${aprovPct}%</div><div class="intel-kpi-l">Aproveitamento</div></div>
-        ${metaMensal?'<div class="intel-kpi"><div class="intel-kpi-v" style="color:'+(metaPct>=100?'var(--green)':metaPct>=70?'var(--yellow)':'var(--red)')+'">'+metaPct+'%</div><div class="intel-kpi-l">'+nOPPReal+'/'+metaMensal+' Meta</div></div>':''}
-      </div>
-      <div class="intel-title" style="margin-top:10px">Potencial por Canal <span style="font-weight:400;color:var(--text2);font-size:11px">(SAL × Meta CR)</span></div>
-      ${cateRows.map(r=>{
-        const realEstim=Math.round(r.pot);
-        const barColor=r.pot<=0?'':'background:linear-gradient(90deg,rgba(91,141,239,0.3),rgba(91,141,239,0.6))';
-        return '<div class="intel-bar-row"><span class="intel-bar-label" title="CR meta: '+r.cr+'%">'+r.canal+'</span><div class="intel-bar-bg"><div class="intel-bar-fill" style="width:'+Math.max(5,r.sal/Math.max(...cateRows.map(x=>x.sal),1)*100)+'%;'+barColor+'"><span class="intel-bar-v">'+r.sal+' SAL</span></div></div><span class="intel-bar-pct" title="Potencial: '+r.pot.toFixed(1)+' opps">'+r.cr+'% → '+r.pot.toFixed(1)+'</span></div>';
-      }).join('')}
-      <div style="font-size:11px;color:var(--text2);margin-top:8px;padding:6px 10px;background:rgba(255,255,255,0.03);border-radius:6px"><strong>Metodologia:</strong> Potencial = SAL recebido × Meta CR do canal | Gap = Potencial − Realizado | Aproveitamento = Realizado / Potencial</div>
-    `)}
-    <div class="intel-grid">
-      ${renderCard('Eficiência por Tier',tierData.map(t=>`
-        <div class="intel-bar-row">
-          <span class="intel-bar-label">${t.name.toUpperCase()}</span>
-          <div class="intel-bar-bg"><div class="intel-bar-fill" style="width:${Math.max(5,t.count/maxTier*100)}%;${t.name==='diamond'?'background:linear-gradient(90deg,#f59e0b,#fbbf24)':t.name==='gold'?'background:linear-gradient(90deg,#a78bfa,#6c63ff)':''}""><span class="intel-bar-v">${t.count}</span></div></div>
-          <span class="intel-bar-pct">${Math.round(t.count/total*100)}%</span>
-        </div>`).join(''))}
-      ${renderCard('Eficiência por Canal',canalData.map(([c,n])=>`
-        <div class="intel-bar-row">
-          <span class="intel-bar-label">${c}</span>
-          <div class="intel-bar-bg"><div class="intel-bar-fill" style="width:${Math.max(5,n/maxCanal*100)}%"><span class="intel-bar-v">${n}</span></div></div>
-          <span class="intel-bar-pct">${Math.round(n/total*100)}%</span>
-        </div>`).join(''))}
-    </div>
-    <div class="intel-grid">
-      ${renderCard('Eficiência por Linha de Receita',linhaData.map(([l,n])=>`
-        <div class="intel-bar-row">
-          <span class="intel-bar-label" title="${l}">${l.length>22?l.slice(0,22)+'…':l}</span>
-          <div class="intel-bar-bg"><div class="intel-bar-fill" style="width:${Math.max(5,n/maxLinha*100)}%"><span class="intel-bar-v">${n}</span></div></div>
-          <span class="intel-bar-pct">${Math.round(n/total*100)}%</span>
-        </div>`).join(''))}
-      ${renderCard('Eficiência por Cargo (Senioridade)',cargoData.map(([c,n])=>`
-        <div class="intel-bar-row">
-          <span class="intel-bar-label" title="${c}">${c.length>22?c.slice(0,22)+'…':c}</span>
-          <div class="intel-bar-bg"><div class="intel-bar-fill" style="width:${Math.max(5,n/maxCargo*100)}%"><span class="intel-bar-v">${n}</span></div></div>
-          <span class="intel-bar-pct">${Math.round(n/total*100)}%</span>
-        </div>`).join(''))}
-    </div>
-    ${renderSection(5,'Comportamento do Operador',`
-      <div class="intel-kpi-row">
-        <div class="intel-kpi"><div class="intel-kpi-v">${avgDelta}</div><div class="intel-kpi-l">Delta médio (dias)</div><div class="intel-kpi-d ${avgDelta<=3?'pg':avgDelta<=5?'pm':'pl'}">${avgDelta<=3?'Saudável':avgDelta<=5?'Atenção':'Crítico'}</div></div>
-        <div class="intel-kpi"><div class="intel-kpi-v">${avgTemp}</div><div class="intel-kpi-l">Temp. média</div><div class="intel-kpi-d ${avgTemp>=60?'pg':avgTemp>=40?'pm':'pl'}">${avgTemp>=60?'Bom':avgTemp>=40?'Regular':'Baixo'}</div></div>
-        <div class="intel-kpi"><div class="intel-kpi-v">${slaRisk}</div><div class="intel-kpi-l">SLA em risco</div><div class="intel-kpi-d ${slaRisk<=2?'pg':slaRisk<=5?'pm':'pl'}">${slaRisk<=2?'OK':slaRisk<=5?'Atenção':'Crítico'}</div></div>
-        <div class="intel-kpi"><div class="intel-kpi-v">${Math.round(buyCount/total*100)}%</div><div class="intel-kpi-l">Taxa sinal BUY</div></div>
-      </div>
-      <div class="intel-title">Tempo médio por etapa</div>
-      ${funnelOrder.filter(e=>deltaByEtapa[e]).map(e=>{
-        const avg=Math.round(deltaByEtapa[e].sum/deltaByEtapa[e].count*10)/10;
-        const maxD=10;
-        return `<div class="intel-bar-row">
-          <span class="intel-bar-label">${fmtEtapa(e)}</span>
-          <div class="intel-bar-bg"><div class="intel-bar-fill" style="width:${Math.max(5,avg/maxD*100)}%;${avg>5?'background:linear-gradient(90deg,#ef4444,#f59e0b)':avg>3?'background:linear-gradient(90deg,#f59e0b,#22c55e)':''}"><span class="intel-bar-v">${avg}d</span></div></div>
-          <span class="intel-bar-pct">${deltaByEtapa[e].count} deals</span>
-        </div>`;
-      }).join('')}
-    `)}
-    ${renderSection(6,'Inteligência ELUCY — Leitura Operacional',`
-      ${insights.length?insights.map(i=>`
-        <div class="intel-insight intel-insight-${i.type}">
-          <div class="intel-insight-label">${i.label}</div>
-          ${i.text}
-        </div>`).join(''):'<div style="color:var(--text2);font-size:12px;padding:10px">Sem insights suficientes — carregue mais deals.</div>'}
-    `)}
-  `;
+  ct.innerHTML=html;
 }
 
 function renderSection(num,title,content){
@@ -4422,5 +4460,6 @@ function initSlackAlerts(){
   </div>
 </div>
 <script src="cockpit-engine.js"></script>
+<script src="analytics-engine.js"></script>
 </body>
 </html>
