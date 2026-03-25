@@ -102,7 +102,7 @@ const FOCUS_MODES = {
   handoff:      { label:'Handoff',       priority:['handoff_prep','dvl_review','note_completion'], icon:'handshake' },
   reativacao:   { label:'Reativacao',    priority:['reativacao','no_show_recovery','follow_up'], icon:'refresh' },
   social_dm:    { label:'Social DM',     priority:['social_dm','follow_up','agendamento'], icon:'chat' },
-  imersao:      { label:'Imersao Focus', priority:['follow_up','handoff_prep','qualificacao'], icon:'trophy' }
+  alta_performance: { label:'Alta Performance', priority:['follow_up','handoff_prep','qualificacao'], icon:'trophy' }
 };
 window.FOCUS_MODES = FOCUS_MODES;
 
@@ -112,15 +112,22 @@ window.FOCUS_MODES = FOCUS_MODES;
 // ==================================================================
 
 var REVENUE_LINES = {
-  imersao:    { label:'Imersao',     base:'qualified',    risk_after:3, line_weight:1.0  },
-  club:       { label:'Club',        base:'opportunity',  risk_after:5, line_weight:0.85 },
-  field_sales:{ label:'Field Sales', base:'meetings',     risk_after:7, line_weight:0.9  },
-  eventos:    { label:'Eventos',     base:'qualified',    risk_after:5, line_weight:0.8  },
-  digital:    { label:'Digital',     base:'leads',        risk_after:3, line_weight:0.7  },
-  social_dm:  { label:'Social DM',   base:'touchpoints',  risk_after:1, line_weight:0.75 },
-  outbound:   { label:'Outbound',    base:'leads',        risk_after:3, line_weight:0.65 },
-  parceria:   { label:'Parceria',    base:'qualified',    risk_after:7, line_weight:0.8  },
-  consulting: { label:'Consulting',  base:'meetings',     risk_after:5, line_weight:1.1  }
+  facebook_ads: { label:'Facebook Ads',    base:'qualified',    risk_after:3, line_weight:1.0  },
+  instagram:    { label:'Instagram',       base:'qualified',    risk_after:3, line_weight:0.95 },
+  social_dm:    { label:'Social DM',       base:'touchpoints',  risk_after:1, line_weight:0.85 },
+  chat:         { label:'Chat',            base:'qualified',    risk_after:2, line_weight:0.8  },
+  skills:       { label:'Skills',          base:'qualified',    risk_after:4, line_weight:0.75 },
+  lead_k:       { label:'Lead K',          base:'qualified',    risk_after:3, line_weight:0.9  },
+  outros:       { label:'Outros',          base:'leads',        risk_after:3, line_weight:0.7  },
+  incompleto:   { label:'Incompleto',      base:'leads',        risk_after:3, line_weight:0.5  },
+  ab_carrinho:  { label:'Ab. Carrinho',    base:'leads',        risk_after:2, line_weight:0.6  },
+  indicacao:    { label:'Indicação',       base:'qualified',    risk_after:5, line_weight:1.0  },
+  field_sales:  { label:'Field Sales',     base:'meetings',     risk_after:7, line_weight:0.9  },
+  reativacao:   { label:'Reativação',      base:'qualified',    risk_after:3, line_weight:0.7  },
+  selfcheckout: { label:'Self Checkout',   base:'leads',        risk_after:2, line_weight:0.6  },
+  eventos:      { label:'Eventos',         base:'qualified',    risk_after:5, line_weight:0.8  },
+  club:         { label:'Club',            base:'opportunity',  risk_after:5, line_weight:0.85 },
+  parceria:     { label:'Parceria',        base:'qualified',    risk_after:7, line_weight:0.8  }
 };
 window.REVENUE_LINES = REVENUE_LINES;
 
@@ -140,19 +147,69 @@ var KILL_SWITCHES = {
 window.KILL_SWITCHES = KILL_SWITCHES;
 
 function resolveRevenueLine(deal){
-  var lr=(deal.linhaReceita||deal.linha_de_receita_vigente||'').toLowerCase();
-  var gr=(deal.grupo_de_receita||deal.grupoReceita||'').toLowerCase();
-  var canal=(deal.canal||'').toLowerCase();
-  var utm=(deal.utm_medium||'').toLowerCase();
-  if(lr.includes('social dm')||lr.includes('social media')||lr.includes('[im] social')||utm==='tallis'||utm==='nardon'||utm==='alfredo') return 'social_dm';
-  if(lr.includes('club')||gr.includes('club')) return 'club';
-  if(lr.includes('consulting')||gr.includes('consulting')) return 'consulting';
-  if(lr.includes('field')||lr.includes('outbound')||canal==='ligacao') return 'field_sales';
-  if(lr.includes('evento')||gr.includes('evento')) return 'eventos';
-  if(lr.includes('digital')||lr.includes('online')||gr.includes('digital')) return 'digital';
-  if(lr.includes('parceria')||gr.includes('parceria')) return 'parceria';
-  if(lr.includes('outbound')) return 'outbound';
-  return 'imersao';
+  var lr=(deal.linhaReceita||deal.linha_de_receita_vigente||'').toLowerCase().trim();
+  var gr=(deal.grupo_de_receita||deal.grupoReceita||'').toLowerCase().trim();
+  var etapa=(deal.etapa||deal.etapa_atual_no_pipeline||'').toLowerCase();
+
+  // 1. grupo_de_receita direto (campo já agrupado no Databricks)
+  if(gr){
+    if(gr.includes('facebook')) return 'facebook_ads';
+    if(gr.includes('instagram')) return 'instagram';
+    if(gr.includes('social dm')||gr.includes('social_dm')) return 'social_dm';
+    if(gr.includes('chat')) return 'chat';
+    if(gr.includes('skill')) return 'skills';
+    if(gr.includes('lead k')||gr.includes('lead_k')) return 'lead_k';
+    if(gr.includes('incomplet')) return 'incompleto';
+    if(gr.includes('abandon')||gr.includes('carrinho')) return 'ab_carrinho';
+    if(gr.includes('indica')) return 'indicacao';
+    if(gr.includes('field')) return 'field_sales';
+    if(gr.includes('reativa')) return 'reativacao';
+    if(gr.includes('selfcheckout')||gr.includes('self checkout')) return 'selfcheckout';
+    if(gr.includes('club')) return 'club';
+    if(gr.includes('parceria')) return 'parceria';
+    if(gr.includes('evento')) return 'eventos';
+  }
+
+  // 2. linha_de_receita_vigente — mapeamento por padrão de prefixo/nome
+  if(lr){
+    // Social DM (antes de Facebook/Instagram para não confundir)
+    if(lr.includes('social dm')) return 'social_dm';
+    // Facebook Ads
+    if(lr.includes('facebook')) return 'facebook_ads';
+    // Instagram (vários perfis: G4, Alfredo, Nardon, Tallis, Outros)
+    if(lr.includes('instagram')) return 'instagram';
+    // Chat
+    if(lr.includes('chat')) return 'chat';
+    // Skills ([SKL] CRM, Site, Especialista, WhatsApp, Email)
+    if(lr.includes('[skl]')||lr.includes('skill')) return 'skills';
+    // Lead K
+    if(lr.includes(' k ')||lr.includes(' k]')||lr.includes('- k ')||lr.includes('-k ')) return 'lead_k';
+    // Abandono de carrinho
+    if(lr.includes('abandon')||lr.includes('carrinho')) return 'ab_carrinho';
+    // Incompleto
+    if(lr.includes('incomplet')) return 'incompleto';
+    // Self Checkout
+    if(lr.includes('selfcheckout')||lr.includes('self checkout')) return 'selfcheckout';
+    // Indicação
+    if(lr.includes('indica')) return 'indicacao';
+    // Field Sales
+    if(lr.includes('[fs]')||lr.includes('field sale')) return 'field_sales';
+    // Reativação
+    if(lr.includes('reativa')) return 'reativacao';
+    // Club
+    if(lr.includes('club')) return 'club';
+    // Parceria
+    if(lr.includes('parceria')) return 'parceria';
+    // Eventos
+    if(lr.includes('evento')) return 'eventos';
+    // Google / Orgânico / Paid Testes → outros
+    if(lr.includes('google')||lr.includes('orgânico')||lr.includes('organico')||lr.includes('paid')) return 'outros';
+  }
+
+  // 3. Self Checkout pela etapa do pipeline
+  if(etapa.includes('self checkout')) return 'selfcheckout';
+
+  return 'outros';
 }
 window.resolveRevenueLine = resolveRevenueLine;
 
@@ -175,7 +232,7 @@ function calcOpportunityValue(deal){
   var stage_prob=STAGE_PROB[etapa]||0.10;
   var persona_weight=tier==='diamond'||tier==='gold'?1.1:tier==='silver'?1.0:0.9;
   var revLine=deal._revLine||resolveRevenueLine(deal);
-  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.imersao;
+  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.outros;
   var delta=deal.delta||deal._delta||0;
   var ra=lc.risk_after;
   var age_penalty=delta>ra*4?0.4:delta>ra*3?0.55:delta>ra*2?0.7:delta>ra?0.85:1.0;
@@ -190,7 +247,7 @@ window.calcOpportunityValue = calcOpportunityValue;
 
 function calcAgingRisk(deal){
   var revLine=deal._revLine||resolveRevenueLine(deal);
-  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.imersao;
+  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.outros;
   var delta=deal.delta||deal._delta||0;
   var ra=lc.risk_after;
   return { revLine:revLine, risk_after:ra, delta:delta, isAtRisk:delta>ra,
@@ -239,7 +296,7 @@ function calcEfficiencyByChannel(allDeals){
     if(etapa!=='novo lead'&&etapa!=='dia 01') s.qualified++;
   });
   Object.keys(byCanal).forEach(function(k){ var s=byCanal[k];
-    var lc=REVENUE_LINES[s.line]||REVENUE_LINES.imersao;
+    var lc=REVENUE_LINES[s.line]||REVENUE_LINES.outros;
     var base=s.deals;
     if(lc.base==='touchpoints') base=Math.max(s.touchpoints,1);
     else if(lc.base==='meetings') base=Math.max(s.meetings,1);
@@ -2023,7 +2080,7 @@ function calcTimelineIntelligence(deal){
   var fase=(deal.fase||deal.fase_atual_no_processo||deal._fase||'').toLowerCase();
   var status=(deal.statusDeal||deal.status_do_deal||'').toLowerCase();
   var revLine=deal._revLine||resolveRevenueLine(deal);
-  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.imersao;
+  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.outros;
 
   // ── IDADE DO DEAL ──
   var ageDays=delta;
@@ -2808,7 +2865,7 @@ function calcForecastV6(deal){
   var aging = deal._aging || calcAgingRisk(deal);
   var delta = deal._delta || deal.delta || 0;
   var revLine = deal._revLine || resolveRevenueLine(deal);
-  var lc = REVENUE_LINES[revLine] || REVENUE_LINES.imersao;
+  var lc = REVENUE_LINES[revLine] || REVENUE_LINES.outros;
   var ra = lc.risk_after;
 
   // --- QUANTITATIVE BASELINE ---
@@ -3248,7 +3305,7 @@ async function calcOperatorPerformance(periodType, periodKey){
   runtimeDeals.forEach(function(r){
     if(!r.aging_days && r.aging_days !== 0) return;
     agingSum += r.aging_days; agingCount++;
-    var revLine = 'imersao'; // default
+    var revLine = r._revLine || resolveRevenueLine(r) || 'outros';
     var riskAfter = (REVENUE_LINES[revLine] || {}).risk_after || 3;
     if(r.aging_days > riskAfter * 2) slaRisk++;
     if(!r.last_touch_at) inactive++;
