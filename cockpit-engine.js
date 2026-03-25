@@ -356,7 +356,7 @@ function renderTaskRunner(filterType){
     var d = t.deal;
     var cfg = TASK_TYPES[t.taskType]||TASK_TYPES.follow_up;
     var agingLabel = t.aging && t.aging.isAtRisk ? '<span class="task-aging task-aging-'+t.aging.riskLevel+'">'+t.aging.riskLabel+'</span>' : '';
-    return '<div class="task-card" data-task-idx="'+idx+'" onclick="window.openTaskDeal(\''+t.id+'\')">'
+    return '<div class="task-card" data-task-idx="'+idx+'" onclick="window.texOpen('+idx+')">'
       + '<div class="task-card-top">'
       + '<span class="task-type-badge task-c-'+cfg.color+'">'+cfg.label+'</span>'
       + '<span class="task-priority task-p-'+t.priority+'">'+t.priority+'</span>'
@@ -372,7 +372,6 @@ function renderTaskRunner(filterType){
       + '<div class="task-card-actions">'
       + '<button class="task-btn" onclick="event.stopPropagation();window.taskQuickAction(\''+t.id+'\',\'fup\')">Gerar FUP</button>'
       + '<button class="task-btn" onclick="event.stopPropagation();window.taskQuickAction(\''+t.id+'\',\'analyze\')">Analisar</button>'
-      + '<button class="task-btn task-btn-next" onclick="event.stopPropagation();window.taskNext('+idx+')">Proxima &rarr;</button>'
       + '</div>'
       + '</div>';
   }).join('');
@@ -385,7 +384,242 @@ function renderTaskRunner(filterType){
 }
 window.renderTaskRunner = renderTaskRunner;
 
+// ==================================================================
+// TASK EXECUTION MODE (HubSpot-style)
+// Overlay com deal card expandido + navegação ← → + disposição + timer
+// ==================================================================
+var _texQueue = [];    // current filtered task queue
+var _texIdx = 0;       // current index in queue
+var _texTimer = null;   // interval id
+var _texSeconds = 0;    // elapsed seconds
+var _texDisposition = null; // selected disposition
+
+// Helper: build the deal card HTML (reuses selectLiveDeal template)
+function _texBuildDealCard(id, d){
+  if(!d) return '<div class="task-empty">Deal não encontrado</div>';
+  var fmtBRL = window.fmtBRL || function(v){return v?'R$ '+Number(v).toLocaleString('pt-BR'):'—';};
+  var barClass=d.tc==='th'?'bf-h':d.tc==='tw'?'bf-w':'bf-c';
+  var tgvClass=d.tc==='th'?'tgv-h':d.tc==='tw'?'tgv-w':'tgv-c';
+  var tempSub=d.tc==='th'?'Quente — ação imediata':d.tc==='tw'?'Morno — reengajamento':'Frio — risco de perda';
+  var buildRecom = window.buildRecomText || function(){return '';};
+  var escHtml = window.escHtml || _escHtml;
+  return '<div class="card">'
+    + '<div class="dch">'
+    + '<div class="dca">'+((d.emailLead||d.nome||'?')[0]).toUpperCase()+'</div>'
+    + '<div class="dci">'
+    + '<div class="dcn">'+escHtml(d.nome||'Lead')+'</div>'
+    + '<div class="dcs">'+escHtml(d.cargo||'—')+' · '+escHtml(d.emailLead||d.empresa||'')+'</div>'
+    + '<div class="tags-row">'
+    + '<span class="tag t-gray">'+escHtml(d.tier||'—')+'</span>'
+    + '<span class="tag t-gray">'+escHtml(d.etapa||d.fase||'')+'</span>'
+    + (d._signal==='BUY'?'<span class="tag t-buy">BUY</span>':d._signal==='RISK'?'<span class="tag t-risk">RISK</span>':d._signal==='STALL'?'<span class="tag t-stall">STALL</span>':d._signal==='CHAMP'?'<span class="tag t-champ">CHAMP</span>':d._signal==='DOME'?'<span class="tag t-stall">IRON DOME</span>':'')
+    + ((d._urgency||0)>=60?'<span class="tag t-risk">SLA RISCO</span>':'')
+    + '</div></div></div>'
+    + '<div class="tg">'
+    + '<div class="tg-row"><span class="tg-lbl">Temperatura do Deal</span><span class="tgv '+tgvClass+'">'+d.temp+'</span></div>'
+    + '<div class="bar"><div class="bf '+barClass+'" style="width:'+d.temp+'%"></div></div>'
+    + '<div class="tg-sub">'+tempSub+'</div></div>'
+    + '<div class="info-grid">'
+    + '<div class="ic"><div class="ic-l">Etapa</div><div class="ic-v">'+escHtml(d.etapa||d.fase||'')+'</div><div class="ic-s">'+(d.fase?'Fase: '+d.fase+' · ':'')+d.delta+' dias no CRM</div></div>'
+    + '<div class="ic"><div class="ic-l">Canal</div><div class="ic-v">'+escHtml(d.canal||'')+'</div><div class="ic-s">'+escHtml(d.linhaReceita||d.utm_medium||'—')+'</div></div>'
+    + '<div class="ic"><div class="ic-l">Dia FUP</div><div class="ic-v">'+escHtml(d.dd||'')+'</div><div class="ic-s">'+(d._timeline?d._timeline.actionLabel:'')+'</div></div>'
+    + '<div class="ic"><div class="ic-l">SLA</div><div class="ic-v" style="color:'+(d._timeline&&(d._timeline.slaStatus==='overdue'||d._timeline.slaStatus==='critical')?'var(--red)':d._timeline&&d._timeline.slaStatus==='at_risk'?'var(--yellow)':'var(--green)')+'">'+((d._timeline?d._timeline.slaLabel:'—'))+'</div><div class="ic-s">'+(d._timeline?(d._timeline.daysToSLA>=0?d._timeline.daysToSLA+'d restantes':Math.abs(d._timeline.daysToSLA)+'d estourado'):'')+'</div></div>'
+    + '<div class="ic"><div class="ic-l">Valor G4</div><div class="ic-v" style="color:var(--green)">'+fmtBRL(d.revenueRaw)+'</div></div>'
+    + '<div class="ic"><div class="ic-l">Valor ELUCY</div><div class="ic-v" style="color:var(--accent2)">'+fmtBRL(d.elucyValor)+'</div></div>'
+    + '</div>'
+    + '<div class="recom"><div class="recom-l">Recomendação ELUCY <span class="elucy-badge">MOTOR ATIVO</span></div>'
+    + '<div class="recom-t" id="recom-tex-'+id+'">'+buildRecom(d)+'</div></div>'
+    + ((d._urgency||0)>=60?'<div class="alrt al-d">SLA em risco — deal sem avanço por '+(d._delta||d.delta||0)+' dias.</div>':'')
+    + (d._signal==='DOME'?'<div class="alrt al-w">Iron Dome ativo — +10 dias sem resposta.</div>':'')
+    + '<div class="row">'
+    + '<button class="btn bp" onclick="showCopy(\''+id+'\',this)">Gerar Copy via ELUCY</button>'
+    + '<button class="btn bs" id="btn-er-tex-'+id+'" onclick="toggleER(\''+id+'\',this)">ELUCI Report</button>'
+    + '<button class="btn bs" data-color="clay" onclick="requestBusinessAnalysis(\''+id+'\',this)" style="border-color:var(--clay);color:var(--clay)">Análise de Mercado</button>'
+    + '<button class="wa-conv-btn" onclick="toggleWaPanel(\''+id+'\',this)">💬 Conversa</button>'
+    + '<button class="btn bs btn-sm" data-color="green" onclick="requestNotaCRM(\''+id+'\',this)" style="border-color:var(--green);color:var(--green)">📝 Nota CRM</button>'
+    + '</div>'
+    + '<div class="ba" id="nota-'+id+'" style="display:none"></div>'
+    + '<div class="wa-panel" id="wa-panel-'+id+'">'
+    + '<div class="wa-panel-header"><span class="wa-panel-title">Conversa WhatsApp</span><span id="wa-badge-'+id+'"></span><button class="wa-panel-close" onclick="toggleWaPanel(\''+id+'\')">✕</button></div>'
+    + '<div class="wa-chat" id="wa-chat-'+id+'"></div>'
+    + '<textarea class="wa-paste-area" id="wa-paste-'+id+'" placeholder="Cole aqui a conversa do WhatsApp..."></textarea>'
+    + '<div class="wa-paste-actions"><button class="btn bsuc btn-sm" onclick="processWaConversation(\''+id+'\')">Salvar conversa</button><button class="btn bs btn-sm" onclick="document.getElementById(\'wa-paste-'+id+'\').value=\'\'">Limpar</button><span class="wa-msg-count" id="wa-count-'+id+'"></span></div>'
+    + '</div>'
+    + '<div class="er" id="er-'+id+'" style="display:none"><div class="er-loading" style="display:none"></div></div>'
+    + '<div class="ba" id="ba-'+id+'" style="display:none"></div>'
+    + '</div>';
+}
+
+function _texUpdateUI(){
+  if(!_texQueue.length) return;
+  var t = _texQueue[_texIdx];
+  var d = t.deal;
+  var cfg = TASK_TYPES[t.taskType]||TASK_TYPES.follow_up;
+
+  // Nav counter + progress
+  var el=document.getElementById;
+  document.getElementById('tex-counter').textContent = (_texIdx+1)+' de '+_texQueue.length;
+  document.getElementById('tex-task-label').textContent = cfg.label + ' · ' + (d.nome||d.emailLead||'Lead');
+  document.getElementById('tex-progress-fill').style.width = Math.round((_texIdx+1)/_texQueue.length*100)+'%';
+  document.getElementById('tex-type-label').textContent = cfg.label + ' · ' + (t.priority||'').toUpperCase();
+
+  // Arrow states
+  document.getElementById('tex-prev').disabled = (_texIdx <= 0);
+  document.getElementById('tex-next').disabled = (_texIdx >= _texQueue.length - 1);
+
+  // Deal card
+  var wrap = document.getElementById('tex-deal-card');
+  wrap.innerHTML = _texBuildDealCard(t.id, d);
+
+  // Load cached outputs if remote
+  if(window.IS_REMOTE && window.loadDealCache) window.loadDealCache(d.deal_id || t.id, t.id);
+  if(window.IS_REMOTE && window.loadWaConversations) window.loadWaConversations(d.deal_id || t.id, t.id);
+
+  // Reset disposition
+  _texDisposition = null;
+  document.querySelectorAll('.tex-disp-btn').forEach(function(b){b.classList.remove('on');});
+
+  // Reset timer
+  _texSeconds = 0;
+  _texUpdateTimer();
+}
+
+function _texUpdateTimer(){
+  var m = Math.floor(_texSeconds/60);
+  var s = _texSeconds%60;
+  var el = document.getElementById('tex-timer');
+  if(el) el.textContent = (m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+}
+
+function _texStartTimer(){
+  if(_texTimer) clearInterval(_texTimer);
+  _texSeconds = 0;
+  _texTimer = setInterval(function(){
+    _texSeconds++;
+    _texUpdateTimer();
+  }, 1000);
+}
+
+function _texStopTimer(){
+  if(_texTimer){ clearInterval(_texTimer); _texTimer=null; }
+}
+
+// Open execution mode at given task index
+window.texOpen = function(idx){
+  var filterEl = document.querySelector('.fchip.on');
+  var filterType = filterEl && filterEl.dataset.tfilter !== 'all' ? filterEl.dataset.tfilter : null;
+  _texQueue = buildTaskQueue(filterType);
+  if(!_texQueue.length) return;
+  _texIdx = Math.min(idx, _texQueue.length - 1);
+  document.getElementById('tex-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  _texUpdateUI();
+  _texStartTimer();
+};
+
+// Navigate ← →
+window.texNav = function(dir){
+  var newIdx = _texIdx + dir;
+  if(newIdx < 0 || newIdx >= _texQueue.length) return;
+  _texIdx = newIdx;
+  _texUpdateUI();
+  _texStartTimer();
+};
+
+// Close execution mode
+window.texClose = function(){
+  document.getElementById('tex-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  _texStopTimer();
+};
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e){
+  var overlay = document.getElementById('tex-overlay');
+  if(!overlay || !overlay.classList.contains('open')) return;
+  if(e.key==='Escape') window.texClose();
+  if(e.key==='ArrowLeft') window.texNav(-1);
+  if(e.key==='ArrowRight') window.texNav(1);
+});
+
+// Select disposition
+window.texDisp = function(btn){
+  document.querySelectorAll('.tex-disp-btn').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  _texDisposition = btn.dataset.disp;
+};
+
+// Skip: go to next without logging
+window.texSkip = function(){
+  if(_texIdx < _texQueue.length - 1){
+    _texIdx++;
+    _texUpdateUI();
+    _texStartTimer();
+  } else {
+    window.texClose();
+    if(window.showSyncToast) window.showSyncToast('ok','Fila concluída!');
+  }
+};
+
+// Complete: log disposition + advance
+window.texComplete = function(){
+  var t = _texQueue[_texIdx];
+  if(!t) return;
+
+  // Log to Supabase activity_log
+  var sb = window._sb ? window._sb() : null;
+  var opId = window.getOperatorId ? window.getOperatorId() : null;
+  if(sb && opId){
+    sb.from('activity_log').insert({
+      operator_id: opId,
+      action: 'task_completed',
+      target_id: t.deal.deal_id || t.id,
+      metadata: JSON.stringify({
+        taskType: t.taskType,
+        disposition: _texDisposition,
+        elapsed_seconds: _texSeconds,
+        dealName: t.deal.nome
+      })
+    }).then(function(){});
+  }
+
+  // Log to deal_interactions if disposition set
+  if(sb && opId && _texDisposition){
+    sb.from('deal_interactions').insert({
+      deal_id: t.deal.deal_id || t.id,
+      operator_id: opId,
+      interaction_type: 'task_disposition',
+      content: JSON.stringify({
+        taskType: t.taskType,
+        disposition: _texDisposition,
+        elapsed_seconds: _texSeconds
+      })
+    }).then(function(){});
+  }
+
+  if(window.showSyncToast) window.showSyncToast('ok','Task concluída: '+(t.deal.nome||''));
+
+  // Advance or close
+  if(_texIdx < _texQueue.length - 1){
+    _texIdx++;
+    _texUpdateUI();
+    _texStartTimer();
+  } else {
+    window.texClose();
+    if(window.showSyncToast) window.showSyncToast('ok','🎉 Fila concluída! Todas as tasks executadas.');
+  }
+};
+
+// Legacy fallbacks
 window.openTaskDeal = function(id){
+  // Find task index for this deal
+  var filterEl = document.querySelector('.fchip.on');
+  var filterType = filterEl && filterEl.dataset.tfilter !== 'all' ? filterEl.dataset.tfilter : null;
+  _texQueue = buildTaskQueue(filterType);
+  for(var i=0;i<_texQueue.length;i++){
+    if(_texQueue[i].id === id){ window.texOpen(i); return; }
+  }
+  // Fallback: open in pipeline
   var d = (window._COCKPIT_DEAL_MAP||{})[id];
   if(d && window.selectLiveDeal){
     window.setScreen('pipeline', null);
@@ -401,9 +635,7 @@ window.taskQuickAction = function(id, action){
 };
 
 window.taskNext = function(currentIdx){
-  var cards = document.querySelectorAll('.task-card');
-  var next = cards[currentIdx+1];
-  if(next) next.scrollIntoView({behavior:'smooth',block:'center'});
+  window.texOpen(currentIdx+1);
 };
 
 // ==================================================================
