@@ -1099,7 +1099,15 @@ function toggleER(id,btnEl){
 
 function showCopy(id,btnEl){
   const dvl=document.getElementById('dvl-'+id);
-  if(!dvl) return;
+  if(!dvl){
+    // Task Runner context — no DVL Gate, go straight to copy generation
+    const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
+    if(deal && (deal.deal_id||id)!=='—'){
+      requestElucyCopy(deal.deal_id||id, deal, id, deal.canal||'WhatsApp');
+      if(btnEl){btnEl.textContent='Gerando...';btnEl.disabled=true;setTimeout(function(){btnEl.textContent='Gerar Copy via ELUCY';btnEl.disabled=false;},5000);}
+    }
+    return;
+  }
   document.getElementById('menu-'+id).style.display='none';
   document.getElementById('co-'+id).style.display='none';
   dvl.style.display='block';
