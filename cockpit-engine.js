@@ -1,7 +1,9 @@
 // ==================================================================
-// ELUCY COCKPIT ENGINE v3.0 — 7-Layer Architecture
-// Operator Context | Taxonomy Core | Runtime Deal Context
-// Task Execution | Analytics | UI State | Product Intelligence
+// ELUCY COCKPIT ENGINE v6.0 — 13-Layer Architecture
+// 1. Operator Context | 2. Taxonomy Core | 3. Runtime Deal Context
+// 4. Task Execution | 5. Analytics | 6. UI State | 7. Product Intelligence
+// 8. Cadence Engine | 9. Runtime Sync | 10. Taxonomy Loader
+// 11. DM Touchpoints | 12. Snapshot Scheduler | 13. V6 Forecast Calculator
 // Incluir APOS cockpit.html carregar (antes do </body>)
 // ==================================================================
 
