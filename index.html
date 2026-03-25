@@ -2368,6 +2368,7 @@ function renderLiveDeals(rows,cols){
         <span class="tb ${sigCls[signal]||'sig-buy'}" style="margin-left:2px">${sigLabels[signal]||signal}</span>
         <span class="urg-badge ${uc}" title="Score urgência">${urgency}</span>
       </div>
+      <div id="di-signal-${id}" style="margin-top:4px;"></div>
       <div class="di-qa">
         <button class="qa-btn" onclick="event.stopPropagation();quickFUP('${id}')">Gerar FUP</button>
         <button class="qa-btn" onclick="event.stopPropagation();quickNote('${id}')">Nota CRM</button>
@@ -2399,6 +2400,21 @@ function renderLiveDeals(rows,cols){
 
   // V5 Runtime Sync — persiste estado enriquecido em deal_runtime
   if(window.syncDealRuntime) window.syncDealRuntime().catch(function(e){ console.warn('[runtime-sync] error:', e.message); });
+
+  // V8 Signal Engine — roda após _COCKPIT_DEAL_MAP estar completo
+  if(window.runSignalEngine){
+    window.runSignalEngine(true).then(function(){
+      // Atualiza badge de sinais em todos os deal cards
+      if(window._COCKPIT_DEAL_MAP){
+        Object.keys(window._COCKPIT_DEAL_MAP).forEach(function(id){
+          var d = window._COCKPIT_DEAL_MAP[id];
+          if(!d._signalScore) return;
+          var el = document.getElementById('di-signal-'+id);
+          if(el && window.renderSignalBadge) el.innerHTML = window.renderSignalBadge(d, true);
+        });
+      }
+    }).catch(function(e){ console.warn('[signals] run error:', e.message); });
+  }
 }
 
 function renderFocusPanel(){
@@ -3752,6 +3768,11 @@ function selectLiveDeal(id,d){
         <div class="ic"><div class="ic-l">Valor G4 Dados</div><div class="ic-v" style="color:var(--green)">${fmtBRL(d.revenueRaw)}</div><div class="ic-s">Time de dados</div></div>
         <div class="ic"><div class="ic-l">Valor ELUCY</div><div class="ic-v" style="color:var(--accent2)">${fmtBRL(d.elucyValor)}</div><div class="ic-s">${d.forecastDelta!=null?(d.forecastDelta>=0?'▲ +'+fmtBRL(d.forecastDelta):'▼ '+fmtBRL(d.forecastDelta))+' vs G4 Dados':'Sem ref. dados'}</div></div>
       </div>
+      <div class="ig-toggle" onclick="this.nextElementSibling.classList.toggle('collapsed');this.querySelector('.tgl-arrow').classList.toggle('up')">
+        <span class="ig-toggle-label">⚡ Sinais do Deal</span>
+        <span class="tgl-arrow">▾</span>
+      </div>
+      <div id="signal-panel-${id}" class="collapsed" style="margin-bottom:10px;"></div>
       <div class="recom">
         <div class="recom-l">Recomendação ELUCY <span class="elucy-badge">MOTOR ATIVO</span></div>
         <div class="recom-t" id="recom-${id}">${buildRecomText(d)}</div>
@@ -3843,6 +3864,10 @@ function selectLiveDeal(id,d){
   if(d.deal_id && window.IS_REMOTE){
     loadDealHistory(d.deal_id, id);
     loadDealCache(d.deal_id, id);
+  }
+  // Renderiza painel de sinais (Layer 18)
+  if(window.renderSignalPanel){
+    window.renderSignalPanel(id, 'signal-panel-'+id);
   }
 }
 
@@ -4036,14 +4061,54 @@ function _renderGlobal(ct,AE,allDeals,deals){
     html+=renderSection(4,'Pipeline por Etapa',
       stageKeys.map(function(k){return _iBar(fmtEtapa(k),stageData[k].count,maxStage,g.overview.totalDeals);}).join(''));
 
-    // Signals
-    html+=renderSection(5,'Sinais',
-      '<div class="intel-kpi-row">'+
+    // Signals — V7 legacy + V8 Signal Engine
+    var sigHtml='<div class="intel-kpi-row">'+
       _iKpi(buyCount,'BUY','var(--green)')+
       _iKpi(stallCount,'STALL','var(--yellow)')+
       _iKpi(riskCount,'RISK','var(--red)')+
       _iKpi(irondome,'Iron Dome','var(--red)')+
-      '</div>');
+      '</div>';
+
+    // V8 Signal Engine stats
+    var signalDeals=deals.filter(function(d){return d._signalScore;});
+    if(signalDeals.length){
+      var critCount=signalDeals.filter(function(d){return d._signalScore.risk_level==='critical';}).length;
+      var highCount=signalDeals.filter(function(d){return d._signalScore.risk_level==='high';}).length;
+      var lowCount=signalDeals.filter(function(d){return d._signalScore.risk_level==='low';}).length;
+      var avgSig=signalDeals.reduce(function(s,d){return s+(d._signalScore.signal_total||0);},0)/signalDeals.length;
+      sigHtml+='<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:6px">⚡ Signal Engine V8</div>';
+      sigHtml+='<div class="intel-kpi-row">'+
+        _iKpi(lowCount,'Low Risk','var(--green)')+
+        _iKpi(highCount,'High Risk','var(--yellow)')+
+        _iKpi(critCount,'Críticos','var(--red)')+
+        _iKpi((avgSig>=0?'+':'')+avgSig.toFixed(2),'Signal Médio',avgSig>0?'var(--green)':avgSig<-0.1?'var(--red)':'var(--yellow)')+
+        '</div>';
+      // Alertas automáticos
+      var intelSig={total:signalDeals.length,avg_signal_total:avgSig,critical_count:critCount,high_count:highCount,
+        top_negative_signals:Object.entries(signalDeals.reduce(function(acc,d){(d._signalScore.top_negative_signals||[]).forEach(function(s){acc[s.type]=(acc[s.type]||0)+1;});return acc;},{})
+        ).map(function(e){return {type:e[0],label:(window.SIGNAL_REGISTRY&&window.SIGNAL_REGISTRY[e[0]]?window.SIGNAL_REGISTRY[e[0]].label:e[0]),count:e[1]};}).sort(function(a,b){return b.count-a.count;}).slice(0,5)};
+      var alerts=window.calcSignalAlerts?window.calcSignalAlerts(intelSig):[];
+      if(alerts.length){
+        sigHtml+='<div style="margin-top:8px">';
+        alerts.forEach(function(a){
+          var bg=a.level==='danger'?'var(--rdim)':'var(--ydim)';
+          var bc=a.level==='danger'?'var(--red)':'var(--yellow)';
+          sigHtml+='<div style="background:'+bg+';border:1px solid '+bc+';border-radius:5px;padding:6px 10px;font-size:11px;color:'+bc+';margin-bottom:4px;">⚠ '+a.msg+'</div>';
+        });
+        sigHtml+='</div>';
+      }
+      // Top sinais negativos
+      if(intelSig.top_negative_signals.length){
+        sigHtml+='<div style="margin-top:8px;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Top Sinais Negativos</div>';
+        var maxSigCount=intelSig.top_negative_signals[0]?intelSig.top_negative_signals[0].count:1;
+        intelSig.top_negative_signals.forEach(function(s){
+          sigHtml+=_iBar('− '+s.label,s.count,maxSigCount,signalDeals.length,'background:var(--red)');
+        });
+      }
+      sigHtml+='</div>';
+    }
+
+    html+=renderSection(5,'Sinais & Risk Engine',sigHtml);
 
     // Activity summary
     html+=renderSection(6,'Atividade (30d)',

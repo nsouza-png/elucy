@@ -1,11 +1,12 @@
 // ==================================================================
-// ELUCY COCKPIT ENGINE v9.0 — 17-Layer Architecture
+// ELUCY COCKPIT ENGINE v9.1 — 18-Layer Architecture
 // 1. Operator Context | 2. Taxonomy Core | 3. Runtime Deal Context
 // 4. Task Execution | 5. Analytics | 6. UI State | 7. Product Intelligence
 // 8. Cadence Engine | 9. Runtime Sync | 10. Taxonomy Loader
 // 11. DM Touchpoints | 12. Snapshot Scheduler | 13. V7 Forecast Calculator
 // 14. Operator Performance Model | 15. Performance Report V3
 // 16. Framework Extractor Engine | 17. Framework UI
+// 18. Signal Engine (V8) — detect, score, persist, route to tasks + UI
 // Incluir APOS cockpit.html carregar (antes do </body>)
 // ==================================================================
 
@@ -4520,6 +4521,506 @@ async function loadFrameworkIntelligence(){
 }
 window.loadFrameworkIntelligence = loadFrameworkIntelligence;
 
-console.log('[cockpit-engine v9.0] 17-Layer Architecture loaded — Qualitative Forecast V7 + Framework Extractor');
+// ==================================================================
+// LAYER 18 — SIGNAL ENGINE (V8)
+// Detecta, calcula, persiste e roteia sinais por deal.
+// Integra com Forecast V7 (signal_total ajusta forecast_score).
+// Alimenta Task Runner com filas automáticas por sinal negativo.
+// Expõe renderSignalBadge(), loadSignalIntelligence(), calcSignalAlerts().
+// ==================================================================
+
+// Signal Registry — pesos e polaridade canônicos (fonte: elucy-signal-engine.md Doc42)
+var SIGNAL_REGISTRY = {
+  // Behavioral
+  lead_replied_fast:      { cat:'behavioral', pol:+1, w:0.10, label:'Respondeu rápido' },
+  lead_slow_response:     { cat:'behavioral', pol:-1, w:0.08, label:'Resposta lenta' },
+  lead_ghosting:          { cat:'behavioral', pol:-1, w:0.30, label:'Lead sumiu' },
+  lead_requested_price:   { cat:'behavioral', pol:+1, w:0.20, label:'Pediu proposta' },
+  lead_requested_time:    { cat:'behavioral', pol:-1, w:0.15, label:'Pediu adiamento' },
+  lead_no_show:           { cat:'behavioral', pol:-1, w:0.25, label:'No-show' },
+  lead_rescheduled:       { cat:'behavioral', pol:-1, w:0.10, label:'Reagendou' },
+  lead_engaged_dm:        { cat:'behavioral', pol:+1, w:0.12, label:'Engajou no DM' },
+  lead_opened_material:   { cat:'behavioral', pol:+1, w:0.08, label:'Abriu material' },
+  lead_asked_references:  { cat:'behavioral', pol:+1, w:0.15, label:'Pediu referências' },
+  // Framework
+  pain_detected:          { cat:'framework',  pol:+1, w:0.15, label:'Dor identificada' },
+  impact_defined:         { cat:'framework',  pol:+1, w:0.12, label:'Impacto definido' },
+  critical_event_defined: { cat:'framework',  pol:+1, w:0.18, label:'Evento crítico' },
+  economic_buyer_present: { cat:'framework',  pol:+1, w:0.20, label:'Decisor presente' },
+  decision_process_known: { cat:'framework',  pol:+1, w:0.10, label:'Processo decisório mapeado' },
+  champion_detected:      { cat:'framework',  pol:+1, w:0.15, label:'Champion detectado' },
+  metrics_defined:        { cat:'framework',  pol:+1, w:0.10, label:'Métricas definidas' },
+  next_step_defined:      { cat:'framework',  pol:+1, w:0.15, label:'Próximo passo claro' },
+  pain_missing:           { cat:'framework',  pol:-1, w:0.15, label:'Dor não mapeada' },
+  authority_missing:      { cat:'framework',  pol:-1, w:0.20, label:'Decisor não mapeado' },
+  no_critical_event:      { cat:'framework',  pol:-1, w:0.15, label:'Sem urgência/evento' },
+  champion_missing:       { cat:'framework',  pol:-1, w:0.10, label:'Sem champion interno' },
+  // Pipeline
+  aging_high:             { cat:'pipeline',   pol:-1, w:0.15, label:'Aging alto' },
+  sla_risk:               { cat:'pipeline',   pol:-1, w:0.12, label:'Risco de SLA' },
+  stage_stuck:            { cat:'pipeline',   pol:-1, w:0.18, label:'Deal travado' },
+  no_touch_recent:        { cat:'pipeline',   pol:-1, w:0.12, label:'Sem toque recente' },
+  too_many_touchpoints:   { cat:'pipeline',   pol:-1, w:0.08, label:'Muitos toques sem avanço' },
+  fast_progress:          { cat:'pipeline',   pol:+1, w:0.12, label:'Progresso rápido' },
+  meeting_scheduled:      { cat:'pipeline',   pol:+1, w:0.15, label:'Reunião agendada' },
+  // Quality
+  note_good:              { cat:'quality',    pol:+1, w:0.08, label:'Nota de qualidade' },
+  note_bad:               { cat:'quality',    pol:-1, w:0.10, label:'Nota fraca' },
+  no_note:                { cat:'quality',    pol:-1, w:0.15, label:'Sem notas' },
+  no_next_step:           { cat:'quality',    pol:-1, w:0.20, label:'Sem próximo passo' },
+  meeting_logged:         { cat:'quality',    pol:+1, w:0.10, label:'Reunião registrada' },
+  meeting_missing:        { cat:'quality',    pol:-1, w:0.12, label:'Reunião não registrada' },
+  no_show_not_treated:    { cat:'quality',    pol:-1, w:0.20, label:'No-show não tratado' },
+  low_context:            { cat:'quality',    pol:-1, w:0.08, label:'Contexto insuficiente' },
+  // Forecast
+  forecast_high_confidence:{ cat:'forecast',  pol:+1, w:0.10, label:'Alta confiança' },
+  forecast_low_confidence: { cat:'forecast',  pol:-1, w:0.15, label:'Baixa confiança' },
+  pipeline_inflated:      { cat:'forecast',   pol:-1, w:0.20, label:'Pipeline inflado' },
+  forecast_drop:          { cat:'forecast',   pol:-1, w:0.12, label:'Forecast caindo' },
+  forecast_up:            { cat:'forecast',   pol:+1, w:0.10, label:'Forecast subindo' },
+  qualitative_strong:     { cat:'forecast',   pol:+1, w:0.12, label:'Score qualitativo alto' },
+  qualitative_weak:       { cat:'forecast',   pol:-1, w:0.10, label:'Score qualitativo baixo' },
+  // Revenue
+  high_value_deal:        { cat:'revenue',    pol:+1, w:0.10, label:'Deal alto valor' },
+  low_ticket:             { cat:'revenue',    pol:-1, w:0.08, label:'Ticket baixo' },
+  high_priority_line:     { cat:'revenue',    pol:+1, w:0.08, label:'Linha prioritária' },
+  low_priority_line:      { cat:'revenue',    pol:-1, w:0.05, label:'Linha baixa prioridade' },
+  strategic_account:      { cat:'revenue',    pol:+1, w:0.15, label:'Conta estratégica' }
+};
+window.SIGNAL_REGISTRY = SIGNAL_REGISTRY;
+
+// Mapeamento sinal negativo → tipo de task automática
+var SIGNAL_TASK_MAP = {
+  no_next_step:          'next_step_fix',
+  aging_high:            'fup',
+  stage_stuck:           'fup',
+  lead_no_show:          'reschedule',
+  no_show_not_treated:   'reschedule',
+  authority_missing:     'authority_confirmation',
+  pain_missing:          'pain_quantification',
+  lead_ghosting:         'reativacao',
+  forecast_low_confidence: 'forecast_repair',
+  no_note:               'note_quality',
+  no_touch_recent:       'fup'
+};
+
+// Detecta sinais de um deal com base em campos calculados do runtime
+function detectSignals(deal){
+  var signals = [];
+  var fr  = deal._frameworkRuntime || {};
+  var fc  = deal._forecastV6 || {};
+  var rl  = REVENUE_LINES[deal._revLine] || {};
+  var ag  = deal._aging || 0;
+
+  function add(type, extras){
+    var def = SIGNAL_REGISTRY[type];
+    if(!def) return;
+    signals.push(Object.assign({ signal_type: type, deal_id: deal.dealId || deal.deal_id, source:'engine' }, def, extras||{}));
+  }
+
+  // == PIPELINE ==
+  if(ag > 0 && rl.risk_after && ag > rl.risk_after)   add('aging_high');
+  if(ag > 7)                                            add('stage_stuck');
+  if(ag > 5 && !deal._lastTouch)                       add('no_touch_recent');
+
+  var tpCount = deal.touchpointCount || 0;
+  if(tpCount > 8 && ag > 3)                            add('too_many_touchpoints');
+  if(ag <= 2 && (deal._stageDelta||0) >= 1)            add('fast_progress');
+  if(deal.meetingStatus === 'scheduled' || deal.reuniao_agendada) add('meeting_scheduled');
+
+  // == FRAMEWORK ==
+  if(fr.spiced_pain >= 0.60)       add('pain_detected');
+  else if(fr.spiced_pain < 0.25)   add('pain_missing');
+
+  if(fr.spiced_impact >= 0.50)     add('impact_defined');
+  if(fr.spiced_critical_event >= 0.50) add('critical_event_defined');
+  else if(fr.spiced_critical_event < 0.20) add('no_critical_event');
+
+  if(fr.meddic_economic >= 0.60)   add('economic_buyer_present');
+  else if(fr.authority_score < 0.30 || fr.meddic_economic < 0.25) add('authority_missing');
+
+  if(fr.decision_process_known >= 0.50 || fr.meddic_process >= 0.50) add('decision_process_known');
+  if(fr.meddic_champion >= 0.55)   add('champion_detected');
+  else if(fr.meddic_champion < 0.25) add('champion_missing');
+
+  if(fr.meddic_metrics >= 0.50)    add('metrics_defined');
+
+  if(fr.next_step_clarity >= 0.60) add('next_step_defined');
+  else if(fr.next_step_clarity < 0.25) add('no_next_step');
+
+  // == QUALITY ==
+  var noteQ = fr.note_quality_score || 0;
+  if(noteQ >= 0.70)   add('note_good');
+  else if(noteQ > 0 && noteQ < 0.30) add('note_bad');
+  else if(noteQ === 0 && fr.extraction_count === 0) add('no_note');
+
+  if(fr.meeting_quality_score >= 0.60)  add('meeting_logged');
+  else if(deal._hasMeeting && fr.meeting_quality_score < 0.20) add('meeting_missing');
+
+  if(deal.noShowUnresolved) add('no_show_not_treated');
+
+  var contextFields = ['nome','empresa','cargo','telefone','email','grupo_de_receita','linha_de_receita_vigente'].filter(function(f){ return !!(deal[f]); }).length;
+  if(contextFields < 3) add('low_context');
+
+  // == FORECAST ==
+  var conf = fc.confidence || fr.confidence_score || 0;
+  if(conf >= 0.75)  add('forecast_high_confidence');
+  else if(conf < 0.30) add('forecast_low_confidence');
+
+  var qs = fr.qualitative_score || 1.0;
+  if(qs >= 0.85)  add('qualitative_strong');
+  else if(qs < 0.40) add('qualitative_weak');
+
+  var prevForecast = deal._forecastPrev || 0;
+  var currForecast = fc.score || 0;
+  if(prevForecast > 0 && currForecast < prevForecast * 0.80) add('forecast_drop');
+  if(prevForecast > 0 && currForecast > prevForecast * 1.15) add('forecast_up');
+
+  // == REVENUE ==
+  var oppVal = deal._oppValue || deal.opportunityValue || 0;
+  if(oppVal > 50000)           add('high_value_deal');
+  if(rl.line_weight >= 0.90)   add('high_priority_line');
+  else if(rl.line_weight <= 0.60) add('low_priority_line');
+
+  var tier = (deal.tier_da_oportunidade||deal.tier||'').toLowerCase();
+  if(tier === 'diamond')       add('strategic_account');
+
+  // == BEHAVIORAL (baseado em meetingStatus e touchpoint patterns) ==
+  if((deal.meetingStatus||'') === 'no_show') add('lead_no_show');
+  if(deal.leadRequestedPrice)  add('lead_requested_price');
+  if(deal.leadGhosting)        add('lead_ghosting');
+  if(deal.leadRescheduled)     add('lead_rescheduled');
+
+  return signals;
+}
+window.detectSignals = detectSignals;
+
+// Calcula score consolidado a partir de lista de sinais
+function calcSignalScore(signals){
+  var pos = 0, neg = 0;
+  var catScores = { behavioral:0, framework:0, pipeline:0, quality:0, forecast:0, revenue:0 };
+  var posSignals = [], negSignals = [];
+
+  signals.forEach(function(s){
+    var def = SIGNAL_REGISTRY[s.signal_type];
+    if(!def) return;
+    var w = def.w || s.weight || 0;
+    var impact = +(w * def.pol).toFixed(4);
+    s.impact_score = impact;
+    catScores[def.cat] = +(( catScores[def.cat]||0 ) + Math.abs(w) * def.pol).toFixed(4);
+    if(def.pol > 0){ pos = +(pos + w).toFixed(4); posSignals.push(s); }
+    else            { neg = +(neg + w).toFixed(4); negSignals.push(s); }
+  });
+
+  // Normalise category scores [-1, +1]
+  Object.keys(catScores).forEach(function(c){
+    catScores[c] = +Math.max(-1, Math.min(1, catScores[c])).toFixed(4);
+  });
+
+  var total = +Math.max(-1, Math.min(1, pos - neg)).toFixed(4);
+  var riskLevel = total >= 0.30 ? 'low' : total >= 0.10 ? 'medium' : total >= -0.10 ? 'high' : 'critical';
+
+  posSignals.sort(function(a,b){ return (b.weight||0)-(a.weight||0); });
+  negSignals.sort(function(a,b){ return (b.weight||0)-(a.weight||0); });
+
+  return {
+    positive_score: pos,
+    negative_score: neg,
+    signal_total: total,
+    risk_level: riskLevel,
+    behavioral_score: catScores.behavioral,
+    framework_score:  catScores.framework,
+    pipeline_score:   catScores.pipeline,
+    quality_score:    catScores.quality,
+    forecast_score:   catScores.forecast,
+    revenue_score:    catScores.revenue,
+    signal_count:     signals.length,
+    positive_count:   posSignals.length,
+    negative_count:   negSignals.length,
+    top_positive_signals: posSignals.slice(0,3).map(function(s){ return { type:s.signal_type, label:SIGNAL_REGISTRY[s.signal_type].label, w:s.weight }; }),
+    top_negative_signals: negSignals.slice(0,3).map(function(s){ return { type:s.signal_type, label:SIGNAL_REGISTRY[s.signal_type].label, w:s.weight }; }),
+    explain_json: { categories: catScores, positive_total: pos, negative_total: neg }
+  };
+}
+window.calcSignalScore = calcSignalScore;
+
+// Ajuste do Forecast V7 com signal_total
+// forecast_adjusted = raw × qualitative_score × (1 + signal_total), clamped [0,1]
+function adjustForecastWithSignals(forecastRaw, qualitativeScore, signalTotal){
+  var adjusted = (forecastRaw||0) * (qualitativeScore||1.0) * (1 + (signalTotal||0));
+  return +Math.max(0, Math.min(1, adjusted)).toFixed(4);
+}
+window.adjustForecastWithSignals = adjustForecastWithSignals;
+
+// Persiste sinais e runtime no Supabase para um deal
+async function persistSignals(dealId, signals, scoreData, operatorEmail){
+  var sb = _sb(); if(!sb) return;
+  var email = operatorEmail || getOperatorId();
+
+  // Upsert runtime (snapshot consolidado)
+  var runtimeRow = Object.assign({ deal_id: dealId, operator_email: email, updated_at: new Date().toISOString() }, scoreData);
+  runtimeRow.top_positive_signals = JSON.stringify(scoreData.top_positive_signals||[]);
+  runtimeRow.top_negative_signals = JSON.stringify(scoreData.top_negative_signals||[]);
+  runtimeRow.explain_json = JSON.stringify(scoreData.explain_json||{});
+
+  var rtRes = await sb.from('deal_signal_runtime').upsert(runtimeRow, { onConflict:'deal_id' });
+  if(rtRes.error) console.warn('[signals] runtime upsert error:', rtRes.error.message);
+
+  // Insert individual signals (append-only)
+  var rows = signals.map(function(s){
+    return {
+      deal_id: dealId,
+      operator_email: email,
+      signal_type: s.signal_type,
+      signal_category: s.cat || (SIGNAL_REGISTRY[s.signal_type]||{}).cat || 'pipeline',
+      signal_value: s.signal_value || 0,
+      weight: s.w || (SIGNAL_REGISTRY[s.signal_type]||{}).w || 0,
+      impact_score: s.impact_score || 0,
+      description: s.label || (SIGNAL_REGISTRY[s.signal_type]||{}).label || s.signal_type,
+      payload: JSON.stringify(s.payload||{}),
+      source: s.source || 'engine',
+      version: 'v8'
+    };
+  });
+
+  if(rows.length){
+    var insRes = await sb.from('deal_signals').insert(rows);
+    if(insRes.error) console.warn('[signals] insert error:', insRes.error.message);
+  }
+}
+window.persistSignals = persistSignals;
+
+// Roda o Signal Engine para todos os deals do operador
+// Atualiza _COCKPIT_DEAL_MAP[dealId]._signals e _signalScore
+async function runSignalEngine(persist){
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var email = getOperatorId();
+  var tasks = [];
+
+  Object.keys(map).forEach(function(id){
+    var d = map[id];
+    var status = (d.statusDeal||'').toLowerCase();
+    if(status === 'perdido' || status === 'ganho') return; // apenas ativos
+
+    var signals  = detectSignals(d);
+    var scoreData = calcSignalScore(signals);
+
+    d._signals    = signals;
+    d._signalScore = scoreData;
+
+    // Integrar com forecast V7 se disponível
+    if(d._forecastV6 && d._frameworkRuntime){
+      d._forecastV6.score_adjusted = adjustForecastWithSignals(
+        d._forecastV6.score || 0,
+        d._frameworkRuntime.qualitative_score || 1.0,
+        scoreData.signal_total
+      );
+    }
+
+    // Coletar tasks automáticas por sinais negativos
+    scoreData.top_negative_signals.forEach(function(ns){
+      var taskType = SIGNAL_TASK_MAP[ns.type];
+      if(taskType){
+        tasks.push({ deal_id:id, deal:d, type:taskType, signal:ns.type, label:ns.label, priority: scoreData.risk_level === 'critical' ? 'critical' : 'high' });
+      }
+    });
+
+    if(persist){
+      persistSignals(id, signals, scoreData, email).catch(function(e){ console.warn('[signals] persist err', e); });
+    }
+  });
+
+  // Expor tasks para o Task Runner
+  window._SIGNAL_TASKS = tasks;
+  console.log('[signals] engine ran — '+Object.keys(map).length+' deals, '+tasks.length+' signal tasks');
+  return tasks;
+}
+window.runSignalEngine = runSignalEngine;
+
+// Constrói tasks automáticas do Signal Engine para o Task Runner
+function buildSignalTasks(){
+  return window._SIGNAL_TASKS || [];
+}
+window.buildSignalTasks = buildSignalTasks;
+
+// Renderiza badge de sinais para uso no deal card e deal workspace
+// Returns HTML string
+function renderSignalBadge(deal, compact){
+  var sc = deal._signalScore;
+  if(!sc) return '';
+  var total = sc.signal_total || 0;
+  var risk  = sc.risk_level || 'medium';
+  var color = risk==='low' ? 'var(--green)' : risk==='medium' ? 'var(--yellow)' : risk==='critical' ? 'var(--red)' : 'var(--red)';
+  var bg    = risk==='low' ? 'var(--gdim)' : risk==='medium' ? 'var(--ydim)' : 'var(--rdim)';
+  var sign  = total >= 0 ? '+' : '';
+  var label = sign + total.toFixed(2);
+
+  if(compact){
+    return '<span style="background:'+bg+';border:1px solid '+color+';border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;color:'+color+';">⚡'+label+'</span>';
+  }
+
+  var html = '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-top:8px;">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">';
+  html += '<span style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);">Sinais</span>';
+  html += '<span style="background:'+bg+';border:1px solid '+color+';border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;color:'+color+';">'+label+' · '+risk+'</span>';
+  html += '</div>';
+
+  sc.top_positive_signals.slice(0,2).forEach(function(s){
+    html += '<div style="font-size:11px;color:var(--green);margin:1px 0;">+ '+(s.label||s.type)+'</div>';
+  });
+  sc.top_negative_signals.slice(0,2).forEach(function(s){
+    html += '<div style="font-size:11px;color:var(--red);margin:1px 0;">− '+(s.label||s.type)+'</div>';
+  });
+
+  html += '</div>';
+  return html;
+}
+window.renderSignalBadge = renderSignalBadge;
+
+// Renderiza painel completo de sinais no Deal Workspace
+function renderSignalPanel(dealId, containerId){
+  var el = document.getElementById(containerId);
+  if(!el) return;
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var d = map[dealId];
+  if(!d || !d._signalScore){
+    el.innerHTML = '<div style="padding:16px;text-align:center;opacity:0.5;font-size:12px;">Nenhum sinal detectado ainda.</div>';
+    return;
+  }
+  var sc = d._signalScore;
+  var signals = d._signals || [];
+  var total = sc.signal_total || 0;
+  var risk  = sc.risk_level || 'medium';
+  var riskColor = risk==='low' ? 'var(--green)' : risk==='medium' ? 'var(--yellow)' : 'var(--red)';
+  var riskBg    = risk==='low' ? 'var(--gdim)' : risk==='medium' ? 'var(--ydim)' : 'var(--rdim)';
+  var sign = total >= 0 ? '+' : '';
+
+  var html = '';
+
+  // Score header
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
+  html += '<div>';
+  html += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:2px;">Signal Score</div>';
+  html += '<div style="font-size:28px;font-weight:800;color:'+riskColor+';">'+sign+total.toFixed(2)+'</div>';
+  html += '</div>';
+  html += '<div style="text-align:right;">';
+  html += '<div style="background:'+riskBg+';border:1px solid '+riskColor+';border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;color:'+riskColor+';">'+risk.toUpperCase()+'</div>';
+  html += '<div style="font-size:10px;color:var(--text2);margin-top:3px;">'+sc.positive_count+' pos · '+sc.negative_count+' neg</div>';
+  html += '</div></div>';
+
+  // Forecast ajustado
+  if(d._forecastV6 && d._forecastV6.score_adjusted !== undefined){
+    var fa = d._forecastV6.score_adjusted;
+    var fr = d._forecastV6.score || 0;
+    var delta = fa - fr;
+    var ds = delta >= 0 ? '+' : '';
+    html += '<div style="background:var(--glass);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:12px;">';
+    html += '<span style="opacity:0.6;">Forecast ajustado: </span><strong>'+Math.round(fa*100)+'%</strong>';
+    html += ' <span style="font-size:10px;color:'+(delta>=0?'var(--green)':'var(--red)')+';">('+ds+Math.round(delta*100)+'pp vs raw)</span>';
+    html += '</div>';
+  }
+
+  // Sinais por categoria
+  var cats = { behavioral:'Comportamental', framework:'Framework', pipeline:'Pipeline', quality:'Qualidade', forecast:'Forecast', revenue:'Receita' };
+  Object.keys(cats).forEach(function(cat){
+    var catSigs = signals.filter(function(s){ return (SIGNAL_REGISTRY[s.signal_type]||{}).cat === cat; });
+    if(!catSigs.length) return;
+    html += '<div style="margin-bottom:8px;">';
+    html += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:3px;">'+cats[cat]+'</div>';
+    catSigs.forEach(function(s){
+      var def = SIGNAL_REGISTRY[s.signal_type];
+      if(!def) return;
+      var c = def.pol > 0 ? 'var(--green)' : 'var(--red)';
+      var pfx = def.pol > 0 ? '+' : '−';
+      html += '<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;">';
+      html += '<span style="color:'+c+';">'+pfx+' '+_escHtml(def.label)+'</span>';
+      html += '<span style="opacity:0.5;">'+def.w.toFixed(2)+'</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+  });
+
+  el.innerHTML = html;
+}
+window.renderSignalPanel = renderSignalPanel;
+
+// Carrega dados agregados de sinais para a aba Intelligence
+async function loadSignalIntelligence(){
+  var sb = _sb(); if(!sb) return null;
+  var email = getOperatorId(); if(!email) return null;
+
+  var res = await sb.from('deal_signal_runtime')
+    .select('deal_id,signal_total,risk_level,behavioral_score,framework_score,pipeline_score,quality_score,forecast_score,positive_count,negative_count,signal_count,top_negative_signals,updated_at')
+    .eq('operator_email', email);
+  var rows = res.data || [];
+  if(!rows.length) return { total:0, rows:[] };
+
+  var total = rows.length;
+  var riskCounts = { low:0, medium:0, high:0, critical:0 };
+  var signalFreq = {};
+  var sumTotal = 0;
+
+  rows.forEach(function(r){
+    riskCounts[r.risk_level||'medium']++;
+    sumTotal += (r.signal_total||0);
+    // Top negative signals para frequência
+    var negs = typeof r.top_negative_signals === 'string' ? JSON.parse(r.top_negative_signals||'[]') : (r.top_negative_signals||[]);
+    negs.forEach(function(s){ signalFreq[s.type] = (signalFreq[s.type]||0) + 1; });
+  });
+
+  var topSignals = Object.keys(signalFreq).sort(function(a,b){ return signalFreq[b]-signalFreq[a]; }).slice(0,10);
+
+  return {
+    total: total,
+    avg_signal_total: +(sumTotal/total).toFixed(4),
+    risk_distribution: riskCounts,
+    critical_count: riskCounts.critical,
+    high_count: riskCounts.high,
+    top_negative_signals: topSignals.map(function(t){ return { type:t, label:(SIGNAL_REGISTRY[t]||{}).label||t, count: signalFreq[t] }; }),
+    rows: rows
+  };
+}
+window.loadSignalIntelligence = loadSignalIntelligence;
+
+// Alertas automáticos baseados no estado do pipeline
+function calcSignalAlerts(intelligenceData){
+  if(!intelligenceData || !intelligenceData.total) return [];
+  var d = intelligenceData;
+  var total = d.total;
+  var alerts = [];
+
+  // % de deals sem next step
+  var noNextStep = (d.top_negative_signals||[]).find(function(s){ return s.type==='no_next_step'; });
+  if(noNextStep && noNextStep.count/total > 0.30){
+    alerts.push({ level:'warning', msg:'+'+(Math.round(noNextStep.count/total*100))+'% dos deals sem próximo passo definido' });
+  }
+
+  // No-show não tratado
+  var noShowUnt = (d.top_negative_signals||[]).find(function(s){ return s.type==='no_show_not_treated'; });
+  if(noShowUnt && noShowUnt.count >= 3){
+    alerts.push({ level:'danger', msg:noShowUnt.count+' no-shows não tratados — lead perdendo temperatura' });
+  }
+
+  // Pipeline médio negativo
+  if(d.avg_signal_total < -0.10){
+    alerts.push({ level:'danger', msg:'Pipeline em risco — signal médio '+d.avg_signal_total.toFixed(2) });
+  }
+
+  // Decisor não mapeado
+  var authMiss = (d.top_negative_signals||[]).find(function(s){ return s.type==='authority_missing'; });
+  if(authMiss && authMiss.count/total > 0.40){
+    alerts.push({ level:'warning', msg:'+'+(Math.round(authMiss.count/total*100))+'% dos deals sem decisor mapeado' });
+  }
+
+  // Muitos críticos
+  if(d.critical_count >= 3){
+    alerts.push({ level:'danger', msg:d.critical_count+' deals em estado crítico — ação imediata necessária' });
+  }
+
+  return alerts;
+}
+window.calcSignalAlerts = calcSignalAlerts;
+
+console.log('[cockpit-engine v9.1] 18-Layer Architecture loaded — Signal Engine V8 + Qualitative Forecast V7 + Framework Extractor');
 
 })();
