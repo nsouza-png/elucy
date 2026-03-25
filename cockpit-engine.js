@@ -360,7 +360,7 @@ function renderTaskRunner(filterType){
     return;
   }
 
-  // Stats header
+  // Stats header — by type
   var byType = {};
   tasks.forEach(function(t){ byType[t.taskType] = (byType[t.taskType]||0)+1; });
   var statsHtml = '<div class="task-stats">';
@@ -370,13 +370,34 @@ function renderTaskRunner(filterType){
   });
   statsHtml += '</div>';
 
+  // Stats — by pipeline stage
+  var byStage = {};
+  var STAGE_ORDER = ['SAL','Conectados','Agendamento','Negociacao','Oportunidade'];
+  tasks.forEach(function(t){
+    var stage = t.deal.etapa || t.deal._etapa || t.deal.fase || 'Outro';
+    byStage[stage] = (byStage[stage]||0)+1;
+  });
+  var stageKeys = Object.keys(byStage).sort(function(a,b){
+    var ia=STAGE_ORDER.indexOf(a), ib=STAGE_ORDER.indexOf(b);
+    if(ia<0) ia=99; if(ib<0) ib=99;
+    return ia-ib;
+  });
+  statsHtml += '<div class="task-stage-bar">';
+  statsHtml += '<span class="task-stage-label">Pipeline:</span>';
+  statsHtml += '<span class="task-stage-chip on" data-stage="all" onclick="window._filterTaskStage(null,this)">Todas</span>';
+  stageKeys.forEach(function(stage){
+    statsHtml += '<span class="task-stage-chip" data-stage="'+_escHtml(stage)+'" onclick="window._filterTaskStage(\''+_escHtml(stage).replace(/'/g,"\\'")+'\',this)">'+_escHtml(stage)+' <b>'+byStage[stage]+'</b></span>';
+  });
+  statsHtml += '</div>';
+
   // Task cards
   var cardsHtml = tasks.map(function(t,idx){
     var d = t.deal;
     var cfg = TASK_TYPES[t.taskType]||TASK_TYPES.follow_up;
+    var dealStage = d.etapa || d._etapa || d.fase || 'Outro';
     var agingLabel = t.aging && t.aging.isAtRisk ? '<span class="task-aging task-aging-'+t.aging.riskLevel+'">'+t.aging.riskLabel+'</span>' : '';
     var cadBadge = t.cadence ? '<span class="task-cad-badge" title="'+_escHtml(t.cadence.templateName)+'">⚡ '+_escHtml(t.cadence.templateName)+' ('+(t.cadence.stepIndex+1)+'/'+t.cadence.totalSteps+')</span>' : '';
-    return '<div class="task-card'+(t.cadence?' task-card-cad':'')+'" data-task-idx="'+idx+'" onclick="window.texOpen('+idx+')">'
+    return '<div class="task-card'+(t.cadence?' task-card-cad':'')+'" data-task-idx="'+idx+'" data-stage="'+_escHtml(dealStage)+'" onclick="window.texOpen('+idx+')">'
       + '<div class="task-card-top">'
       + '<span class="task-type-badge task-c-'+cfg.color+'">'+cfg.label+'</span>'
       + '<span class="task-priority task-p-'+t.priority+'">'+t.priority+'</span>'
@@ -404,6 +425,22 @@ function renderTaskRunner(filterType){
   if(counter) counter.textContent = tasks.length;
 }
 window.renderTaskRunner = renderTaskRunner;
+
+// Filter tasks by pipeline stage (client-side show/hide)
+window._filterTaskStage = function(stage, el){
+  // Toggle chip highlight
+  document.querySelectorAll('.task-stage-chip').forEach(function(c){ c.classList.remove('on'); });
+  if(el) el.classList.add('on');
+
+  // Show/hide task cards
+  document.querySelectorAll('.task-card').forEach(function(card){
+    if(!stage){
+      card.style.display='';
+    } else {
+      card.style.display = card.dataset.stage === stage ? '' : 'none';
+    }
+  });
+};
 
 // ==================================================================
 // TASK EXECUTION MODE (HubSpot-style)

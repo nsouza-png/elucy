@@ -257,6 +257,13 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .cad-option-steps{display:flex;gap:4px;flex-wrap:wrap}
 .cad-mini-step{font-size:9px;font-weight:600;padding:2px 5px;background:var(--bg4);border-radius:3px}
 .task-btn-next:hover{background:var(--accent);color:#fff}
+/* Task stage filter bar */
+.task-stage-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding:8px 0;border-top:1px solid var(--border)}
+.task-stage-label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-right:4px}
+.task-stage-chip{padding:3px 8px;border-radius:5px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.12s}
+.task-stage-chip:hover{border-color:var(--accent);color:var(--accent2)}
+.task-stage-chip.on{background:var(--adim);border-color:var(--accent);color:var(--accent2)}
+.task-stage-chip b{font-weight:800}
 /* V3: Filter chips */
 .fchip{padding:4px 10px;border-radius:6px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.12s}
 .fchip:hover{border-color:var(--accent);color:var(--accent2)}
