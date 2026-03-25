@@ -637,6 +637,14 @@ window.texSkip = function(){
   }
 };
 
+// Open HubSpot for current task deal
+window.texOpenHubSpot = function(){
+  var t = _texQueue[_texIdx];
+  if(!t || !t.deal) return;
+  var dealId = t.deal.deal_id || t.id || '';
+  if(dealId) window.open('https://app.hubspot.com/contacts/7186301/record/0-3/' + dealId, '_blank');
+};
+
 // Complete: log disposition + advance
 window.texComplete = function(){
   var t = _texQueue[_texIdx];
