@@ -26,8 +26,8 @@ const _operatorCtx = {
   email: '',
   qualificador_name: '',
   role: 'sdr',
-  meta_mensal: { fups:300, qualificacoes:100, handoffs:40 },
-  meta_diaria: { fups:15, qualificacoes:5, handoffs:2 },
+  meta_mensal: { fups:300, qualificacoes:100, handoffs:40, opp:15 },
+  meta_diaria: { fups:15, qualificacoes:5, handoffs:2, opp:1 },
   focus_mode: 'velocidade',
   active_revenue_lines: [],
   permissions: { can_view_team:false, can_approve:false, is_leader:false },
@@ -64,6 +64,7 @@ async function initOperatorContext(){
   _operatorCtx.meta_diaria.fups=Math.ceil(_operatorCtx.meta_mensal.fups/22);
   _operatorCtx.meta_diaria.qualificacoes=Math.ceil(_operatorCtx.meta_mensal.qualificacoes/22);
   _operatorCtx.meta_diaria.handoffs=Math.ceil(_operatorCtx.meta_mensal.handoffs/22);
+  _operatorCtx.meta_diaria.opp=Math.ceil((_operatorCtx.meta_mensal.opp||15)/22);
   _operatorCtx.initialized=true;
   // Load cadence enrollments after operator context is ready
   cadenceLoadAll();
@@ -81,6 +82,15 @@ async function saveOperatorSettings(settings){
     _operatorCtx.meta_diaria.fups=Math.ceil(_operatorCtx.meta_mensal.fups/22);
     _operatorCtx.meta_diaria.qualificacoes=Math.ceil(_operatorCtx.meta_mensal.qualificacoes/22);
     _operatorCtx.meta_diaria.handoffs=Math.ceil(_operatorCtx.meta_mensal.handoffs/22);
+    _operatorCtx.meta_diaria.opp=Math.ceil((_operatorCtx.meta_mensal.opp||15)/22);
+    // Persist goal history
+    var pk=new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
+    sb.from('operator_goals').upsert({
+      operator_email:email, period_key:pk,
+      fups:_operatorCtx.meta_mensal.fups, qualificacoes:_operatorCtx.meta_mensal.qualificacoes,
+      handoffs:_operatorCtx.meta_mensal.handoffs, opp:_operatorCtx.meta_mensal.opp||15,
+      updated_at:new Date().toISOString()
+    },{onConflict:'operator_email,period_key'}).then(function(){});
   }
   await sb.from('operators').update(update).eq('email',email);
 }
@@ -1444,6 +1454,14 @@ async function renderHome(){
   var fupPct = meta.fups>0 ? Math.min(100,Math.round((todayStats.fups||0)/meta.fups*100)) : 0;
   var qualPct = meta.qualificacoes>0 ? Math.min(100,Math.round((todayStats.qualificacoes||0)/meta.qualificacoes*100)) : 0;
   var handPct = meta.handoffs>0 ? Math.min(100,Math.round((todayStats.handoffs||0)/meta.handoffs*100)) : 0;
+  // OPP mensal — conta deals em fase oportunidade/negociacao no pipe atual
+  var metaMensal = _operatorCtx.meta_mensal || {};
+  var oppTarget = metaMensal.opp || 15;
+  var oppActual = allDeals.filter(function(d){
+    var fase = (d._fase || d.fase || d.fase_atual_no_processo || '').toLowerCase();
+    return fase === 'oportunidade' || fase.includes('negoc');
+  }).length;
+  var oppPct = oppTarget > 0 ? Math.min(100, Math.round(oppActual / oppTarget * 100)) : 0;
 
   var html = '';
 
@@ -1458,6 +1476,7 @@ async function renderHome(){
     + '<div class="home-meta"><div class="home-meta-label">FUPs</div><div class="home-meta-value">'+(todayStats.fups||0)+' / '+meta.fups+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(fupPct>=100?' done':'')+'" style="width:'+fupPct+'%"></div></div></div>'
     + '<div class="home-meta"><div class="home-meta-label">Qualificacoes</div><div class="home-meta-value">'+(todayStats.qualificacoes||0)+' / '+meta.qualificacoes+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(qualPct>=100?' done':'')+'" style="width:'+qualPct+'%"></div></div></div>'
     + '<div class="home-meta"><div class="home-meta-label">Handoffs</div><div class="home-meta-value">'+(todayStats.handoffs||0)+' / '+meta.handoffs+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(handPct>=100?' done':'')+'" style="width:'+handPct+'%"></div></div></div>'
+    + '<div class="home-meta"><div class="home-meta-label">OPP Mensal</div><div class="home-meta-value">'+oppActual+' / '+oppTarget+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(oppPct>=100?' done':'')+'" style="width:'+oppPct+'%"></div></div></div>'
     + '</div></div>';
 
   // BLOCO 2 — Tarefas criticas
@@ -3557,9 +3576,10 @@ async function calcPerformanceReportV3(periodType, periodKey){
   var deals = dealIds.map(function(id){ return map[id]; });
 
   // ── BLOCK 1: META ──
+  var metaM = _operatorCtx.meta_mensal || {};
   var meta = {
-    target_sal: _operatorCtx.meta_mensal || 40,
-    target_opp: Math.round((_operatorCtx.meta_mensal || 40) * 0.35),
+    target_sal: metaM.qualificacoes || 100,
+    target_opp: metaM.opp || 15,
     target_revenue: 180000
   };
 

@@ -1848,6 +1848,17 @@ function openSettings(){
       </div>
 
       <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
+        <div class="modal-s" style="font-weight:600;margin-bottom:6px">Metas Mensais</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="modal-f"><label class="modal-l">FUPs</label><input class="modal-i" id="op-meta-fups" type="number" min="1" value="${window.getOperatorCtx().meta_mensal.fups||300}" style="font-size:12px"></div>
+          <div class="modal-f"><label class="modal-l">Qualificações</label><input class="modal-i" id="op-meta-qual" type="number" min="1" value="${window.getOperatorCtx().meta_mensal.qualificacoes||100}" style="font-size:12px"></div>
+          <div class="modal-f"><label class="modal-l">Handoffs</label><input class="modal-i" id="op-meta-handoffs" type="number" min="1" value="${window.getOperatorCtx().meta_mensal.handoffs||40}" style="font-size:12px"></div>
+          <div class="modal-f"><label class="modal-l">OPP (Oportunidades)</label><input class="modal-i" id="op-meta-opp" type="number" min="1" value="${window.getOperatorCtx().meta_mensal.opp||15}" style="font-size:12px"></div>
+        </div>
+        <div class="modal-note">Metas mensais do operador. OPP = deals que chegaram à fase Oportunidade/Negociação. Salvo com histórico por mês.</div>
+      </div>
+
+      <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
         <div class="modal-s" style="font-weight:600;margin-bottom:6px">Databricks</div>
         <div class="modal-f">
           <label class="modal-l">Token de acesso</label>
@@ -1932,6 +1943,12 @@ function saveOperator(){
     localStorage.setItem('elucy_api_enabled',enabled?'true':'false');
     window.ELUCY_API_ENABLED=enabled;
   }
+  // Salvar metas mensais
+  const metaFups=parseInt(document.getElementById('op-meta-fups')?.value)||300;
+  const metaQual=parseInt(document.getElementById('op-meta-qual')?.value)||100;
+  const metaHandoffs=parseInt(document.getElementById('op-meta-handoffs')?.value)||40;
+  const metaOpp=parseInt(document.getElementById('op-meta-opp')?.value)||15;
+  window.saveOperatorSettings({meta_mensal:{fups:metaFups,qualificacoes:metaQual,handoffs:metaHandoffs,opp:metaOpp}});
   // Limpa cache de nome se o email mudou (força novo lookup)
   const prev=localStorage.getItem('elucy_operator_email');
   if(prev!==email) localStorage.removeItem('elucy_qualificador_name');
