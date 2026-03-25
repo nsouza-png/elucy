@@ -1747,17 +1747,15 @@ async function callSyncDeals(){
   if(btn){btn.disabled=true;btn.style.opacity='0.5';}
   showSyncToast('load','Sincronizando com Databricks...');
   try{
-    // 1. Enfileira sync request no Supabase — worker processa em ~2min
-    const reqId='sync_'+Date.now();
-    await sb.from('cockpit_requests').insert({
-      id: reqId,
-      operator_email: session.user.email,
+    // 1. Enfileira sync request — schema real: operator_id(text), deal_id(text), request_type(text), status(text), deal_data(jsonb)
+    const {error:insertErr} = await sb.from('cockpit_requests').insert({
+      operator_id: session.user.email,
       deal_id: '_sync_pipeline',
       request_type: 'sync_pipeline',
-      payload: JSON.stringify({operator_email: session.user.email, triggered_by:'manual_refresh'}),
       status: 'pending',
-      created_at: new Date().toISOString()
+      deal_data: {operator_email: session.user.email, triggered_by: 'manual_refresh'}
     });
+    if(insertErr) throw new Error(insertErr.message);
     // 2. Recarrega deals do Supabase (dados atuais enquanto sync roda)
     await loadDealsFromSupabase(session.user.email);
     _lastSyncAt=Date.now();
