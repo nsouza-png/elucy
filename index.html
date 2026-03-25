@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ELUCi Cockpit</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a1628'/><text x='50' y='68' font-size='42' font-weight='bold' text-anchor='middle' fill='%234a9eff' font-family='system-ui'>Ei</text></svg>">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a1628'/><text x='50' y='68' font-size='42' font-weight='bold' text-anchor='middle' fill='%234a9eff' font-family='system-ui'>Ei</text></svg>">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Bungee&display=swap" rel="stylesheet">
+<title>ELUCY — Sales Engagement</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2304080f'/><text x='50' y='66' font-size='36' font-weight='900' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='2'>EC</text><rect x='28' y='72' width='44' height='14' rx='4' fill='%235b8def'/><text x='50' y='82' font-size='9' font-weight='800' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>BY G4</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2304080f'/><text x='50' y='66' font-size='36' font-weight='900' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='2'>EC</text><rect x='28' y='72' width='44' height='14' rx='4' fill='%235b8def'/><text x='50' y='82' font-size='9' font-weight='800' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>BY G4</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase JS SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <!-- cockpit-data.js carregado após auth, apenas em ambiente local G4 OS -->
@@ -30,65 +30,65 @@ if(!window.IS_REMOTE){
 </script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#070d18;--bg2:#0a1628;--bg3:#0f1e35;--bg4:#162845;--border:#1c3254;--border2:#2a4570;--accent:#4a9eff;--accent2:#6cb4ff;--adim:rgba(74,158,255,.12);--green:#22c55e;--gdim:rgba(34,197,94,.12);--yellow:#d4a017;--ydim:rgba(212,160,23,.12);--red:#dc2626;--rdim:rgba(220,38,38,.12);--blue:#3478c2;--bdim:rgba(52,120,194,.12);--clay:#b87333;--claydim:rgba(184,115,51,.12);--gold:#d4a017;--golddim:rgba(212,160,23,.12);--text:#e2e8f0;--text2:#8899b0;--r:8px;--r2:12px;--font-title:'PP Museum','Bungee',Impact,system-ui,sans-serif;--font-body:'Manrope',Inter,system-ui,sans-serif}
-body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:14px}
-::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
-#topbar{height:50px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:10px;flex-shrink:0;z-index:10}
-.logo{font-family:var(--font-title);font-size:15px;font-weight:800;color:var(--accent);margin-right:6px;text-transform:uppercase;letter-spacing:1px}.logo em{color:var(--accent2);font-style:italic;font-weight:400}
-.ntab{padding:6px 13px;border-radius:6px;font-size:12px;color:var(--text2);cursor:pointer;transition:.15s;border:none;background:none;font-family:inherit}.ntab:hover{color:var(--text);background:var(--bg3)}.ntab.on{color:var(--accent2);background:var(--adim);font-weight:600}
+:root{--bg:#080b12;--bg2:#0c1018;--bg3:#111620;--bg4:#171d2a;--border:rgba(255,255,255,.06);--border2:rgba(255,255,255,.10);--accent:#5b8def;--accent2:#8fb8ff;--adim:rgba(91,141,239,.08);--green:#34d399;--gdim:rgba(52,211,153,.08);--yellow:#f5c542;--ydim:rgba(245,197,66,.08);--red:#f87171;--rdim:rgba(248,113,113,.08);--blue:#60a5fa;--bdim:rgba(96,165,250,.08);--clay:#d4956a;--claydim:rgba(212,149,106,.08);--gold:#f5c542;--golddim:rgba(245,197,66,.08);--text:#e8ecf2;--text2:#6b7a90;--r:10px;--r2:12px;--font-title:'Manrope',Inter,system-ui,sans-serif;--font-body:'Manrope',Inter,system-ui,sans-serif;--glass:rgba(255,255,255,.025);--glow:0 0 40px rgba(91,141,239,.04);--shadow-lg:0 8px 32px rgba(0,0,0,.5);--shadow-sm:0 2px 8px rgba(0,0,0,.25)}
+body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,rgba(91,141,239,.07) 0%,transparent 50%);color:var(--text);font-family:var(--font-body);height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:13px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.14)}
+#topbar{height:52px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0;z-index:10}
+.logo{display:flex;align-items:center;gap:8px;margin-right:12px}.logo-name{font-family:var(--font-title);font-size:16px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:1.5px}.logo-badge{background:var(--accent);color:#fff;font-size:8px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:1px;text-transform:uppercase;line-height:1.3}
+.ntab{padding:6px 14px;border-radius:20px;font-size:12px;color:var(--text2);cursor:pointer;transition:.15s;border:1px solid transparent;background:none;font-family:inherit;font-weight:500}.ntab:hover{color:var(--text);background:rgba(255,255,255,.04)}.ntab.on{color:#fff;background:var(--bg4);border-color:var(--border2);font-weight:600}
 .tbr{margin-left:auto;display:flex;align-items:center;gap:10px}
-.chip{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:3px 11px 3px 5px;font-size:12px}.av{width:24px;height:24px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff}.chip-name{font-weight:600}.chip-lvl{color:var(--accent2);font-size:11px}
+.chip{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:3px 12px 3px 5px;font-size:12px}.av{width:24px;height:24px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}.chip-name{font-weight:600;color:#fff}.chip-lvl{color:var(--text2);font-size:11px}
 .streak-badge{background:var(--golddim);border:1px solid var(--gold);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--gold);font-weight:700}
 #main{display:flex;flex:1;overflow:hidden}
 #sb{width:292px;min-width:292px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
 .sb-h{padding:12px 14px 8px;border-bottom:1px solid var(--border);flex-shrink:0}.sb-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}.sb-title{font-family:var(--font-title);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px}.sb-date{font-size:11px;color:var(--text2)}
 .sb-stats{display:flex;gap:5px}.sbs{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 7px;text-align:center}.sbs-n{font-family:var(--font-body);font-size:15px;font-weight:800}.sbs-l{font-size:10px;color:var(--text2)}
-.sb-search{padding:8px 14px;border-bottom:1px solid var(--border);flex-shrink:0}.srch{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:12px;color:var(--text);outline:none;font-family:inherit}.srch::placeholder{color:var(--text2)}.srch:focus{border-color:var(--accent)}
+.sb-search{padding:8px 14px;border-bottom:1px solid var(--border);flex-shrink:0}.srch{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--text);outline:none;font-family:inherit}.srch::placeholder{color:var(--text2)}.srch:focus{border-color:var(--border2)}
 .deal-list{flex:1;overflow-y:auto;padding:8px}
-.di{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:5px;cursor:pointer;transition:.15s;border-left:3px solid transparent}.di:hover{border-color:var(--border2);background:var(--bg4)}.di.on{border-color:var(--accent)!important;background:var(--adim)}.di.sla{border-left-color:var(--red)}.di.dome{border-left-color:var(--yellow)}
-.di-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:1px}.di-co{font-size:11px;color:var(--text2);margin-bottom:6px}.di-meta{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.di{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;margin-bottom:6px;cursor:pointer;transition:.15s;border-left:3px solid transparent}.di:hover{border-color:var(--border2);background:var(--bg4)}.di.on{border-color:var(--accent)!important;background:rgba(91,141,239,.06)}.di.sla{border-left-color:var(--red)}.di.dome{border-left-color:var(--yellow)}
+.di-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;color:#fff}.di-co{font-size:11px;color:var(--text2);margin-bottom:6px}.di-meta{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .tb{display:inline-flex;align-items:center;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700}.th{background:var(--gdim);color:var(--green);border:1px solid var(--green)}.tw{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}.tc{background:var(--rdim);color:var(--red);border:1px solid var(--red)}
 .fc{background:var(--bg4);border:1px solid var(--border);border-radius:4px;padding:2px 5px;font-size:10px;color:var(--text2)}.cc{font-size:10px;padding:2px 5px;border-radius:4px;font-weight:600}.cwa{background:rgba(37,211,102,.12);color:#25d366;border:1px solid #25d366}.cig{background:rgba(225,48,108,.12);color:#e1306c;border:1px solid #e1306c}.ccl{background:var(--bdim);color:var(--blue);border:1px solid var(--blue)}.di-day{font-size:10px;color:var(--text2);margin-left:auto}
 #ct{flex:1;overflow-y:auto;padding:18px 20px}.screen{display:none}.screen.on{display:block}
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:17px;margin-bottom:13px}
-.sec-t{font-family:var(--font-title);font-size:12px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.8px}
-.btn{padding:8px 14px;border-radius:var(--r);font-size:12px;font-weight:600;cursor:pointer;border:none;transition:.15s;display:inline-flex;align-items:center;gap:5px;font-family:inherit;text-decoration:none}
-.bp{background:var(--accent);color:#fff}.bp:hover{background:var(--accent2)}.bs{background:var(--bg3);color:var(--text);border:1px solid var(--border)}.bs:hover{border-color:var(--border2);background:var(--bg4)}.bsuc{background:var(--gdim);color:var(--green);border:1px solid var(--green)}.bsuc:hover{background:var(--green);color:#fff}.bwrn{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}.bwa{background:rgba(37,211,102,.15);color:#25d366;border:1px solid #25d366}.bwa:hover{background:#25d366;color:#fff}.big2{background:rgba(225,48,108,.15);color:#e1306c;border:1px solid #e1306c}.big2:hover{background:#e1306c;color:#fff}.btn-sm{padding:5px 9px;font-size:11px}
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:18px;margin-bottom:14px}
+.sec-t{font-family:var(--font-body);font-size:13px;font-weight:700;color:#fff;letter-spacing:.2px}
+.btn{padding:8px 15px;border-radius:var(--r);font-size:12px;font-weight:600;cursor:pointer;border:none;transition:.2s;display:inline-flex;align-items:center;gap:5px;font-family:inherit;text-decoration:none}
+.bp{background:linear-gradient(135deg,var(--accent),#4a7de8);color:#fff;box-shadow:0 2px 12px rgba(91,141,239,.2)}.bp:hover{background:linear-gradient(135deg,var(--accent2),var(--accent));box-shadow:0 4px 20px rgba(91,141,239,.3)}.bs{background:var(--bg3);color:var(--text);border:1px solid var(--border)}.bs:hover{border-color:var(--border2);background:var(--bg4)}.bsuc{background:var(--gdim);color:var(--green);border:1px solid var(--green)}.bsuc:hover{background:var(--green);color:#fff}.bwrn{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}.bwa{background:rgba(37,211,102,.15);color:#25d366;border:1px solid #25d366}.bwa:hover{background:#25d366;color:#fff}.big2{background:rgba(225,48,108,.15);color:#e1306c;border:1px solid #e1306c}.big2:hover{background:#e1306c;color:#fff}.btn-sm{padding:5px 9px;font-size:11px}
 .tag{padding:3px 7px;border-radius:4px;font-size:11px;font-weight:600;display:inline-block}.t-elite{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}.t-builder{background:var(--adim);color:var(--accent2);border:1px solid var(--accent)}.t-exec{background:var(--bdim);color:var(--blue);border:1px solid var(--blue)}.t-gray{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}.t-buy{background:var(--gdim);color:var(--green);border:1px solid var(--green)}.t-risk{background:var(--rdim);color:var(--red);border:1px solid var(--red)}.t-stall{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}.t-champ{background:rgba(139,133,255,.15);color:var(--accent2);border:1px solid var(--accent2)}
 .dch{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}.dca{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;flex-shrink:0}.dci{flex:1}.dcn{font-size:16px;font-weight:800;margin-bottom:1px}.dcs{font-size:12px;color:var(--text2);margin-bottom:7px}.tags-row{display:flex;gap:5px;flex-wrap:wrap}
-.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:13px}.ic{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px 11px}.ic-l{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}.ic-v{font-size:13px;font-weight:600}.ic-s{font-size:11px;color:var(--text2);margin-top:2px}
-.tg{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:13px 15px;margin-bottom:13px}.tg-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.tg-lbl{font-size:12px;color:var(--text2)}.tg-sub{font-size:11px;color:var(--text2);margin-top:5px}.tgv{font-family:var(--font-body);font-size:26px;font-weight:800}.tgv-h{color:var(--green)}.tgv-w{color:var(--yellow)}.tgv-c{color:var(--red)}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}.ic{background:var(--glass);border:1px solid var(--border);border-radius:var(--r);padding:11px 12px;transition:.2s}.ic:hover{background:rgba(255,255,255,.04)}.ic-l{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}.ic-v{font-size:13px;font-weight:600}.ic-s{font-size:11px;color:var(--text2);margin-top:2px}
+.tg{background:var(--glass);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:14px}.tg-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.tg-lbl{font-size:12px;color:var(--text2)}.tg-sub{font-size:11px;color:var(--text2);margin-top:5px}.tgv{font-family:var(--font-body);font-size:26px;font-weight:800}.tgv-h{color:var(--green)}.tgv-w{color:var(--yellow)}.tgv-c{color:var(--red)}
 .bar{background:var(--bg4);border-radius:4px;height:6px;overflow:hidden}.bf{height:100%;border-radius:4px}.bf-h{background:linear-gradient(90deg,#f59e0b,#22c55e)}.bf-w{background:linear-gradient(90deg,#ef4444,#f59e0b)}.bf-c{background:#ef4444}
-.recom{background:var(--adim);border:1px solid var(--accent);border-radius:var(--r);padding:12px 14px;margin-bottom:13px}.recom-l{font-size:10px;color:var(--accent2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}.recom-t{font-size:13px;line-height:1.55}
+.recom{background:rgba(91,141,239,.06);border:1px solid rgba(91,141,239,.15);border-radius:var(--r);padding:13px 15px;margin-bottom:14px;box-shadow:0 0 16px rgba(91,141,239,.04)}.recom-l{font-size:10px;color:var(--accent2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}.recom-t{font-size:13px;line-height:1.55}
 .alrt{padding:10px 13px;border-radius:var(--r);font-size:12px;margin-bottom:11px;line-height:1.5}.al-w{background:var(--ydim);border:1px solid var(--yellow);color:var(--yellow)}.al-d{background:var(--rdim);border:1px solid var(--red);color:var(--red)}.al-i{background:var(--adim);border:1px solid var(--accent);color:var(--accent2)}
 .row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:10px;margin-bottom:4px}
-.er{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:13px}.er-h{background:linear-gradient(135deg,#16162a,#0d0d1f);padding:13px 17px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}.er-badge{background:var(--accent);color:#fff;font-size:9px;font-weight:900;padding:3px 7px;border-radius:4px;letter-spacing:1.5px}.er-htitle{font-size:13px;font-weight:700}.er-dqi{margin-left:auto;font-size:12px;font-weight:800;color:var(--accent2)}
+.er{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:14px}.er-h{background:var(--bg4);padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}.er-badge{background:var(--accent);color:#fff;font-size:9px;font-weight:900;padding:3px 7px;border-radius:4px;letter-spacing:1.5px}.er-htitle{font-size:13px;font-weight:700}.er-dqi{margin-left:auto;font-size:12px;font-weight:800;color:var(--accent2)}
 .er-b{padding:12px 17px;border-bottom:1px solid var(--border)}.er-b:last-child{border-bottom:none}.er-bl{font-size:10px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;display:flex;align-items:center;gap:5px}.er-bl::before{content:"";width:3px;height:10px;background:var(--accent);border-radius:2px;display:inline-block;flex-shrink:0}.er-bt{font-size:12px;line-height:1.65}.er-bt p{margin-bottom:4px}.er-bt p:last-child{margin-bottom:0}
 .ef{display:inline-flex;align-items:center;border-radius:4px;padding:2px 6px;font-size:11px;font-weight:600;margin:2px 2px 2px 0}.ef-w{background:var(--ydim);border:1px solid var(--yellow);color:var(--yellow)}.ef-g{background:var(--gdim);border:1px solid var(--green);color:var(--green)}.ef-r{background:var(--rdim);border:1px solid var(--red);color:var(--red)}
 .er-v{background:var(--bg3);padding:13px 17px;display:flex;align-items:center;gap:13px}.ev-s{font-size:28px;font-weight:900;color:var(--accent2)}.ev-t{font-size:12px;line-height:1.55}
 .mo{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;margin-bottom:7px;cursor:pointer;transition:.15s}.mo:hover{border-color:var(--border2);background:var(--bg3)}.mo.on{border-color:var(--accent);background:var(--adim)}.mo.rec{border-color:var(--green)}.mo-top{display:flex;align-items:center;gap:6px;margin-bottom:3px}.mo-rb{background:var(--gdim);color:var(--green);border:1px solid var(--green);font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px}.mo-t{font-size:12px;font-weight:700}.mo-d{font-size:11px;color:var(--text2)}
 .bl-sec{margin-top:10px}.bl-l{font-size:11px;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}.bli{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;opacity:.45}.bli-n{font-size:12px;color:var(--text2)}.bli-w{font-size:10px;color:var(--text2);background:var(--bg4);padding:2px 6px;border-radius:4px}
-.dvl{background:var(--bg2);border:1px solid var(--yellow);border-radius:var(--r2);padding:15px;margin-bottom:13px}.dvl-t{font-size:13px;font-weight:700;color:var(--yellow);margin-bottom:3px}.dvl-s{font-size:11px;color:var(--text2);margin-bottom:12px}.dvl-g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.dvl-f{display:flex;flex-direction:column;gap:3px}.dvl-l{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}.dvl-i{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 9px;font-size:12px;color:var(--text);outline:none;width:100%;font-family:inherit}.dvl-i:focus{border-color:var(--accent)}
-.co{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:13px}.co-h{padding:11px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}.co-chan{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}.co-tabs{display:flex;gap:3px}.cotab{padding:5px 11px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:none;color:var(--text2);transition:.15s;font-family:inherit}.cotab:hover{color:var(--text);background:var(--bg3)}.cotab.on{color:var(--accent2);background:var(--adim)}.co-b{padding:14px}.co-txt{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px;font-size:13px;line-height:1.7;white-space:pre-wrap;min-height:90px;margin-bottom:11px;font-family:inherit}.co-note{font-size:11px;color:var(--text2);margin-left:auto}
+.dvl{background:var(--bg3);border:1px solid rgba(245,197,66,.15);border-radius:var(--r2);padding:16px;margin-bottom:14px}.dvl-t{font-size:13px;font-weight:700;color:var(--yellow);margin-bottom:3px}.dvl-s{font-size:11px;color:var(--text2);margin-bottom:12px}.dvl-g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.dvl-f{display:flex;flex-direction:column;gap:3px}.dvl-l{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}.dvl-i{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 9px;font-size:12px;color:var(--text);outline:none;width:100%;font-family:inherit}.dvl-i:focus{border-color:var(--accent)}
+.co{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:14px}.co-h{padding:11px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}.co-chan{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}.co-tabs{display:flex;gap:3px}.cotab{padding:5px 11px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:none;color:var(--text2);transition:.15s;font-family:inherit}.cotab:hover{color:var(--text);background:var(--bg3)}.cotab.on{color:var(--accent2);background:var(--adim)}.co-b{padding:14px}.co-txt{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px;font-size:13px;line-height:1.7;white-space:pre-wrap;min-height:90px;margin-bottom:11px;font-family:inherit}.co-note{font-size:11px;color:var(--text2);margin-left:auto}
 .ftabs{display:flex;gap:5px;margin-bottom:17px;flex-wrap:wrap}.ft{padding:6px 13px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg2);color:var(--text2);transition:.15s}.ft:hover{color:var(--text);border-color:var(--border2)}.ft.on{color:var(--accent2);background:var(--adim);border-color:var(--accent)}
-.kpi-g{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:17px}.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px}.kpi-l{font-size:11px;color:var(--text2);margin-bottom:7px}.kpi-v{font-size:22px;font-weight:800;margin-bottom:3px}.kd{font-size:12px}.kd-p{color:var(--green)}.kd-n{color:var(--red)}
-.ch{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px;margin-bottom:13px}.ch-t{font-size:12px;font-weight:700;margin-bottom:12px}.fr{display:flex;align-items:center;gap:8px;margin-bottom:7px}.fl{font-size:12px;color:var(--text2);width:130px;flex-shrink:0}.fb-bg{flex:1;background:var(--bg3);border-radius:4px;height:18px;overflow:hidden}.fb-f{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:flex-end;padding-right:6px;min-width:20px}.fb-v{font-size:10px;font-weight:700;color:#fff}.fp{font-size:11px;color:var(--text2);width:34px;text-align:right;flex-shrink:0}
+.kpi-g{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}.kpi{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:16px;transition:.15s}.kpi:hover{background:var(--bg4)}.kpi-l{font-size:11px;color:var(--text2);margin-bottom:8px;letter-spacing:.3px}.kpi-v{font-size:22px;font-weight:800;margin-bottom:3px}.kd{font-size:12px}.kd-p{color:var(--green)}.kd-n{color:var(--red)}
+.ch{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:17px;margin-bottom:14px}.ch-t{font-size:12px;font-weight:700;margin-bottom:12px}.fr{display:flex;align-items:center;gap:8px;margin-bottom:7px}.fl{font-size:12px;color:var(--text2);width:130px;flex-shrink:0}.fb-bg{flex:1;background:var(--bg3);border-radius:4px;height:18px;overflow:hidden}.fb-f{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:flex-end;padding-right:6px;min-width:20px}.fb-v{font-size:10px;font-weight:700;color:#fff}.fp{font-size:11px;color:var(--text2);width:34px;text-align:right;flex-shrink:0}
 .tbl{width:100%;border-collapse:collapse;font-size:12px}.tbl th{padding:7px 10px;text-align:left;color:var(--text2);font-weight:600;border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.5px}.tbl td{padding:8px 10px;border-bottom:1px solid var(--border)}.tbl tr:hover td{background:var(--bg3)}.tbl tr:last-child td{border-bottom:none}.pg{color:var(--green);font-weight:700}.pm{color:var(--yellow);font-weight:700}.pl{color:var(--red);font-weight:700}
-#rp{width:205px;min-width:205px;background:var(--bg2);border-left:1px solid var(--border);padding:11px;overflow-y:auto;display:flex;flex-direction:column;gap:9px}
-.rps{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px}.rps-t{font-family:var(--font-title);font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+#rp{width:205px;min-width:205px;background:var(--bg2);border-left:1px solid var(--border);padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.rps{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:12px}.rps-t{font-family:var(--font-body);font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
 .lvl-n{font-size:14px;font-weight:800;color:var(--accent2);text-align:center;margin-bottom:1px}.lvl-s{font-size:10px;color:var(--text2);text-align:center}.lvl-bar{background:var(--bg4);border-radius:4px;height:5px;margin:7px 0;overflow:hidden}.lvl-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--accent2))}.lvl-xp{font-size:10px;color:var(--text2);text-align:center}
 .score-big{font-family:var(--font-body);font-size:28px;font-weight:800;color:var(--accent2);text-align:center;line-height:1;margin:3px 0}.score-l{font-size:10px;color:var(--text2);text-align:center;font-family:var(--font-body)}.sk-n{font-family:var(--font-body);font-size:24px;font-weight:800;color:var(--gold);text-align:center;line-height:1;margin:3px 0}.sk-l{font-size:10px;color:var(--text2);text-align:center}
 .bg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.bgi{background:var(--bg4);border:1px solid var(--border);border-radius:6px;padding:5px 3px;text-align:center;cursor:pointer;transition:.15s}.bgi:hover{border-color:var(--border2)}.bgi.on{border-color:var(--accent);background:var(--adim)}.bgi.off{opacity:.3}.bgi-ic{font-size:15px;margin-bottom:1px}.bgi-n{font-size:9px;color:var(--text2);line-height:1.2}
 .tr{display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:4px}.tr:last-child{margin-bottom:0}.tr-l{color:var(--text2)}.tr-v{font-weight:700}
-.dma{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:13px}.dma-h{background:linear-gradient(135deg,#1a0d2a,#0d0d1f);padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}.dma-badge{background:#e1306c;color:#fff;font-size:9px;font-weight:900;padding:3px 7px;border-radius:4px;letter-spacing:1.5px}.dma-t{font-size:13px;font-weight:700}.dma-st{margin-left:auto;font-size:11px;color:var(--text2)}.dma-st.on{color:var(--green)}.dma-b{padding:14px}
+.dma{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:14px}.dma-h{background:var(--bg4);padding:14px 17px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}.dma-badge{background:#e1306c;color:#fff;font-size:9px;font-weight:900;padding:3px 7px;border-radius:4px;letter-spacing:1.5px}.dma-t{font-size:13px;font-weight:700}.dma-st{margin-left:auto;font-size:11px;color:var(--text2)}.dma-st.on{color:var(--green)}.dma-b{padding:14px}
 .fbr{display:flex;gap:6px;margin-bottom:12px}.fbb{flex:1;padding:7px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;text-align:center;transition:.15s}.fbb:hover{border-color:var(--border2)}.fbb.on{border-color:var(--accent);background:var(--adim);color:var(--accent2)}
 .cap-area{background:var(--bg3);border:2px dashed var(--border2);border-radius:var(--r);padding:20px;text-align:center;cursor:pointer;transition:.15s;margin-bottom:12px}.cap-area:hover{border-color:var(--accent);background:var(--adim)}.cap-icon{font-size:26px;margin-bottom:5px;opacity:.6}.cap-l{font-size:13px;color:var(--text2);font-weight:600;margin-bottom:3px}.cap-s{font-size:11px;color:var(--text2)}
 .anlz{display:none;align-items:center;gap:8px;padding:10px;background:var(--adim);border-radius:var(--r);margin-bottom:12px}.anlz.show{display:flex}.spin{width:14px;height:14px;border:2px solid rgba(108,99,255,.2);border-top-color:var(--accent2);border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}@keyframes spin{to{transform:rotate(360deg)}}.anlz-t{font-size:12px;color:var(--accent2)}
 .dm-res{display:none}.dm-res.show{display:block}.dm-ctx{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:8px;font-size:12px;color:var(--text2);line-height:1.6}
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:340px;gap:10px;text-align:center;padding:40px}.e-ic{font-size:36px;opacity:.4}.e-t{font-size:15px;font-weight:600}.e-s{font-size:12px;color:var(--text2);line-height:1.6;max-width:250px}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}.screen.on,.er,.card{animation:fadeIn .2s ease}
-.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease}
-.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);padding:24px;width:420px;max-width:90vw}
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease}
+.modal{background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:28px;width:420px;max-width:90vw;box-shadow:0 24px 64px rgba(0,0,0,.6)}
 .modal-t{font-size:16px;font-weight:800;margin-bottom:4px}.modal-s{font-size:12px;color:var(--text2);margin-bottom:20px;line-height:1.5}
 .modal-f{display:flex;flex-direction:column;gap:4px;margin-bottom:14px}.modal-l{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
 .modal-i{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);outline:none;width:100%;font-family:inherit;transition:.15s}.modal-i:focus{border-color:var(--accent)}
@@ -172,7 +172,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .task-btn{padding:5px 10px;border-radius:6px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.12s}
 .task-btn:hover{border-color:var(--accent);color:var(--accent2);background:var(--adim)}
 .task-btn-next{margin-left:auto;border-color:var(--accent);color:var(--accent2);background:var(--adim)}
-.task-btn-next:hover{background:var(--accent);color:#fff}
 /* ── Task Execution Mode (HubSpot-style) ──────────────────── */
 .tex-overlay{position:fixed;inset:0;z-index:900;background:rgba(2,6,15,.85);backdrop-filter:blur(6px);display:none;flex-direction:column;overflow:hidden}
 .tex-overlay.open{display:flex}
@@ -257,6 +256,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .cad-option-meta{font-size:10px;color:var(--text2);margin-bottom:6px}
 .cad-option-steps{display:flex;gap:4px;flex-wrap:wrap}
 .cad-mini-step{font-size:9px;font-weight:600;padding:2px 5px;background:var(--bg4);border-radius:3px}
+.task-btn-next:hover{background:var(--accent);color:#fff}
 /* Task stage filter bar */
 .task-stage-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding:8px 0;border-top:1px solid var(--border)}
 .task-stage-label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-right:4px}
@@ -264,11 +264,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .task-stage-chip:hover{border-color:var(--accent);color:var(--accent2)}
 .task-stage-chip.on{background:var(--adim);border-color:var(--accent);color:var(--accent2)}
 .task-stage-chip b{font-weight:800}
-/* V3: DM WhatsApp deep link */
-.dm-wa-link{display:inline-flex;align-items:center;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;text-decoration:none;background:var(--gdim);color:var(--green);border:1px solid var(--green);transition:.12s}
-.dm-wa-link:hover{background:var(--green);color:#fff}
+/* V3: Filter chips */
+.fchip{padding:4px 10px;border-radius:6px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.12s}
+.fchip:hover{border-color:var(--accent);color:var(--accent2)}
+.fchip.on{background:var(--adim);border-color:var(--accent);color:var(--accent2)}
 /* History panel — expandable & copyable */
-.hist-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:13px}
+.hist-panel{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:14px}
 .hist-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:.12s}
 .hist-header:hover{background:var(--bg3)}
 .hist-header-title{font-family:var(--font-title);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2)}
@@ -287,6 +288,23 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .hist-expanded.show{display:block}
 .hist-copy-btn{position:absolute;top:6px;right:6px;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg4);color:var(--text2);cursor:pointer;transition:.12s}
 .hist-copy-btn:hover{border-color:var(--accent);color:var(--accent2);background:var(--adim)}
+/* Nota CRM — rich rendering */
+.nota-crm-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+.nota-crm-header{display:flex;align-items:center;gap:9px;padding:13px 17px;border-bottom:1px solid var(--border);background:var(--bg4)}
+.nota-crm-badge{background:var(--gdim);color:var(--green);font-size:9px;font-weight:900;padding:3px 8px;border-radius:4px;letter-spacing:1.5px;text-transform:uppercase}
+.nota-crm-title{font-size:13px;font-weight:700;color:var(--text)}
+.nota-crm-body{padding:16px 18px;font-size:13px;line-height:1.7;color:var(--text)}
+.nota-section-title{font-size:13px;font-weight:800;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);letter-spacing:.3px}
+.nota-section{display:flex;align-items:center;gap:7px;margin:14px 0 6px;padding:6px 0}
+.nota-section-icon{font-size:15px;flex-shrink:0}
+.nota-section-label{font-size:12px;font-weight:800;color:var(--accent2);text-transform:uppercase;letter-spacing:.8px}
+.nota-list{list-style:none;padding:0;margin:0 0 4px 0}
+.nota-list li{position:relative;padding:3px 0 3px 16px;font-size:12.5px;line-height:1.65;color:var(--text)}
+.nota-list li::before{content:"•";position:absolute;left:2px;color:var(--text2);font-weight:700}
+.nota-key{color:var(--text2);font-weight:600}
+.nota-list li strong{color:var(--text);font-weight:700}
+.nota-nao-informado{color:var(--yellow);font-style:italic;font-weight:600;background:var(--ydim);padding:1px 6px;border-radius:3px;font-size:11px}
+.nota-text{font-size:12.5px;line-height:1.6;margin:2px 0}
 /* WhatsApp conversation panel */
 .wa-conv-btn{padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--green);color:var(--green);background:transparent;transition:.15s}
 .wa-conv-btn:hover{background:var(--gdim);color:#4ade80}
@@ -315,12 +333,43 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .wa-bubble-ts{font-size:9px;color:var(--text2);text-align:right;margin-top:2px}
 .wa-bubble-text{white-space:pre-wrap}
 .wa-saved-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;background:var(--gdim);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+/* Slack alerts */
+.slack-btn{position:relative;padding:5px 8px;border-radius:6px;font-size:13px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);transition:.15s;line-height:1;font-weight:600}
+.slack-btn:hover{border-color:#e01e5a;color:#e01e5a}
+.slack-btn .notif-dot{background:#e01e5a}
+.slack-count{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;border-radius:8px;background:#e01e5a;color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;display:none}
+.slack-count.show{display:flex}
+.slack-panel{position:absolute;top:50px;right:120px;width:400px;max-height:480px;overflow-y:auto;background:rgba(12,21,37,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border2);border-radius:14px;box-shadow:0 12px 48px rgba(0,0,0,.5);z-index:50;display:none}
+.slack-panel.show{display:block;animation:fadeIn .15s ease}
+.slack-panel-header{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.slack-panel-title{font-family:var(--font-title);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text)}
+.slack-alert{display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:.12s}
+.slack-alert:hover{background:var(--bg3)}
+.slack-alert.unread{background:rgba(224,30,90,.06)}
+.slack-alert.highlight{border-left:3px solid #e01e5a}
+.slack-alert-ch{font-size:10px;font-weight:700;color:#e01e5a}
+.slack-alert-msg{font-size:12px;color:var(--text);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slack-alert-meta{font-size:10px;color:var(--text2);margin-top:2px}
+.slack-alert-sender{font-weight:600;color:var(--accent2)}
+.slack-setup-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:100;display:none;align-items:center;justify-content:center}
+.slack-setup-modal.show{display:flex}
+.slack-setup-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);width:480px;max-height:80vh;overflow-y:auto;padding:24px}
+.slack-setup-title{font-family:var(--font-title);font-size:14px;text-transform:uppercase;letter-spacing:1px;color:var(--text);margin-bottom:16px}
+.slack-setup-input{width:100%;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-size:13px;font-family:var(--font-body);resize:none;outline:none;min-height:60px}
+.slack-setup-input::placeholder{color:var(--text2)}
+.slack-setup-input:focus{border-color:var(--accent)}
+.slack-setup-preview{margin-top:12px;padding:12px;background:var(--bg3);border-radius:var(--r);font-size:12px;display:none}
+.slack-setup-preview.show{display:block}
+.slack-cfg-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+.slack-cfg-ch{font-weight:700;color:#e01e5a;font-size:12px}
+.slack-cfg-type{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--adim);color:var(--accent2)}
+.slack-cfg-hl{font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(224,30,90,.15);color:#e01e5a}
 /* Notification system */
 .notif-btn{position:relative;padding:5px 8px;border-radius:6px;font-size:14px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);transition:.15s;line-height:1}
 .notif-btn:hover{border-color:var(--accent);color:var(--accent2)}
 .notif-dot{position:absolute;top:2px;right:2px;width:7px;height:7px;border-radius:50%;background:var(--red);display:none}
 .notif-dot.show{display:block}
-.notif-panel{position:absolute;top:46px;right:80px;width:360px;max-height:420px;overflow-y:auto;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:50;display:none}
+.notif-panel{position:absolute;top:50px;right:80px;width:360px;max-height:420px;overflow-y:auto;background:rgba(12,21,37,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border2);border-radius:14px;box-shadow:0 12px 48px rgba(0,0,0,.5);z-index:50;display:none}
 .notif-panel.show{display:block;animation:fadeIn .15s ease}
 .notif-panel-header{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .notif-panel-title{font-family:var(--font-title);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text)}
@@ -405,18 +454,28 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .elucy-pulse{font-size:12px;color:var(--accent2);font-weight:600;animation:elucy-blink 1.2s ease-in-out infinite}
 @keyframes elucy-blink{0%,100%{opacity:1}50%{opacity:.35}}
 /* Filtros e ordenação */
-.sb-filters{padding:6px 14px 8px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:5px}
+.sb-filters-toggle{display:flex;align-items:center;justify-content:space-between;padding:6px 14px;cursor:pointer;border-bottom:1px solid var(--border);flex-shrink:0;user-select:none}
+.sb-filters-toggle:hover{background:var(--bg3)}
+.tgl-arrow{font-size:11px;color:var(--text2);transition:transform .2s}.tgl-arrow.up{transform:rotate(180deg)}
+.sb-filters{padding:6px 14px 8px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:5px;overflow:hidden;transition:max-height .25s ease,padding .25s ease;max-height:300px}
+.sb-filters.collapsed{max-height:0;padding-top:0;padding-bottom:0;border-bottom:none}
+.ig-toggle{display:flex;align-items:center;justify-content:space-between;padding:8px 0;cursor:pointer;user-select:none;margin-bottom:4px}
+.ig-toggle:hover .ig-toggle-label{color:var(--text)}
+.ig-toggle-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.ig-toggle .tgl-arrow{font-size:10px}
+.info-grid.collapsed{display:none}
 .filter-row{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
 .filter-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;width:100%}
-.fchip{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.12s}
+.fchip{padding:4px 10px;border-radius:14px;font-size:10px;font-weight:600;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;transition:.12s}
 .fchip:hover{border-color:var(--border2);color:var(--text)}
-.fchip.on{background:var(--adim);border-color:var(--accent);color:var(--accent2)}
+.fchip.on{background:var(--bg4);border-color:var(--border2);color:#fff}
 .fchip.on-green{background:var(--gdim);border-color:var(--green);color:var(--green)}
 .fchip.on-red{background:var(--rdim);border-color:var(--red);color:var(--red)}
 .fchip.on-yellow{background:var(--ydim);border-color:var(--yellow);color:var(--yellow)}
 .sort-row{display:flex;align-items:center;gap:4px}
-.sort-sel{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 7px;font-size:10px;color:var(--text2);outline:none;cursor:pointer;font-family:inherit}
+.sort-sel{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:4px 22px 4px 8px;font-size:10px;color:var(--text2);outline:none;cursor:pointer;font-family:inherit;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7a90'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center}
 .sort-sel:focus{border-color:var(--accent)}
+.sort-sel option{background:var(--bg2);color:var(--text)}
 /* Sinal badges */
 .sig-buy{background:var(--gdim);color:var(--green);border:1px solid var(--green)}
 .sig-risk{background:var(--rdim);color:var(--red);border:1px solid var(--red)}
@@ -452,10 +511,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .qa-btn{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg4);color:var(--text2);cursor:pointer;transition:.12s}
 .qa-btn:hover{border-color:var(--accent);color:var(--accent2);background:var(--adim)}
 /* Auth screens */
-#auth-screen,#pending-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:0}
+#auth-screen,#pending-screen{position:fixed;inset:0;background:var(--bg);background-image:radial-gradient(ellipse at 50% 30%,rgba(91,141,239,.06) 0%,transparent 60%);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:0}
 #auth-screen.hidden,#pending-screen.hidden{display:none}
-.auth-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:40px;max-width:380px;width:90%;text-align:center}
-.auth-logo{font-family:var(--font-title);font-size:22px;font-weight:900;color:var(--accent);margin-bottom:4px;text-transform:uppercase;letter-spacing:2px}.auth-logo em{color:var(--accent2);font-style:italic;font-weight:400}
+.auth-card{background:var(--bg3);border:1px solid var(--border);border-radius:16px;padding:44px;max-width:380px;width:90%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.5)}
+.auth-logo{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px}.auth-logo-name{font-family:var(--font-title);font-size:26px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:2.5px}.auth-logo-badge{background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;letter-spacing:1px;text-transform:uppercase}
 .auth-sub{font-size:13px;color:var(--text2);margin-bottom:28px;line-height:1.5}
 .auth-form{display:flex;flex-direction:column;gap:10px;margin-bottom:4px}
 .auth-field{display:flex;flex-direction:column}
@@ -528,90 +587,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .li-phase-pill{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700}.li-phase-hot{background:var(--rdim);color:var(--red);border:1px solid var(--red)}
 .li-skip-warn{background:var(--ydim);border:1px solid var(--yellow);border-radius:4px;padding:5px 8px;font-size:10px;color:var(--yellow);font-weight:600;margin-top:4px}
 .li-timeline-wrap{padding:4px 0}
-/* Social DM Pipeline Visual */
-.dm-pipeline-visual{padding:12px 0;margin-bottom:8px}
-.dm-pipe-grid{display:flex;gap:6px;overflow-x:auto;padding:4px 0}
-.dm-pipe-col{min-width:150px;flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px}
-.dm-pipe-col-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
-.dm-pipe-col-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2)}
-.dm-pipe-col-count{font-size:11px;font-weight:800;color:var(--accent2);background:var(--adim);padding:1px 6px;border-radius:4px}
-.dm-pipe-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:5px;cursor:pointer;transition:.12s}
-.dm-pipe-card:hover{border-color:var(--accent);background:var(--adim)}
-.dm-pipe-card-name{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dm-pipe-card-handle{font-size:10px;color:var(--text2);margin-bottom:4px}
-.dm-pipe-card-meta{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px}
-.dm-pipe-card-platform{font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(225,48,108,.12);color:#e1306c;border:1px solid rgba(225,48,108,.3);font-weight:600}
-.dm-pipe-card-founder{font-size:9px;padding:1px 5px;border-radius:3px;background:var(--ydim);color:var(--yellow);border:1px solid rgba(212,160,23,.3);font-weight:600}
-.dm-pipe-card-tp{font-size:9px;padding:1px 5px;border-radius:3px;background:var(--adim);color:var(--accent2);border:1px solid rgba(74,158,255,.3);font-weight:600}
-.dm-pipe-card-actions{display:flex;gap:4px}
-.dm-pipe-advance{font-size:9px;padding:2px 7px;border-radius:4px;border:1px solid var(--green);color:var(--green);background:transparent;cursor:pointer;font-weight:600;transition:.12s}
-.dm-pipe-advance:hover{background:var(--gdim)}
-.dm-pipe-lost{font-size:10px;color:var(--red);text-align:center;padding:6px;margin-top:4px}
-/* Aging risk labels */
-.aging-label{font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700}
-.aging-ok{background:var(--gdim);color:var(--green);border:1px solid var(--green)}
-.aging-medium{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}
-.aging-high{background:var(--rdim);color:var(--red);border:1px solid var(--red)}
-.aging-critical{background:var(--red);color:#fff}
-/* Revenue line badge */
-.revline-badge{font-size:9px;padding:1px 5px;border-radius:3px;font-weight:600;background:var(--claydim);color:var(--clay);border:1px solid rgba(184,115,51,.3)}
-/* Signal badges */
-.sig-buy{background:var(--gdim);color:var(--green);border:1px solid var(--green)}
-.sig-risk{background:var(--rdim);color:var(--red);border:1px solid var(--red)}
-.sig-stall{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}
-.sig-champ{background:rgba(139,133,255,.12);color:var(--accent2);border:1px solid var(--accent2)}
-.sig-dome{background:var(--rdim);color:var(--red);border:1px solid var(--red)}
-/* Urgency badge */
-.urg-badge{font-size:9px;padding:1px 5px;border-radius:3px;font-weight:800;margin-left:2px}
-.urg-low{background:var(--gdim);color:var(--green)}.urg-med{background:var(--ydim);color:var(--yellow)}.urg-high{background:var(--rdim);color:var(--red)}
-/* Copy actions row */
-.copy-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding-top:8px}
-/* Quick actions in sidebar */
-.di-qa{display:flex;gap:4px;margin-top:5px}.qa-btn{font-size:9px;padding:2px 7px;border-radius:4px;border:1px solid var(--border);background:var(--bg4);color:var(--text2);cursor:pointer;transition:.12s;font-weight:600}.qa-btn:hover{border-color:var(--accent);color:var(--accent2);background:var(--adim)}
-/* Intelligence — taxonomy sections */
-.intel-section{margin-bottom:18px}.intel-section-title{font-family:var(--font-title);font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}.intel-section-num{background:var(--accent);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0}
-.intel-kpi-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}.intel-kpi{flex:1;min-width:80px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center}.intel-kpi-v{font-size:18px;font-weight:800;margin-bottom:2px}.intel-kpi-l{font-size:10px;color:var(--text2)}.intel-kpi-d{font-size:10px;margin-top:2px}
-.intel-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}.intel-bar-label{font-size:11px;color:var(--text2);width:80px;flex-shrink:0;text-align:right}.intel-bar-bg{flex:1;background:var(--bg4);border-radius:4px;height:18px;overflow:hidden}.intel-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;min-width:16px;transition:width .3s ease}.intel-bar-v{font-size:10px;font-weight:700;color:#fff}.intel-bar-pct{font-size:10px;color:var(--text2);width:36px;text-align:right;flex-shrink:0}
-.intel-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}.intel-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px}.intel-title{font-size:12px;font-weight:700;margin-bottom:10px}
-.intel-insight{padding:10px 14px;border-radius:var(--r);margin-bottom:8px;font-size:12px;line-height:1.6}.intel-insight-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}.intel-insight-good{background:var(--gdim);border:1px solid var(--green);color:var(--text)}.intel-insight-good .intel-insight-label{color:var(--green)}.intel-insight-bad{background:var(--rdim);border:1px solid var(--red);color:var(--text)}.intel-insight-bad .intel-insight-label{color:var(--red)}.intel-insight-warn{background:var(--ydim);border:1px solid var(--yellow);color:var(--text)}.intel-insight-warn .intel-insight-label{color:var(--yellow)}
-.intel-empty{text-align:center;padding:40px;color:var(--text2);font-size:13px}
-/* Filter chips */
-.sb-filters-toggle{display:flex;align-items:center;justify-content:space-between;padding:6px 14px;cursor:pointer;border-bottom:1px solid var(--border);flex-shrink:0;user-select:none}
-.sb-filters-toggle:hover{background:var(--bg3)}
-.tgl-arrow{font-size:11px;color:var(--text2);transition:transform .2s}.tgl-arrow.up{transform:rotate(180deg)}
-.sb-filters{padding:6px 14px;border-bottom:1px solid var(--border);flex-shrink:0;overflow:hidden;transition:max-height .25s ease,padding .25s ease;max-height:300px}
-.sb-filters.collapsed{max-height:0;padding-top:0;padding-bottom:0;border-bottom:none}
-.ig-toggle{display:flex;align-items:center;justify-content:space-between;padding:8px 0;cursor:pointer;user-select:none;margin-bottom:4px}
-.ig-toggle:hover .ig-toggle-label{color:var(--text)}
-.ig-toggle-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
-.ig-toggle .tgl-arrow{font-size:10px}
-.info-grid.collapsed{display:none}
-.filter-row{display:flex;align-items:center;gap:4px;margin-bottom:4px;flex-wrap:wrap}
-.filter-label{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;width:36px;flex-shrink:0}
-.fchip{font-size:10px;padding:2px 7px;border-radius:4px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);transition:.12s}
-.fchip:hover{border-color:var(--border2);color:var(--text)}
-.fchip.on{background:var(--adim);border-color:var(--accent);color:var(--accent2);font-weight:600}
-.sort-row{display:flex;align-items:center;gap:6px;margin-top:2px}
-.sort-sel{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:10px;color:var(--text);font-family:inherit;outline:none;cursor:pointer}
-.sort-sel:focus{border-color:var(--accent)}
-/* Meta bar */
-.meta-bar-bg{background:var(--bg4);border-radius:3px;height:4px;overflow:hidden;margin-bottom:0}
-.meta-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s ease}
-.meta-bar-fill.done{background:linear-gradient(90deg,var(--green),#4ade80)}
-/* Focus panel */
-.focus-item{display:flex;align-items:center;gap:6px;padding:4px 0;cursor:pointer;transition:.12s;border-radius:4px}
-.focus-item:hover{background:var(--adim)}
-.focus-pos{font-size:10px;font-weight:800;color:var(--accent2);width:16px;text-align:center;flex-shrink:0}
-.focus-name{font-size:11px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.focus-why{font-size:9px;color:var(--text2);flex-shrink:0}
 </style>
 </head>
 <body>
 <!-- ── AUTH: Login email/senha ─────────────────────────────── -->
 <div id="auth-screen" class="hidden">
   <div class="auth-card">
-    <div class="auth-logo">ELUCi <em>Cockpit</em></div>
-    <div class="auth-sub">Sales Engagement System — G4 Educação<br>Entre com seu e-mail G4 para acessar.</div>
+    <div class="auth-logo"><span class="auth-logo-name">ELUCY</span><span class="auth-logo-badge">BY G4</span></div>
+    <div class="auth-sub">Sales Engagement System<br>Entre com seu e-mail G4 para acessar.</div>
     <div class="auth-form">
       <div class="auth-field">
         <input class="auth-input" id="auth-email" type="email" placeholder="seu@g4educacao.com" autocomplete="username">
@@ -638,8 +621,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
   </div>
 </div>
 <div id="topbar">
-  <span class="logo">ELUCi <em>Cockpit</em></span>
-  <span style="font-size:10px;color:var(--text2);margin-left:-4px;letter-spacing:.3px">Revenue Intelligence v3</span>
+  <span class="logo"><span class="logo-name">ELUCY</span><span class="logo-badge">BY G4</span></span>
+  <span style="font-size:10px;color:var(--text2);margin-left:-2px;letter-spacing:.3px">Sales Engagement</span>
   <button class="ntab on" onclick="setScreen('home',this)">Home</button>
   <button class="ntab" onclick="setScreen('pipeline',this)">Pipeline</button>
   <button class="ntab" onclick="setScreen('tasks',this)">Tasks <span class="tab-count" id="task-count"></span></button>
@@ -654,8 +637,35 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
       <span class="chip-name" id="chip-name">Nathan</span>
       <span class="chip-lvl">Hunter Lv3</span>
     </div>
+    <button class="slack-btn" id="slack-btn" onclick="toggleSlackPanel()" title="Alertas Slack">⚡<span class="slack-count" id="slack-count">0</span></button>
     <button class="notif-btn" id="notif-btn" onclick="toggleNotifPanel()" title="Notificações">🔔<span class="notif-dot" id="notif-dot"></span></button>
     <button class="btn-settings" onclick="openSettings()" title="Configurar operador">⚙</button>
+  </div>
+  <div class="slack-panel" id="slack-panel">
+    <div class="slack-panel-header">
+      <span class="slack-panel-title">Alertas Slack</span>
+      <div style="display:flex;gap:6px">
+        <button class="btn bs btn-sm" onclick="openSlackSetup()" style="font-size:10px;padding:3px 8px">+ Config</button>
+        <button class="btn bs btn-sm" onclick="markAllSlackRead()" style="font-size:10px;padding:3px 8px">Limpar</button>
+      </div>
+    </div>
+    <div id="slack-alert-list"><div class="notif-empty">Nenhum alerta Slack.</div></div>
+  </div>
+  <div class="slack-setup-modal" id="slack-setup-modal">
+    <div class="slack-setup-box">
+      <div class="slack-setup-title">Configurar Alertas Slack</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Descreva o que quer monitorar em linguagem natural. Ex: "quero receber alertas do canal fup-dm-insta com destaque especial" ou "monitorar menções no #deals-quentes"</p>
+      <textarea class="slack-setup-input" id="slack-setup-input" placeholder="Ex: quero acompanhar o canal fup-dm-insta com destaque quando tiver FUPs pendentes para mim"></textarea>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button class="btn bsuc btn-sm" onclick="processSlackSetup()">Configurar</button>
+        <button class="btn bs btn-sm" onclick="closeSlackSetup()">Cancelar</button>
+      </div>
+      <div class="slack-setup-preview" id="slack-setup-preview"></div>
+      <div style="margin-top:16px">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">Canais ativos:</div>
+        <div id="slack-cfg-list"></div>
+      </div>
+    </div>
   </div>
   <div class="notif-panel" id="notif-panel">
     <div class="notif-panel-header">
@@ -868,8 +878,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
       </div>
       <div id="dm-ocr-messages"></div>
     </div>
-    <!-- Social DM Pipeline Visual — renderizado pelo engine v2 -->
-    <div id="dm-pipeline-visual" class="dm-pipeline-visual"></div>
     <div class="dm-footer">
       <div class="dm-footer-left">
         <span class="dm-footer-item">ELUCY v2.4</span>
@@ -1112,7 +1120,7 @@ function confirmDVL(id){
     const co=document.getElementById('co-'+id);
     const wa=document.getElementById('ct-'+id+'-wa');
     if(co) co.style.display='block';
-    if(wa) wa.textContent='ELUCi gerando copy calibrada pelo motor…';
+    if(wa) wa.textContent='ELUCY gerando copy calibrada pelo motor…';
     requestElucyCopy(mergedDeal.deal_id, mergedDeal, id, mergedDeal.canal||'WhatsApp');
     co&&co.scrollIntoView({behavior:'smooth',block:'start'});
   } else {
@@ -1439,7 +1447,6 @@ function getSB(){
 async function supabaseSignOut(){
   const sb=getSB(); if(sb) await sb.auth.signOut();
   _currentUser=null;
-  // Governança: limpa operador do localStorage ao sair
   localStorage.removeItem('elucy_operator_email');
   localStorage.removeItem('elucy_qualificador_name');
   showAuthScreen();
@@ -1480,6 +1487,7 @@ function showCockpit(user){
   if(window.IS_REMOTE){
     loadDealsFromSupabase(user.email);
   }
+  initSlackAlerts();
 }
 
 async function checkApproval(user){
@@ -1529,12 +1537,13 @@ async function loadDealsFromSupabase(email){
     {name:'revenue'},{name:'contact_name'},{name:'valor_da_oportunidade'},
     {name:'faixa_de_faturamento'},{name:'perfil'},{name:'utm_source'},{name:'utm_campaign'},
     {name:'motivo_lost'},{name:'origem_do_deal'},{name:'coproprietario_name'},
-    {name:'nome_do_evento'},{name:'tipo_de_evento'},
+    {name:'nome_do_negocio'},{name:'nome_do_evento'},{name:'tipo_de_evento'},
     {name:'p_telefone'},{name:'p_segmento'},{name:'p_cluster_rfm'},
     {name:'p_negociacoes_ganhas'},{name:'p_receita_total'},{name:'p_pa_cliente'},
     {name:'p_primeiro_produto'},{name:'p_ultimo_produto'},{name:'p_produtos_comprados'},
     {name:'p_data_primeira_compra'},{name:'p_data_ultima_compra'},
-    {name:'p_comprou_scale'},{name:'p_comprou_club'}
+    {name:'p_comprou_scale'},{name:'p_comprou_club'},
+    {name:'fase_anterior_no_processo'},{name:'faixa_de_funcionarios'},{name:'closed_at'}
   ].map((c,i)=>({name:c.name,position:i}));
   // Transforma objetos em arrays (formato esperado pelo cockpit)
   const colNames=cols.map(c=>c.name);
@@ -1571,6 +1580,14 @@ async function loadEfficiencyMetrics(sb,email){
       window._EFFICIENCY_METRICS=JSON.parse(data.report);
     }
   }catch(e){/* fallback to local calc */}
+  // Load operator meta mensal
+  try{
+    const {data:op}=await sb.from('operators')
+      .select('meta_mensal')
+      .eq('email',email)
+      .maybeSingle();
+    if(op&&op.meta_mensal) window._OPERATOR_META=op.meta_mensal;
+  }catch(e){/* meta not available */}
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
@@ -2016,15 +2033,16 @@ function pickName(nome,_){
 }
 
 function fetchPipelineByName(nome,token,btn){
+  // Sanitiza nome para prevenir SQL injection
+  const safeNome=(nome||'').replace(/'/g,"''").replace(/[;\-\-\/\*]/g,'');
   const anoAtual=new Date().getFullYear();
   const mesAtual=String(new Date().getMonth()+1).padStart(2,'0');
-  // Usa parameterized query para prevenir SQL injection
-  const query=`SELECT f.deal_id, f.fase_atual_no_processo, f.etapa_atual_no_pipeline, f.tier_da_oportunidade, f.delta_t, f.qualificador_name, f.proprietario_name, f.linha_de_receita_vigente, f.grupo_de_receita, f.created_at, f.event_skipped, f.email, f.cargo, f.canal_de_marketing, f.utm_medium, f.status_do_deal, f.revenue, COALESCE(p.nome, '') as contact_name, COALESCE(f.motivo_lost, '') as motivo_lost FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY deal_id ORDER BY event_timestamp DESC) as rn FROM production.diamond.funil_comercial WHERE qualificador_name = :nome AND pipeline_name = 'Comercial' AND created_at >= :data_inicio) f LEFT JOIN (SELECT DISTINCT email, nome FROM production.diamond.persons_overview WHERE email IS NOT NULL) p ON LOWER(f.email) = LOWER(p.email) WHERE f.rn = 1 ORDER BY f.delta_t DESC LIMIT 300`;
+  const query=`SELECT f.deal_id, f.fase_atual_no_processo, f.etapa_atual_no_pipeline, f.tier_da_oportunidade, f.delta_t, f.qualificador_name, f.proprietario_name, f.linha_de_receita_vigente, f.grupo_de_receita, f.created_at, f.event_skipped, f.email, f.cargo, f.canal_de_marketing, f.utm_medium, f.status_do_deal, f.revenue, COALESCE(p.nome, '') as contact_name, COALESCE(f.motivo_lost, '') as motivo_lost FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY deal_id ORDER BY event_timestamp DESC) as rn FROM production.diamond.funil_comercial WHERE qualificador_name = '${safeNome}' AND pipeline_name = 'Comercial' AND created_at >= '${anoAtual}-${mesAtual}-01') f LEFT JOIN (SELECT DISTINCT email, nome FROM production.diamond.persons_overview WHERE email IS NOT NULL) p ON LOWER(f.email) = LOWER(p.email) WHERE f.rn = 1 ORDER BY f.delta_t DESC LIMIT 300`;
 
   fetch(DB_ENDPOINT,{
     method:'POST',
     headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
-    body:JSON.stringify({statement:query,warehouse_id:DB_WAREHOUSE,wait_timeout:'30s',on_wait_timeout:'CONTINUE',parameters:[{name:'nome',value:nome||''},{name:'data_inicio',value:anoAtual+'-'+mesAtual+'-01'}]})
+    body:JSON.stringify({statement:query,warehouse_id:DB_WAREHOUSE,wait_timeout:'30s',on_wait_timeout:'CONTINUE'})
   })
   .then(r=>{if(!r.ok) throw new Error('HTTP '+r.status);return r.json();})
   .then(data=>{
@@ -2075,32 +2093,35 @@ function pollStatement(stmtId,nome,attempts){
   .catch(()=>showSyncToast('err','Erro ao verificar status da query.'));
 }
 
-// ── ELUCY VALOR — Modelo ponderado de oportunidade (v2 Taxonomico) ──
-// Usa calcOpportunityValue do cockpit-engine.js quando disponivel
-// Fallback local para modo sem engine
+// ── ELUCY VALOR — Modelo interno de oportunidade ─────────────────────
+// Inputs: tier, cargo, etapa, delta, skipped
+// Output: valor estimado em R$ (proxy de receita ponderada)
 function calcElucyValor({tier,cargo,etapa,delta,skipped}){
-  // Se engine v2 disponivel, delega para formula completa
-  if(window.calcOpportunityValue){
-    const ov=window.calcOpportunityValue({tier,cargo,etapa,delta,event_skipped:skipped?'true':'false'});
-    return ov.value;
-  }
-  // Fallback simplificado
+  // Base por tier (ticket médio histórico G4)
   const tierBase={diamond:38000,gold:18000,silver:9000,bronze:4000};
   const base=tierBase[(tier||'').toLowerCase()]||6000;
+
+  // Multiplicador por cargo/authority
   let authMult=1.0;
   const c=(cargo||'').toLowerCase();
   if(c.includes('ceo')||c.includes('presidente')) authMult=1.15;
   else if(c.includes('fundador')||c.includes('sócio')||c.includes('socio')) authMult=1.10;
   else if(c.includes('diretor')) authMult=1.0;
   else if(c.includes('gerente')) authMult=0.85;
+
+  // Probabilidade de fechamento por etapa (conversion rate histórica)
   const etapaProb={
     'entrevista agendada':0.55,'agendamento':0.45,'reagendamento':0.38,
     'conectados':0.20,'dia 01':0.12,'dia 02':0.10,'dia 03':0.08,
     'dia 04':0.06,'dia 05':0.05,'dia 06':0.04,'novo lead':0.08
   };
   const prob=etapaProb[(etapa||'').toLowerCase()]||0.10;
+
+  // Penalidade por tempo parado
   const agePenalty=delta>20?0.5:delta>10?0.7:delta>5?0.85:1.0;
+  // Bônus por sem gaps (event_skipped=false = lead respondeu fluxo normal)
   const flowBonus=skipped?1.0:1.08;
+
   return Math.round(base * authMult * prob * agePenalty * flowBonus);
 }
 
@@ -2114,7 +2135,6 @@ const COL={};
 function renderLiveDeals(rows,cols){
   cols.forEach((c,i)=>COL[c.name]=i);
   function g(row,name){const i=COL[name];return i!=null?row[i]||'':'';}
-  // Resolve delta_t com fallback para cálculo via created_at_crm
   function resolveDelta(row){
     let d=parseInt(g(row,'delta_t'))||0;
     if(!d){
@@ -2195,13 +2215,16 @@ function renderLiveDeals(rows,cols){
 
   rows.forEach((row,idx)=>{
     const id='live-'+idx;
-    const emailLead=g(row,'email')||'';
-    // Nome do contato — persons_overview.nome via JOIN (contact_name), fallback email
+    const deal_id=g(row,'deal_id')||'';
+    const emailLead=g(row,'email_lead')||g(row,'email')||'';
+    // Nome: prioridade nome_do_negocio > contact_name > email parsed > Deal #ID
+    const nomeNegocio=(g(row,'nome_do_negocio')||'').trim();
     const contactName=(g(row,'contact_name')||'').trim();
     let nome='';
-    if(contactName) nome=contactName;
+    if(nomeNegocio) nome=nomeNegocio;
+    else if(contactName) nome=contactName;
     else if(emailLead) nome=emailLead.split('@')[0].replace(/[._-]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-    else nome='Lead '+(idx+1);
+    else nome=deal_id?('Deal #'+deal_id):('Lead '+(idx+1));
     // Empresa: domínio do email
     const empresa=emailLead?emailLead.split('@')[1]||'—':'—';
     const cargo=g(row,'cargo')||'';
@@ -2217,33 +2240,31 @@ function renderLiveDeals(rows,cols){
     const canal=resolveCanal(linhaReceita,utm);
     // Valor da oportunidade (time de dados)
     const revenueRaw=parseFloat(g(row,'revenue'))||0;
-    const deal_id=g(row,'deal_id');
     const temp=calcTemp(row);
     const tc=tempClass(temp);
     const tl=tempLabel(temp);
     const cc=canalClass(canal);
     const dd=dDay(delta);
-    const slaRisk=agingInfo.isAtRisk;
-    const irondome=agingInfo.riskLevel==='critical';
+    const slaRisk=delta>7;
+    const irondome=delta>10;
     const classes='di'+(slaRisk?' sla':'')+(irondome?' dome':'');
 
-    // Valor ELUCi — calculado por SPICED: tier + cargo + etapa + delta + event_skipped
+    // Valor ELUCY — calculado por SPICED: tier + cargo + etapa + delta + event_skipped
     const elucyValor=calcElucyValor({tier,cargo,etapa,delta,skipped:String(g(row,'event_skipped')).toLowerCase()==='true'});
     // Forecast delta: divergência entre modelo de dados e modelo Elucy
     const forecastDelta=revenueRaw>0?elucyValor-revenueRaw:null;
     const createdAtCrm=g(row,'created_at_crm')||g(row,'created_at')||'';
     // conta_founder: derivado do utm_medium para rotear tom Social DM no worker
     const contaFounder=(utm.toLowerCase()==='tallis'||utm.toLowerCase()==='nardon'||utm.toLowerCase()==='alfredo')?utm.toLowerCase():'';
-    // Resolve revenue_line via engine taxonomico
-    const revLine=window.resolveRevenueLine?window.resolveRevenueLine({linhaReceita,utm_medium:utm,canal,grupo_de_receita:''}):'imersao';
-    // Aging por linha (risk_after dinamico)
-    const agingInfo=window.calcAgingRisk?window.calcAgingRisk({_revLine:revLine,delta}):{isAtRisk:delta>7,riskLevel:'low',riskLabel:'OK',risk_after:3};
-    const dealObj={nome,empresa:emailLead||empresa,cargo,fase,etapa,tier,delta,canal,deal_id,temp,tc,tl,dd,emailLead,
-      linhaReceita,revenueRaw,elucyValor,forecastDelta,statusDeal,motivoLost,createdAtCrm,
-      created_at_crm:createdAtCrm,
-      utm_medium:utm,conta_founder:contaFounder,
-      _fase:fase,_etapa:etapa,_tier:tier,_delta:delta,_temp:temp,
-      _revLine:revLine,_aging:agingInfo};
+    const telefone=g(row,'p_telefone')||'';
+    const faseAnterior=g(row,'fase_anterior_no_processo')||'';
+    const faixaFunc=g(row,'faixa_de_funcionarios')||'';
+    const closedAt=g(row,'closed_at')||'';
+    const dealObj={nome,nomeNegocio,contact_name:contactName,empresa:emailLead||empresa,cargo,fase,faseAnterior,etapa,tier,delta,canal,deal_id,temp,tc,tl,dd,emailLead,
+      linhaReceita,revenueRaw,elucyValor,forecastDelta,statusDeal,motivoLost,createdAtCrm,closedAt,
+      created_at_crm:createdAtCrm, closed_at:closedAt,
+      utm_medium:utm,conta_founder:contaFounder,telefone,faixaFunc,
+      _fase:fase,_etapa:etapa,_tier:tier,_delta:delta,_temp:temp};
     // Timeline Intelligence
     if(window.calcTimelineIntelligence) dealObj._timeline=window.calcTimelineIntelligence(dealObj);
     // Sinal automático
@@ -2261,17 +2282,17 @@ function renderLiveDeals(rows,cols){
     di.className=classes;
     di.id='di-'+id;
     di.setAttribute('data-live','1');
+    di.setAttribute('data-dealid',deal_id||'');
     di.innerHTML=`
+      <span style="display:none">${deal_id||''}</span>
       <div class="di-name">${nome}</div>
       <div class="di-co">${empresa}${cargo?' · '+cargo:''}</div>
       <div class="di-meta">
         <span class="tb ${tc}">${tl} ${temp}</span>
         <span class="fc">${etapa||fase}</span>
         <span class="cc ${cc}">${canal}</span>
-        <span class="revline-badge" title="Linha de receita">${revLine}</span>
         <span class="tb ${sigCls[signal]||'sig-buy'}" style="margin-left:2px">${sigLabels[signal]||signal}</span>
         <span class="urg-badge ${uc}" title="Score urgência">${urgency}</span>
-        ${agingInfo.isAtRisk?'<span class="aging-label aging-'+agingInfo.riskLevel+'">'+agingInfo.riskLabel+'</span>':''}
       </div>
       <div class="di-qa">
         <button class="qa-btn" onclick="event.stopPropagation();quickFUP('${id}')">Gerar FUP</button>
@@ -2459,46 +2480,45 @@ function openNotif(idx){
   // Fechar painel de notificações
   const panel=document.getElementById('notif-panel');
   if(panel) panel.classList.remove('show');
-  // Navegar até o deal card e abrir o painel correspondente
+  // Navegar até o deal — abrir deal completo no Pipeline
   if(n.targetId){
-    const card=document.getElementById('di-'+n.targetId);
-    if(card){
-      card.scrollIntoView({behavior:'smooth',block:'center'});
-      card.style.outline='2px solid var(--accent)';
-      setTimeout(()=>card.style.outline='',2500);
-      // Abrir o painel correto + histórico expandido com conteúdo
-      setTimeout(()=>{
-        if(n.nType==='analyze'){
-          const er=document.getElementById('er-'+n.targetId);
-          if(er) er.style.display='block';
-        } else if(n.nType==='copy'||n.nType==='dm_copy'){
-          const co=document.getElementById('co-'+n.targetId);
-          if(co) co.style.display='block';
-        } else if(n.nType==='business_analysis'){
-          const ba=document.getElementById('ba-'+n.targetId);
-          if(ba) ba.style.display='block';
-        }
-        // Abrir histórico e expandir o item mais recente do tipo
-        const histPanel=document.getElementById('hist-'+n.targetId);
-        if(histPanel&&!histPanel.classList.contains('open')) histPanel.classList.add('open');
-        // Encontrar e expandir o primeiro item do tipo correspondente
-        const typeMap={analyze:'analysis',copy:'copy',dm_copy:'dm',business_analysis:'analysis',brief:'brief'};
-        const matchType=typeMap[n.nType]||n.nType;
-        const histItems=histPanel?histPanel.querySelectorAll('.hist-item'):[];
-        for(let i=0;i<histItems.length;i++){
-          const label=histItems[i].querySelector('.hist-item-type');
-          if(label){
-            const lt=label.textContent.toLowerCase();
-            const expand=document.getElementById('hexp-'+n.targetId+'-'+i);
-            if((matchType==='copy'&&lt.includes('copy'))||(matchType==='analysis'&&(lt.includes('anál')||lt.includes('anal')))||(matchType==='dm'&&lt.includes('dm'))||(matchType==='brief'&&lt.includes('brief'))){
-              if(expand&&!expand.classList.contains('show')) expand.classList.add('show');
-              break;
-            }
+    // Abrir deal no pipeline via selectLiveDeal (mostra o card completo)
+    const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[n.targetId];
+    if(deal){
+      setScreen('pipeline',null);
+      selectLiveDeal(n.targetId, deal);
+    }
+    // Abrir o painel correto + histórico expandido com conteúdo
+    setTimeout(()=>{
+      if(n.nType==='analyze'){
+        const er=document.getElementById('er-'+n.targetId);
+        if(er) er.style.display='block';
+      } else if(n.nType==='copy'||n.nType==='dm_copy'){
+        const co=document.getElementById('co-'+n.targetId);
+        if(co) co.style.display='block';
+      } else if(n.nType==='business_analysis'){
+        const ba=document.getElementById('ba-'+n.targetId);
+        if(ba) ba.style.display='block';
+      }
+      // Abrir histórico e expandir o item mais recente do tipo
+      const histPanel=document.getElementById('hist-'+n.targetId);
+      if(histPanel&&!histPanel.classList.contains('open')) histPanel.classList.add('open');
+      const typeMap={analyze:'analysis',copy:'copy',dm_copy:'dm',business_analysis:'analysis',brief:'brief'};
+      const matchType=typeMap[n.nType]||n.nType;
+      const histItems=histPanel?histPanel.querySelectorAll('.hist-item'):[];
+      for(let i=0;i<histItems.length;i++){
+        const label=histItems[i].querySelector('.hist-item-type');
+        if(label){
+          const lt=label.textContent.toLowerCase();
+          const expand=document.getElementById('hexp-'+n.targetId+'-'+i);
+          if((matchType==='copy'&&lt.includes('copy'))||(matchType==='analysis'&&(lt.includes('anál')||lt.includes('anal')))||(matchType==='dm'&&lt.includes('dm'))||(matchType==='brief'&&lt.includes('brief'))){
+            if(expand&&!expand.classList.contains('show')) expand.classList.add('show');
+            break;
           }
         }
-      },400);
-      return;
-    }
+      }
+    },500);
+    return;
   }
   // Fallback: copiar conteúdo se não encontrou o card
   if(n.output){
@@ -2522,7 +2542,6 @@ function showNotificationBadge(n){
 
 // ── CLAUDE API — MOTOR LLM DO ELUCY WEBAPP ──────────────────────────
 
-// MCP bundle cache (loaded once from mcps.json)
 let _mcpBundle = null;
 async function loadMCPBundle(){
   if(_mcpBundle) return _mcpBundle;
@@ -2533,7 +2552,6 @@ async function loadMCPBundle(){
   return _mcpBundle || {};
 }
 
-// MCPs por tipo de request (injetar apenas os relevantes — ~40-50k tokens cada)
 const MCP_MAP = {
   analyze: ['eluci-core','lead-profile','output-schema','signals','strategy','cse-engine','behavior','segments','conversion','iron-dome'],
   copy: ['eluci-core','playbooks','playbook-sdr','cse-engine','blde','fip','sdr-social-dm','behavior','signals','output-schema'],
@@ -2664,7 +2682,6 @@ async function callIntelligenceAPI(dealData, requestType, extraContext){
   if(!apiKey) throw new Error('API key não configurada');
   const model = window.ELUCY_API_MODEL || 'claude-sonnet-4-20250514';
 
-  // Load MCPs e montar system prompt
   const bundle = await loadMCPBundle();
   const mcpSlugs = MCP_MAP[requestType] || MCP_MAP.analyze;
   let systemParts = [];
@@ -2677,11 +2694,11 @@ async function callIntelligenceAPI(dealData, requestType, extraContext){
 
   // Carrega histórico completo para enriquecer contexto
   const history = await loadDealFullHistory(dealData.deal_id);
+
   const dealCtx = buildDealContext(dealData);
   const prompt = REQUEST_PROMPTS[requestType] || REQUEST_PROMPTS.analyze;
   const userMsg = dealCtx + history + '\n\n' + prompt + (extraContext ? '\n\nCONTEXTO EXTRA: '+extraContext : '');
 
-  // Call Claude API
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -2706,7 +2723,6 @@ async function callIntelligenceAPI(dealData, requestType, extraContext){
   return { intelligence: text, model: result.model, usage: result.usage };
 }
 
-// Salva resposta da API no Supabase para histórico
 async function saveAPIResponse(dealId, requestType, output){
   const sb = getSB();
   const email = _currentUser && _currentUser.email;
@@ -2729,7 +2745,7 @@ async function requestElucyAnalysis(deal_id, dealData, targetId){
   }
   const reportEl=document.getElementById('er-'+targetId);
   if(reportEl){
-    reportEl.innerHTML='<div class="er-loading"><span class="elucy-pulse">ELUCi analisando deal '+escHtml(deal_id)+'...</span></div>';
+    reportEl.innerHTML='<div class="er-loading"><span class="elucy-pulse">ELUCY analisando deal '+escHtml(deal_id)+'...</span></div>';
     reportEl.style.display='block';
   }
 
@@ -2755,7 +2771,6 @@ async function requestElucyAnalysis(deal_id, dealData, targetId){
         }
       } catch(apiErr) {
         console.warn('Intelligence API falhou, fallback para worker:', apiErr.message);
-        // Continue to Supabase worker fallback below
       }
     }
 
@@ -2805,21 +2820,15 @@ async function requestElucyAnalysis(deal_id, dealData, targetId){
 // Extrai seções do output de copy: WhatsApp msg separada de nota CRM e backstage
 function parseCopyOutput(raw){
   if(!raw) return {wa:'',crm:'',full:''};
-  // Tenta extrair seção WhatsApp
   let wa='', crm='', full=raw;
-  // Padrões comuns do LLM: "VERSÃO WHATSAPP:", "WHATSAPP:", "MENSAGEM WHATSAPP:", "📱 WhatsApp"
   const waPatterns = [
     /(?:VERS[ÃA]O\s+WHATSAPP|MENSAGEM\s+WHATSAPP|WHATSAPP)\s*:?\s*\n([\s\S]*?)(?=\n(?:VERS[ÃA]O\s+EMAIL|NOTA\s+CRM|NOTA\s+DE\s+QUALIFICA|CRM\s*:|EMAIL|DM\s+PRONTO|\[D\d|━|---|\*\*\*|$))/i,
     /📱\s*(?:WhatsApp|WA)\s*:?\s*\n([\s\S]*?)(?=\n(?:📝|📋|NOTA|EMAIL|CRM|\[D\d|━|---|\*\*\*|$))/i
   ];
   for(const pat of waPatterns){
     const m = raw.match(pat);
-    if(m && m[1] && m[1].trim().length > 20){
-      wa = m[1].trim();
-      break;
-    }
+    if(m && m[1] && m[1].trim().length > 20){ wa = m[1].trim(); break; }
   }
-  // Tenta extrair nota CRM
   const crmPatterns = [
     /(?:NOTA\s+CRM|NOTA\s+DE\s+QUALIFICA[ÇC][ÃA]O)\s*:?\s*\n([\s\S]*?)$/i,
     /📝\s*(?:Nota\s+CRM|CRM)\s*:?\s*\n([\s\S]*?)$/i,
@@ -2827,17 +2836,12 @@ function parseCopyOutput(raw){
   ];
   for(const pat of crmPatterns){
     const m = raw.match(pat);
-    if(m && m[1] && m[1].trim().length > 10){
-      crm = m[1].trim();
-      break;
-    }
+    if(m && m[1] && m[1].trim().length > 10){ crm = m[1].trim(); break; }
   }
-  // Se não encontrou WA específico, tenta DM PRONTO PARA COLAR
   if(!wa){
     const dmMatch = raw.match(/DM\s+PRONTO\s+PARA\s+COLAR\s*:?\s*\n([\s\S]*?)(?=\n(?:NOTA|CRM|━|---|\*\*\*|$))/i);
     if(dmMatch && dmMatch[1]) wa = dmMatch[1].trim();
   }
-  // Fallback: se não extraiu nada, usa o output inteiro como WA
   if(!wa) wa = raw;
   if(!crm) crm = raw;
   return {wa, crm, full: raw};
@@ -2847,7 +2851,7 @@ async function requestElucyCopy(deal_id, dealData, targetId, canal){
   const copyEl=document.getElementById('co-'+targetId);
   if(copyEl){
     const wa=document.getElementById('ct-'+targetId+'-wa');
-    if(wa) wa.textContent='ELUCi gerando copy...';
+    if(wa) wa.textContent='ELUCY gerando copy...';
   }
 
   if(window.IS_REMOTE){
@@ -2979,7 +2983,7 @@ async function requestBusinessAnalysis(id,btnEl){
   }
   baEl.style.display='block';
   if(btn) btn.classList.add('btn-on');
-  baEl.innerHTML='<div class="ba-h"><span class="ba-badge">ANÁLISE</span><span class="ba-htitle">Análise de Mercado</span></div><div class="ba-b"><span class="elucy-pulse">ELUCi analisando setor do deal...</span></div>';
+  baEl.innerHTML='<div class="ba-h"><span class="ba-badge">ANÁLISE</span><span class="ba-htitle">Análise de Mercado</span></div><div class="ba-b"><span class="elucy-pulse">ELUCY analisando setor do deal...</span></div>';
 
   // Monta o setor a partir do deal
   const setor=deal.linhaReceita||deal.canal||'educação executiva B2B';
@@ -3097,12 +3101,10 @@ async function loadDealCache(dealId, targetId){
       .order('created_at',{ascending:false})
       .limit(50);
     if(!data||!data.length) return;
-    // Pega o mais recente de cada tipo
     const latest={};
     data.forEach(row=>{
       if(!latest[row.interaction_type]) latest[row.interaction_type]=row;
     });
-    // Injeta cada tipo no painel correspondente
     if(latest.analysis && latest.analysis.content){
       ELUCY_CACHE[dealId]=latest.analysis.content;
       injectElucyReport(targetId, latest.analysis.content);
@@ -3145,7 +3147,9 @@ function renderDealHistory(targetId, interactions){
       '<div class="hist-item-body"><div class="hist-item-type">'+escHtml(label)+'</div>'+
       (preview?'<div class="hist-item-preview">'+escHtml(preview)+'…</div>':'')+
       '</div><span class="hist-item-ts">'+ts+'</span></div>'+
-      (output?'<div class="hist-expanded" id="'+hid+'"><button class="hist-copy-btn" onclick="event.stopPropagation();clipText(this.parentElement.querySelector(\'.hist-content\').innerText)">Copiar</button><div class="hist-content">'+renderMd(output)+'</div></div>':'');
+      (output?'<div class="hist-expanded" id="'+hid+'"><button class="hist-copy-btn" onclick="event.stopPropagation();clipText(this.parentElement.querySelector(\'.hist-content\').innerText)">Copiar</button>'+
+      (i.interaction_type==='copy'||i.interaction_type==='dm'?'<button class="hist-copy-btn" onclick="event.stopPropagation();histWhatsApp(\''+targetId+'\',this.parentElement.querySelector(\'.hist-content\').innerText)" style="right:60px;border-color:#25d366;color:#25d366">📱 WA</button>':'')+
+      '<div class="hist-content">'+renderMd(output)+'</div></div>':'');
   }).join('');
 }
 function toggleHistPanel(id){
@@ -3165,6 +3169,31 @@ function toggleHistExpanded(hid){
 function clipText(text){
   navigator.clipboard.writeText(text).then(()=>showSyncToast('ok','Copiado!')).catch(()=>{});
 }
+function histWhatsApp(targetId, text){
+  // Extrai apenas a seção [COPY PARA ENVIAR] se existir, senão usa texto antes de [NOTA CRM]
+  let msg=text||'';
+  const copyMatch=msg.match(/\[COPY\s*(?:PARA\s*ENVIAR)?\]\s*([\s\S]*?)(?=\n---|\[NOTA|\[DIAGNÓS|\[CSE|$)/i);
+  if(copyMatch) msg=copyMatch[1].trim();
+  else{
+    const notaIdx=msg.indexOf('[NOTA CRM]');
+    if(notaIdx>0) msg=msg.slice(0,notaIdx).trim();
+    // Remove header lines like [COPY — INSTAGRAM DM — TALLIS_MODE] and Touch Point lines
+    msg=msg.replace(/^\[COPY[^\]]*\]\s*/i,'').replace(/^Touch Point:.*\n?/im,'').replace(/^---\s*\n?/gm,'').trim();
+  }
+  const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[targetId];
+  const phone=(deal&&(deal.telefone||deal.p_telefone))||'';
+  console.log('[histWA] targetId=',targetId,'deal=',!!deal,'deal.telefone=',deal&&deal.telefone,'phone=',phone);
+  let num=phone.replace(/\D/g,'');
+  if(num.length===10||num.length===11) num='55'+num;
+  const encoded=encodeURIComponent(msg);
+  if(num){
+    window.open('https://api.whatsapp.com/send?phone='+num+'&text='+encoded,'_blank');
+  } else {
+    navigator.clipboard.writeText(msg).catch(()=>{});
+    window.open('https://api.whatsapp.com/send?text='+encoded,'_blank');
+    showSyncToast('warn','Telefone do lead indisponível — texto copiado.');
+  }
+}
 
 // ── NOTA DE QUALIFICAÇÃO CRM ──────────────────────────────────────
 
@@ -3182,7 +3211,7 @@ async function requestNotaCRM(id,btnEl){
     return;
   }
   if(btn) btn.classList.add('btn-on');
-  notaEl.innerHTML='<div class="ba-h"><span class="ba-badge" style="background:var(--gdim);color:var(--green)">CRM</span><span class="ba-htitle">Nota de Qualificação</span></div><div class="ba-b"><span class="elucy-pulse">ELUCi gerando nota de qualificação...</span></div>';
+  notaEl.innerHTML='<div class="ba-h"><span class="ba-badge" style="background:var(--gdim);color:var(--green)">CRM</span><span class="ba-htitle">Nota de Qualificação</span></div><div class="ba-b"><span class="elucy-pulse">ELUCY gerando nota de qualificação...</span></div>';
   notaEl.style.display='block';
   notaEl.scrollIntoView({behavior:'smooth',block:'nearest'});
   if(window.IS_REMOTE){
@@ -3234,6 +3263,57 @@ function injectNotaCRM(targetId, output){
   notaEl.style.display='block';
   const btn=document.getElementById('btn-nota-'+targetId);
   if(btn) btn.classList.add('btn-on');
+}
+function renderNotaRich(text){
+  const lines=text.split('\n');
+  let html='';
+  let inList=false;
+  for(let i=0;i<lines.length;i++){
+    let line=lines[i];
+    const trimmed=line.trim();
+    if(!trimmed){ if(inList){html+='</ul>';inList=false;} html+='<div style="height:6px"></div>'; continue; }
+    // Title line (NOTA DE QUALIFICAÇÃO...)
+    if(trimmed.match(/^NOTA DE QUALIFICA[ÇC][ÃA]O/i)||trimmed.match(/^\[NOTA DE/i)){
+      if(inList){html+='</ul>';inList=false;}
+      html+='<div class="nota-section-title">'+escHtml(trimmed)+'</div>';
+      continue;
+    }
+    // Section headers with emoji (📋 Observações:, 🏢 Perfil da Empresa, etc)
+    const secMatch=trimmed.match(/^[•\-\*]?\s*([\p{Emoji}\u{200d}\u{fe0f}\u{20e3}]+)\s*\*?\*?([^*\n:]+):?\*?\*?\s*$/u);
+    if(secMatch){
+      if(inList){html+='</ul>';inList=false;}
+      html+='<div class="nota-section"><span class="nota-section-icon">'+secMatch[1]+'</span><span class="nota-section-label">'+escHtml(secMatch[2].trim())+'</span></div>';
+      continue;
+    }
+    // Section header without emoji but bold (**Something:**)
+    const boldSecMatch=trimmed.match(/^[•\-\*]?\s*\*\*([^*]+)\*\*:?\s*$/);
+    if(boldSecMatch){
+      if(inList){html+='</ul>';inList=false;}
+      html+='<div class="nota-section"><span class="nota-section-label">'+escHtml(boldSecMatch[1].trim())+'</span></div>';
+      continue;
+    }
+    // Bullet items (• or - or *)
+    const bulletMatch=trimmed.match(/^[•\-\*]\s+(.+)/);
+    if(bulletMatch){
+      if(!inList){html+='<ul class="nota-list">';inList=true;}
+      let content=bulletMatch[1];
+      // Format key: value patterns
+      content=content.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+      content=content.replace(/^([^:]+?):\s*/,'<span class="nota-key">$1:</span> ');
+      content=content.replace(/NAO_INFORMADO/g,'<span class="nota-nao-informado">NAO_INFORMADO</span>');
+      // Bold words between ** already handled, now handle remaining bold-like patterns
+      html+='<li>'+content+'</li>';
+      continue;
+    }
+    // Regular text with possible formatting
+    if(inList){html+='</ul>';inList=false;}
+    let content=escHtml(trimmed);
+    content=content.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+    content=content.replace(/NAO_INFORMADO/g,'<span class="nota-nao-informado">NAO_INFORMADO</span>');
+    html+='<div class="nota-text">'+content+'</div>';
+  }
+  if(inList) html+='</ul>';
+  return html;
 }
 
 // ── WHATSAPP CONVERSATION FLOW ──────────────────────────────────────
@@ -3410,7 +3490,7 @@ async function loadWaConversation(id){
 function injectElucyReport(targetId, report){
   const reportEl=document.getElementById('er-'+targetId);
   if(!reportEl) return;
-  // Detecta seções canônicas do ELUCI REPORT e renderiza com markdown
+  // Detecta seções canônicas do ELUCI REPORT e renderiza
   const context=extractSection(report,'ELUCI CONTEXT');
   const diagnostic=extractSection(report,'DIAGNOSTIC CORE');
   const directive=extractSection(report,'STRATEGIC DIRECTIVE');
@@ -3457,12 +3537,9 @@ function escHtml(s){
 function renderMd(raw){
   if(!raw) return '';
   let s = escHtml(raw);
-
-  // Tabelas markdown: detecta linhas |...|
   s = s.replace(/((?:^\|.+\|$\n?)+)/gm, function(block){
     const rows = block.trim().split('\n').filter(r=>r.trim());
     if(rows.length<2) return block;
-    // Detecta separador (|---|---|)
     const sepIdx = rows.findIndex(r=>/^\|[\s\-:|]+\|$/.test(r));
     let html='<table class="md-table"><thead><tr>';
     const hdr = (sepIdx>0?rows[0]:rows[0]).replace(/^\||\|$/g,'').split('|');
@@ -3478,52 +3555,28 @@ function renderMd(raw){
     html+='</tbody></table>';
     return html;
   });
-
-  // Headers
   s = s.replace(/^#### (.+)$/gm,'<h4 class="md-h4">$1</h4>');
   s = s.replace(/^### (.+)$/gm,'<h3 class="md-h3">$1</h3>');
   s = s.replace(/^## (.+)$/gm,'<h2 class="md-h2">$1</h2>');
   s = s.replace(/^# (.+)$/gm,'<h1 class="md-h1">$1</h1>');
-
-  // Section markers do ELUCI REPORT [SECTION NAME]
   s = s.replace(/\[(ELUCI CONTEXT|DIAGNOSTIC CORE|STRATEGIC DIRECTIVE|NEXT BEST ACTION|BENCHMARK CANAL|GOVERNANCE FLAGS|ELUCI VERDICT|NOTA DE QUALIFICAÇÃO[^\]]*|ELUCY —[^\]]*|FOLLOWUP[^\]]*)\]/g,
     '<div class="md-section">$1</div>');
-
-  // Bold + Italic
   s = s.replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>');
   s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
   s = s.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g,'<em>$1</em>');
-
-  // Confidence tags
   s = s.replace(/\[Alta\]/g,'<span class="md-conf md-conf-h">[Alta]</span>');
   s = s.replace(/\[Média\]/g,'<span class="md-conf md-conf-m">[Média]</span>');
   s = s.replace(/\[Baixa\]/g,'<span class="md-conf md-conf-l">[Baixa]</span>');
-
-  // Status/alert tags
   s = s.replace(/🔴|❌/g,'<span style="color:var(--red)">$&</span>');
   s = s.replace(/🟡|⚠️/g,'<span style="color:var(--yellow)">$&</span>');
   s = s.replace(/🟢|✅/g,'<span style="color:var(--green)">$&</span>');
-
-  // Bullet lists (- item)
   s = s.replace(/^- (.+)$/gm,'<div class="md-li">$1</div>');
-
-  // Numbered lists (1. item)
   s = s.replace(/^(\d+)\. (.+)$/gm,'<div class="md-li"><span class="md-num">$1.</span> $2</div>');
-
-  // Horizontal rules
   s = s.replace(/^(━+|---+|\*\*\*+)$/gm,'<hr class="md-hr">');
-
-  // Code inline
   s = s.replace(/`([^`]+)`/g,'<code class="md-code">$1</code>');
-
-  // NAO_INFORMADO highlight
   s = s.replace(/NAO_INFORMADO/g,'<span class="md-na">NAO_INFORMADO</span>');
-
-  // Paragraphs (double newline)
   s = s.replace(/\n\n/g,'</p><p class="md-p">');
-  // Single newlines (that aren't already handled)
   s = s.replace(/\n/g,'<br>');
-
   return '<div class="md-body"><p class="md-p">'+s+'</p></div>';
 }
 
@@ -3592,16 +3645,16 @@ function selectLiveDeal(id,d){
         <div class="ic"><div class="ic-l">Timing Score</div><div class="ic-v" style="color:${d._timeline&&d._timeline.timingScore>=70?'var(--green)':d._timeline&&d._timeline.timingScore>=40?'var(--yellow)':'var(--red)'}">${d._timeline?d._timeline.timingScore:'—'}</div><div class="ic-s">${d._timeline?d._timeline.estimatedCloseDate?'Est. close: '+d._timeline.estimatedCloseDate:'':''}</div></div>
         <div class="ic"><div class="ic-l">Deal ID</div><div class="ic-v" style="font-size:11px">${d.deal_id||'—'}</div></div>
         <div class="ic"><div class="ic-l">Valor G4 Dados</div><div class="ic-v" style="color:var(--green)">${fmtBRL(d.revenueRaw)}</div><div class="ic-s">Time de dados</div></div>
-        <div class="ic"><div class="ic-l">Valor ELUCi</div><div class="ic-v" style="color:var(--accent2)">${fmtBRL(d.elucyValor)}</div><div class="ic-s">${d.forecastDelta!=null?(d.forecastDelta>=0?'▲ +'+fmtBRL(d.forecastDelta):'▼ '+fmtBRL(d.forecastDelta))+' vs G4 Dados':'Sem ref. dados'}</div></div>
+        <div class="ic"><div class="ic-l">Valor ELUCY</div><div class="ic-v" style="color:var(--accent2)">${fmtBRL(d.elucyValor)}</div><div class="ic-s">${d.forecastDelta!=null?(d.forecastDelta>=0?'▲ +'+fmtBRL(d.forecastDelta):'▼ '+fmtBRL(d.forecastDelta))+' vs G4 Dados':'Sem ref. dados'}</div></div>
       </div>
       <div class="recom">
-        <div class="recom-l">Recomendação ELUCi <span class="elucy-badge">MOTOR ATIVO</span></div>
+        <div class="recom-l">Recomendação ELUCY <span class="elucy-badge">MOTOR ATIVO</span></div>
         <div class="recom-t" id="recom-${id}">${buildRecomText(d)}</div>
       </div>
       ${(d._urgency||0)>=60?`<div class="alrt al-d">SLA em risco — deal sem avanço por ${d._delta||d.delta||0} dias.</div>`:''}
       ${d._signal==='DOME'?`<div class="alrt al-w">Iron Dome ativo — +10 dias sem resposta. Copy bloqueada até revisão manual.</div>`:''}
       <div class="row">
-        <button class="btn bp" onclick="showCopy('${id}',this)">Gerar Copy via ELUCi</button>
+        <button class="btn bp" onclick="showCopy('${id}',this)">Gerar Copy via ELUCY</button>
         <button class="btn bs" id="btn-er-${id}" onclick="toggleER('${id}',this)">ELUCI Report</button>
         <button class="btn bs" id="btn-ba-${id}" data-color="clay" onclick="requestBusinessAnalysis('${id}',this)" style="border-color:var(--clay);color:var(--clay)">Análise de Mercado</button>
         <button class="wa-conv-btn" id="btn-wa-${id}" onclick="toggleWaPanel('${id}',this)">💬 Conversa</button>
@@ -3664,6 +3717,7 @@ function selectLiveDeal(id,d){
         <div class="co-txt" id="ct-${id}-crm" contenteditable="true" spellcheck="false" style="display:none">[ELUCI NOTE] ${new Date().toLocaleDateString('pt-BR')}\n\nDeal ID: ${d.deal_id||id} | Fase: ${d.fase} | Temp: ${d.temp}/100\nCanal: ${d.canal} | Dia: ${d.dd} | Delta: ${d.delta} dias\n\nAção: FUP via ${d.canal}\nStatus: Aguardando resposta.</div>
         <div class="copy-actions">
           <button class="btn bs btn-sm" onclick="clip('ct-${id}-wa')">Copiar</button>
+          <button class="btn bs btn-sm" onclick="openWhatsApp('${id}')" style="border-color:#25d366;color:#25d366" title="Abrir no WhatsApp">📱 WhatsApp</button>
           <button class="btn bs btn-sm" onclick="regenCopy('${id}')">Regenerar</button>
           <button class="btn bs btn-sm" onclick="clip('ct-${id}-crm')">Copiar Nota</button>
           <span style="margin-left:auto;font-size:10px;color:var(--text2)">Editavel</span>
@@ -3684,6 +3738,30 @@ function selectLiveDeal(id,d){
     loadDealHistory(d.deal_id, id);
     loadDealCache(d.deal_id, id);
   }
+}
+
+// ── WHATSAPP DEEP LINK ──
+function openWhatsApp(id, phone){
+  // Pega o texto da copy atual
+  const el=document.getElementById('ct-'+id+'-wa');
+  const text=el?el.textContent||el.innerText:'';
+  // Normalizar telefone: deal map primeiro (mais confiável), depois param
+  const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
+  let raw=(deal&&(deal.telefone||deal.p_telefone))||phone||'';
+  console.log('[WA] id=',id,'deal.telefone=',deal&&deal.telefone,'param=',phone,'raw=',raw);
+  let num=raw.replace(/\D/g,'');
+  if(!num){
+    // Sem telefone — copia texto e abre wa.me sem número
+    if(text){navigator.clipboard.writeText(text).catch(()=>{});}
+    const encoded=encodeURIComponent(text);
+    window.open('https://api.whatsapp.com/send?text='+encoded,'_blank');
+    showSyncToast('warn','Telefone do lead indisponível — texto copiado. Cole no chat do lead.');
+    return;
+  }
+  // Garantir código de país BR
+  if(num.length===10||num.length===11) num='55'+num;
+  const encoded=encodeURIComponent(text);
+  window.open('https://api.whatsapp.com/send?phone='+num+'&text='+encoded,'_blank');
 }
 
 // ── RECOMENDAÇÃO DINÂMICA & COPY HELPERS ────────────────────────────
@@ -3707,11 +3785,11 @@ function regenCopy(id){
   if(!deal) return;
   const wa=document.getElementById('ct-'+id+'-wa');
   if(wa){
-    wa.textContent='ELUCi gerando nova variação…';
+    wa.textContent='ELUCY gerando nova variação…';
     // Dispara para o motor Elucy via postMessage
     requestElucyCopy(deal.deal_id||id, deal, id, deal.canal||'WhatsApp');
   }
-  showSyncToast('ok','Regenerando copy via motor ELUCi…');
+  showSyncToast('ok','Regenerando copy via motor ELUCY…');
 }
 
 // ── QUICK ACTIONS ────────────────────────────────────────────────────
@@ -3802,6 +3880,7 @@ function _renderGlobal(ct,AE,allDeals,deals){
     var totalValor=deals.reduce(function(s,d){return s+(d.elucyValor||0);},0);
 
     var html='';
+    // Overview KPIs
     html+=renderSection(1,'Overview',
       '<div class="intel-kpi-row">'+
       _iKpi(total,'Deals ativos','var(--accent2)')+
@@ -3812,6 +3891,7 @@ function _renderGlobal(ct,AE,allDeals,deals){
       _iKpi(o.pipeline.atRisk,'Em risco','var(--red)')+
       '</div>');
 
+    // Score breakdown
     html+=renderSection(2,'Score — 5 Componentes',
       '<div class="intel-kpi-row">'+
       _iKpi(o.scores.qualification+'%','Qualificação')+
@@ -3822,18 +3902,21 @@ function _renderGlobal(ct,AE,allDeals,deals){
       '</div>'+
       '<div style="font-size:10px;color:var(--text2);margin-top:6px">Score = Qualificação×0.2 + Handoff×0.3 + WinRate×0.3 + Speed×0.1 + DQI×0.1</div>');
 
+    // By Line summary
     var lineData=g.byLine.data;
     var lineKeys=Object.keys(lineData).sort(function(a,b){return lineData[b].active-lineData[a].active;});
     var maxLine=Math.max.apply(null,lineKeys.map(function(k){return lineData[k].active;}).concat([1]));
     html+=renderSection(3,'Pipeline por Linha de Receita',
       lineKeys.map(function(k){return _iBar(k,lineData[k].active,maxLine,total);}).join(''));
 
+    // By Stage summary
     var stageData=g.byStage.data;
     var stageKeys=Object.keys(stageData).sort(function(a,b){return (stageData[a].order||99)-(stageData[b].order||99);});
     var maxStage=Math.max.apply(null,stageKeys.map(function(k){return stageData[k].count;}).concat([1]));
     html+=renderSection(4,'Pipeline por Etapa',
       stageKeys.map(function(k){return _iBar(fmtEtapa(k),stageData[k].count,maxStage,g.overview.totalDeals);}).join(''));
 
+    // Signals
     html+=renderSection(5,'Sinais',
       '<div class="intel-kpi-row">'+
       _iKpi(buyCount,'BUY','var(--green)')+
@@ -3842,6 +3925,7 @@ function _renderGlobal(ct,AE,allDeals,deals){
       _iKpi(irondome,'Iron Dome','var(--red)')+
       '</div>');
 
+    // Activity summary
     html+=renderSection(6,'Atividade (30d)',
       '<div class="intel-kpi-row">'+
       _iKpi(o.metrics.total,'Total ações')+
@@ -3858,9 +3942,11 @@ function _renderGlobal(ct,AE,allDeals,deals){
   });
 }
 
+// ── OPERATOR ──
 function _renderOperator(ct,AE){
   AE.calcByOperator(30).then(function(o){
     var html='';
+    // Score
     html+=renderSection(1,'Score do Operador',
       '<div style="text-align:center;margin-bottom:14px"><div style="font-size:48px;font-weight:900;color:var(--accent2)">'+o.scores.overall+'</div><div style="font-size:12px;color:var(--text2)">de 100</div></div>'+
       '<div class="intel-kpi-row">'+
@@ -3871,6 +3957,7 @@ function _renderOperator(ct,AE){
       _iKpi(o.scores.dqi+'%','DQI')+
       '</div>');
 
+    // Pipeline health
     html+=renderSection(2,'Saúde do Pipeline',
       '<div class="intel-kpi-row">'+
       _iKpi(o.pipeline.activeDeals,'Deals ativos','var(--accent2)')+
@@ -3878,6 +3965,7 @@ function _renderOperator(ct,AE){
       _iKpi(o.pipeline.atRisk,'Em risco','var(--red)')+
       '</div>');
 
+    // Activity breakdown
     html+=renderSection(3,'Ações ('+o.period+'d)',
       '<div class="intel-kpi-row">'+
       _iKpi(o.metrics.total,'Total')+
@@ -3890,6 +3978,7 @@ function _renderOperator(ct,AE){
       _iKpi(o.metrics.enrichments,'Enrichments')+
       '</div>');
 
+    // Activity by day
     var days=Object.keys(o.byDay).sort();
     var maxDay=Math.max.apply(null,days.map(function(d){return o.byDay[d];}).concat([1]));
     if(days.length){
@@ -3901,6 +3990,7 @@ function _renderOperator(ct,AE){
   });
 }
 
+// ── LINE ──
 function _renderLine(ct,AE){
   var data=AE.calcByLine().data;
   var speed=AE.calcSpeed().data;
@@ -3909,9 +3999,11 @@ function _renderLine(ct,AE){
   var maxActive=Math.max.apply(null,keys.map(function(k){return data[k].active;}).concat([1]));
 
   var html='';
+  // Summary bar
   html+=renderSection(1,'Deals Ativos por Linha',
     keys.map(function(k){return _iBar(k,data[k].active,maxActive,total);}).join(''));
 
+  // Table
   html+=renderSection(2,'Detalhamento por Linha',
     '<table class="intel-table"><thead><tr><th>Linha</th><th>Ativos</th><th>Ganhos</th><th>Perdidos</th><th>Win%</th><th>Aging</th><th>Risco</th><th>Valor</th><th>Veloc.</th></tr></thead><tbody>'+
     keys.map(function(k){
@@ -3920,6 +4012,7 @@ function _renderLine(ct,AE){
       return '<tr><td style="font-weight:600">'+k+'</td><td>'+d.active+'</td><td style="color:var(--green)">'+d.won+'</td><td style="color:var(--red)">'+d.lost+'</td><td>'+d.winRate+'%</td><td>'+d.avgAging+'d</td><td style="color:var(--red)">'+d.atRisk+'</td><td>'+fmtBRL(d.totalValue)+'</td><td>'+v+'</td></tr>';
     }).join('')+'</tbody></table>');
 
+  // DQI by line (async)
   AE.calcDQI(30).then(function(dqi){
     var dqiData=dqi.data;
     var dqiKeys=Object.keys(dqiData).sort(function(a,b){return dqiData[b].avgDQI-dqiData[a].avgDQI;});
@@ -3933,6 +4026,7 @@ function _renderLine(ct,AE){
   ct.innerHTML=html;
 }
 
+// ── STAGE ──
 function _renderStage(ct,AE){
   var data=AE.calcByStage().data;
   var keys=Object.keys(data).sort(function(a,b){return (data[a].order||99)-(data[b].order||99);});
@@ -3940,9 +4034,11 @@ function _renderStage(ct,AE){
   var maxCount=Math.max.apply(null,keys.map(function(k){return data[k].count;}).concat([1]));
 
   var html='';
+  // Funnel
   html+=renderSection(1,'Funil por Etapa',
     keys.map(function(k){return _iBar(fmtEtapa(k),data[k].count,maxCount,total);}).join(''));
 
+  // Table
   html+=renderSection(2,'Detalhamento por Etapa',
     '<table class="intel-table"><thead><tr><th>Etapa</th><th>Deals</th><th>Aging</th><th>Valor</th><th>Risco</th></tr></thead><tbody>'+
     keys.map(function(k){
@@ -3950,6 +4046,7 @@ function _renderStage(ct,AE){
       return '<tr><td style="font-weight:600">'+fmtEtapa(k)+'</td><td>'+d.count+'</td><td>'+d.avgAging+'d</td><td>'+fmtBRL(d.totalValue)+'</td><td style="color:var(--red)">'+d.atRisk+'</td></tr>';
     }).join('')+'</tbody></table>');
 
+  // Tier distribution per stage
   html+=renderSection(3,'Tier por Etapa',
     '<div class="intel-grid">'+keys.filter(function(k){return Object.keys(data[k].byTier).length>0;}).map(function(k){
       var tiers=data[k].byTier;
@@ -3961,6 +4058,7 @@ function _renderStage(ct,AE){
   ct.innerHTML=html;
 }
 
+// ── CHANNEL ──
 function _renderChannel(ct,AE){
   var data=AE.calcByChannel().data;
   var keys=Object.keys(data).sort(function(a,b){return data[b].active-data[a].active;});
@@ -3981,6 +4079,7 @@ function _renderChannel(ct,AE){
   ct.innerHTML=html;
 }
 
+// ── TASK ──
 function _renderTask(ct,AE){
   var data=AE.calcByTask().data;
   var keys=Object.keys(data).sort(function(a,b){return data[b].count-data[a].count;});
@@ -4001,10 +4100,12 @@ function _renderTask(ct,AE){
   ct.innerHTML=html;
 }
 
+// ── VALUE ──
 function _renderValue(ct,AE){
   var data=AE.calcValue();
   var html='';
 
+  // Total
   html+=renderSection(1,'Pipeline Total',
     '<div class="intel-kpi-row">'+
     _iKpi(fmtBRL(data.totalValue),'Valor total','var(--accent2)')+
@@ -4012,6 +4113,7 @@ function _renderValue(ct,AE){
     _iKpi(data.totalActive>0?fmtBRL(Math.round(data.totalValue/data.totalActive)):'R$ 0','Ticket médio','var(--green)')+
     '</div>');
 
+  // By Line
   var lineKeys=Object.keys(data.byLine).sort(function(a,b){return data.byLine[b].total-data.byLine[a].total;});
   var maxLineVal=Math.max.apply(null,lineKeys.map(function(k){return data.byLine[k].total;}).concat([1]));
   html+=renderSection(2,'Valor por Linha',
@@ -4020,6 +4122,7 @@ function _renderValue(ct,AE){
       return '<div class="intel-bar-row"><span class="intel-bar-label" title="'+k+'">'+(k.length>22?k.slice(0,22)+'...':k)+'</span><div class="intel-bar-bg"><div class="intel-bar-fill" style="width:'+Math.max(5,v.total/maxLineVal*100)+'%;background:linear-gradient(90deg,rgba(34,197,94,0.4),rgba(34,197,94,0.7))"><span class="intel-bar-v">'+fmtBRL(v.total)+'</span></div></div><span class="intel-bar-pct">'+v.count+' deals</span></div>';
     }).join(''));
 
+  // By Stage
   var stageKeys=Object.keys(data.byStage).sort(function(a,b){return data.byStage[b].total-data.byStage[a].total;});
   var maxStageVal=Math.max.apply(null,stageKeys.map(function(k){return data.byStage[k].total;}).concat([1]));
   html+=renderSection(3,'Valor por Etapa',
@@ -4028,6 +4131,7 @@ function _renderValue(ct,AE){
       return '<div class="intel-bar-row"><span class="intel-bar-label">'+fmtEtapa(k)+'</span><div class="intel-bar-bg"><div class="intel-bar-fill" style="width:'+Math.max(5,v.total/maxStageVal*100)+'%;background:linear-gradient(90deg,rgba(91,141,239,0.4),rgba(91,141,239,0.7))"><span class="intel-bar-v">'+fmtBRL(v.total)+'</span></div></div><span class="intel-bar-pct">'+v.count+' deals</span></div>';
     }).join(''));
 
+  // By Tier
   var tierKeys=Object.keys(data.byTier).sort(function(a,b){return data.byTier[b].total-data.byTier[a].total;});
   html+=renderSection(4,'Valor por Tier',
     '<div class="intel-kpi-row">'+tierKeys.map(function(k){
@@ -4149,6 +4253,184 @@ function showSyncToast(type,msg){
   t.textContent=msg;
   document.body.appendChild(t);
   setTimeout(()=>t.remove(),5000);
+}
+
+// ── SLACK ALERTS SYSTEM ──
+let _slackAlerts=[];
+let _slackConfigs=[];
+
+function toggleSlackPanel(){
+  const panel=document.getElementById('slack-panel');
+  if(!panel) return;
+  const wasOpen=panel.classList.contains('show');
+  // Fechar outros painéis
+  document.getElementById('notif-panel')?.classList.remove('show');
+  if(wasOpen){ panel.classList.remove('show'); return; }
+  panel.classList.add('show');
+  loadSlackAlerts();
+}
+
+function openSlackSetup(){
+  const modal=document.getElementById('slack-setup-modal');
+  if(modal){ modal.classList.add('show'); loadSlackConfigs(); }
+}
+
+function closeSlackSetup(){
+  const modal=document.getElementById('slack-setup-modal');
+  if(modal) modal.classList.remove('show');
+  document.getElementById('slack-setup-input').value='';
+  const prev=document.getElementById('slack-setup-preview');
+  if(prev){ prev.classList.remove('show'); prev.innerHTML=''; }
+}
+
+async function loadSlackConfigs(){
+  const email=_currentUser&&_currentUser.email;
+  if(!email) return;
+  const sb=getSB(); if(!sb) return;
+  const {data}=await sb.from('operator_slack_configs').select('*').eq('operator_id',email).eq('enabled',true);
+  _slackConfigs=data||[];
+  const el=document.getElementById('slack-cfg-list');
+  if(!el) return;
+  if(!_slackConfigs.length){ el.innerHTML='<div style="font-size:11px;color:var(--text2)">Nenhum canal configurado.</div>'; return; }
+  el.innerHTML=_slackConfigs.map(c=>{
+    const badge=c.highlight?'<span style="background:#e01e5a;color:#fff;font-size:9px;padding:1px 5px;border-radius:3px;margin-left:6px">destaque</span>':'';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">'+
+      '<div><span style="font-weight:600;color:var(--text);font-size:12px">#'+escHtml(c.channel_name)+'</span>'+badge+
+      '<span style="font-size:10px;color:var(--text2);margin-left:8px">'+escHtml(c.alert_type)+'</span></div>'+
+      '<button class="btn bs btn-sm" onclick="removeSlackConfig(\''+c.id+'\')" style="font-size:9px;padding:2px 6px;color:#ef4444;border-color:#ef4444">×</button></div>';
+  }).join('');
+}
+
+async function removeSlackConfig(cfgId){
+  const sb=getSB(); if(!sb) return;
+  await sb.from('operator_slack_configs').update({enabled:false}).eq('id',cfgId);
+  loadSlackConfigs();
+  showSyncToast('ok','Config removida.');
+}
+
+async function processSlackSetup(){
+  const input=document.getElementById('slack-setup-input');
+  const text=(input&&input.value||'').trim();
+  if(!text){ showSyncToast('err','Descreva o que quer monitorar.'); return; }
+  const email=_currentUser&&_currentUser.email;
+  if(!email) return;
+  // Parse natural language → extract channel name and alert type
+  const lower=text.toLowerCase();
+  let channelName='';
+  let channelId='';
+  let alertType='mention';
+  let highlight=false;
+  let keywords=[];
+  // Detect channel name
+  const chMatch=lower.match(/#?([\w-]+)/);
+  if(chMatch) channelName=chMatch[1];
+  // Known channel mapping (expandir conforme necessário)
+  const knownChannels={'fup-dm-insta':'C091M783T8F','deals-quentes':'','geral':''};
+  if(knownChannels[channelName]) channelId=knownChannels[channelName];
+  // Detect alert type
+  if(lower.includes('fup')||lower.includes('follow')||lower.includes('pendente')) alertType='fup_pending';
+  if(lower.includes('menç')||lower.includes('mention')||lower.includes('me marca')) alertType='mention';
+  if(lower.includes('keyword')||lower.includes('palavra')) alertType='keyword';
+  // Detect highlight
+  if(lower.includes('destaque')||lower.includes('highlight')||lower.includes('especial')) highlight=true;
+  // Detect keywords
+  const kwMatch=text.match(/palavras?[- ]?chave[s]?[:\s]+([^\n]+)/i);
+  if(kwMatch) keywords=kwMatch[1].split(',').map(k=>k.trim()).filter(Boolean);
+  if(!channelName){ showSyncToast('err','Não consegui identificar o canal. Use # antes do nome.'); return; }
+  // Preview
+  const prev=document.getElementById('slack-setup-preview');
+  if(!channelId){
+    // Sem channel_id mapeado — salva com placeholder
+    channelId='UNKNOWN_'+channelName.toUpperCase();
+  }
+  const sb=getSB(); if(!sb) return;
+  const {error}=await sb.from('operator_slack_configs').upsert({
+    operator_id:email, channel_id:channelId, channel_name:channelName,
+    alert_type:alertType, highlight:highlight, keywords:keywords, enabled:true
+  },{onConflict:'operator_id,channel_id,alert_type'});
+  if(error){ showSyncToast('err','Erro ao salvar: '+error.message); return; }
+  if(prev){
+    prev.classList.add('show');
+    prev.innerHTML='<div style="color:var(--green);font-weight:600;margin-bottom:4px">✓ Configurado!</div>'+
+      '<div style="font-size:11px;color:var(--text2)">Canal: <b>#'+escHtml(channelName)+'</b> | Tipo: <b>'+alertType+'</b>'+
+      (highlight?' | <span style="color:#e01e5a">Destaque ativo</span>':'')+
+      (keywords.length?' | Keywords: '+keywords.join(', '):'')+
+      '</div>';
+  }
+  input.value='';
+  loadSlackConfigs();
+}
+
+async function loadSlackAlerts(){
+  const email=_currentUser&&_currentUser.email;
+  if(!email) return;
+  const sb=getSB(); if(!sb) return;
+  const {data}=await sb.from('operator_slack_alerts').select('*').eq('operator_id',email).order('created_at',{ascending:false}).limit(30);
+  _slackAlerts=data||[];
+  renderSlackAlerts();
+  // Update count badge
+  const unread=_slackAlerts.filter(a=>!a.is_read).length;
+  const countEl=document.getElementById('slack-count');
+  if(countEl){ countEl.textContent=unread; if(unread>0) countEl.classList.add('show'); else countEl.classList.remove('show'); }
+}
+
+function renderSlackAlerts(){
+  const list=document.getElementById('slack-alert-list');
+  if(!list) return;
+  if(!_slackAlerts.length){ list.innerHTML='<div class="notif-empty">Nenhum alerta Slack.</div>'; return; }
+  list.innerHTML=_slackAlerts.map((a,i)=>{
+    const cls='notif-item'+(a.is_read?'':' unread');
+    const ts=a.created_at?new Date(a.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
+    const hl=a.highlight?'border-left:3px solid #e01e5a;':'';
+    const icon=a.alert_type==='fup_pending'?'⏳':a.alert_type==='mention'?'@':'🔑';
+    const preview=(a.message_text||'').substring(0,80)+(a.message_text&&a.message_text.length>80?'…':'');
+    return '<div class="'+cls+'" style="'+hl+'" onclick="openSlackAlert('+i+')">'+
+      '<span class="notif-item-icon">'+icon+'</span>'+
+      '<div class="notif-item-body">'+
+        '<div class="notif-item-title">#'+escHtml(a.channel_name||'')+(a.sender_name?' — '+escHtml(a.sender_name):'')+'</div>'+
+        '<div class="notif-item-sub">'+escHtml(preview)+'</div>'+
+      '</div>'+
+      '<span class="notif-item-ts">'+ts+'</span></div>';
+  }).join('');
+}
+
+async function openSlackAlert(idx){
+  if(!_slackAlerts[idx]) return;
+  const a=_slackAlerts[idx];
+  if(!a.is_read){
+    a.is_read=true;
+    const sb=getSB();
+    if(sb) sb.from('operator_slack_alerts').update({is_read:true}).eq('id',a.id).then(()=>{});
+    renderSlackAlerts();
+    const unread=_slackAlerts.filter(x=>!x.is_read).length;
+    const countEl=document.getElementById('slack-count');
+    if(countEl){ countEl.textContent=unread; if(unread>0) countEl.classList.add('show'); else countEl.classList.remove('show'); }
+  }
+  if(a.permalink){ window.open(a.permalink,'_blank'); }
+  else if(a.message_text){
+    navigator.clipboard.writeText(a.message_text).then(()=>showSyncToast('ok','Mensagem copiada!')).catch(()=>{});
+  }
+}
+
+async function markAllSlackRead(){
+  const email=_currentUser&&_currentUser.email;
+  if(!email) return;
+  const sb=getSB(); if(!sb) return;
+  await sb.from('operator_slack_alerts').update({is_read:true}).eq('operator_id',email).eq('is_read',false);
+  _slackAlerts.forEach(a=>a.is_read=true);
+  renderSlackAlerts();
+  const countEl=document.getElementById('slack-count');
+  if(countEl){ countEl.textContent='0'; countEl.classList.remove('show'); }
+  showSyncToast('ok','Alertas limpos.');
+}
+
+// Auto-load slack alert count on init
+function initSlackAlerts(){
+  const email=_currentUser&&_currentUser.email;
+  if(!email) return;
+  loadSlackAlerts();
+  // Poll every 60s for new alerts
+  setInterval(()=>loadSlackAlerts(),60000);
 }
 </script>
 <!-- ── TASK EXECUTION OVERLAY ────────────────────────────────────── -->
