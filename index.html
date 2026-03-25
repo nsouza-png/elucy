@@ -1743,18 +1743,34 @@ async function callSyncDeals(){
   const {data:{session}}=await sb.auth.getSession();
   if(!session) return;
   _syncInProgress=true;
-  showSyncToast('load','Atualizando pipeline...');
+  const btn=document.getElementById('btn-refresh');
+  if(btn){btn.disabled=true;btn.style.opacity='0.5';}
+  showSyncToast('load','Sincronizando com Databricks...');
   try{
+    // 1. Enfileira sync request no Supabase — worker processa em ~2min
+    const reqId='sync_'+Date.now();
+    await sb.from('cockpit_requests').insert({
+      id: reqId,
+      operator_email: session.user.email,
+      deal_id: '_sync_pipeline',
+      request_type: 'sync_pipeline',
+      payload: JSON.stringify({operator_email: session.user.email, triggered_by:'manual_refresh'}),
+      status: 'pending',
+      created_at: new Date().toISOString()
+    });
+    // 2. Recarrega deals do Supabase (dados atuais enquanto sync roda)
     await loadDealsFromSupabase(session.user.email);
     _lastSyncAt=Date.now();
     const el=document.getElementById('sbdate');
     const now=new Date();
     const ts=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    if(el) el.textContent='Atualizado: '+ts;
+    if(el) el.textContent='Sync solicitado: '+ts+' (atualiza em ~2min)';
+    showSyncToast('ok','Sync solicitado — pipeline atualiza em ~2min.');
   }catch(err){
-    showSyncToast('err','Falha ao atualizar pipeline.');
+    showSyncToast('err','Falha ao solicitar sync: '+err.message);
   }finally{
     _syncInProgress=false;
+    if(btn){btn.disabled=false;btn.style.opacity='';}
   }
 }
 

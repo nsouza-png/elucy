@@ -112,42 +112,21 @@ window.FOCUS_MODES = FOCUS_MODES;
 // LAYER 2 — TAXONOMY CORE
 // ==================================================================
 
-// Revenue Lines — mapeamento canônico das linhas reais do G4
-// Fonte: production.diamond.funil_comercial (linha_de_receita_vigente + grupo_de_receita)
+// Revenue Lines — grupos canônicos reais do G4
+// Fonte: production.diamond.funil_comercial.grupo_de_receita (76 linhas → 10 grupos)
 var REVENUE_LINES = {
-  // Imersões Presenciais
-  imersao_presencial: { label:'Imersão Presencial', base:'qualified',   risk_after:3, line_weight:1.0  },
-  // Imersões Online
-  imersao_online:     { label:'Imersão Online',     base:'qualified',   risk_after:4, line_weight:0.9  },
-  // Social DM (Instagram founder — utm tallis/nardon/alfredo)
-  social_dm:          { label:'Social DM',          base:'touchpoints', risk_after:1, line_weight:0.75 },
-  // Perfil K (Social DM variante)
-  social_dm_k:        { label:'Social DM K',        base:'touchpoints', risk_after:1, line_weight:0.70 },
-  // Club / Scale / Continuidade
-  club:               { label:'Club',               base:'opportunity', risk_after:5, line_weight:0.85 },
-  scale:              { label:'Scale',              base:'opportunity', risk_after:5, line_weight:0.85 },
-  // Consulting / Harvard / Tank
-  consulting:         { label:'Consulting',         base:'meetings',    risk_after:5, line_weight:1.1  },
-  // Customer Experience
-  cx:                 { label:'Customer Experience',base:'qualified',   risk_after:4, line_weight:0.95 },
-  // Gestão de Pessoas / GP
-  gp:                 { label:'Gestão de Pessoas',  base:'qualified',   risk_after:4, line_weight:0.9  },
-  // Gestão & Estratégia
-  gestao:             { label:'Gestão & Estratégia',base:'qualified',   risk_after:3, line_weight:1.0  },
-  // Digital / Online / E-commerce
-  digital:            { label:'Digital/Online',     base:'leads',       risk_after:3, line_weight:0.7  },
-  // Eventos (participação, conferência)
-  eventos:            { label:'Eventos',            base:'qualified',   risk_after:5, line_weight:0.8  },
-  // Reativação (leads perdidos reengajados)
-  reativacao:         { label:'Reativação',         base:'leads',       risk_after:2, line_weight:0.6  },
-  // Abandono de Carrinho / Self Checkout
-  selfcheckout:       { label:'Self Checkout',      base:'leads',       risk_after:1, line_weight:0.5  },
-  // Field Sales / Outbound
-  field_sales:        { label:'Field Sales',        base:'meetings',    risk_after:7, line_weight:0.9  },
-  // Parceria / Indicação
-  parceria:           { label:'Parceria',           base:'qualified',   risk_after:7, line_weight:0.8  },
-  // Fallback genérico
-  imersao:            { label:'Imersão',            base:'qualified',   risk_after:3, line_weight:1.0  }
+  funil_marketing:  { label:'Funil de Marketing',        base:'qualified',   risk_after:3, line_weight:1.0  },
+  turmas:           { label:'Turmas',                    base:'qualified',   risk_after:4, line_weight:1.0  },
+  projetos_eventos: { label:'Projetos & Eventos',        base:'qualified',   risk_after:5, line_weight:0.9  },
+  social_dm:        { label:'Social DM',                 base:'touchpoints', risk_after:1, line_weight:0.75 },
+  social_dm_k:      { label:'Social DM K',               base:'touchpoints', risk_after:1, line_weight:0.70 },
+  selfcheckout:     { label:'Self Checkout',             base:'leads',       risk_after:1, line_weight:0.5  },
+  reativacao:       { label:'Reativação',                base:'leads',       risk_after:2, line_weight:0.6  },
+  expansao:         { label:'Expansão (Farmer/CS Corp)', base:'opportunity', risk_after:7, line_weight:0.9  },
+  renovacao:        { label:'Renovação',                 base:'opportunity', risk_after:5, line_weight:0.85 },
+  field_sales:      { label:'Field Sales',               base:'meetings',    risk_after:7, line_weight:0.9  },
+  aquisicao:        { label:'Time de Vendas - Aquisição',base:'qualified',   risk_after:3, line_weight:1.0  },
+  nao_definido:     { label:'Não Definido',              base:'leads',       risk_after:3, line_weight:0.6  }
 };
 window.REVENUE_LINES = REVENUE_LINES;
 
@@ -166,63 +145,47 @@ var KILL_SWITCHES = {
 };
 window.KILL_SWITCHES = KILL_SWITCHES;
 
-// resolveRevenueLine — classifica deal pela linha de receita real do G4
-// Lê: linha_de_receita_vigente, grupo_de_receita, origem_do_deal, utm_medium
-// REGRA: usar o campo mais específico primeiro, fallback no mais genérico
+// resolveRevenueLine — mapeia deal para grupo_de_receita canônico do G4
+// REGRA 1: se grupo_de_receita vier preenchido do Databricks → usar direto (fonte da verdade)
+// REGRA 2: fallback por linha_de_receita_vigente e utm_medium para casos sem grupo
 function resolveRevenueLine(deal){
-  var lr=(deal.linhaReceita||deal.linha_de_receita_vigente||'').toLowerCase();
-  var gr=(deal.grupo_de_receita||deal.grupoReceita||'').toLowerCase();
-  var origem=(deal.origem_do_deal||deal.origemDeal||'').toLowerCase();
-  var canal=(deal.canal||'').toLowerCase();
-  var utm=(deal.utm_medium||'').toLowerCase();
+  var lr=(deal.linhaReceita||deal.linha_de_receita_vigente||'').toLowerCase().trim();
+  var gr=(deal.grupo_de_receita||deal.grupoReceita||'').toLowerCase().trim();
+  var utm=(deal.utm_medium||'').toLowerCase().trim();
 
-  // Social DM — Instagram founder (tallis/nardon/alfredo) ou linha explícita
+  // REGRA 1 — grupo_de_receita direto do Databricks (fonte da verdade)
+  if(gr==='funil de marketing')          return 'funil_marketing';
+  if(gr==='turmas')                      return 'turmas';
+  if(gr==='projetos e eventos')          return 'projetos_eventos';
+  if(gr==='selfcheckout')                return 'selfcheckout';
+  if(gr==='expansão'||gr==='expansao')   return 'expansao';
+  if(gr==='renovação'||gr==='renovacao') return 'renovacao';
+  if(gr==='time de vendas - field sales') return 'field_sales';
+  if(gr==='time de vendas - aquisição'||gr==='time de vendas - aquisicao') return 'aquisicao';
+  if(gr==='não definido'||gr==='nao definido') return 'nao_definido';
+
+  // REGRA 2 — fallback por linha_de_receita_vigente (quando grupo vazio)
   if(lr.includes('[im] social dm')||lr.includes('social dm - perfil k')) {
     return lr.includes('perfil k') ? 'social_dm_k' : 'social_dm';
   }
   if(utm==='tallis'||utm==='nardon'||utm==='alfredo') return 'social_dm';
-  if(lr.includes('[im] social')||origem.includes('[im] social')) return 'social_dm';
+  if(lr.includes('[im] social'))  return 'social_dm';
+  if(lr.includes('reativ'))       return 'aquisicao'; // reativação = time de vendas
+  if(lr.includes('abandono')||lr.includes('[on] selfcheckout')||lr.includes('[on] outros')) return 'selfcheckout';
+  if(lr.includes('[fs]'))         return 'field_sales';
+  if(lr.includes('[skl]'))        return 'nao_definido';
+  if(lr.includes('[on]'))         return 'turmas'; // produtos online = turmas
+  if(lr.includes('[cm]'))         return 'funil_marketing';
+  if(lr.includes('farmer')||lr.includes('cs corporativo')) return 'expansao';
+  if(lr.includes('renovaç')||lr.includes('renovac')) return 'renovacao';
+  if(lr.includes('gestão e estratégia')||lr.includes('gestao e estrategia')) return 'turmas';
+  if(lr.includes('g4 traction')||lr.includes('g4 sales')||lr.includes('g4 frontier')||lr.includes('g4 scale')) return 'turmas';
+  if(lr.includes('g4 club')) return 'renovacao';
+  if(lr.includes('parceria')||lr.includes('patrocín')||lr.includes('indica')) return 'projetos_eventos';
+  if(lr.includes('scale experience')||lr.includes('g4 pelo brasil')||lr.includes('g4 alumni')||lr.includes('g4 valley')) return 'projetos_eventos';
 
-  // Abandono de carrinho / Self Checkout
-  if(lr.includes('abandono')||lr.includes('self checkout')||gr.includes('selfcheckout')||origem.includes('abandono')) return 'selfcheckout';
-
-  // Reativação
-  if(lr.includes('reativ')||origem.includes('reativ')) return 'reativacao';
-
-  // Club / Scale
-  if(lr.includes('scale')||gr.includes('scale')) return 'scale';
-  if(lr.includes('club')||gr.includes('club')) return 'club';
-
-  // Consulting / Harvard / Tank
-  if(lr.includes('consulting')||lr.includes('harvard')||lr.includes('tank')||gr.includes('consulting')) return 'consulting';
-
-  // Customer Experience
-  if(lr.includes('customer experience')||lr.includes('[cx]')||gr.includes('customer experience')) return 'cx';
-
-  // Gestão de Pessoas
-  if(lr.includes('gestao de pessoas')||lr.includes('gestão de pessoas')||lr.includes('[gp]')||gr.includes('gestão de pessoas')) return 'gp';
-
-  // Eventos
-  if(lr.includes('event')||gr.includes('event')||origem.includes('event')) return 'eventos';
-
-  // Parceria / Indicação
-  if(lr.includes('parceria')||lr.includes('indica')||gr.includes('parceria')) return 'parceria';
-
-  // Field Sales / Outbound
-  if(lr.includes('field')||canal==='ligacao') return 'field_sales';
-  if(lr.includes('outbound')||gr.includes('outbound')) return 'field_sales';
-
-  // Imersão Online (sigla [ON])
-  if(lr.includes('[on]')||lr.includes('online')||gr.includes('online')||gr.includes('digital')) return 'imersao_online';
-
-  // Digital / E-commerce
-  if(lr.includes('digital')||lr.includes('ecommerce')||lr.includes('e-commerce')) return 'digital';
-
-  // Gestão & Estratégia (e variantes — imersão presencial genérica)
-  if(lr.includes('gestao')||lr.includes('gestão')||lr.includes('[im]')||gr.includes('imers')) return 'imersao_presencial';
-
-  // Fallback — imersão genérica
-  return 'imersao';
+  // Fallback final — funil de marketing (forma mais comum de entrada sem grupo definido)
+  return 'funil_marketing';
 }
 window.resolveRevenueLine = resolveRevenueLine;
 
