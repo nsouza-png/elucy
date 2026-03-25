@@ -3351,21 +3351,41 @@ function toggleWaPanel(id,btnEl){
 }
 
 function parseWhatsAppMessages(raw){
-  // Formatos comuns:
-  // [23/03/2026, 07:00:00] Nome: mensagem
+  // Formatos comuns do WhatsApp BR:
+  // [12:55, 25/02/2026] Nome: mensagem   (hora antes da data — formato mais comum no BR)
+  // [25/02/2026, 12:55] Nome: mensagem   (data antes da hora)
   // 23/03/2026 07:00 - Nome: mensagem
   // 23/03/26, 07:00 - Nome: mensagem
   const lines=raw.split('\n');
   const msgs=[];
-  const re1=/^\[(\d{1,2}\/\d{1,2}\/\d{2,4}),?\s*(\d{1,2}:\d{2}(?::\d{2})?)\]\s*([^:]+):\s*(.+)/;
+  // re1a: [TIME, DATE] Sender: msg (BR format — hora antes)
+  const re1a=/^\[(\d{1,2}:\d{2}(?::\d{2})?),?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})\]\s*([^:]+):\s*(.+)/;
+  // re1b: [DATE, TIME] Sender: msg
+  const re1b=/^\[(\d{1,2}\/\d{1,2}\/\d{2,4}),?\s*(\d{1,2}:\d{2}(?::\d{2})?)\]\s*([^:]+):\s*(.+)/;
+  // re2: DATE TIME - Sender: msg
   const re2=/^(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(\d{1,2}:\d{2}(?::\d{2})?)\s*[-–]\s*([^:]+):\s*(.+)/;
   let current=null;
   for(const line of lines){
-    const m=line.match(re1)||line.match(re2);
+    let m=line.match(re1a);
+    if(m){
+      // Swap time/date to normalize: date=m[2], time=m[1]
+      if(current) msgs.push(current);
+      current={date:m[2],time:m[1],sender:m[3].trim(),text:m[4]};
+      continue;
+    }
+    m=line.match(re1b);
     if(m){
       if(current) msgs.push(current);
       current={date:m[1],time:m[2],sender:m[3].trim(),text:m[4]};
-    } else if(current&&line.trim()){
+      continue;
+    }
+    m=line.match(re2);
+    if(m){
+      if(current) msgs.push(current);
+      current={date:m[1],time:m[2],sender:m[3].trim(),text:m[4]};
+      continue;
+    }
+    if(current&&line.trim()){
       current.text+='\n'+line;
     }
   }
@@ -4273,7 +4293,7 @@ function showSyncToast(type,msg){
   if(old) old.remove();
   const t=document.createElement('div');
   t.id='sync-toast';
-  t.style.cssText='position:fixed;bottom:20px;right:20px;z-index:200;padding:10px 15px;border-radius:8px;font-size:12px;font-weight:600;max-width:320px;line-height:1.5;animation:fadeIn .2s ease';
+  t.style.cssText='position:fixed;bottom:20px;right:20px;z-index:9999;padding:10px 15px;border-radius:8px;font-size:12px;font-weight:600;max-width:320px;line-height:1.5;animation:fadeIn .2s ease';
   if(type==='ok') t.style.cssText+='background:rgba(34,197,94,.15);border:1px solid #22c55e;color:#22c55e';
   else t.style.cssText+='background:rgba(239,68,68,.15);border:1px solid #ef4444;color:#ef4444';
   t.textContent=msg;
