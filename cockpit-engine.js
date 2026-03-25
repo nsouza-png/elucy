@@ -2575,6 +2575,110 @@ async function syncDealRuntime(){
 
 window.syncDealRuntime = syncDealRuntime;
 
-console.log('[cockpit-engine v3.1] 8-Layer Architecture loaded — +Cadence Engine +Runtime Sync');
+// ==================================================================
+// LAYER 10 — TAXONOMY LOADER (V5)
+// Carrega taxonomy do Supabase, fallback para hardcoded
+// ==================================================================
+
+async function loadTaxonomy(){
+  var sb = _sb(); if(!sb) return;
+  try {
+    var rl = await sb.from('taxonomy_revenue_lines').select('line_slug,line_label,base_metric,risk_after_days,line_weight').eq('is_active',true);
+    if(rl.data && rl.data.length){
+      rl.data.forEach(function(r){
+        REVENUE_LINES[r.line_slug] = { label:r.line_label, base:r.base_metric, risk_after:r.risk_after_days, line_weight:r.line_weight };
+      });
+      console.log('[taxonomy] revenue_lines loaded: '+rl.data.length);
+    }
+    var ks = await sb.from('kill_switches').select('switch_slug,is_enabled');
+    if(ks.data && ks.data.length){
+      ks.data.forEach(function(k){ KILL_SWITCHES[k.switch_slug] = k.is_enabled; });
+      console.log('[taxonomy] kill_switches loaded: '+ks.data.length);
+    }
+    var fm = await sb.from('focus_modes').select('mode_slug,mode_label,icon,priority_task_types').eq('is_active',true);
+    if(fm.data && fm.data.length){
+      fm.data.forEach(function(f){
+        FOCUS_MODES[f.mode_slug] = { label:f.mode_label, icon:f.icon, priority:f.priority_task_types||[] };
+      });
+      console.log('[taxonomy] focus_modes loaded: '+fm.data.length);
+    }
+  } catch(e){ console.warn('[taxonomy] load error:', e.message); }
+}
+window.loadTaxonomy = loadTaxonomy;
+
+// ==================================================================
+// LAYER 11 — DM TOUCHPOINTS MIGRATION (V5)
+// ==================================================================
+
+var _origSaveDMTouchpoint = window.saveDMTouchpoint || saveDMTouchpoint;
+async function saveDMTouchpointV5(leadId, tpType, description, channel, framework){
+  var sb = _sb(); if(!sb) return _origSaveDMTouchpoint(leadId, tpType, description);
+  var opId = getOperatorId(); if(!opId) return;
+  var countRes = await sb.from('social_dm_touchpoints').select('id', {count:'exact'}).eq('lead_id', leadId);
+  var tpNumber = (countRes.count || 0) + 1;
+  var res = await sb.from('social_dm_touchpoints').insert({
+    lead_id: leadId, operator_email: opId, touchpoint_number: tpNumber,
+    touchpoint_type: tpType || 'outbound_dm', channel: channel || 'instagram',
+    direction: 'outbound', content_preview: (description||'').substring(0,200),
+    copy_framework: framework || null
+  });
+  if(res.error) console.warn('[dm-tp] insert error:', res.error.message);
+}
+if(typeof saveDMTouchpoint === 'function') saveDMTouchpoint = saveDMTouchpointV5;
+window.saveDMTouchpoint = saveDMTouchpointV5;
+
+// ==================================================================
+// LAYER 12 — SNAPSHOT SCHEDULER (V5)
+// ==================================================================
+
+async function syncDailySnapshot(){
+  var sb = _sb(); if(!sb) return;
+  var email = getOperatorId(); if(!email) return;
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var keys = Object.keys(map);
+  if(!keys.length) return;
+  var today = new Date().toISOString().slice(0,10);
+  var stats = { total:0, critical:0, high:0, medium:0, none:0,
+    dome:0, hot:0, warm:0, neutral:0,
+    sumAging:0, sumTemp:0, sumValue:0, sumUrgency:0, sumPriority:0 };
+  keys.forEach(function(id){
+    var d = map[id];
+    if((d.statusDeal||'').toLowerCase()==='perdido'||(d.statusDeal||'').toLowerCase()==='ganho') return;
+    enrichDealContext(d);
+    stats.total++;
+    var risk = (d._aging||{}).riskLevel||'none';
+    if(risk==='critical') stats.critical++; else if(risk==='high') stats.high++;
+    else if(risk==='medium') stats.medium++; else stats.none++;
+    var sig = d._signal||'NEUTRAL';
+    if(sig==='DOME') stats.dome++; else if(sig==='HOT') stats.hot++;
+    else if(sig==='WARM') stats.warm++; else stats.neutral++;
+    stats.sumAging += d._delta||0;
+    stats.sumTemp += d._temp||0;
+    stats.sumValue += d._oppValue||0;
+    stats.sumUrgency += d._urgency||0;
+    stats.sumPriority += d._urgency||0;
+  });
+  if(!stats.total) return;
+  var row = {
+    snapshot_date: today, period_type:'daily', operator_email:email,
+    revenue_line:null, stage:null, channel:null,
+    total_deals: stats.total,
+    risk_critical:stats.critical, risk_high:stats.high, risk_medium:stats.medium, risk_none:stats.none,
+    signal_dome:stats.dome, signal_hot:stats.hot, signal_warm:stats.warm, signal_neutral:stats.neutral,
+    avg_aging_days: +(stats.sumAging/stats.total).toFixed(1),
+    avg_temperature: +(stats.sumTemp/stats.total).toFixed(1),
+    avg_value_score: +(stats.sumValue/stats.total).toFixed(2),
+    avg_urgency: +(stats.sumUrgency/stats.total).toFixed(1),
+    avg_priority: +(stats.sumPriority/stats.total).toFixed(1),
+    pipeline_value: stats.sumValue,
+    formula_version:'v5.0', source:'cockpit_engine'
+  };
+  var res = await sb.from('analytics_snapshots').upsert(row, {onConflict:'snapshot_date,period_type,operator_email,revenue_line,stage,channel'});
+  if(res.error) console.warn('[snapshot] upsert error:', res.error.message);
+  else console.log('[snapshot] daily snapshot synced for '+email);
+}
+window.syncDailySnapshot = syncDailySnapshot;
+
+console.log('[cockpit-engine v5.0] 12-Layer Architecture loaded — V5 Schema Complete');
 
 })();
