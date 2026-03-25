@@ -1,10 +1,11 @@
 // ==================================================================
-// ELUCY COCKPIT ENGINE v8.0 — 15-Layer Architecture
+// ELUCY COCKPIT ENGINE v9.0 — 17-Layer Architecture
 // 1. Operator Context | 2. Taxonomy Core | 3. Runtime Deal Context
 // 4. Task Execution | 5. Analytics | 6. UI State | 7. Product Intelligence
 // 8. Cadence Engine | 9. Runtime Sync | 10. Taxonomy Loader
-// 11. DM Touchpoints | 12. Snapshot Scheduler | 13. V6 Forecast Calculator
+// 11. DM Touchpoints | 12. Snapshot Scheduler | 13. V7 Forecast Calculator
 // 14. Operator Performance Model | 15. Performance Report V3
+// 16. Framework Extractor Engine | 17. Framework UI
 // Incluir APOS cockpit.html carregar (antes do </body>)
 // ==================================================================
 
@@ -56,11 +57,7 @@ async function initOperatorContext(){
     _operatorCtx.role=data.role||'sdr';
     _operatorCtx.squad=data.squad||'';
     _operatorCtx.focus_mode=data.focus_mode||'velocidade';
-    if(data.meta_mensal){
-      var mm=data.meta_mensal;
-      if(typeof mm==='string') try{ mm=JSON.parse(mm); }catch(e){ mm=null; }
-      if(mm&&typeof mm==='object') Object.assign(_operatorCtx.meta_mensal,mm);
-    }
+    if(data.meta_mensal) try{ Object.assign(_operatorCtx.meta_mensal,JSON.parse(data.meta_mensal)); }catch(e){}
     _operatorCtx.permissions.can_view_team=data.role==='leader'||data.role==='manager';
     _operatorCtx.permissions.can_approve=data.role==='leader'||data.role==='manager';
     _operatorCtx.permissions.is_leader=data.role==='leader';
@@ -81,7 +78,7 @@ async function saveOperatorSettings(settings){
   const update={};
   if(settings.focus_mode){ update.focus_mode=settings.focus_mode; _operatorCtx.focus_mode=settings.focus_mode; }
   if(settings.meta_mensal){
-    update.meta_mensal=settings.meta_mensal;
+    update.meta_mensal=JSON.stringify(settings.meta_mensal);
     Object.assign(_operatorCtx.meta_mensal,settings.meta_mensal);
     _operatorCtx.meta_diaria.fups=Math.ceil(_operatorCtx.meta_mensal.fups/22);
     _operatorCtx.meta_diaria.qualificacoes=Math.ceil(_operatorCtx.meta_mensal.qualificacoes/22);
@@ -106,7 +103,7 @@ const FOCUS_MODES = {
   handoff:      { label:'Handoff',       priority:['handoff_prep','dvl_review','note_completion'], icon:'handshake' },
   reativacao:   { label:'Reativacao',    priority:['reativacao','no_show_recovery','follow_up'], icon:'refresh' },
   social_dm:    { label:'Social DM',     priority:['social_dm','follow_up','agendamento'], icon:'chat' },
-  alta_performance: { label:'Alta Performance', priority:['follow_up','handoff_prep','qualificacao'], icon:'trophy' }
+  imersao:      { label:'Imersao Focus', priority:['follow_up','handoff_prep','qualificacao'], icon:'trophy' }
 };
 window.FOCUS_MODES = FOCUS_MODES;
 
@@ -116,22 +113,15 @@ window.FOCUS_MODES = FOCUS_MODES;
 // ==================================================================
 
 var REVENUE_LINES = {
-  facebook_ads: { label:'Facebook Ads',    base:'qualified',    risk_after:3, line_weight:1.0  },
-  instagram:    { label:'Instagram',       base:'qualified',    risk_after:3, line_weight:0.95 },
-  social_dm:    { label:'Social DM',       base:'touchpoints',  risk_after:1, line_weight:0.85 },
-  chat:         { label:'Chat',            base:'qualified',    risk_after:2, line_weight:0.8  },
-  skills:       { label:'Skills',          base:'qualified',    risk_after:4, line_weight:0.75 },
-  lead_k:       { label:'Lead K',          base:'qualified',    risk_after:3, line_weight:0.9  },
-  outros:       { label:'Outros',          base:'leads',        risk_after:3, line_weight:0.7  },
-  incompleto:   { label:'Incompleto',      base:'leads',        risk_after:3, line_weight:0.5  },
-  ab_carrinho:  { label:'Ab. Carrinho',    base:'leads',        risk_after:2, line_weight:0.6  },
-  indicacao:    { label:'Indicação',       base:'qualified',    risk_after:5, line_weight:1.0  },
-  field_sales:  { label:'Field Sales',     base:'meetings',     risk_after:7, line_weight:0.9  },
-  reativacao:   { label:'Reativação',      base:'qualified',    risk_after:3, line_weight:0.7  },
-  selfcheckout: { label:'Self Checkout',   base:'leads',        risk_after:2, line_weight:0.6  },
-  eventos:      { label:'Eventos',         base:'qualified',    risk_after:5, line_weight:0.8  },
-  club:         { label:'Club',            base:'opportunity',  risk_after:5, line_weight:0.85 },
-  parceria:     { label:'Parceria',        base:'qualified',    risk_after:7, line_weight:0.8  }
+  imersao:    { label:'Imersao',     base:'qualified',    risk_after:3, line_weight:1.0  },
+  club:       { label:'Club',        base:'opportunity',  risk_after:5, line_weight:0.85 },
+  field_sales:{ label:'Field Sales', base:'meetings',     risk_after:7, line_weight:0.9  },
+  eventos:    { label:'Eventos',     base:'qualified',    risk_after:5, line_weight:0.8  },
+  digital:    { label:'Digital',     base:'leads',        risk_after:3, line_weight:0.7  },
+  social_dm:  { label:'Social DM',   base:'touchpoints',  risk_after:1, line_weight:0.75 },
+  outbound:   { label:'Outbound',    base:'leads',        risk_after:3, line_weight:0.65 },
+  parceria:   { label:'Parceria',    base:'qualified',    risk_after:7, line_weight:0.8  },
+  consulting: { label:'Consulting',  base:'meetings',     risk_after:5, line_weight:1.1  }
 };
 window.REVENUE_LINES = REVENUE_LINES;
 
@@ -151,69 +141,19 @@ var KILL_SWITCHES = {
 window.KILL_SWITCHES = KILL_SWITCHES;
 
 function resolveRevenueLine(deal){
-  var lr=(deal.linhaReceita||deal.linha_de_receita_vigente||'').toLowerCase().trim();
-  var gr=(deal.grupo_de_receita||deal.grupoReceita||'').toLowerCase().trim();
-  var etapa=(deal.etapa||deal.etapa_atual_no_pipeline||'').toLowerCase();
-
-  // 1. grupo_de_receita direto (campo já agrupado no Databricks)
-  if(gr){
-    if(gr.includes('facebook')) return 'facebook_ads';
-    if(gr.includes('instagram')) return 'instagram';
-    if(gr.includes('social dm')||gr.includes('social_dm')) return 'social_dm';
-    if(gr.includes('chat')) return 'chat';
-    if(gr.includes('skill')) return 'skills';
-    if(gr.includes('lead k')||gr.includes('lead_k')) return 'lead_k';
-    if(gr.includes('incomplet')) return 'incompleto';
-    if(gr.includes('abandon')||gr.includes('carrinho')) return 'ab_carrinho';
-    if(gr.includes('indica')) return 'indicacao';
-    if(gr.includes('field')) return 'field_sales';
-    if(gr.includes('reativa')) return 'reativacao';
-    if(gr.includes('selfcheckout')||gr.includes('self checkout')) return 'selfcheckout';
-    if(gr.includes('club')) return 'club';
-    if(gr.includes('parceria')) return 'parceria';
-    if(gr.includes('evento')) return 'eventos';
-  }
-
-  // 2. linha_de_receita_vigente — mapeamento por padrão de prefixo/nome
-  if(lr){
-    // Social DM (antes de Facebook/Instagram para não confundir)
-    if(lr.includes('social dm')) return 'social_dm';
-    // Facebook Ads
-    if(lr.includes('facebook')) return 'facebook_ads';
-    // Instagram (vários perfis: G4, Alfredo, Nardon, Tallis, Outros)
-    if(lr.includes('instagram')) return 'instagram';
-    // Chat
-    if(lr.includes('chat')) return 'chat';
-    // Skills ([SKL] CRM, Site, Especialista, WhatsApp, Email)
-    if(lr.includes('[skl]')||lr.includes('skill')) return 'skills';
-    // Lead K
-    if(lr.includes(' k ')||lr.includes(' k]')||lr.includes('- k ')||lr.includes('-k ')) return 'lead_k';
-    // Abandono de carrinho
-    if(lr.includes('abandon')||lr.includes('carrinho')) return 'ab_carrinho';
-    // Incompleto
-    if(lr.includes('incomplet')) return 'incompleto';
-    // Self Checkout
-    if(lr.includes('selfcheckout')||lr.includes('self checkout')) return 'selfcheckout';
-    // Indicação
-    if(lr.includes('indica')) return 'indicacao';
-    // Field Sales
-    if(lr.includes('[fs]')||lr.includes('field sale')) return 'field_sales';
-    // Reativação
-    if(lr.includes('reativa')) return 'reativacao';
-    // Club
-    if(lr.includes('club')) return 'club';
-    // Parceria
-    if(lr.includes('parceria')) return 'parceria';
-    // Eventos
-    if(lr.includes('evento')) return 'eventos';
-    // Google / Orgânico / Paid Testes → outros
-    if(lr.includes('google')||lr.includes('orgânico')||lr.includes('organico')||lr.includes('paid')) return 'outros';
-  }
-
-  // 3. Self Checkout pela etapa do pipeline
-  if(etapa.includes('self checkout')) return 'selfcheckout';
-
-  return 'outros';
+  var lr=(deal.linhaReceita||deal.linha_de_receita_vigente||'').toLowerCase();
+  var gr=(deal.grupo_de_receita||deal.grupoReceita||'').toLowerCase();
+  var canal=(deal.canal||'').toLowerCase();
+  var utm=(deal.utm_medium||'').toLowerCase();
+  if(lr.includes('social dm')||lr.includes('social media')||lr.includes('[im] social')||utm==='tallis'||utm==='nardon'||utm==='alfredo') return 'social_dm';
+  if(lr.includes('club')||gr.includes('club')) return 'club';
+  if(lr.includes('consulting')||gr.includes('consulting')) return 'consulting';
+  if(lr.includes('field')||lr.includes('outbound')||canal==='ligacao') return 'field_sales';
+  if(lr.includes('evento')||gr.includes('evento')) return 'eventos';
+  if(lr.includes('digital')||lr.includes('online')||gr.includes('digital')) return 'digital';
+  if(lr.includes('parceria')||gr.includes('parceria')) return 'parceria';
+  if(lr.includes('outbound')) return 'outbound';
+  return 'imersao';
 }
 window.resolveRevenueLine = resolveRevenueLine;
 
@@ -236,7 +176,7 @@ function calcOpportunityValue(deal){
   var stage_prob=STAGE_PROB[etapa]||0.10;
   var persona_weight=tier==='diamond'||tier==='gold'?1.1:tier==='silver'?1.0:0.9;
   var revLine=deal._revLine||resolveRevenueLine(deal);
-  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.outros;
+  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.imersao;
   var delta=deal.delta||deal._delta||0;
   var ra=lc.risk_after;
   var age_penalty=delta>ra*4?0.4:delta>ra*3?0.55:delta>ra*2?0.7:delta>ra?0.85:1.0;
@@ -251,7 +191,7 @@ window.calcOpportunityValue = calcOpportunityValue;
 
 function calcAgingRisk(deal){
   var revLine=deal._revLine||resolveRevenueLine(deal);
-  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.outros;
+  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.imersao;
   var delta=deal.delta||deal._delta||0;
   var ra=lc.risk_after;
   return { revLine:revLine, risk_after:ra, delta:delta, isAtRisk:delta>ra,
@@ -264,23 +204,21 @@ function calcConversionByLine(allDeals){
   var byLine={};
   allDeals.forEach(function(d){
     var line=d._revLine||resolveRevenueLine(d);
-    if(!byLine[line]) byLine[line]={leads:0,qualified:0,opp:0,won:0,lost:0,total_value:0};
+    if(!byLine[line]) byLine[line]={mql:0,sal:0,opp:0,won:0,lost:0,total_value:0};
     var s=byLine[line]; var status=(d.statusDeal||'').toLowerCase(); var fase=(d._fase||d.fase||'').toLowerCase();
-    s.leads++;
-    if(status==='ganho'){ s.qualified++;s.opp++;s.won++;s.total_value+=(d.revenueRaw||0); }
+    s.mql++;
+    if(status==='ganho'){ s.sal++;s.opp++;s.won++;s.total_value+=(d.revenueRaw||0); }
     else if(status==='perdido'||fase==='perdido'){
       var m=(d.motivoLost||d.motivo_lost||'').toLowerCase();
-      if(m.indexOf('[validacao]')!==0) s.qualified++;
+      if(m.indexOf('[validacao]')!==0) s.sal++;
       if(m.indexOf('[negociacao]')===0||m.indexOf('[im]')===0) s.opp++;
       s.lost++;
-    } else { if(fase!=='mql'&&fase) s.qualified++; if(fase==='oportunidade'||fase==='negociacao'||fase==='negociação') s.opp++; }
+    } else { if(fase!=='mql') s.sal++; if(fase==='oportunidade'||fase==='negociacao') s.opp++; }
   });
   Object.keys(byLine).forEach(function(k){ var s=byLine[k];
-    // Backward compat aliases for existing consumers
-    s.mql=s.leads; s.sal=s.qualified;
-    s.cr_mql_sal=s.leads>0?Math.round(s.qualified/s.leads*1000)/10:0;
-    s.cr_sal_opp=s.qualified>0?Math.round(s.opp/s.qualified*1000)/10:0;
-    s.cr_mql_opp=s.leads>0?Math.round(s.opp/s.leads*1000)/10:0;
+    s.cr_mql_sal=s.mql>0?Math.round(s.sal/s.mql*1000)/10:0;
+    s.cr_sal_opp=s.sal>0?Math.round(s.opp/s.sal*1000)/10:0;
+    s.cr_mql_opp=s.mql>0?Math.round(s.opp/s.mql*1000)/10:0;
     s.avg_ticket=s.won>0?Math.round(s.total_value/s.won):0;
   });
   return byLine;
@@ -300,7 +238,7 @@ function calcEfficiencyByChannel(allDeals){
     if(etapa!=='novo lead'&&etapa!=='dia 01') s.qualified++;
   });
   Object.keys(byCanal).forEach(function(k){ var s=byCanal[k];
-    var lc=REVENUE_LINES[s.line]||REVENUE_LINES.outros;
+    var lc=REVENUE_LINES[s.line]||REVENUE_LINES.imersao;
     var base=s.deals;
     if(lc.base==='touchpoints') base=Math.max(s.touchpoints,1);
     else if(lc.base==='meetings') base=Math.max(s.meetings,1);
@@ -367,7 +305,10 @@ var TASK_TYPES = {
   social_dm:       { label:'Social DM',        icon:'chat',   color:'accent2' },
   handoff_prep:    { label:'Handoff Prep',     icon:'hand',   color:'green' },
   note_completion: { label:'Nota CRM',         icon:'note',   color:'text2' },
-  dvl_review:      { label:'DVL Review',       icon:'check',  color:'accent' }
+  dvl_review:      { label:'DVL Review',       icon:'check',  color:'accent' },
+  framework_gap_fill:{ label:'Framework Gap',  icon:'target', color:'yellow' },
+  authority_confirmation:{ label:'Authority Check', icon:'user', color:'accent' },
+  pain_quantification:{ label:'Pain Quantify', icon:'alert',  color:'red' }
 };
 window.TASK_TYPES = TASK_TYPES;
 
@@ -1350,7 +1291,7 @@ function analyzeProductUsage(){
   });
   if(bestLine && bestCR > 0){
     insights.push({ type:'opportunity', severity:'info',
-      message:'Linha mais promissora: '+(REVENUE_LINES[bestLine]?REVENUE_LINES[bestLine].label:bestLine)+' com '+bestCR+'% de conversao Lead-Qualificado',
+      message:'Linha mais promissora: '+(REVENUE_LINES[bestLine]?REVENUE_LINES[bestLine].label:bestLine)+' com '+bestCR+'% de conversao MQL-SAL',
       suggestion:'Priorize deals dessa linha no focus mode'
     });
   }
@@ -1537,9 +1478,9 @@ async function renderHome(){
     + '</div>'
     + '<div class="home-meta-grid">'
     + '<div class="home-meta"><div class="home-meta-label">FUPs</div><div class="home-meta-value">'+(todayStats.fups||0)+' / '+meta.fups+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(fupPct>=100?' done':'')+'" style="width:'+fupPct+'%"></div></div></div>'
-    + '<div class="home-meta"><div class="home-meta-label">Qualificações</div><div class="home-meta-value">'+(todayStats.qualificacoes||0)+' / '+meta.qualificacoes+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(qualPct>=100?' done':'')+'" style="width:'+qualPct+'%"></div></div></div>'
+    + '<div class="home-meta"><div class="home-meta-label">Qualificacoes</div><div class="home-meta-value">'+(todayStats.qualificacoes||0)+' / '+meta.qualificacoes+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(qualPct>=100?' done':'')+'" style="width:'+qualPct+'%"></div></div></div>'
     + '<div class="home-meta"><div class="home-meta-label">Handoffs</div><div class="home-meta-value">'+(todayStats.handoffs||0)+' / '+meta.handoffs+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(handPct>=100?' done':'')+'" style="width:'+handPct+'%"></div></div></div>'
-    + '<div class="home-meta"><div class="home-meta-label">Oportunidades (mês)</div><div class="home-meta-value">'+oppActual+' / '+oppTarget+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(oppPct>=100?' done':'')+'" style="width:'+oppPct+'%"></div></div></div>'
+    + '<div class="home-meta"><div class="home-meta-label">OPP Mensal</div><div class="home-meta-value">'+oppActual+' / '+oppTarget+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(oppPct>=100?' done':'')+'" style="width:'+oppPct+'%"></div></div></div>'
     + '</div></div>';
 
   // BLOCO 2 — Tarefas criticas
@@ -2084,7 +2025,7 @@ function calcTimelineIntelligence(deal){
   var fase=(deal.fase||deal.fase_atual_no_processo||deal._fase||'').toLowerCase();
   var status=(deal.statusDeal||deal.status_do_deal||'').toLowerCase();
   var revLine=deal._revLine||resolveRevenueLine(deal);
-  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.outros;
+  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.imersao;
 
   // ── IDADE DO DEAL ──
   var ageDays=delta;
@@ -2857,9 +2798,10 @@ async function syncDailySnapshot(){
 window.syncDailySnapshot = syncDailySnapshot;
 
 // ==================================================================
-// LAYER 13 — V6 FORECAST CALCULATOR
-// Qualitative Forecast Engine: combina quantitativo (stage/aging/velocity)
+// LAYER 13 — V7 FORECAST CALCULATOR
+// Qualitative Forecast Engine V7: combina quantitativo (stage/aging/velocity)
 // com pesos qualitativos (show/note/authority/urgency/behavior/next_step)
+// + qualitative_score do Framework Extractor (SPICED/MEDDIC).
 // Gera forecast_score_adjusted, confidence, e explainability completa.
 // Sync resultado para forecast_runtime + forecast_events no Supabase.
 // ==================================================================
@@ -2869,7 +2811,7 @@ function calcForecastV6(deal){
   var aging = deal._aging || calcAgingRisk(deal);
   var delta = deal._delta || deal.delta || 0;
   var revLine = deal._revLine || resolveRevenueLine(deal);
-  var lc = REVENUE_LINES[revLine] || REVENUE_LINES.outros;
+  var lc = REVENUE_LINES[revLine] || REVENUE_LINES.imersao;
   var ra = lc.risk_after;
 
   // --- QUANTITATIVE BASELINE ---
@@ -2976,8 +2918,15 @@ function calcForecastV6(deal){
   var qualitative_weight = +(show_weight * note_weight * authority_weight * urgency_weight * behavior_weight * next_step_weight).toFixed(4);
   qualitative_weight = Math.max(0.10, Math.min(2.50, qualitative_weight));
 
+  // V7: Framework qualitative_score from deal_framework_runtime (SPICED + MEDDIC)
+  var framework_qs = 1.0; // default neutral if no extraction yet
+  var framework_data = deal._frameworkRuntime || null;
+  if(framework_data && typeof framework_data.qualitative_score === 'number'){
+    framework_qs = Math.max(0.20, Math.min(1.30, framework_data.qualitative_score));
+  }
+
   var forecast_score_raw = +quantitative_score.toFixed(4);
-  var forecast_score_adjusted = +((forecast_score_raw * qualitative_weight) - no_show_penalty).toFixed(4);
+  var forecast_score_adjusted = +((forecast_score_raw * qualitative_weight * framework_qs) - no_show_penalty).toFixed(4);
   forecast_score_adjusted = Math.max(0, Math.min(1.0, forecast_score_adjusted));
 
   // --- CONFIDENCE ---
@@ -2987,8 +2936,11 @@ function calcForecastV6(deal){
   if(tp > 0) data_points += Math.min(3, tp);
   if(deal._timeline && deal._timeline.stagesVisited > 1) data_points += 1;
   if(cargo) data_points += 1;
-  // confidence: 0-1 based on data richness
-  var forecast_confidence = +(Math.min(1.0, data_points / 10)).toFixed(4);
+  // V7: framework extractions boost confidence
+  if(framework_data && framework_data.extraction_count > 0) data_points += Math.min(3, framework_data.extraction_count);
+  if(framework_data && framework_data.overall_coverage >= 0.45) data_points += 1;
+  // confidence: 0-1 based on data richness (V7 max 13)
+  var forecast_confidence = +(Math.min(1.0, data_points / 13)).toFixed(4);
   var confidence_level = forecast_confidence >= 0.7 ? 'high' : forecast_confidence >= 0.4 ? 'medium' : 'low';
 
   // --- FORECAST VALUE ---
@@ -3006,11 +2958,31 @@ function calcForecastV6(deal){
   if(risk_signals.length) reason_secondary = 'Riscos: ' + risk_signals.slice(0,3).join(', ');
   else if(positive_signals.length) reason_secondary = 'Destaques: ' + positive_signals.slice(0,3).join(', ');
 
+  // V7: Framework-based signals
+  if(framework_data){
+    if(framework_data.spiced_avg >= 0.70) positive_signals.push('SPICED strong ('+framework_data.spiced_avg.toFixed(2)+')');
+    else if(framework_data.spiced_avg > 0 && framework_data.spiced_avg < 0.35) risk_signals.push('SPICED weak ('+framework_data.spiced_avg.toFixed(2)+')');
+    if(framework_data.meddic_avg >= 0.70) positive_signals.push('MEDDIC strong ('+framework_data.meddic_avg.toFixed(2)+')');
+    else if(framework_data.meddic_avg > 0 && framework_data.meddic_avg < 0.35) risk_signals.push('MEDDIC weak ('+framework_data.meddic_avg.toFixed(2)+')');
+    if(framework_data.overall_coverage < 0.30 && framework_data.extraction_count > 0) risk_signals.push('Low framework coverage ('+Math.round(framework_data.overall_coverage*100)+'%)');
+    if(framework_data.main_gap_1) risk_signals.push('Gap: '+framework_data.main_gap_1);
+  }
+
   // --- NEXT ACTION DERIVED ---
   var next_action = nba.type || 'follow_up';
   var next_action_reason = nba.label || '';
   if(forecast_score_adjusted < 0.10 && confidence_level !== 'low'){
     next_action = 'forecast_repair'; next_action_reason = 'Forecast muito baixo com confianca '+confidence_level+' — revisar deal';
+  }
+  // V7: framework gap fills
+  if(framework_data && framework_data.overall_coverage < 0.45 && framework_data.extraction_count > 0 && next_action !== 'forecast_repair'){
+    if(!framework_data.authority_score || framework_data.authority_score < 0.30){
+      next_action = 'authority_confirmation'; next_action_reason = 'Economic buyer nao confirmado — perguntar quem decide';
+    } else if(framework_data.spiced_pain < 0.30){
+      next_action = 'pain_quantification'; next_action_reason = 'Dor nao quantificada — explorar impacto financeiro';
+    } else {
+      next_action = 'framework_gap_fill'; next_action_reason = 'Coverage SPICED/MEDDIC baixo — cobrir gaps: '+(framework_data.main_gap_1||'');
+    }
   }
 
   return {
@@ -3035,16 +3007,24 @@ function calcForecastV6(deal){
     risk_signals: risk_signals,
     next_action: next_action,
     next_action_reason: next_action_reason,
+    // V7 framework data
+    framework_qualitative_score: framework_qs,
+    spiced_avg: framework_data ? framework_data.spiced_avg : null,
+    meddic_avg: framework_data ? framework_data.meddic_avg : null,
+    framework_coverage: framework_data ? framework_data.overall_coverage : null,
+    framework_confidence: framework_data ? framework_data.confidence_score : null,
     explain_json: {
       quantitative: { stage_prob:stage_prob, aging_factor:aging_factor, velocity_factor:velocity_factor, engagement_factor:engagement_factor },
       qualitative: { show_weight:show_weight, note_weight:note_weight, authority_weight:authority_weight, urgency_weight:urgency_weight, behavior_weight:behavior_weight, next_step_weight:next_step_weight },
+      framework: { qualitative_score:framework_qs, spiced_avg:framework_data?framework_data.spiced_avg:null, meddic_avg:framework_data?framework_data.meddic_avg:null, coverage:framework_data?framework_data.overall_coverage:null },
       no_show_penalty: no_show_penalty,
       data_points: data_points,
       signals: { positive:positive_signals, risk:risk_signals }
     }
   };
 }
-window.calcForecastV6 = calcForecastV6;
+window.calcForecastV7 = calcForecastV6;
+window.calcForecastV6 = calcForecastV6; // backward compat
 
 // Attach forecast to enrichDealContext
 var _origEnrichDealContext = enrichDealContext;
@@ -3086,9 +3066,9 @@ async function syncForecastRuntime(){
       data_points_count: f.explain_json.data_points,
       predicted_outcome: f.forecast_score_adjusted >= 0.50 ? 'likely_win' : f.forecast_score_adjusted >= 0.25 ? 'working' : 'at_risk',
       predicted_value: f.forecast_value,
-      formula_version: 'v6.0',
+      formula_version: 'v7.0',
       // V6 columns
-      forecast_version: 'v6',
+      forecast_version: 'v7',
       stage_probability_v6: f.stage_probability_v6,
       qualitative_weight: f.qualitative_weight,
       show_weight: f.show_weight,
@@ -3108,6 +3088,12 @@ async function syncForecastRuntime(){
       risk_signals: JSON.stringify(f.risk_signals),
       next_action: f.next_action,
       next_action_reason: f.next_action_reason,
+      // V7 columns
+      qualitative_score_v7: f.framework_qualitative_score,
+      spiced_avg: f.spiced_avg,
+      meddic_avg: f.meddic_avg,
+      framework_coverage: f.framework_coverage,
+      framework_confidence: f.framework_confidence,
       explain_json: JSON.stringify(f.explain_json),
       updated_at: new Date().toISOString()
     });
@@ -3120,7 +3106,7 @@ async function syncForecastRuntime(){
       source_id: email,
       delta_forecast: f.forecast_score_adjusted,
       reason: f.reason_main,
-      payload: JSON.stringify({ adjusted:f.forecast_score_adjusted, confidence:f.forecast_confidence, version:'v6' })
+      payload: JSON.stringify({ adjusted:f.forecast_score_adjusted, confidence:f.forecast_confidence, framework_qs:f.framework_qualitative_score, version:'v7' })
     });
   });
 
@@ -3146,7 +3132,7 @@ async function syncForecastRuntime(){
     }
   }
 
-  console.log('[forecast-sync] ' + synced + '/' + rows.length + ' deals forecast synced (v6)');
+  console.log('[forecast-sync] ' + synced + '/' + rows.length + ' deals forecast synced (v7)');
   return synced;
 }
 window.syncForecastRuntime = syncForecastRuntime;
@@ -3218,7 +3204,7 @@ async function calcOperatorPerformance(periodType, periodKey){
 
   // ---- Fetch deals for conversion data ----
   var dealsRes = await sb.from('deals')
-    .select('deal_id,fase_atual_no_processo,etapa_atual_no_pipeline,status_do_deal,revenue,valor_da_oportunidade,created_at_crm,linha_de_receita_vigente,grupo_de_receita,utm_medium,canal_de_marketing')
+    .select('deal_id,fase_atual_no_processo,etapa_atual_no_pipeline,status_do_deal,revenue,valor_da_oportunidade,created_at_crm')
     .eq('operator_email', email);
   var allDeals = (dealsRes.data || []);
 
@@ -3260,20 +3246,18 @@ async function calcOperatorPerformance(periodType, periodKey){
   ).toFixed(4);
 
   // ==================================================
-  // BLOCO 2: CONVERSAO (funil de qualificação)
-  // fase_atual_no_processo = classificação (SAL, Conectado, Agendado, Oportunidade...)
-  // etapa_atual_no_pipeline = etapa operacional (Novo Lead, Dia 02, Conectados, Agendamento...)
+  // BLOCO 2: CONVERSAO
   // ==================================================
   var funnel = { mql:0, sal:0, conectado:0, agendamento:0, show:0, opp:0, won:0, lost:0 };
   allDeals.forEach(function(d){
     var fase = (d.fase_atual_no_processo || '').toLowerCase();
     var etapa = (d.etapa_atual_no_pipeline || '').toLowerCase();
     var status = (d.status_do_deal || '').toLowerCase();
-    funnel.mql++; // mql = total leads (persistence key)
-    if(fase && fase !== 'mql') funnel.sal++; // sal = qualificados (persistence key)
-    if(etapa === 'conectados' || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('oportunidade') || etapa.includes('negociacao') || etapa.includes('fechamento')) funnel.conectado++;
-    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('oportunidade') || etapa.includes('negociacao') || etapa.includes('fechamento')) funnel.agendamento++;
-    if(fase === 'oportunidade' || fase === 'negociação' || fase === 'negociacao' || status === 'ganho') funnel.opp++;
+    funnel.mql++;
+    if(fase !== 'mql') funnel.sal++;
+    if(etapa === 'conectados' || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('oportunidade') || etapa.includes('negociacao')) funnel.conectado++;
+    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('oportunidade') || etapa.includes('negociacao')) funnel.agendamento++;
+    if(status === 'ganho' || etapa.includes('oportunidade') || etapa.includes('negociacao')) funnel.opp++;
     if(status === 'ganho') funnel.won++;
     if(status === 'perdido') funnel.lost++;
   });
@@ -3309,7 +3293,7 @@ async function calcOperatorPerformance(periodType, periodKey){
   runtimeDeals.forEach(function(r){
     if(!r.aging_days && r.aging_days !== 0) return;
     agingSum += r.aging_days; agingCount++;
-    var revLine = r._revLine || resolveRevenueLine(r) || 'outros';
+    var revLine = 'imersao'; // default
     var riskAfter = (REVENUE_LINES[revLine] || {}).risk_after || 3;
     if(r.aging_days > riskAfter * 2) slaRisk++;
     if(!r.last_touch_at) inactive++;
@@ -3706,32 +3690,22 @@ async function calcPerformanceReportV3(periodType, periodKey){
   volume.deals_worked = Object.keys(dealsWorkedSet).length;
 
   // ── BLOCK 3: CONVERSÃO ──
-  // Taxonomia: fase_atual_no_processo = classificação de qualificação (SAL, Conectado, Agendado, Oportunidade, Ganho, Perdido)
-  //            etapa_atual_no_pipeline = etapa operacional (Novo Lead, Dia 02-05, Conectados, Agendamento, Entrevista, etc.)
-  var funnel = { leads:0, qualified:0, connected:0, scheduled:0, show:0, opp:0, won:0, lost:0 };
+  var funnel = { mql:0, sal:0, connected:0, scheduled:0, show:0, opp:0, won:0, lost:0 };
   deals.forEach(function(d){
-    funnel.leads++;
-    var fase = (d._fase || d.fase || d.fase_atual_no_processo || '').toLowerCase();
-    var etapa = (d.etapa || d.etapa_atual_no_pipeline || '').toLowerCase();
+    funnel.mql++;
+    var etapa = (d.etapa || d.fase || d.fase_atual_no_processo || '').toLowerCase();
+    if(etapa.includes('dia ') || etapa.includes('conectad') || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade') || etapa.includes('negoc')) funnel.sal++;
+    if(etapa.includes('conectad')) funnel.connected++;
+    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend')) funnel.scheduled++;
+    if(etapa.includes('entrevista')) funnel.show++;
+    if(etapa.includes('oportunidade') || etapa.includes('negoc')) funnel.opp++;
     var status = (d.statusDeal || d.status_do_deal || '').toLowerCase();
-    // Qualificado = qualquer deal que saiu de MQL (fase != null e != vazio)
-    if(fase && fase !== 'mql') funnel.qualified++;
-    // Conectado = etapa de pipeline indica contato feito
-    if(etapa.includes('conectad') || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade') || etapa.includes('negoc') || etapa.includes('fechamento')) funnel.connected++;
-    // Agendado = etapa indica agendamento/entrevista
-    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade') || etapa.includes('negoc') || etapa.includes('fechamento')) funnel.scheduled++;
-    // Show = entrevista realizada
-    if(etapa.includes('entrevista') || etapa.includes('oportunidade') || etapa.includes('negoc') || etapa.includes('fechamento')) funnel.show++;
-    // Oportunidade = fase de qualificação indica oportunidade real
-    if(fase === 'oportunidade' || fase === 'negociação' || fase === 'negociacao' || status === 'ganho') funnel.opp++;
     if(status === 'ganho' || status === 'won') funnel.won++;
     if(status === 'perdido' || status === 'lost') funnel.lost++;
   });
-  // Alias for backward compat with persistence keys
-  funnel.mql = funnel.leads; funnel.sal = funnel.qualified;
   var conversion = {
-    mql_sal: funnel.leads > 0 ? funnel.qualified / funnel.leads : 0,
-    sal_connected: funnel.qualified > 0 ? funnel.connected / funnel.qualified : 0,
+    mql_sal: funnel.mql > 0 ? funnel.sal / funnel.mql : 0,
+    sal_connected: funnel.sal > 0 ? funnel.connected / funnel.sal : 0,
     connected_scheduled: funnel.connected > 0 ? funnel.scheduled / funnel.connected : 0,
     scheduled_show: funnel.scheduled > 0 ? funnel.show / funnel.scheduled : 0,
     show_opp: funnel.show > 0 ? funnel.opp / funnel.show : 0,
@@ -3742,16 +3716,15 @@ async function calcPerformanceReportV3(periodType, periodKey){
   var linePerf = {};
   deals.forEach(function(d){
     var rl = d._revLine || resolveRevenueLine(d);
-    if(!linePerf[rl]) linePerf[rl] = { leads:0, qualified:0, connected:0, scheduled:0, show:0, opp:0, won:0, lost:0, tickets:[], aging:[] };
+    if(!linePerf[rl]) linePerf[rl] = { leads:0, sal:0, connected:0, scheduled:0, show:0, opp:0, won:0, lost:0, tickets:[], aging:[] };
     var lp = linePerf[rl];
     lp.leads++;
-    var fase = (d._fase || d.fase || d.fase_atual_no_processo || '').toLowerCase();
-    var etapa = (d.etapa || d.etapa_atual_no_pipeline || '').toLowerCase();
-    if(fase && fase !== 'mql') lp.qualified++;
-    if(etapa.includes('conectad') || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade') || etapa.includes('negoc') || etapa.includes('fechamento')) lp.connected++;
-    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade') || etapa.includes('negoc') || etapa.includes('fechamento')) lp.scheduled++;
-    if(etapa.includes('entrevista') || etapa.includes('oportunidade') || etapa.includes('negoc') || etapa.includes('fechamento')) lp.show++;
-    if(fase === 'oportunidade' || fase === 'negociação' || fase === 'negociacao' || (d.statusDeal||d.status_do_deal||'').toLowerCase() === 'ganho') lp.opp++;
+    var etapa = (d.etapa || d.fase || '').toLowerCase();
+    if(etapa.includes('dia ') || etapa.includes('conectad') || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade')) lp.sal++;
+    if(etapa.includes('conectad')) lp.connected++;
+    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend')) lp.scheduled++;
+    if(etapa.includes('entrevista')) lp.show++;
+    if(etapa.includes('oportunidade')) lp.opp++;
     var status = (d.statusDeal || d.status_do_deal || '').toLowerCase();
     if(status === 'ganho') lp.won++;
     if(status === 'perdido') lp.lost++;
@@ -3936,13 +3909,13 @@ async function calcPerformanceReportV3(periodType, periodKey){
       return {
         operator_email: email, qualificador_name: qname, revenue_line: rl,
         period_type: periodType, period_key: periodKey,
-        leads_count: lp.leads, sal_count: lp.qualified||0, connected_count: lp.connected,
+        leads_count: lp.leads, sal_count: lp.sal, connected_count: lp.connected,
         scheduled_count: lp.scheduled, show_count: lp.show, opp_count: lp.opp,
         won_count: lp.won, lost_count: lp.lost,
         avg_ticket: Math.round(avgT), pipeline_value: Math.round(lp.tickets.reduce(function(a,b){return a+b;},0)),
         won_value: 0, avg_aging_days: Math.round(avgA * 10) / 10,
-        cr_mql_sal: lp.leads > 0 ? (lp.qualified||0) / lp.leads : 0,
-        cr_sal_connected: (lp.qualified||0) > 0 ? lp.connected / (lp.qualified||1) : 0,
+        cr_mql_sal: lp.leads > 0 ? lp.sal / lp.leads : 0,
+        cr_sal_connected: lp.sal > 0 ? lp.connected / lp.sal : 0,
         cr_connected_scheduled: lp.connected > 0 ? lp.scheduled / lp.connected : 0,
         cr_scheduled_show: lp.scheduled > 0 ? lp.show / lp.scheduled : 0,
         cr_show_opp: lp.show > 0 ? lp.opp / lp.show : 0,
@@ -3983,18 +3956,18 @@ function renderPerformanceReportV3(report, containerId){
   var m = report.meta;
   html += '<div class="pv3-section"><div class="pv3-sec-title">Meta e Progresso</div>';
   html += '<div class="pv3-kpi-row">';
-  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+m.actual_sal+'/'+m.target_sal+'</div><div class="pv3-kpi-l">Qualificados</div></div>';
-  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+m.actual_opp+'/'+m.target_opp+'</div><div class="pv3-kpi-l">Oportunidades</div></div>';
+  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+m.actual_sal+'/'+m.target_sal+'</div><div class="pv3-kpi-l">SAL</div></div>';
+  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+m.actual_opp+'/'+m.target_opp+'</div><div class="pv3-kpi-l">OPP</div></div>';
   html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+(Math.round(m.achievement_rate * 100))+'%</div><div class="pv3-kpi-l">Atingimento</div></div>';
   html += '</div></div>';
 
   // ── Faixa 2: Funil ──
   var f = report.funnel;
-  html += '<div class="pv3-section"><div class="pv3-sec-title">Funil de Qualificação</div>';
+  html += '<div class="pv3-section"><div class="pv3-sec-title">Funil</div>';
   html += '<div class="pv3-funnel">';
   var funnelStages = [
-    {k:'mql',l:'Leads'},{k:'sal',l:'Qualificados'},{k:'connected',l:'Conectados'},{k:'scheduled',l:'Agendados'},
-    {k:'show',l:'Show'},{k:'opp',l:'Oportunidades'},{k:'won',l:'Ganhos'}
+    {k:'mql',l:'MQL'},{k:'sal',l:'SAL'},{k:'connected',l:'Conect.'},{k:'scheduled',l:'Agend.'},
+    {k:'show',l:'Show'},{k:'opp',l:'OPP'},{k:'won',l:'Won'}
   ];
   var maxF = Math.max(f.mql, 1);
   funnelStages.forEach(function(st){
@@ -4006,10 +3979,10 @@ function renderPerformanceReportV3(report, containerId){
 
   // ── Faixa 3: Conversão ──
   var c = report.conversion;
-  html += '<div class="pv3-section"><div class="pv3-sec-title">Conversão por Fase</div>';
+  html += '<div class="pv3-section"><div class="pv3-sec-title">Conversão por Etapa</div>';
   html += '<div class="pv3-kpi-row">';
-  [['mql_sal','Lead→Qualif.'],['sal_connected','Qualif.→Conect.'],['connected_scheduled','Conect.→Agend.'],
-   ['scheduled_show','Agend.→Show'],['show_opp','Show→Oport.'],['opp_won','Oport.→Ganho']].forEach(function(pair){
+  [['mql_sal','MQL→SAL'],['sal_connected','SAL→Con.'],['connected_scheduled','Con.→Ag.'],
+   ['scheduled_show','Ag.→Show'],['show_opp','Show→OPP'],['opp_won','OPP→Won']].forEach(function(pair){
     var val = Math.round((c[pair[0]] || 0) * 100);
     html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+val+'%</div><div class="pv3-kpi-l">'+pair[1]+'</div></div>';
   });
@@ -4073,7 +4046,7 @@ function renderPerformanceReportV3(report, containerId){
   if(rlKeys.length > 0){
     html += '<div class="pv3-section"><div class="pv3-sec-title">Eficiência por Linha de Receita</div>';
     html += '<div class="pv3-line-table"><table><thead><tr>';
-    html += '<th>Linha</th><th>Leads</th><th>Qualif.</th><th>Conect.</th><th>Agend.</th><th>Show</th><th>Oport.</th><th>Ganhos</th><th>CR L→Q</th><th>Aging</th>';
+    html += '<th>Linha</th><th>Leads</th><th>SAL</th><th>Con.</th><th>Ag.</th><th>Show</th><th>OPP</th><th>Won</th><th>CR M→S</th><th>Aging</th>';
     html += '</tr></thead><tbody>';
     rlKeys.forEach(function(rl){
       var l = lp[rl];
@@ -4081,9 +4054,9 @@ function renderPerformanceReportV3(report, containerId){
       var avgA = l.aging.length > 0 ? Math.round(l.aging.reduce(function(a,b){return a+b;},0) / l.aging.length * 10) / 10 : 0;
       html += '<tr>';
       html += '<td><b>'+_escHtml(cfg.label)+'</b></td>';
-      html += '<td>'+l.leads+'</td><td>'+(l.qualified||0)+'</td><td>'+l.connected+'</td><td>'+l.scheduled+'</td>';
+      html += '<td>'+l.leads+'</td><td>'+l.sal+'</td><td>'+l.connected+'</td><td>'+l.scheduled+'</td>';
       html += '<td>'+l.show+'</td><td>'+l.opp+'</td><td>'+l.won+'</td>';
-      html += '<td>'+(l.leads>0?Math.round((l.qualified||0)/l.leads*100):0)+'%</td>';
+      html += '<td>'+(l.leads>0?Math.round(l.sal/l.leads*100):0)+'%</td>';
       html += '<td>'+avgA+'d</td>';
       html += '</tr>';
     });
@@ -4094,6 +4067,427 @@ function renderPerformanceReportV3(report, containerId){
 }
 window.renderPerformanceReportV3 = renderPerformanceReportV3;
 
-console.log('[cockpit-engine v8.0] 15-Layer Architecture loaded — Performance Report V3');
+// ==================================================================
+// LAYER 16 — FRAMEWORK EXTRACTOR ENGINE (V7.1)
+// Consolida extrações SPICED/MEDDIC de deal_framework_runtime.
+// Calcula qualitative_score para alimentar o Forecast V7.
+// Gera tasks automáticas quando gaps são detectados.
+// ==================================================================
+
+// Load deal_framework_runtime for all operator deals into _COCKPIT_DEAL_MAP
+async function loadFrameworkRuntime(){
+  var sb = _sb(); if(!sb) return;
+  var email = getOperatorId(); if(!email) return;
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var dealIds = Object.keys(map);
+  if(!dealIds.length) return;
+
+  // Fetch in chunks of 100
+  var CHUNK = 100;
+  var allRows = [];
+  for(var i = 0; i < dealIds.length; i += CHUNK){
+    var ids = dealIds.slice(i, i + CHUNK);
+    try {
+      var res = await sb.from('deal_framework_runtime')
+        .select('*')
+        .in('deal_id', ids);
+      if(res.data) allRows = allRows.concat(res.data);
+    } catch(e){ console.warn('[framework] load error:', e.message); }
+  }
+
+  // Attach to deal map
+  allRows.forEach(function(r){
+    if(map[r.deal_id]) map[r.deal_id]._frameworkRuntime = r;
+  });
+
+  console.log('[framework] loaded ' + allRows.length + ' deal_framework_runtime rows');
+  return allRows.length;
+}
+window.loadFrameworkRuntime = loadFrameworkRuntime;
+
+// Calculate qualitative_score from framework runtime data
+// Formula V7.1:
+// qs = (spiced_avg * 0.30) + (meddic_avg * 0.30) + (overall_coverage * 0.15)
+//    + (confidence_score * 0.10) + (next_step_clarity * 0.10) + (authority_score * 0.05)
+// Clamped [0.20, 1.30]
+function calcQualitativeScore(fr){
+  if(!fr) return 1.0;
+  var qs = (fr.spiced_avg || 0) * 0.30
+         + (fr.meddic_avg || 0) * 0.30
+         + (fr.overall_coverage || 0) * 0.15
+         + (fr.confidence_score || 0) * 0.10
+         + (fr.next_step_clarity || 0) * 0.10
+         + (fr.authority_score || 0) * 0.05;
+  return Math.max(0.20, Math.min(1.30, +qs.toFixed(4)));
+}
+window.calcQualitativeScore = calcQualitativeScore;
+
+// Consolidate individual framework_extractions into deal_framework_runtime
+// Called after a new extraction is saved (e.g. from note_analysis, meeting, cockpit worker)
+async function consolidateFrameworkRuntime(dealId){
+  var sb = _sb(); if(!sb) return null;
+
+  // Fetch all extractions for this deal
+  var res = await sb.from('framework_extractions')
+    .select('*')
+    .eq('deal_id', dealId)
+    .order('created_at', { ascending: false });
+  var extractions = res.data || [];
+  if(!extractions.length) return null;
+
+  // Aggregate: take max score per field (most informed extraction wins)
+  var sp = { situation:0, pain:0, impact:0, critical_event:0, decision:0 };
+  var md = { metrics:0, economic:0, criteria:0, process:0, pain:0, champion:0 };
+  var aux = { authority:0, urgency:0, intent:0, next_step:0, objection:0, note_quality:0, meeting_quality:0 };
+  var gaps = {};
+  var questions = [];
+  var confidences = [];
+
+  extractions.forEach(function(ex){
+    var s = ex.spiced_json || {};
+    if(s.situation && s.situation.score > sp.situation) sp.situation = s.situation.score;
+    if(s.pain && s.pain.score > sp.pain) sp.pain = s.pain.score;
+    if(s.impact && s.impact.score > sp.impact) sp.impact = s.impact.score;
+    if(s.critical_event && s.critical_event.score > sp.critical_event) sp.critical_event = s.critical_event.score;
+    if(s.decision && s.decision.score > sp.decision) sp.decision = s.decision.score;
+
+    var m = ex.meddic_json || {};
+    if(m.metrics && m.metrics.score > md.metrics) md.metrics = m.metrics.score;
+    if(m.economic_buyer && m.economic_buyer.score > md.economic) md.economic = m.economic_buyer.score;
+    if(m.decision_criteria && m.decision_criteria.score > md.criteria) md.criteria = m.decision_criteria.score;
+    if(m.decision_process && m.decision_process.score > md.process) md.process = m.decision_process.score;
+    if(m.identify_pain && m.identify_pain.score > md.pain) md.pain = m.identify_pain.score;
+    if(m.champion && m.champion.score > md.champion) md.champion = m.champion.score;
+
+    var a = ex.auxiliary_json || {};
+    if((a.authority_score||0) > aux.authority) aux.authority = a.authority_score;
+    if((a.urgency_score||0) > aux.urgency) aux.urgency = a.urgency_score;
+    if((a.intent_score||0) > aux.intent) aux.intent = a.intent_score;
+    if((a.next_step_clarity||0) > aux.next_step) aux.next_step = a.next_step_clarity;
+    if((a.objection_score||0) > aux.objection) aux.objection = a.objection_score;
+    if((a.note_quality_score||0) > aux.note_quality) aux.note_quality = a.note_quality_score;
+    if((a.meeting_quality_score||0) > aux.meeting_quality) aux.meeting_quality = a.meeting_quality_score;
+
+    if(ex.confidence_score) confidences.push(ex.confidence_score);
+
+    // Collect gaps
+    (ex.main_gaps || []).forEach(function(g){ gaps[g] = (gaps[g]||0) + 1; });
+    // Collect questions (most recent first)
+    if(questions.length < 5 && ex.next_best_questions){
+      ex.next_best_questions.forEach(function(q){ if(questions.length < 5) questions.push(q); });
+    }
+  });
+
+  var spiced_avg = +((sp.situation + sp.pain + sp.impact + sp.critical_event + sp.decision) / 5).toFixed(4);
+  var meddic_avg = +((md.metrics + md.economic + md.criteria + md.process + md.pain + md.champion) / 6).toFixed(4);
+
+  // Coverage: fields above 0.45 threshold
+  var spiced_fields = [sp.situation, sp.pain, sp.impact, sp.critical_event, sp.decision];
+  var spiced_coverage = +(spiced_fields.filter(function(v){ return v >= 0.45; }).length / 5).toFixed(4);
+  var meddic_fields = [md.metrics, md.economic, md.criteria, md.process, md.pain, md.champion];
+  var meddic_coverage = +(meddic_fields.filter(function(v){ return v >= 0.45; }).length / 6).toFixed(4);
+  var overall_coverage = +((spiced_coverage + meddic_coverage) / 2).toFixed(4);
+
+  // Confidence: avg of extraction confidences
+  var confidence_score = confidences.length > 0
+    ? +(confidences.reduce(function(a,b){return a+b;},0) / confidences.length).toFixed(4)
+    : 0;
+
+  // Top 3 gaps
+  var gapsSorted = Object.keys(gaps).sort(function(a,b){ return gaps[b]-gaps[a]; });
+
+  // Build runtime row
+  var row = {
+    deal_id: dealId,
+    operator_email: extractions[0].operator_email || getOperatorId(),
+    spiced_situation: sp.situation,
+    spiced_pain: sp.pain,
+    spiced_impact: sp.impact,
+    spiced_critical_event: sp.critical_event,
+    spiced_decision: sp.decision,
+    spiced_avg: spiced_avg,
+    meddic_metrics: md.metrics,
+    meddic_economic: md.economic,
+    meddic_criteria: md.criteria,
+    meddic_process: md.process,
+    meddic_pain: md.pain,
+    meddic_champion: md.champion,
+    meddic_avg: meddic_avg,
+    authority_score: aux.authority,
+    urgency_score: aux.urgency,
+    intent_score: aux.intent,
+    next_step_clarity: aux.next_step,
+    objection_score: aux.objection,
+    note_quality_score: aux.note_quality,
+    meeting_quality_score: aux.meeting_quality,
+    spiced_coverage: spiced_coverage,
+    meddic_coverage: meddic_coverage,
+    overall_coverage: overall_coverage,
+    confidence_score: confidence_score,
+    main_gap_1: gapsSorted[0] || null,
+    main_gap_2: gapsSorted[1] || null,
+    main_gap_3: gapsSorted[2] || null,
+    recommended_questions: JSON.stringify(questions),
+    extraction_count: extractions.length,
+    last_source_type: extractions[0].source_type,
+    updated_at: new Date().toISOString()
+  };
+
+  // Calc qualitative_score
+  row.qualitative_score = calcQualitativeScore(row);
+  row.explain_json = JSON.stringify({
+    spiced: sp, meddic: md, auxiliary: aux,
+    coverage: { spiced: spiced_coverage, meddic: meddic_coverage, overall: overall_coverage },
+    qualitative_score: row.qualitative_score,
+    extraction_count: extractions.length
+  });
+
+  // Upsert
+  var upsertRes = await sb.from('deal_framework_runtime').upsert(row, { onConflict: 'deal_id' });
+  if(upsertRes.error) console.warn('[framework] consolidation error:', upsertRes.error.message);
+  else console.log('[framework] consolidated deal ' + dealId + ' | qs=' + row.qualitative_score + ' coverage=' + overall_coverage);
+
+  // Event
+  await sb.from('framework_extraction_events').insert({
+    deal_id: dealId,
+    event_type: 'consolidation',
+    delta_coverage: overall_coverage,
+    delta_confidence: confidence_score,
+    payload: JSON.stringify({ spiced_avg: spiced_avg, meddic_avg: meddic_avg, qs: row.qualitative_score })
+  });
+
+  // Attach to deal map
+  var map = window._COCKPIT_DEAL_MAP || {};
+  if(map[dealId]) map[dealId]._frameworkRuntime = row;
+
+  return row;
+}
+window.consolidateFrameworkRuntime = consolidateFrameworkRuntime;
+
+// Save a new framework extraction and re-consolidate
+async function saveFrameworkExtraction(dealId, sourceType, sourceId, extractionResult){
+  var sb = _sb(); if(!sb) return null;
+  var email = getOperatorId();
+
+  var row = {
+    deal_id: dealId,
+    operator_email: email,
+    source_type: sourceType,
+    source_id: sourceId,
+    framework_version: 'v7.1',
+    spiced_json: JSON.stringify(extractionResult.spiced || {}),
+    meddic_json: JSON.stringify(extractionResult.meddic || {}),
+    auxiliary_json: JSON.stringify(extractionResult.auxiliary || {}),
+    coverage_json: JSON.stringify(extractionResult.coverage || {}),
+    confidence_score: extractionResult.confidence || 0,
+    main_gaps: JSON.stringify(extractionResult.main_gaps || []),
+    next_best_questions: JSON.stringify(extractionResult.next_best_questions || []),
+    raw_evidence: JSON.stringify(extractionResult.raw_evidence || [])
+  };
+
+  var res = await sb.from('framework_extractions').insert([row], { returning: 'representation' });
+  if(res.error){ console.warn('[framework] save error:', res.error.message); return null; }
+
+  // Event
+  await sb.from('framework_extraction_events').insert({
+    deal_id: dealId,
+    source_type: sourceType,
+    source_id: sourceId,
+    event_type: 'extraction',
+    payload: JSON.stringify({ source: sourceType, confidence: extractionResult.confidence })
+  });
+
+  // Re-consolidate
+  return await consolidateFrameworkRuntime(dealId);
+}
+window.saveFrameworkExtraction = saveFrameworkExtraction;
+
+// Build framework gap tasks for Task Runner
+function buildFrameworkGapTasks(){
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var tasks = [];
+  Object.keys(map).forEach(function(id){
+    var d = map[id];
+    if((d.statusDeal||'').toLowerCase()==='perdido'||(d.statusDeal||'').toLowerCase()==='ganho') return;
+    var fr = d._frameworkRuntime;
+    if(!fr || fr.extraction_count === 0) return;
+    if(fr.overall_coverage >= 0.70) return; // good enough
+
+    var gapType = 'framework_gap_fill';
+    var gapLabel = 'Cobrir gaps SPICED/MEDDIC';
+    var gapPriority = 'medium';
+
+    if(fr.authority_score < 0.30){
+      gapType = 'authority_confirmation'; gapLabel = 'Confirmar economic buyer'; gapPriority = 'high';
+    } else if(fr.spiced_pain < 0.30){
+      gapType = 'pain_quantification'; gapLabel = 'Quantificar dor e impacto'; gapPriority = 'high';
+    } else if(fr.meddic_champion < 0.30){
+      gapType = 'framework_gap_fill'; gapLabel = 'Identificar champion interno'; gapPriority = 'medium';
+    }
+
+    var question = (fr.recommended_questions && fr.recommended_questions.length > 0)
+      ? (typeof fr.recommended_questions === 'string' ? JSON.parse(fr.recommended_questions) : fr.recommended_questions)[0]
+      : null;
+
+    tasks.push({
+      deal_id: id,
+      deal: d,
+      type: gapType,
+      label: gapLabel,
+      priority: gapPriority,
+      sublabel: (d.nome||d.lead_name||'')+ ' — ' + (d._revLine||''),
+      coverage: fr.overall_coverage,
+      question: question,
+      gap1: fr.main_gap_1,
+      gap2: fr.main_gap_2
+    });
+  });
+
+  // Sort: high priority first, then by lowest coverage
+  tasks.sort(function(a,b){
+    var po = { critical:0, high:1, medium:2, low:3 };
+    var pa = po[a.priority]||3, pb = po[b.priority]||3;
+    if(pa !== pb) return pa - pb;
+    return (a.coverage||0) - (b.coverage||0);
+  });
+
+  return tasks;
+}
+window.buildFrameworkGapTasks = buildFrameworkGapTasks;
+
+// ==================================================================
+// LAYER 17 — FRAMEWORK UI
+// Renderiza aba Framework no Deal Workspace e subtab na Intelligence.
+// ==================================================================
+
+function renderFrameworkPanel(dealId, containerId){
+  var el = document.getElementById(containerId);
+  if(!el) return;
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var d = map[dealId];
+  if(!d){ el.innerHTML = '<p>Deal nao encontrado.</p>'; return; }
+  var fr = d._frameworkRuntime;
+
+  if(!fr || fr.extraction_count === 0){
+    el.innerHTML = '<div style="padding:16px;text-align:center;opacity:0.6;">Nenhuma extracao de framework ainda.<br>Analise uma nota ou reuniao para iniciar.</div>';
+    return;
+  }
+
+  function bar(label, score, maxLabel){
+    var pct = Math.round((score||0)*100);
+    var color = pct >= 70 ? 'var(--color-green,#22c55e)' : pct >= 45 ? 'var(--color-yellow,#eab308)' : 'var(--color-red,#ef4444)';
+    var state = pct >= 70 ? 'strong' : pct >= 45 ? 'partial' : pct >= 20 ? 'weak' : 'missing';
+    return '<div style="display:flex;align-items:center;gap:8px;margin:3px 0;">'
+      + '<span style="width:130px;font-size:12px;">'+_escHtml(label)+'</span>'
+      + '<div style="flex:1;height:8px;background:var(--bg-2,#333);border-radius:4px;overflow:hidden;">'
+      + '<div style="width:'+pct+'%;height:100%;background:'+color+';border-radius:4px;"></div></div>'
+      + '<span style="width:42px;text-align:right;font-size:11px;font-weight:600;">'+pct+'%</span>'
+      + '<span style="font-size:10px;opacity:0.6;">'+state+'</span>'
+      + '</div>';
+  }
+
+  var html = '';
+
+  // Qualitative Score badge
+  var qs = fr.qualitative_score || 1.0;
+  var qsColor = qs >= 0.80 ? '#22c55e' : qs >= 0.50 ? '#eab308' : '#ef4444';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
+  html += '<div><span style="font-size:11px;text-transform:uppercase;opacity:0.5;">Qualitative Score</span><br>';
+  html += '<span style="font-size:28px;font-weight:700;color:'+qsColor+';">'+qs.toFixed(2)+'</span></div>';
+  html += '<div style="text-align:right;">';
+  html += '<span style="font-size:11px;opacity:0.5;">Coverage</span><br>';
+  html += '<span style="font-size:20px;font-weight:600;">'+Math.round((fr.overall_coverage||0)*100)+'%</span>';
+  html += '</div></div>';
+
+  // SPICED
+  html += '<div style="margin-bottom:12px;"><div style="font-size:12px;font-weight:700;text-transform:uppercase;margin-bottom:4px;opacity:0.7;">SPICED <span style="float:right;font-weight:400;">avg '+(fr.spiced_avg||0).toFixed(2)+'</span></div>';
+  html += bar('Situation', fr.spiced_situation);
+  html += bar('Pain', fr.spiced_pain);
+  html += bar('Impact', fr.spiced_impact);
+  html += bar('Critical Event', fr.spiced_critical_event);
+  html += bar('Decision', fr.spiced_decision);
+  html += '</div>';
+
+  // MEDDIC
+  html += '<div style="margin-bottom:12px;"><div style="font-size:12px;font-weight:700;text-transform:uppercase;margin-bottom:4px;opacity:0.7;">MEDDIC <span style="float:right;font-weight:400;">avg '+(fr.meddic_avg||0).toFixed(2)+'</span></div>';
+  html += bar('Metrics', fr.meddic_metrics);
+  html += bar('Economic Buyer', fr.meddic_economic);
+  html += bar('Decision Criteria', fr.meddic_criteria);
+  html += bar('Decision Process', fr.meddic_process);
+  html += bar('Identify Pain', fr.meddic_pain);
+  html += bar('Champion', fr.meddic_champion);
+  html += '</div>';
+
+  // Gaps
+  if(fr.main_gap_1){
+    html += '<div style="margin-bottom:12px;padding:8px;background:var(--bg-2,#222);border-radius:6px;">';
+    html += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;opacity:0.5;margin-bottom:4px;">Gaps</div>';
+    if(fr.main_gap_1) html += '<div style="font-size:12px;color:var(--color-red,#ef4444);">• '+_escHtml(fr.main_gap_1)+'</div>';
+    if(fr.main_gap_2) html += '<div style="font-size:12px;color:var(--color-yellow,#eab308);">• '+_escHtml(fr.main_gap_2)+'</div>';
+    if(fr.main_gap_3) html += '<div style="font-size:12px;opacity:0.7;">• '+_escHtml(fr.main_gap_3)+'</div>';
+    html += '</div>';
+  }
+
+  // Recommended questions
+  var rq = fr.recommended_questions;
+  if(typeof rq === 'string') try { rq = JSON.parse(rq); } catch(e){ rq = []; }
+  if(rq && rq.length){
+    html += '<div style="margin-bottom:8px;padding:8px;background:var(--bg-2,#222);border-radius:6px;">';
+    html += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;opacity:0.5;margin-bottom:4px;">Perguntas Recomendadas</div>';
+    rq.forEach(function(q){
+      html += '<div style="font-size:12px;margin:2px 0;">→ '+_escHtml(q)+'</div>';
+    });
+    html += '</div>';
+  }
+
+  // Metadata
+  html += '<div style="font-size:10px;opacity:0.4;margin-top:8px;">'+fr.extraction_count+' extracoes | Confianca: '+Math.round((fr.confidence_score||0)*100)+'% | Ultima: '+(fr.last_source_type||'—')+'</div>';
+
+  el.innerHTML = html;
+}
+window.renderFrameworkPanel = renderFrameworkPanel;
+
+// Intelligence subtab: Framework coverage by operator
+async function loadFrameworkIntelligence(){
+  var sb = _sb(); if(!sb) return null;
+  var email = getOperatorId(); if(!email) return null;
+
+  var res = await sb.from('deal_framework_runtime')
+    .select('deal_id,spiced_avg,meddic_avg,overall_coverage,confidence_score,authority_score,spiced_pain,meddic_champion,extraction_count,main_gap_1')
+    .eq('operator_email', email);
+  var rows = res.data || [];
+  if(!rows.length) return { total:0 };
+
+  var total = rows.length;
+  var spiced_strong = 0, meddic_strong = 0, low_coverage = 0;
+  var gap_freq = {};
+  var sum_spiced = 0, sum_meddic = 0, sum_coverage = 0;
+
+  rows.forEach(function(r){
+    sum_spiced += (r.spiced_avg||0);
+    sum_meddic += (r.meddic_avg||0);
+    sum_coverage += (r.overall_coverage||0);
+    if(r.spiced_avg >= 0.70) spiced_strong++;
+    if(r.meddic_avg >= 0.70) meddic_strong++;
+    if(r.overall_coverage < 0.30) low_coverage++;
+    if(r.main_gap_1) gap_freq[r.main_gap_1] = (gap_freq[r.main_gap_1]||0) + 1;
+  });
+
+  var top_gaps = Object.keys(gap_freq).sort(function(a,b){ return gap_freq[b]-gap_freq[a]; }).slice(0,5);
+
+  return {
+    total: total,
+    spiced_avg: +(sum_spiced/total).toFixed(4),
+    meddic_avg: +(sum_meddic/total).toFixed(4),
+    coverage_avg: +(sum_coverage/total).toFixed(4),
+    spiced_strong_pct: +(spiced_strong/total).toFixed(4),
+    meddic_strong_pct: +(meddic_strong/total).toFixed(4),
+    low_coverage_count: low_coverage,
+    top_gaps: top_gaps.map(function(g){ return { gap:g, count:gap_freq[g] }; })
+  };
+}
+window.loadFrameworkIntelligence = loadFrameworkIntelligence;
+
+console.log('[cockpit-engine v9.0] 17-Layer Architecture loaded — Qualitative Forecast V7 + Framework Extractor');
 
 })();

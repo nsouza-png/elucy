@@ -450,16 +450,6 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .pv3-line-table th{text-align:left;padding:6px 8px;font-weight:700;color:var(--text2);border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.5px}
 .pv3-line-table td{padding:5px 8px;border-bottom:1px solid var(--border);color:var(--text)}
 .pv3-line-table tr:hover{background:rgba(255,255,255,.02)}
-/* Intelligence V2 — Executive Strip */
-.intel-exec-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
-.intel-exec-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;position:relative;overflow:hidden}
-.intel-exec-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
-.iex-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text2);margin-bottom:6px}
-.iex-main{font-size:22px;font-weight:900;line-height:1.2;color:var(--text)}
-.iex-sub{font-size:11px;color:var(--text2);margin-top:4px;line-height:1.4}
-.iex-trend{font-size:11px;font-weight:700;margin-top:3px}
-.iex-trend.up{color:var(--green)}.iex-trend.down{color:var(--red)}.iex-trend.flat{color:var(--yellow)}
-@media(max-width:700px){.intel-exec-strip{grid-template-columns:1fr 1fr}}
 /* Intelligence dashboard */
 .intel-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
 .intel-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:15px;overflow:hidden}
@@ -667,7 +657,6 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
   <button class="ntab on" onclick="setScreen('home',this)">Home</button>
   <button class="ntab" onclick="setScreen('pipeline',this)">Pipeline</button>
   <button class="ntab" onclick="setScreen('tasks',this)">Tasks <span class="tab-count" id="task-count"></span></button>
-  <button class="ntab" onclick="setScreen('dm',this)">DM</button>
   <button class="ntab" onclick="setScreen('reports',this)">Reports</button>
   <button class="ntab" onclick="setScreen('intelligence',this)">Intel</button>
   <div class="tbr">
@@ -744,7 +733,7 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
       <div class="filter-row">
         <span class="filter-label">Etapa</span>
         <span class="fchip on" data-filter="etapa" data-val="todos" onclick="toggleFilter(this,'etapa')">Todos</span>
-        <span class="fchip" data-filter="etapa" data-val="Novo Lead" onclick="toggleFilter(this,'etapa')">Novo Lead</span>
+        <span class="fchip" data-filter="etapa" data-val="Novo Lead" onclick="toggleFilter(this,'etapa')">MQL</span>
         <span class="fchip" data-filter="etapa" data-val="Dia 01" onclick="toggleFilter(this,'etapa')">D1</span>
         <span class="fchip" data-filter="etapa" data-val="Dia 02" onclick="toggleFilter(this,'etapa')">D2</span>
         <span class="fchip" data-filter="etapa" data-val="Dia 03" onclick="toggleFilter(this,'etapa')">D3</span>
@@ -848,50 +837,27 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
       </div>
   </div>
     <div class="screen" id="screen-intelligence">
-      <!-- LINE 1: Executive Strip — always visible -->
-      <div id="intel-exec-strip" class="intel-exec-strip">
-        <div class="intel-exec-card" id="iex-meta">
-          <div class="iex-label">Meta do Mês</div>
-          <div class="iex-main" id="iex-meta-main">—</div>
-          <div class="iex-sub" id="iex-meta-sub">Carregue o pipeline</div>
-        </div>
-        <div class="intel-exec-card" id="iex-forecast">
-          <div class="iex-label">Forecast</div>
-          <div class="iex-main" id="iex-forecast-main">—</div>
-          <div class="iex-sub" id="iex-forecast-sub">—</div>
-        </div>
-        <div class="intel-exec-card" id="iex-score">
-          <div class="iex-label">Score</div>
-          <div class="iex-main" id="iex-score-main">—</div>
-          <div class="iex-sub" id="iex-score-sub">—</div>
-        </div>
-        <div class="intel-exec-card" id="iex-health">
-          <div class="iex-label">Saúde Pipeline</div>
-          <div class="iex-main" id="iex-health-main">—</div>
-          <div class="iex-sub" id="iex-health-sub">—</div>
-        </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:3px">Inteligência Operacional</div>
+        <div style="font-size:12px;color:var(--text2)" id="intel-subtitle">Análise automática do pipeline — carregue deals para ativar</div>
       </div>
-
-      <!-- LINE 2: Tabs de Granularidade -->
       <div class="intel-dims" id="intel-dims">
-        <span class="intel-dim on" onclick="window._intelDim('operator',this)">Operador</span>
+        <span class="intel-dim on" onclick="window._intelDim('global',this)">Global</span>
+        <span class="intel-dim" onclick="window._intelDim('operator',this)">Operador</span>
         <span class="intel-dim" onclick="window._intelDim('line',this)">Linha</span>
         <span class="intel-dim" onclick="window._intelDim('stage',this)">Etapa</span>
         <span class="intel-dim" onclick="window._intelDim('channel',this)">Canal</span>
-        <span class="intel-dim" onclick="window._intelDim('period',this)">Período</span>
-        <span class="intel-dim" onclick="window._intelDim('forecast',this)">Forecast</span>
-        <span class="intel-dim" onclick="window._intelDim('quality',this)">Qualidade</span>
+        <span class="intel-dim" onclick="window._intelDim('task',this)">Tasks</span>
+        <span class="intel-dim" onclick="window._intelDim('value',this)">Valor</span>
         <span class="intel-dim" onclick="window._intelDim('performance',this)" style="border-color:var(--gold);color:var(--gold)">Performance V3</span>
       </div>
-
-      <!-- LINE 3+: Dynamic content -->
       <div id="intel-content">
         <div class="intel-empty">Carregue o pipeline para visualizar a análise de inteligência.</div>
       </div>
       <div id="perf-report-v3" style="display:none"></div>
     </div>
-<!-- ── SCREEN: DM WAR ROOM ────────────────────────────────────────── -->
-<div class="screen" id="screen-dm">
+<!-- ── SCREEN: DM WAR ROOM — REMOVIDO (touchpoint lógica migrada para CSE engine) -->
+<div class="screen" id="screen-dm" style="display:none!important">
   <div class="dm-center" style="position:relative">
     <div class="dm-drop-wrap">
       <div class="dm-drop" id="dm-drop-zone"
@@ -1109,7 +1075,7 @@ function setScreen(n,el){
   if(el){ el.classList.add('on'); }
   else {
     const tabs=document.querySelectorAll('.ntab');
-    const tabMap={home:0,pipeline:1,tasks:2,dm:3,reports:4,intelligence:5};
+    const tabMap={home:0,pipeline:1,tasks:2,reports:3,intelligence:4};
     const idx=tabMap[n]!=null?tabMap[n]:0;
     if(tabs[idx]) tabs[idx].classList.add('on');
   }
@@ -2330,7 +2296,6 @@ function renderLiveDeals(rows,cols){
     const delta=resolveDelta(row);
     // Canal: derivado da linha_de_receita_vigente (canônico) com fallback utm_medium
     const linhaReceita=g(row,'linha_de_receita_vigente')||'';
-    const grupoReceita=g(row,'grupo_de_receita')||'';
     const utm=g(row,'utm_medium')||'';
     const canal=resolveCanal(linhaReceita,utm);
     // Valor da oportunidade (time de dados)
@@ -2356,7 +2321,7 @@ function renderLiveDeals(rows,cols){
     const faixaFunc=g(row,'faixa_de_funcionarios')||'';
     const closedAt=g(row,'closed_at')||'';
     const dealObj={nome,nomeNegocio,contact_name:contactName,empresa:emailLead||empresa,cargo,fase,faseAnterior,etapa,tier,delta,canal,deal_id,temp,tc,tl,dd,emailLead,
-      linhaReceita,grupoReceita,revenueRaw,elucyValor,forecastDelta,statusDeal,motivoLost,createdAtCrm,closedAt,
+      linhaReceita,revenueRaw,elucyValor,forecastDelta,statusDeal,motivoLost,createdAtCrm,closedAt,
       created_at_crm:createdAtCrm, closed_at:closedAt,
       utm_medium:utm,conta_founder:contaFounder,telefone,faixaFunc,
       _fase:fase,_etapa:etapa,_tier:tier,_delta:delta,_temp:temp};
@@ -3981,6 +3946,7 @@ window._intelDim=function(dim,el){
 function renderIntelligence(){
   const map=window._COCKPIT_DEAL_MAP;
   const ct=document.getElementById('intel-content');
+  const sub=document.getElementById('intel-subtitle');
   if(!map||!ct) return;
   const allDeals=Object.values(map);
   if(!allDeals.length){
@@ -3990,388 +3956,18 @@ function renderIntelligence(){
   const AE=window.AnalyticsEngine;
   if(!AE){ct.innerHTML='<div class="intel-empty">Analytics Engine não carregado.</div>';return;}
   const deals=allDeals.filter(d=>{const s=(d.statusDeal||'').toLowerCase();return s!=='perdido'&&s!=='ganho'&&s!=='desqualificado';});
-
-  // Always render Executive Strip
-  _renderExecStrip(allDeals,deals);
+  if(sub) sub.textContent=deals.length+' deals ativos — '+new Date().toLocaleDateString('pt-BR')+' — dim: '+_intelCurrentDim.toUpperCase();
 
   ct.innerHTML='<div class="intel-loading">Calculando...</div>';
   var dim=_intelCurrentDim;
 
-  if(dim==='operator') _renderOperatorV2(ct,AE,allDeals,deals);
+  if(dim==='global') _renderGlobal(ct,AE,allDeals,deals);
+  else if(dim==='operator') _renderOperator(ct,AE);
   else if(dim==='line') _renderLine(ct,AE);
-  else if(dim==='stage') _renderStageV2(ct,AE,allDeals,deals);
+  else if(dim==='stage') _renderStage(ct,AE);
   else if(dim==='channel') _renderChannel(ct,AE);
-  else if(dim==='period') _renderPeriod(ct,AE,allDeals,deals);
-  else if(dim==='forecast') _renderForecastTab(ct,allDeals,deals);
-  else if(dim==='quality') _renderQualityTab(ct,allDeals,deals);
-}
-
-// ── EXECUTIVE STRIP (always visible) ──
-function _renderExecStrip(allDeals,deals){
-  var ctx=window.getOperatorCtx();
-  var metaM=ctx.meta_mensal||{};
-  var now=new Date();
-  var daysInMonth=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
-  var dayOfMonth=now.getDate();
-  var businessDays=21; // approx
-  var businessDaysPassed=Math.round(dayOfMonth/daysInMonth*businessDays);
-  var paceIdeal=businessDaysPassed/businessDays;
-
-  // Count OPP from deals (fase = oportunidade/negociacao or status = ganho)
-  var oppCount=allDeals.filter(function(d){
-    var fase=(d._fase||d.fase||d.fase_atual_no_processo||'').toLowerCase();
-    return fase==='oportunidade'||fase==='negociação'||fase==='negociacao'||(d.statusDeal||d.status_do_deal||'').toLowerCase()==='ganho';
-  }).length;
-  var salCount=allDeals.filter(function(d){
-    var fase=(d._fase||d.fase||d.fase_atual_no_processo||'').toLowerCase();
-    return fase&&fase!=='mql';
-  }).length;
-  var oppTarget=metaM.opp||15;
-  var salTarget=metaM.qualificacoes||100;
-  var oppPct=oppTarget>0?Math.round(oppCount/oppTarget*100):0;
-  var salPct=salTarget>0?Math.round(salCount/salTarget*100):0;
-  var oppPace=paceIdeal>0?Math.round(oppCount/(oppTarget*paceIdeal)*100):0;
-
-  // Revenue from won deals
-  var revenueWon=allDeals.filter(function(d){return (d.statusDeal||d.status_do_deal||'').toLowerCase()==='ganho';}).reduce(function(s,d){return s+(parseFloat(d.revenueRaw||d.revenue||d.valor_da_oportunidade||0));},0);
-
-  // Card 1: Meta
-  var metaMain=document.getElementById('iex-meta-main');
-  var metaSub=document.getElementById('iex-meta-sub');
-  if(metaMain) metaMain.innerHTML='<span style="color:'+(oppPct>=100?'var(--green)':oppPct>=70?'var(--accent2)':'var(--red)')+'">'+oppCount+'/'+oppTarget+'</span> <span style="font-size:13px;color:var(--text2)">OPP</span>';
-  if(metaSub) metaSub.innerHTML='SAL: '+salCount+'/'+salTarget+' ('+salPct+'%) · Pace: '+oppPace+'%'+(oppPace<80?' <span style="color:var(--red)">⚠</span>':'');
-
-  // Card 2: Forecast
-  var fcEl=document.getElementById('iex-forecast-main');
-  var fcSub=document.getElementById('iex-forecast-sub');
-  var totalPipeline=deals.reduce(function(s,d){return s+(parseFloat(d.revenueRaw||d.revenue||d.valor_da_oportunidade||0));},0);
-  if(fcEl) fcEl.innerHTML=fmtBRL(Math.round(totalPipeline));
-  if(fcSub) fcSub.innerHTML='Pipeline ativo · Won: '+fmtBRL(Math.round(revenueWon));
-
-  // Card 3: Score
-  var scoreEl=document.getElementById('iex-score-main');
-  var scoreSub=document.getElementById('iex-score-sub');
-  var AE=window.AnalyticsEngine;
-  if(AE){
-    AE.calcByOperator(30).then(function(o){
-      var sc=o.scores.overall;
-      var band=sc>=80?'Elite':sc>=65?'Forte':sc>=50?'Estável':sc>=35?'Atenção':'Crítico';
-      var bandColor=sc>=80?'var(--green)':sc>=65?'var(--accent2)':sc>=50?'var(--yellow)':sc>=35?'var(--orange)':'var(--red)';
-      if(scoreEl) scoreEl.innerHTML='<span style="color:'+bandColor+'">'+sc+'</span> <span style="font-size:13px;color:'+bandColor+'">'+band+'</span>';
-      if(scoreSub) scoreSub.innerHTML='Qualif. '+o.scores.qualification+'% · Handoff '+o.scores.handoff+'% · Win '+o.scores.winRate+'%';
-    });
-  }
-
-  // Card 4: Pipeline Health
-  var healthEl=document.getElementById('iex-health-main');
-  var healthSub=document.getElementById('iex-health-sub');
-  var avgAging=deals.length>0?Math.round(deals.reduce(function(s,d){return s+(Number(d.delta||d._delta||0));},0)/deals.length*10)/10:0;
-  var atRisk=deals.filter(function(d){return d._aging&&d._aging.isAtRisk;}).length;
-  var riskPct=deals.length>0?Math.round(atRisk/deals.length*100):0;
-  var healthColor=riskPct<=15?'var(--green)':riskPct<=30?'var(--yellow)':'var(--red)';
-  if(healthEl) healthEl.innerHTML='<span style="color:'+healthColor+'">'+riskPct+'%</span> <span style="font-size:13px">risco</span>';
-  if(healthSub) healthSub.innerHTML='Aging: '+avgAging+'d · Em risco: '+atRisk+'/'+deals.length;
-}
-
-// ── OPERATOR TAB (V2) ──
-function _renderOperatorV2(ct,AE,allDeals,deals){
-  AE.calcByOperator(30).then(function(o){
-    var ctx=window.getOperatorCtx();
-    var metaM=ctx.meta_mensal||{};
-    var html='';
-
-    // Section 1: Meta e Progresso
-    var oppCount=allDeals.filter(function(d){
-      var fase=(d._fase||d.fase||d.fase_atual_no_processo||'').toLowerCase();
-      return fase==='oportunidade'||fase==='negociação'||fase==='negociacao'||(d.statusDeal||d.status_do_deal||'').toLowerCase()==='ganho';
-    }).length;
-    var salCount=allDeals.filter(function(d){
-      var fase=(d._fase||d.fase||d.fase_atual_no_processo||'').toLowerCase();
-      return fase&&fase!=='mql';
-    }).length;
-    var revenueWon=allDeals.filter(function(d){return(d.statusDeal||d.status_do_deal||'').toLowerCase()==='ganho';}).reduce(function(s,d){return s+(parseFloat(d.revenueRaw||d.revenue||0));},0);
-    var now=new Date();var dayOfMonth=now.getDate();var daysInMonth=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
-    var pace=Math.round(dayOfMonth/daysInMonth*100);
-
-    html+=renderSection(1,'Meta e Progresso',
-      '<div class="intel-kpi-row">'+
-      _iKpi(salCount+'/'+(metaM.qualificacoes||100),'Qualificados',salCount>=(metaM.qualificacoes||100)?'var(--green)':'var(--text)')+
-      _iKpi(oppCount+'/'+(metaM.opp||15),'Oportunidades',oppCount>=(metaM.opp||15)?'var(--green)':'var(--text)')+
-      _iKpi(fmtBRL(Math.round(revenueWon)),'Receita Won','var(--green)')+
-      _iKpi(pace+'%','Pace do Mês',pace>75?'var(--green)':'var(--yellow)')+
-      '</div>');
-
-    // Section 2: Volume
-    html+=renderSection(2,'Volume',
-      '<div class="intel-kpi-row">'+
-      _iKpi(o.metrics.total,'Total ações')+
-      _iKpi(o.metrics.fups,'FUPs')+
-      _iKpi(o.metrics.dms,'DMs')+
-      _iKpi(o.metrics.analyses,'Análises')+
-      _iKpi(o.metrics.copies,'Copies')+
-      _iKpi(o.metrics.notes,'Notas CRM')+
-      _iKpi(o.metrics.uniqueDeals,'Deals tocados')+
-      _iKpi(o.pipeline.activeDeals,'Deals ativos')+
-      '</div>');
-
-    // Section 3: Conversão (funil de qualificação)
-    var byLine=window.calcConversionByLine?window.calcConversionByLine(allDeals):{};
-    var totals={leads:0,qualified:0,connected:0,scheduled:0,show:0,opp:0,won:0};
-    Object.keys(byLine).forEach(function(k){var s=byLine[k];totals.leads+=s.leads||0;totals.qualified+=s.qualified||0;});
-    // Use report funnel if available
-    var crLeadQual=totals.leads>0?Math.round(totals.qualified/totals.leads*100):0;
-
-    html+=renderSection(3,'Funil de Qualificação',
-      '<div class="intel-kpi-row">'+
-      _iKpi(allDeals.length,'Leads')+
-      _iKpi(salCount,'Qualificados')+
-      _iKpi(deals.filter(function(d){var e=(d.etapa||d.etapa_atual_no_pipeline||'').toLowerCase();return e.includes('conectad');}).length,'Conectados')+
-      _iKpi(deals.filter(function(d){var e=(d.etapa||d.etapa_atual_no_pipeline||'').toLowerCase();return e.includes('agend')||e.includes('entrevista');}).length,'Agendados')+
-      _iKpi(oppCount,'Oportunidades','var(--accent2)')+
-      _iKpi(allDeals.filter(function(d){return(d.statusDeal||d.status_do_deal||'').toLowerCase()==='ganho';}).length,'Ganhos','var(--green)')+
-      '</div>');
-
-    // Section 4: Velocidade
-    html+=renderSection(4,'Velocidade',
-      '<div class="intel-kpi-row">'+
-      _iKpi(o.pipeline.avgAging+'d','Aging médio',o.pipeline.avgAging>5?'var(--red)':o.pipeline.avgAging>3?'var(--yellow)':'var(--green)')+
-      _iKpi(o.pipeline.atRisk,'Em risco SLA','var(--red)')+
-      _iKpi(deals.filter(function(d){return(Number(d.delta||d._delta||0))>7;}).length,'Inativos >7d','var(--yellow)')+
-      '</div>');
-
-    // Section 5: Qualidade (DQI)
-    html+=renderSection(5,'Qualidade',
-      '<div class="intel-kpi-row">'+
-      _iKpi(o.scores.dqi+'/100','DQI',o.scores.dqi>=60?'var(--green)':o.scores.dqi>=30?'var(--yellow)':'var(--red)')+
-      _iKpi(o.scores.qualification+'%','Qualificação')+
-      _iKpi(o.scores.handoff+'%','Handoff')+
-      _iKpi(o.scores.speed+'%','Velocidade')+
-      '</div>');
-
-    // Section 6: Receita
-    var totalPipeline=deals.reduce(function(s,d){return s+(parseFloat(d.revenueRaw||d.revenue||d.valor_da_oportunidade||0));},0);
-    html+=renderSection(6,'Receita',
-      '<div class="intel-kpi-row">'+
-      _iKpi(fmtBRL(Math.round(totalPipeline)),'Pipeline ativo','var(--accent2)')+
-      _iKpi(fmtBRL(Math.round(revenueWon)),'Won','var(--green)')+
-      _iKpi(deals.length>0?fmtBRL(Math.round(totalPipeline/deals.length)):'—','Ticket médio')+
-      '</div>');
-
-    // Section 7: Insights do Elucy
-    var gargalo=_detectGargalo(allDeals,deals);
-    html+=renderSection(7,'Leitura do Elucy',
-      '<div class="intel-insight'+(gargalo.type==='bad'?' intel-insight-bad':gargalo.type==='good'?' intel-insight-good':' intel-insight-warn')+'">'+
-      '<div class="intel-insight-label">'+gargalo.label+'</div>'+gargalo.message+'</div>'+
-      (gargalo.action?'<div class="intel-insight intel-insight-warn"><div class="intel-insight-label">Próxima Ação</div>'+gargalo.action+'</div>':''));
-
-    ct.innerHTML=html;
-  });
-}
-
-// ── STAGE TAB V2 — Classe do Deal + Etapa Pipeline ──
-function _renderStageV2(ct,AE,allDeals,deals){
-  var html='';
-
-  // Classe do Deal (fase_atual_no_processo)
-  var classCounts={lead:0,qualificado:0,conectado:0,agendado:0,oportunidade:0,ganho:0,perdido:0};
-  allDeals.forEach(function(d){
-    var fase=(d._fase||d.fase||d.fase_atual_no_processo||'').toLowerCase();
-    var status=(d.statusDeal||d.status_do_deal||'').toLowerCase();
-    if(status==='ganho') classCounts.ganho++;
-    else if(status==='perdido') classCounts.perdido++;
-    else if(fase==='oportunidade'||fase==='negociação'||fase==='negociacao') classCounts.oportunidade++;
-    else if(fase==='agendado') classCounts.agendado++;
-    else if(fase==='conectado') classCounts.conectado++;
-    else if(fase==='sal'||fase) classCounts.qualificado++;
-    else classCounts.lead++;
-  });
-  var maxClass=Math.max.apply(null,Object.values(classCounts).concat([1]));
-  var classOrder=['lead','qualificado','conectado','agendado','oportunidade','ganho','perdido'];
-  var classLabels={lead:'Leads',qualificado:'Qualificados',conectado:'Conectados',agendado:'Agendados',oportunidade:'Oportunidades',ganho:'Ganhos',perdido:'Perdidos'};
-  html+=renderSection(1,'Classificação de Qualificação',
-    classOrder.map(function(k){return _iBar(classLabels[k],classCounts[k],maxClass,allDeals.length);}).join(''));
-
-  // Etapa do Pipeline (etapa_atual_no_pipeline)
-  var data=AE.calcByStage().data;
-  var stageKeys=Object.keys(data).sort(function(a,b){return(data[a].order||99)-(data[b].order||99);});
-  var maxStage=Math.max.apply(null,stageKeys.map(function(k){return data[k].count;}).concat([1]));
-  html+=renderSection(2,'Etapa Operacional do Pipeline',
-    stageKeys.map(function(k){return _iBar(fmtEtapa(k),data[k].count,maxStage,deals.length);}).join(''));
-
-  // Table detail
-  html+=renderSection(3,'Detalhamento por Etapa',
-    '<table class="intel-table"><thead><tr><th>Etapa</th><th>Deals</th><th>Aging</th><th>Valor</th><th>Risco</th></tr></thead><tbody>'+
-    stageKeys.map(function(k){
-      var d=data[k];
-      return '<tr><td style="font-weight:600">'+fmtEtapa(k)+'</td><td>'+d.count+'</td><td>'+d.avgAging+'d</td><td>'+fmtBRL(d.totalValue)+'</td><td style="color:var(--red)">'+d.atRisk+'</td></tr>';
-    }).join('')+'</tbody></table>');
-
-  ct.innerHTML=html;
-}
-
-// ── PERIOD TAB ──
-function _renderPeriod(ct,AE,allDeals,deals){
-  AE.calcByOperator(30).then(function(o){
-    var html='';
-    var days=Object.keys(o.byDay).sort();
-    var maxDay=Math.max.apply(null,days.map(function(d){return o.byDay[d];}).concat([1]));
-
-    html+=renderSection(1,'Atividade por Dia (últimos 14 dias)',
-      days.slice(-14).map(function(d){return _iBar(d.slice(5),o.byDay[d],maxDay,o.metrics.total);}).join(''));
-
-    html+=renderSection(2,'Resumo do Período',
-      '<div class="intel-kpi-row">'+
-      _iKpi(o.metrics.total,'Total 30d')+
-      _iKpi(o.metrics.fups,'FUPs')+
-      _iKpi(o.metrics.dms,'DMs')+
-      _iKpi(o.metrics.analyses,'Análises')+
-      _iKpi(o.metrics.notes,'Notas')+
-      _iKpi(o.metrics.uniqueDeals,'Deals tocados')+
-      '</div>');
-
-    ct.innerHTML=html;
-  });
-}
-
-// ── FORECAST TAB ──
-function _renderForecastTab(ct,allDeals,deals){
-  var html='';
-  var totalPipeline=deals.reduce(function(s,d){return s+(parseFloat(d.revenueRaw||d.revenue||d.valor_da_oportunidade||0));},0);
-  var wonDeals=allDeals.filter(function(d){return(d.statusDeal||d.status_do_deal||'').toLowerCase()==='ganho';});
-  var wonValue=wonDeals.reduce(function(s,d){return s+(parseFloat(d.revenueRaw||d.revenue||0));},0);
-
-  // Forecast macro
-  html+=renderSection(1,'Forecast Macro',
-    '<div class="intel-kpi-row">'+
-    _iKpi(fmtBRL(Math.round(totalPipeline)),'Pipeline bruto','var(--accent2)')+
-    _iKpi(fmtBRL(Math.round(wonValue)),'Won acumulado','var(--green)')+
-    _iKpi(deals.length,'Deals ativos')+
-    '</div>');
-
-  // Forecast quality
-  var noNote=deals.filter(function(d){return!d._hasNote&&!d._noteQuality;}).length;
-  var noNextStep=deals.filter(function(d){return!d._nextAction||d._nextAction==='none';}).length;
-  var inflated=deals.filter(function(d){return d._forecastV6&&d._forecastV6.score>0.7;}).length;
-  var lowConf=deals.filter(function(d){return d._forecastV6&&d._forecastV6.confidence<0.3;}).length;
-  var pctNoNote=deals.length>0?Math.round(noNote/deals.length*100):0;
-  var pctNoNext=deals.length>0?Math.round(noNextStep/deals.length*100):0;
-
-  html+=renderSection(2,'Forecast Quality',
-    '<div class="intel-kpi-row">'+
-    _iKpi(pctNoNote+'%','Sem note',pctNoNote>30?'var(--red)':'var(--green)')+
-    _iKpi(pctNoNext+'%','Sem next step',pctNoNext>30?'var(--red)':'var(--green)')+
-    _iKpi(inflated,'Inflados','var(--yellow)')+
-    _iKpi(lowConf,'Baixa confiança','var(--red)')+
-    '</div>');
-
-  // Forecast radar (top deals by value)
-  var topDeals=deals.slice().sort(function(a,b){return(parseFloat(b.revenueRaw||b.revenue||b.valor_da_oportunidade||0))-(parseFloat(a.revenueRaw||a.revenue||a.valor_da_oportunidade||0));}).slice(0,15);
-  html+=renderSection(3,'Forecast Radar — Top 15 Deals',
-    '<table class="intel-table"><thead><tr><th>Deal</th><th>Linha</th><th>Etapa</th><th>Valor</th><th>Aging</th><th>Risco</th></tr></thead><tbody>'+
-    topDeals.map(function(d){
-      var nome=(d.nome||d.deal_name||d.deal_id||'?').substring(0,30);
-      var linha=d._revLine||'—';
-      var etapa=fmtEtapa(d.etapa||d.etapa_atual_no_pipeline||'—');
-      var val=fmtBRL(Math.round(parseFloat(d.revenueRaw||d.revenue||d.valor_da_oportunidade||0)));
-      var aging=Number(d.delta||d._delta||0);
-      var risk=d._aging&&d._aging.isAtRisk?'<span style="color:var(--red)">RISCO</span>':'OK';
-      return '<tr><td style="font-weight:600">'+nome+'</td><td>'+linha+'</td><td>'+etapa+'</td><td>'+val+'</td><td>'+aging+'d</td><td>'+risk+'</td></tr>';
-    }).join('')+'</tbody></table>');
-
-  ct.innerHTML=html;
-}
-
-// ── QUALITY TAB ──
-function _renderQualityTab(ct,allDeals,deals){
-  var html='';
-  var total=deals.length||1;
-  var withNote=deals.filter(function(d){return d._hasNote||d._noteQuality;}).length;
-  var withNextStep=deals.filter(function(d){return d._nextAction&&d._nextAction!=='none';}).length;
-  var withAuthority=deals.filter(function(d){return d._persona;}).length;
-  var withMeeting=deals.filter(function(d){var e=(d.etapa||d.etapa_atual_no_pipeline||'').toLowerCase();return e.includes('entrevista')||e.includes('agend');}).length;
-
-  var noteRate=Math.round(withNote/total*100);
-  var nextStepRate=Math.round(withNextStep/total*100);
-  var authorityRate=Math.round(withAuthority/total*100);
-  var qualCoverage=Math.round((noteRate+nextStepRate+authorityRate)/3);
-
-  html+=renderSection(1,'Cobertura Qualitativa',
-    '<div class="intel-kpi-row">'+
-    _iKpi(qualCoverage+'%','Índice Geral',qualCoverage>=60?'var(--green)':qualCoverage>=40?'var(--yellow)':'var(--red)')+
-    _iKpi(noteRate+'%','Com nota',noteRate>=70?'var(--green)':'var(--yellow)')+
-    _iKpi(nextStepRate+'%','Com next step',nextStepRate>=70?'var(--green)':'var(--yellow)')+
-    _iKpi(authorityRate+'%','Autoridade ID',authorityRate>=50?'var(--green)':'var(--yellow)')+
-    '</div>');
-
-  // Pipeline health index
-  var AE=window.AnalyticsEngine;
-  if(AE){
-    AE.calcByOperator(30).then(function(o){
-      var convScore=o.scores.qualification/100;
-      var fcConf=0.5; // placeholder
-      var inflatedRate=0.1; // placeholder
-      var slaRisk=o.pipeline.atRisk/(total||1);
-      var qualScore=qualCoverage/100;
-      var pipelineHealth=Math.round((convScore*0.30+fcConf*0.25+(1-inflatedRate)*0.20+(1-slaRisk)*0.15+qualScore*0.10)*100);
-      var healthBand=pipelineHealth>=70?'Saudável':pipelineHealth>=50?'Atenção':'Crítico';
-      var healthColor=pipelineHealth>=70?'var(--green)':pipelineHealth>=50?'var(--yellow)':'var(--red)';
-
-      var healthHtml=renderSection(2,'Índice de Saúde do Pipeline',
-        '<div style="text-align:center;margin:10px 0"><div style="font-size:42px;font-weight:900;color:'+healthColor+'">'+pipelineHealth+'</div><div style="font-size:13px;color:'+healthColor+';font-weight:700">'+healthBand+'</div></div>'+
-        '<div style="font-size:11px;color:var(--text2);text-align:center">Conversão×0.30 + Forecast×0.25 + (1−Inflated)×0.20 + (1−SLA risk)×0.15 + Qualidade×0.10</div>');
-      ct.innerHTML+=healthHtml;
-    });
-  }
-
-  html+=renderSection(3,'Distribuição de Qualidade por Etapa',
-    '<div class="intel-kpi-row">'+
-    _iKpi(withMeeting,'Com meeting agendado')+
-    _iKpi(deals.filter(function(d){return Number(d.delta||d._delta||0)>7;}).length,'Inativos >7d','var(--red)')+
-    _iKpi(deals.filter(function(d){return d._aging&&d._aging.riskLevel==='critical';}).length,'Aging crítico','var(--red)')+
-    '</div>');
-
-  ct.innerHTML=html;
-}
-
-// ── ELUCY INSIGHTS DETECTOR ──
-function _detectGargalo(allDeals,deals){
-  // Detect main bottleneck
-  var fases={};
-  deals.forEach(function(d){
-    var e=(d.etapa||d.etapa_atual_no_pipeline||'desconhecido').toLowerCase();
-    if(!fases[e]) fases[e]={count:0,aging:0};
-    fases[e].count++;
-    fases[e].aging+=Number(d.delta||d._delta||0);
-  });
-  // Find stage with highest aging
-  var worstStage='',worstAging=0;
-  Object.keys(fases).forEach(function(k){
-    var avg=fases[k].count>0?fases[k].aging/fases[k].count:0;
-    if(avg>worstAging&&fases[k].count>=3){worstAging=avg;worstStage=k;}
-  });
-  // Find best/worst revenue line
-  var byLine=window.calcConversionByLine?window.calcConversionByLine(allDeals):{};
-  var bestLine='',bestCR=0,worstLine='',worstCR=999;
-  Object.keys(byLine).forEach(function(k){
-    var s=byLine[k];
-    if(s.leads>=5){
-      if(s.cr_mql_sal>bestCR){bestCR=s.cr_mql_sal;bestLine=k;}
-      if(s.cr_mql_sal<worstCR){worstCR=s.cr_mql_sal;worstLine=k;}
-    }
-  });
-
-  if(worstStage&&worstAging>5){
-    return {type:'bad',label:'Gargalo Principal',
-      message:'Etapa <b>'+fmtEtapa(worstStage)+'</b> tem aging médio de <b>'+Math.round(worstAging*10)/10+' dias</b> com '+fases[worstStage].count+' deals. Leads estão travando aqui.',
-      action:'Rodar FUP Queue filtrando <b>'+fmtEtapa(worstStage)+'</b> e priorizar deals com aging > '+Math.round(worstAging)+' dias.'};
-  }
-  if(worstLine&&worstCR<50){
-    return {type:'warn',label:'Linha Fraca',
-      message:'Linha <b>'+worstLine+'</b> tem conversão Lead→Qualificado de apenas <b>'+worstCR+'%</b>. Melhor linha: <b>'+bestLine+'</b> com '+bestCR+'%.',
-      action:'Priorizar deals da linha <b>'+worstLine+'</b> ou redistribuir esforço para <b>'+bestLine+'</b>.'};
-  }
-  return {type:'good',label:'Pipeline Saudável',
-    message:'Nenhum gargalo crítico detectado. Continue o ritmo atual.',action:''};
+  else if(dim==='task') _renderTask(ct,AE);
+  else if(dim==='value') _renderValue(ct,AE);
 }
 
 function _iBar(label,count,max,total,extraStyle){
@@ -4664,7 +4260,7 @@ function renderCard(title,content){
 }
 
 function fmtEtapa(e){
-  const map={'novo lead':'Novo Lead','dia 01':'D1','dia 02':'D2','dia 03':'D3','dia 04':'D4','dia 05':'D5','dia 06':'D6','conectados':'Conectado','agendamento':'Agendamento','reagendamento':'Reagendamento','entrevista agendada':'Entrevista'};
+  const map={'novo lead':'MQL','dia 01':'D1','dia 02':'D2','dia 03':'D3','dia 04':'D4','dia 05':'D5','dia 06':'D6','conectados':'Conectado','agendamento':'Agendamento','reagendamento':'Reagendamento','entrevista agendada':'Entrevista'};
   return map[(e||'').toLowerCase()]||e;
 }
 
