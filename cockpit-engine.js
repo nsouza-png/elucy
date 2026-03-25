@@ -2031,9 +2031,397 @@ if(window._currentUser){
     setTimeout(initRealtimeListeners,500);
     setTimeout(updateGamificationUI,2000);
     setTimeout(renderHome,2500);
+    // Load cadence enrollments after operator context is ready
+    setTimeout(function(){
+      if(window.loadCadenceEnrollments) loadCadenceEnrollments().then(function(){ loadCadenceSteps(); });
+    },1500);
   });
 }
 
-console.log('[cockpit-engine v3.0] 7-Layer Architecture loaded — Operator Context, Taxonomy Core, Runtime Deal, Task Execution, Analytics, UI State, Product Intelligence');
+// ==================================================================
+// LAYER 8 — CADENCE ENGINE
+// Templates de cadência multi-canal, enrollment por deal, step tracking.
+// Cadências geram tasks diárias que alimentam o Task Runner (Layer 4).
+// ==================================================================
+
+var CADENCE_CHANNELS = {
+  whatsapp:  { label:'WhatsApp',  icon:'💬', color:'green' },
+  ligacao:   { label:'Ligação',   icon:'📞', color:'accent' },
+  email:     { label:'E-mail',    icon:'📧', color:'accent2' },
+  instagram: { label:'Instagram', icon:'📱', color:'clay' },
+  linkedin:  { label:'LinkedIn',  icon:'🔗', color:'accent2' },
+  tarefa:    { label:'Tarefa',    icon:'📋', color:'text2' }
+};
+
+// Default cadence templates by tier/persona
+var DEFAULT_CADENCES = [
+  {
+    id: 'cad_titan_hot',
+    name: 'Titan Hot — Imersão Presencial',
+    tier: 'diamond,gold',
+    persona: 'Titan',
+    totalDays: 14,
+    steps: [
+      { day:1, channel:'whatsapp', action:'Apresentação + link calendly', auto:false },
+      { day:1, channel:'ligacao',  action:'Call de conexão (60s max)', auto:false },
+      { day:2, channel:'whatsapp', action:'FUP: enviou link? Viu material?', auto:false },
+      { day:3, channel:'instagram',action:'DM Founder — tensão de inação', auto:false },
+      { day:4, channel:'ligacao',  action:'Call decisivo — agenda ou descarta', auto:false },
+      { day:5, channel:'whatsapp', action:'Último toque — deadline 24h', auto:false },
+      { day:7, channel:'email',    action:'Breakup email — encerramento elegante', auto:false },
+      { day:10,channel:'instagram',action:'Reengajamento leve — conteúdo de valor', auto:false },
+      { day:14,channel:'whatsapp', action:'Último contato — arquivo ou reativa', auto:false }
+    ]
+  },
+  {
+    id: 'cad_builder_warm',
+    name: 'Builder Warm — Digital/Harvard',
+    tier: 'silver,gold',
+    persona: 'Builder',
+    totalDays: 12,
+    steps: [
+      { day:1, channel:'whatsapp', action:'Apresentação SPICED — situação + impacto', auto:false },
+      { day:2, channel:'email',    action:'Caso de sucesso do segmento', auto:false },
+      { day:3, channel:'ligacao',  action:'Call SPICED — Critical Event', auto:false },
+      { day:4, channel:'whatsapp', action:'FUP com dados personalizado', auto:false },
+      { day:6, channel:'linkedin', action:'Conexão + mensagem de valor', auto:false },
+      { day:8, channel:'ligacao',  action:'Call decisivo', auto:false },
+      { day:10,channel:'whatsapp', action:'Último toque', auto:false },
+      { day:12,channel:'email',    action:'Breakup email', auto:false }
+    ]
+  },
+  {
+    id: 'cad_executor_cold',
+    name: 'Executor Cold — Reativação',
+    tier: 'bronze,silver',
+    persona: 'Executor',
+    totalDays: 21,
+    steps: [
+      { day:1, channel:'whatsapp', action:'Reativação — nova abordagem', auto:false },
+      { day:3, channel:'ligacao',  action:'Call SPIN — identificar dor atual', auto:false },
+      { day:5, channel:'email',    action:'Conteúdo educativo', auto:false },
+      { day:7, channel:'whatsapp', action:'FUP + pergunta aberta', auto:false },
+      { day:10,channel:'instagram',action:'Engajamento social leve', auto:false },
+      { day:14,channel:'ligacao',  action:'Última tentativa de call', auto:false },
+      { day:17,channel:'whatsapp', action:'Mensagem de encerramento', auto:false },
+      { day:21,channel:'email',    action:'Breakup definitivo', auto:false }
+    ]
+  },
+  {
+    id: 'cad_fast_agendamento',
+    name: 'Fast Track — Agendamento Rápido',
+    tier: 'diamond,gold,silver',
+    persona: 'any',
+    totalDays: 5,
+    steps: [
+      { day:1, channel:'whatsapp', action:'Envio de link para agendar', auto:false },
+      { day:1, channel:'ligacao',  action:'Call imediato', auto:false },
+      { day:2, channel:'whatsapp', action:'FUP: conseguiu agendar?', auto:false },
+      { day:3, channel:'ligacao',  action:'Segunda tentativa de call', auto:false },
+      { day:4, channel:'instagram',action:'DM Founder como último recurso', auto:false },
+      { day:5, channel:'whatsapp', action:'Deadline final — agora ou arquivo', auto:false }
+    ]
+  },
+  {
+    id: 'cad_no_show',
+    name: 'No-Show Recovery',
+    tier: 'any',
+    persona: 'any',
+    totalDays: 7,
+    steps: [
+      { day:1, channel:'whatsapp', action:'Reagendamento imediato — tom empático', auto:false },
+      { day:1, channel:'ligacao',  action:'Call para reagendar (até 2h após no-show)', auto:false },
+      { day:2, channel:'whatsapp', action:'FUP com nova data sugerida', auto:false },
+      { day:3, channel:'email',    action:'Email formal com opções de horário', auto:false },
+      { day:5, channel:'ligacao',  action:'Última tentativa de call', auto:false },
+      { day:7, channel:'whatsapp', action:'Encerramento ou downsell', auto:false }
+    ]
+  }
+];
+window.DEFAULT_CADENCES = DEFAULT_CADENCES;
+window.CADENCE_CHANNELS = CADENCE_CHANNELS;
+
+// In-memory enrollment state: { dealId: { cadenceId, startDate, currentStep, status, completedSteps:[] } }
+var _cadenceEnrollments = {};
+
+// Load enrollments from Supabase on init
+async function loadCadenceEnrollments(){
+  var sb=_sb(); if(!sb) return;
+  var opId=getOperatorId(); if(!opId) return;
+  try{
+    var {data}=await sb.from('deal_interactions')
+      .select('deal_id,content,created_at')
+      .eq('operator_id',opId)
+      .eq('interaction_type','cadence_enrollment')
+      .order('created_at',{ascending:false});
+    if(!data) return;
+    // Latest enrollment per deal wins
+    var seen={};
+    data.forEach(function(row){
+      if(seen[row.deal_id]) return;
+      seen[row.deal_id]=true;
+      try{
+        var c=JSON.parse(row.content);
+        if(c.status!=='cancelled'){
+          _cadenceEnrollments[row.deal_id]=c;
+        }
+      }catch(e){}
+    });
+    console.log('[cadence] Loaded '+Object.keys(_cadenceEnrollments).length+' enrollments');
+  }catch(e){ console.warn('[cadence] load error:',e); }
+}
+
+// Load completed steps
+async function loadCadenceSteps(){
+  var sb=_sb(); if(!sb) return;
+  var opId=getOperatorId(); if(!opId) return;
+  try{
+    var {data}=await sb.from('deal_interactions')
+      .select('deal_id,content')
+      .eq('operator_id',opId)
+      .eq('interaction_type','cadence_step_done');
+    if(!data) return;
+    data.forEach(function(row){
+      try{
+        var c=JSON.parse(row.content);
+        var e=_cadenceEnrollments[row.deal_id];
+        if(e && c.stepIdx!=null){
+          if(!e.completedSteps) e.completedSteps=[];
+          if(e.completedSteps.indexOf(c.stepIdx)<0) e.completedSteps.push(c.stepIdx);
+        }
+      }catch(ex){}
+    });
+  }catch(e){}
+}
+
+// Enroll a deal in a cadence
+async function enrollDealInCadence(dealId, cadenceId){
+  var cadence=DEFAULT_CADENCES.find(function(c){return c.id===cadenceId;});
+  if(!cadence) return;
+  var enrollment={
+    cadenceId: cadenceId,
+    cadenceName: cadence.name,
+    startDate: new Date().toISOString().slice(0,10),
+    currentStep: 0,
+    status: 'active',
+    completedSteps: [],
+    totalSteps: cadence.steps.length
+  };
+  _cadenceEnrollments[dealId]=enrollment;
+
+  // Persist to Supabase
+  var sb=_sb(); var opId=getOperatorId();
+  if(sb && opId){
+    await sb.from('deal_interactions').insert({
+      deal_id: dealId,
+      operator_id: opId,
+      interaction_type: 'cadence_enrollment',
+      content: JSON.stringify(enrollment)
+    });
+  }
+  if(window.showSyncToast) window.showSyncToast('ok','Cadência "'+cadence.name+'" iniciada');
+  return enrollment;
+}
+
+// Mark a step as done
+async function completeCadenceStep(dealId, stepIdx){
+  var enrollment=_cadenceEnrollments[dealId];
+  if(!enrollment) return;
+  if(!enrollment.completedSteps) enrollment.completedSteps=[];
+  if(enrollment.completedSteps.indexOf(stepIdx)<0) enrollment.completedSteps.push(stepIdx);
+  enrollment.currentStep=Math.max(enrollment.currentStep, stepIdx+1);
+
+  // Check if cadence is complete
+  var cadence=DEFAULT_CADENCES.find(function(c){return c.id===enrollment.cadenceId;});
+  if(cadence && enrollment.completedSteps.length >= cadence.steps.length){
+    enrollment.status='completed';
+  }
+
+  var sb=_sb(); var opId=getOperatorId();
+  if(sb && opId){
+    await sb.from('deal_interactions').insert({
+      deal_id: dealId,
+      operator_id: opId,
+      interaction_type: 'cadence_step_done',
+      content: JSON.stringify({ stepIdx:stepIdx, cadenceId:enrollment.cadenceId })
+    });
+  }
+}
+
+// Cancel enrollment
+async function cancelCadenceEnrollment(dealId){
+  if(!_cadenceEnrollments[dealId]) return;
+  _cadenceEnrollments[dealId].status='cancelled';
+  var sb=_sb(); var opId=getOperatorId();
+  if(sb && opId){
+    await sb.from('deal_interactions').insert({
+      deal_id: dealId,
+      operator_id: opId,
+      interaction_type: 'cadence_enrollment',
+      content: JSON.stringify(_cadenceEnrollments[dealId])
+    });
+  }
+  delete _cadenceEnrollments[dealId];
+  if(window.showSyncToast) window.showSyncToast('ok','Cadência cancelada');
+}
+
+// Get today's cadence tasks (integrates with Task Runner)
+function getCadenceTasks(){
+  var today=new Date().toISOString().slice(0,10);
+  var tasks=[];
+  Object.keys(_cadenceEnrollments).forEach(function(dealId){
+    var enrollment=_cadenceEnrollments[dealId];
+    if(enrollment.status!=='active') return;
+    var cadence=DEFAULT_CADENCES.find(function(c){return c.id===enrollment.cadenceId;});
+    if(!cadence) return;
+    var startDate=new Date(enrollment.startDate);
+    var todayDate=new Date(today);
+    var daysSinceStart=Math.floor((todayDate-startDate)/(1000*60*60*24))+1;
+
+    cadence.steps.forEach(function(step, idx){
+      // Show step if: it's today's step (or overdue) AND not completed
+      if(step.day<=daysSinceStart && (enrollment.completedSteps||[]).indexOf(idx)<0){
+        var deal=(window._COCKPIT_DEAL_MAP||{})[dealId];
+        if(!deal) return;
+        var ch=CADENCE_CHANNELS[step.channel]||CADENCE_CHANNELS.tarefa;
+        tasks.push({
+          id: dealId,
+          deal: deal,
+          taskType: 'cadence',
+          label: ch.label+': '+step.action,
+          priority: step.day<daysSinceStart?'critical':'high',
+          sortPriority: step.day<daysSinceStart?0:1,
+          urgency: step.day<daysSinceStart?90:60,
+          cadenceStep: idx,
+          cadenceId: enrollment.cadenceId,
+          cadenceName: cadence.name,
+          stepChannel: step.channel,
+          stepAction: step.action,
+          stepDay: step.day,
+          daysSinceStart: daysSinceStart
+        });
+      }
+    });
+  });
+  return tasks;
+}
+window.getCadenceTasks = getCadenceTasks;
+
+// Inject cadence tasks into buildTaskQueue
+var _origBuildTaskQueue = buildTaskQueue;
+buildTaskQueue = function(filterType){
+  var tasks = _origBuildTaskQueue(filterType);
+  // Add cadence tasks
+  var cadTasks = getCadenceTasks();
+  if(filterType && filterType!=='cadence') return tasks; // non-cadence filter active
+  cadTasks.forEach(function(ct){ tasks.push(ct); });
+  // Re-sort by priority
+  tasks.sort(function(a,b){
+    if(a.sortPriority !== b.sortPriority) return a.sortPriority - b.sortPriority;
+    return (b.urgency||0) - (a.urgency||0);
+  });
+  return tasks;
+};
+window.buildTaskQueue = buildTaskQueue;
+
+// Render cadence enrollment modal for a deal
+function renderCadenceModal(dealId){
+  var deal=(window._COCKPIT_DEAL_MAP||{})[dealId];
+  if(!deal) return;
+  var enrollment=_cadenceEnrollments[dealId];
+  var escH=window.escHtml||_escHtml;
+
+  var html='<div class="cad-modal-overlay" id="cad-modal" onclick="if(event.target===this)this.remove()">';
+  html+='<div class="cad-modal">';
+  html+='<div class="cad-modal-header">';
+  html+='<span class="cad-modal-title">Cadências — '+escH(deal.nome||'Lead')+'</span>';
+  html+='<button class="tex-close" onclick="document.getElementById(\'cad-modal\').remove()">✕</button>';
+  html+='</div>';
+
+  if(enrollment && enrollment.status==='active'){
+    // Show current enrollment progress
+    var cadence=DEFAULT_CADENCES.find(function(c){return c.id===enrollment.cadenceId;});
+    if(cadence){
+      html+='<div class="cad-active">';
+      html+='<div class="cad-active-name">'+escH(cadence.name)+'</div>';
+      html+='<div class="cad-active-progress">'+((enrollment.completedSteps||[]).length)+' de '+cadence.steps.length+' steps concluídos</div>';
+      html+='<div class="cad-progress-bar"><div class="cad-progress-fill" style="width:'+Math.round((enrollment.completedSteps||[]).length/cadence.steps.length*100)+'%"></div></div>';
+      html+='<div class="cad-steps">';
+      cadence.steps.forEach(function(step,idx){
+        var done=(enrollment.completedSteps||[]).indexOf(idx)>=0;
+        var ch=CADENCE_CHANNELS[step.channel]||CADENCE_CHANNELS.tarefa;
+        var startDate=new Date(enrollment.startDate);
+        var stepDate=new Date(startDate.getTime()+(step.day-1)*86400000);
+        var dateStr=stepDate.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+        html+='<div class="cad-step'+(done?' done':'')+'" onclick="'+(done?'':'window.cadCompleteStep(\''+dealId+'\','+idx+')')+'">';
+        html+='<span class="cad-step-check">'+(done?'✅':'⬜')+'</span>';
+        html+='<span class="cad-step-day">D'+step.day+' ('+dateStr+')</span>';
+        html+='<span class="cad-step-ch" style="color:var(--'+ch.color+')">'+ch.icon+' '+ch.label+'</span>';
+        html+='<span class="cad-step-action">'+escH(step.action)+'</span>';
+        html+='</div>';
+      });
+      html+='</div>';
+      html+='<button class="tex-act tex-act-skip" style="margin-top:12px;width:100%" onclick="window.cadCancel(\''+dealId+'\');document.getElementById(\'cad-modal\').remove()">Cancelar cadência</button>';
+      html+='</div>';
+    }
+  } else {
+    // Show cadence picker
+    html+='<div class="cad-picker-label">Escolha uma cadência para iniciar:</div>';
+    html+='<div class="cad-picker">';
+    DEFAULT_CADENCES.forEach(function(c){
+      var matchesTier=c.tier==='any'||(deal.tier&&c.tier.indexOf((deal.tier||'').toLowerCase())>=0);
+      var matchesPersona=c.persona==='any'||(deal._persona&&c.persona===deal._persona);
+      var recommended=matchesTier&&matchesPersona;
+      html+='<div class="cad-option'+(recommended?' recommended':'')+'" onclick="window.cadEnroll(\''+dealId+'\',\''+c.id+'\');document.getElementById(\'cad-modal\').remove()">';
+      html+='<div class="cad-option-name">'+escH(c.name)+(recommended?' <span class="cad-rec-badge">RECOMENDADA</span>':'')+'</div>';
+      html+='<div class="cad-option-meta">'+c.steps.length+' steps · '+c.totalDays+' dias</div>';
+      html+='<div class="cad-option-steps">';
+      c.steps.forEach(function(s){
+        var ch=CADENCE_CHANNELS[s.channel]||CADENCE_CHANNELS.tarefa;
+        html+='<span class="cad-mini-step" style="color:var(--'+ch.color+')">D'+s.day+' '+ch.icon+'</span>';
+      });
+      html+='</div></div>';
+    });
+    html+='</div>';
+  }
+  html+='</div></div>';
+
+  // Remove existing modal if any
+  var old=document.getElementById('cad-modal');
+  if(old) old.remove();
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+window.renderCadenceModal = renderCadenceModal;
+window.cadEnroll = function(dealId,cadenceId){
+  enrollDealInCadence(dealId,cadenceId).then(function(){
+    if(window.renderTaskRunner) window.renderTaskRunner();
+  });
+};
+window.cadCompleteStep = function(dealId,stepIdx){
+  completeCadenceStep(dealId,stepIdx).then(function(){
+    renderCadenceModal(dealId); // refresh modal
+    if(window.renderTaskRunner) window.renderTaskRunner();
+  });
+};
+window.cadCancel = function(dealId){
+  cancelCadenceEnrollment(dealId).then(function(){
+    if(window.renderTaskRunner) window.renderTaskRunner();
+  });
+};
+
+// Add cadence type to TASK_TYPES
+TASK_TYPES.cadence = { label:'Cadência', icon:'seq', color:'accent2' };
+
+// Export cadence functions
+window.loadCadenceEnrollments = loadCadenceEnrollments;
+window.loadCadenceSteps = loadCadenceSteps;
+window.enrollDealInCadence = enrollDealInCadence;
+window.completeCadenceStep = completeCadenceStep;
+window.cancelCadenceEnrollment = cancelCadenceEnrollment;
+
+// Init cadences after operator loads
+var _origBoot = window._bootEngine;
+
+console.log('[cockpit-engine v3.1] 8-Layer Architecture loaded — +Cadence Engine');
 
 })();
