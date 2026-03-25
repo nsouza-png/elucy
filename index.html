@@ -264,6 +264,12 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .task-stage-chip:hover{border-color:var(--accent);color:var(--accent2)}
 .task-stage-chip.on{background:var(--adim);border-color:var(--accent);color:var(--accent2)}
 .task-stage-chip b{font-weight:800}
+.task-rl-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding:8px 0;border-top:1px solid var(--border)}
+.task-rl-label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-right:4px}
+.task-rl-chip{padding:3px 8px;border-radius:5px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.12s}
+.task-rl-chip:hover{border-color:var(--clay);color:var(--clay)}
+.task-rl-chip.on{background:var(--claydim);border-color:var(--clay);color:var(--clay)}
+.task-rl-chip b{font-weight:800}
 /* V3: Filter chips */
 .fchip{padding:4px 10px;border-radius:6px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.12s}
 .fchip:hover{border-color:var(--accent);color:var(--accent2)}
@@ -3526,12 +3532,20 @@ function injectElucyReport(targetId, report){
 }
 
 function injectElucyCopy(targetId, copyWA, copyCRM){
+  // Cache in deal map so re-renders preserve copy
+  if(window._COCKPIT_DEAL_MAP && window._COCKPIT_DEAL_MAP[targetId]){
+    window._COCKPIT_DEAL_MAP[targetId]._cachedCopyWA = copyWA;
+    window._COCKPIT_DEAL_MAP[targetId]._cachedCopyCRM = copyCRM;
+  }
   const wa=document.getElementById('ct-'+targetId+'-wa');
   const crm=document.getElementById('ct-'+targetId+'-crm');
   const co=document.getElementById('co-'+targetId);
   if(wa&&copyWA) wa.innerText=copyWA;
   if(crm&&copyCRM) crm.innerText=copyCRM;
   if(co) co.style.display='block';
+  // Re-enable generate button
+  var btn=document.querySelector('#co-'+targetId)&&document.querySelector('button.bp[disabled]');
+  if(btn){btn.textContent='Gerar Copy via ELUCY';btn.disabled=false;}
 }
 
 function extractSection(text, sectionName){

@@ -298,7 +298,7 @@ var TASK_TYPES = {
 };
 window.TASK_TYPES = TASK_TYPES;
 
-function buildTaskQueue(filterType){
+function buildTaskQueue(filterType, filterRevLine){
   var map = window._COCKPIT_DEAL_MAP||{};
   var tasks = [];
   var focusMode = _operatorCtx.focus_mode||'velocidade';
@@ -308,6 +308,12 @@ function buildTaskQueue(filterType){
     var d = map[id];
     if((d.statusDeal||'').toLowerCase()==='perdido'||(d.statusDeal||'').toLowerCase()==='ganho') return;
     enrichDealContext(d);
+
+    // Revenue line filter
+    if(filterRevLine){
+      var rl = d._revLine || resolveRevenueLine(d);
+      if(rl !== filterRevLine) return;
+    }
 
     // Check if deal has active cadence — cadence overrides default _nextAction
     var cadStep = cadenceGetCurrentStep(id);
@@ -393,6 +399,24 @@ function renderTaskRunner(filterType){
   });
   statsHtml += '</div>';
 
+  // Stats — by revenue line
+  var byRevLine = {};
+  tasks.forEach(function(t){
+    var rl = t.deal._revLine || resolveRevenueLine(t.deal);
+    byRevLine[rl] = (byRevLine[rl]||0)+1;
+  });
+  var rlKeys = Object.keys(byRevLine).sort(function(a,b){ return (byRevLine[b]||0)-(byRevLine[a]||0); });
+  if(rlKeys.length > 1){
+    statsHtml += '<div class="task-rl-bar">';
+    statsHtml += '<span class="task-rl-label">Linha:</span>';
+    statsHtml += '<span class="task-rl-chip on" data-revline="all" onclick="window._filterTaskRevLine(null,this)">Todas</span>';
+    rlKeys.forEach(function(rl){
+      var rlCfg = REVENUE_LINES[rl]||{label:rl};
+      statsHtml += '<span class="task-rl-chip" data-revline="'+_escHtml(rl)+'" onclick="window._filterTaskRevLine(\''+_escHtml(rl).replace(/'/g,"\\'")+'\',this)">'+_escHtml(rlCfg.label)+' <b>'+byRevLine[rl]+'</b></span>';
+    });
+    statsHtml += '</div>';
+  }
+
   // Task cards
   var cardsHtml = tasks.map(function(t,idx){
     var d = t.deal;
@@ -400,7 +424,8 @@ function renderTaskRunner(filterType){
     var dealStage = d.etapa || d._etapa || d.fase || 'Outro';
     var agingLabel = t.aging && t.aging.isAtRisk ? '<span class="task-aging task-aging-'+t.aging.riskLevel+'">'+t.aging.riskLabel+'</span>' : '';
     var cadBadge = t.cadence ? '<span class="task-cad-badge" title="'+_escHtml(t.cadence.templateName)+'">⚡ '+_escHtml(t.cadence.templateName)+' ('+(t.cadence.stepIndex+1)+'/'+t.cadence.totalSteps+')</span>' : '';
-    return '<div class="task-card'+(t.cadence?' task-card-cad':'')+'" data-task-idx="'+idx+'" data-stage="'+_escHtml(dealStage)+'" onclick="window.texOpen('+idx+')">'
+    var dealRevLine = d._revLine || resolveRevenueLine(d);
+    return '<div class="task-card'+(t.cadence?' task-card-cad':'')+'" data-task-idx="'+idx+'" data-stage="'+_escHtml(dealStage)+'" data-revline="'+_escHtml(dealRevLine)+'" onclick="window.texOpen('+idx+')">'
       + '<div class="task-card-top">'
       + '<span class="task-type-badge task-c-'+cfg.color+'">'+cfg.label+'</span>'
       + '<span class="task-priority task-p-'+t.priority+'">'+t.priority+'</span>'
@@ -442,6 +467,38 @@ window._filterTaskStage = function(stage, el){
     } else {
       card.style.display = card.dataset.stage === stage ? '' : 'none';
     }
+  });
+};
+
+// Filter tasks by revenue line (client-side show/hide)
+window._filterTaskRevLine = function(revLine, el){
+  document.querySelectorAll('.task-rl-chip').forEach(function(c){ c.classList.remove('on'); });
+  if(el) el.classList.add('on');
+  // Also respect active stage filter
+  var activeStage = null;
+  var stageEl = document.querySelector('.task-stage-chip.on');
+  if(stageEl && stageEl.dataset.stage !== 'all') activeStage = stageEl.dataset.stage;
+
+  document.querySelectorAll('.task-card').forEach(function(card){
+    var stageMatch = !activeStage || card.dataset.stage === activeStage;
+    var rlMatch = !revLine || card.dataset.revline === revLine;
+    card.style.display = (stageMatch && rlMatch) ? '' : 'none';
+  });
+};
+
+// Patch _filterTaskStage to also respect active revenue line filter
+var _origFilterTaskStage = window._filterTaskStage;
+window._filterTaskStage = function(stage, el){
+  document.querySelectorAll('.task-stage-chip').forEach(function(c){ c.classList.remove('on'); });
+  if(el) el.classList.add('on');
+  var activeRevLine = null;
+  var rlEl = document.querySelector('.task-rl-chip.on');
+  if(rlEl && rlEl.dataset.revline !== 'all') activeRevLine = rlEl.dataset.revline;
+
+  document.querySelectorAll('.task-card').forEach(function(card){
+    var stageMatch = !stage || card.dataset.stage === stage;
+    var rlMatch = !activeRevLine || card.dataset.revline === activeRevLine;
+    card.style.display = (stageMatch && rlMatch) ? '' : 'none';
   });
 };
 
@@ -500,12 +557,12 @@ function _texBuildDealCard(id, d){
     + '<button class="btn bs btn-sm" data-color="green" onclick="requestNotaCRM(\''+id+'\',this)" style="border-color:var(--green);color:var(--green)">📝 Nota CRM</button>'
     + '<button class="btn bs btn-sm" onclick="window.open(\'https://app.hubspot.com/contacts/7186301/record/0-3/'+(d.deal_id||id)+'\',\'_blank\')" style="border-color:#ff7a59;color:#ff7a59">🔗 HubSpot</button>'
     + '</div>'
-    + '<div class="co" id="co-'+id+'" style="display:none">'
+    + '<div class="co" id="co-'+id+'" style="'+(d._cachedCopyWA?'':'display:none')+'">'
     + '<div class="co-h"><span class="co-chan">Copy gerada</span>'
     + '<div class="co-tabs"><button class="cotab on" onclick="swTab(\''+id+'\',\'wa\',this)">WhatsApp</button><button class="cotab" onclick="swTab(\''+id+'\',\'crm\',this)">Nota CRM</button></div></div>'
     + '<div class="co-b">'
-    + '<div class="co-txt" id="ct-'+id+'-wa" contenteditable="true" spellcheck="false" style="white-space:pre-wrap">Gerando copy...</div>'
-    + '<div class="co-txt" id="ct-'+id+'-crm" contenteditable="true" spellcheck="false" style="display:none;white-space:pre-wrap"></div>'
+    + '<div class="co-txt" id="ct-'+id+'-wa" contenteditable="true" spellcheck="false" style="white-space:pre-wrap">'+(d._cachedCopyWA?_escHtml(d._cachedCopyWA):'Gerando copy...')+'</div>'
+    + '<div class="co-txt" id="ct-'+id+'-crm" contenteditable="true" spellcheck="false" style="display:none;white-space:pre-wrap">'+(d._cachedCopyCRM?_escHtml(d._cachedCopyCRM):'')+'</div>'
     + '<div class="copy-actions">'
     + '<button class="btn bs btn-sm" onclick="clip(\'ct-'+id+'-wa\')">Copiar</button>'
     + '<button class="btn bs btn-sm" onclick="openWhatsApp(\''+id+'\')" style="border-color:#25d366;color:#25d366">📱 WhatsApp</button>'
@@ -581,7 +638,9 @@ function _texStopTimer(){
 window.texOpen = function(idx){
   var filterEl = document.querySelector('.fchip.on');
   var filterType = filterEl && filterEl.dataset.tfilter !== 'all' ? filterEl.dataset.tfilter : null;
-  _texQueue = buildTaskQueue(filterType);
+  var rlEl = document.querySelector('.task-rl-chip.on');
+  var filterRevLine = rlEl && rlEl.dataset.revline !== 'all' ? rlEl.dataset.revline : null;
+  _texQueue = buildTaskQueue(filterType, filterRevLine);
   if(!_texQueue.length) return;
   _texIdx = Math.min(idx, _texQueue.length - 1);
   document.getElementById('tex-overlay').classList.add('open');
@@ -730,7 +789,9 @@ window.openTaskDeal = function(id){
   // Find task index for this deal
   var filterEl = document.querySelector('.fchip.on');
   var filterType = filterEl && filterEl.dataset.tfilter !== 'all' ? filterEl.dataset.tfilter : null;
-  _texQueue = buildTaskQueue(filterType);
+  var rlEl2 = document.querySelector('.task-rl-chip.on');
+  var filterRL = rlEl2 && rlEl2.dataset.revline !== 'all' ? rlEl2.dataset.revline : null;
+  _texQueue = buildTaskQueue(filterType, filterRL);
   for(var i=0;i<_texQueue.length;i++){
     if(_texQueue[i].id === id){ window.texOpen(i); return; }
   }
@@ -2400,8 +2461,8 @@ window.getCadenceTasks = getCadenceTasks;
 
 // Inject cadence tasks into buildTaskQueue
 var _origBuildTaskQueue = buildTaskQueue;
-buildTaskQueue = function(filterType){
-  var tasks = _origBuildTaskQueue(filterType);
+buildTaskQueue = function(filterType, filterRevLine){
+  var tasks = _origBuildTaskQueue(filterType, filterRevLine);
   // Add cadence tasks
   var cadTasks = getCadenceTasks();
   if(filterType && filterType!=='cadence') return tasks; // non-cadence filter active
