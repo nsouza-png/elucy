@@ -3437,18 +3437,21 @@ async function processWaConversation(id){
   const email=_currentUser&&_currentUser.email;
   if(!sb||!email){showSyncToast('err','Supabase não conectado.');return;}
   // Inserir cada mensagem como registro individual
+  // Schema real: deal_id, operator_id, operator_email, tipo, conteudo
   const records=msgs.map((m,i)=>({
     deal_id:String(deal.deal_id),
     operator_id:email,
-    source_type:m.role==='lead'?'whatsapp_msg_lead':'whatsapp_msg_sdr',
-    content:JSON.stringify({sender:m.sender,text:m.text,date:m.date,time:m.time,index:i,role:m.role})
+    operator_email:email,
+    tipo:m.role==='lead'?'whatsapp_msg_lead':'whatsapp_msg_sdr',
+    conteudo:JSON.stringify({sender:m.sender,text:m.text,date:m.date,time:m.time,index:i,role:m.role})
   }));
   // Também salvar bloco bruto como enrichment para o worker
   records.push({
     deal_id:String(deal.deal_id),
     operator_id:email,
-    source_type:'whatsapp_raw',
-    content:raw
+    operator_email:email,
+    tipo:'whatsapp_raw',
+    conteudo:raw
   });
   showSyncToast('ok','Salvando '+msgs.length+' mensagens...');
   const {data,error}=await sb.from('lead_enrichments').insert(records).select();
@@ -3499,17 +3502,17 @@ async function loadWaConversation(id){
   const {data,error}=await sb.from('lead_enrichments')
     .select('*')
     .eq('deal_id',String(deal.deal_id))
-    .eq('operator_id',email)
-    .in('source_type',['whatsapp_msg_lead','whatsapp_msg_sdr'])
+    .eq('operator_email',email)
+    .in('tipo',['whatsapp_msg_lead','whatsapp_msg_sdr'])
     .order('created_at',{ascending:true});
   if(error||!data||!data.length) return;
   // Parsear registros em mensagens
   const msgs=data.map(row=>{
     try{
-      const c=JSON.parse(row.content);
+      const c=JSON.parse(row.conteudo);
       return {sender:c.sender||'',text:c.text||'',date:c.date||'',time:c.time||'',role:c.role||'lead'};
     }catch(e){
-      return {sender:'',text:row.content,date:'',time:'',role:row.source_type==='whatsapp_msg_lead'?'lead':'sdr'};
+      return {sender:'',text:row.conteudo,date:'',time:'',role:row.tipo==='whatsapp_msg_lead'?'lead':'sdr'};
     }
   });
   if(msgs.length){
