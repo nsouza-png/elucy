@@ -112,16 +112,42 @@ window.FOCUS_MODES = FOCUS_MODES;
 // LAYER 2 — TAXONOMY CORE
 // ==================================================================
 
+// Revenue Lines — mapeamento canônico das linhas reais do G4
+// Fonte: production.diamond.funil_comercial (linha_de_receita_vigente + grupo_de_receita)
 var REVENUE_LINES = {
-  imersao:    { label:'Imersao',     base:'qualified',    risk_after:3, line_weight:1.0  },
-  club:       { label:'Club',        base:'opportunity',  risk_after:5, line_weight:0.85 },
-  field_sales:{ label:'Field Sales', base:'meetings',     risk_after:7, line_weight:0.9  },
-  eventos:    { label:'Eventos',     base:'qualified',    risk_after:5, line_weight:0.8  },
-  digital:    { label:'Digital',     base:'leads',        risk_after:3, line_weight:0.7  },
-  social_dm:  { label:'Social DM',   base:'touchpoints',  risk_after:1, line_weight:0.75 },
-  outbound:   { label:'Outbound',    base:'leads',        risk_after:3, line_weight:0.65 },
-  parceria:   { label:'Parceria',    base:'qualified',    risk_after:7, line_weight:0.8  },
-  consulting: { label:'Consulting',  base:'meetings',     risk_after:5, line_weight:1.1  }
+  // Imersões Presenciais
+  imersao_presencial: { label:'Imersão Presencial', base:'qualified',   risk_after:3, line_weight:1.0  },
+  // Imersões Online
+  imersao_online:     { label:'Imersão Online',     base:'qualified',   risk_after:4, line_weight:0.9  },
+  // Social DM (Instagram founder — utm tallis/nardon/alfredo)
+  social_dm:          { label:'Social DM',          base:'touchpoints', risk_after:1, line_weight:0.75 },
+  // Perfil K (Social DM variante)
+  social_dm_k:        { label:'Social DM K',        base:'touchpoints', risk_after:1, line_weight:0.70 },
+  // Club / Scale / Continuidade
+  club:               { label:'Club',               base:'opportunity', risk_after:5, line_weight:0.85 },
+  scale:              { label:'Scale',              base:'opportunity', risk_after:5, line_weight:0.85 },
+  // Consulting / Harvard / Tank
+  consulting:         { label:'Consulting',         base:'meetings',    risk_after:5, line_weight:1.1  },
+  // Customer Experience
+  cx:                 { label:'Customer Experience',base:'qualified',   risk_after:4, line_weight:0.95 },
+  // Gestão de Pessoas / GP
+  gp:                 { label:'Gestão de Pessoas',  base:'qualified',   risk_after:4, line_weight:0.9  },
+  // Gestão & Estratégia
+  gestao:             { label:'Gestão & Estratégia',base:'qualified',   risk_after:3, line_weight:1.0  },
+  // Digital / Online / E-commerce
+  digital:            { label:'Digital/Online',     base:'leads',       risk_after:3, line_weight:0.7  },
+  // Eventos (participação, conferência)
+  eventos:            { label:'Eventos',            base:'qualified',   risk_after:5, line_weight:0.8  },
+  // Reativação (leads perdidos reengajados)
+  reativacao:         { label:'Reativação',         base:'leads',       risk_after:2, line_weight:0.6  },
+  // Abandono de Carrinho / Self Checkout
+  selfcheckout:       { label:'Self Checkout',      base:'leads',       risk_after:1, line_weight:0.5  },
+  // Field Sales / Outbound
+  field_sales:        { label:'Field Sales',        base:'meetings',    risk_after:7, line_weight:0.9  },
+  // Parceria / Indicação
+  parceria:           { label:'Parceria',           base:'qualified',   risk_after:7, line_weight:0.8  },
+  // Fallback genérico
+  imersao:            { label:'Imersão',            base:'qualified',   risk_after:3, line_weight:1.0  }
 };
 window.REVENUE_LINES = REVENUE_LINES;
 
@@ -140,19 +166,62 @@ var KILL_SWITCHES = {
 };
 window.KILL_SWITCHES = KILL_SWITCHES;
 
+// resolveRevenueLine — classifica deal pela linha de receita real do G4
+// Lê: linha_de_receita_vigente, grupo_de_receita, origem_do_deal, utm_medium
+// REGRA: usar o campo mais específico primeiro, fallback no mais genérico
 function resolveRevenueLine(deal){
   var lr=(deal.linhaReceita||deal.linha_de_receita_vigente||'').toLowerCase();
   var gr=(deal.grupo_de_receita||deal.grupoReceita||'').toLowerCase();
+  var origem=(deal.origem_do_deal||deal.origemDeal||'').toLowerCase();
   var canal=(deal.canal||'').toLowerCase();
   var utm=(deal.utm_medium||'').toLowerCase();
-  if(lr.includes('social dm')||lr.includes('social media')||lr.includes('[im] social')||utm==='tallis'||utm==='nardon'||utm==='alfredo') return 'social_dm';
+
+  // Social DM — Instagram founder (tallis/nardon/alfredo) ou linha explícita
+  if(lr.includes('[im] social dm')||lr.includes('social dm - perfil k')) {
+    return lr.includes('perfil k') ? 'social_dm_k' : 'social_dm';
+  }
+  if(utm==='tallis'||utm==='nardon'||utm==='alfredo') return 'social_dm';
+  if(lr.includes('[im] social')||origem.includes('[im] social')) return 'social_dm';
+
+  // Abandono de carrinho / Self Checkout
+  if(lr.includes('abandono')||lr.includes('self checkout')||gr.includes('selfcheckout')||origem.includes('abandono')) return 'selfcheckout';
+
+  // Reativação
+  if(lr.includes('reativ')||origem.includes('reativ')) return 'reativacao';
+
+  // Club / Scale
+  if(lr.includes('scale')||gr.includes('scale')) return 'scale';
   if(lr.includes('club')||gr.includes('club')) return 'club';
-  if(lr.includes('consulting')||gr.includes('consulting')) return 'consulting';
-  if(lr.includes('field')||lr.includes('outbound')||canal==='ligacao') return 'field_sales';
-  if(lr.includes('evento')||gr.includes('evento')) return 'eventos';
-  if(lr.includes('digital')||lr.includes('online')||gr.includes('digital')) return 'digital';
-  if(lr.includes('parceria')||gr.includes('parceria')) return 'parceria';
-  if(lr.includes('outbound')) return 'outbound';
+
+  // Consulting / Harvard / Tank
+  if(lr.includes('consulting')||lr.includes('harvard')||lr.includes('tank')||gr.includes('consulting')) return 'consulting';
+
+  // Customer Experience
+  if(lr.includes('customer experience')||lr.includes('[cx]')||gr.includes('customer experience')) return 'cx';
+
+  // Gestão de Pessoas
+  if(lr.includes('gestao de pessoas')||lr.includes('gestão de pessoas')||lr.includes('[gp]')||gr.includes('gestão de pessoas')) return 'gp';
+
+  // Eventos
+  if(lr.includes('event')||gr.includes('event')||origem.includes('event')) return 'eventos';
+
+  // Parceria / Indicação
+  if(lr.includes('parceria')||lr.includes('indica')||gr.includes('parceria')) return 'parceria';
+
+  // Field Sales / Outbound
+  if(lr.includes('field')||canal==='ligacao') return 'field_sales';
+  if(lr.includes('outbound')||gr.includes('outbound')) return 'field_sales';
+
+  // Imersão Online (sigla [ON])
+  if(lr.includes('[on]')||lr.includes('online')||gr.includes('online')||gr.includes('digital')) return 'imersao_online';
+
+  // Digital / E-commerce
+  if(lr.includes('digital')||lr.includes('ecommerce')||lr.includes('e-commerce')) return 'digital';
+
+  // Gestão & Estratégia (e variantes — imersão presencial genérica)
+  if(lr.includes('gestao')||lr.includes('gestão')||lr.includes('[im]')||gr.includes('imers')) return 'imersao_presencial';
+
+  // Fallback — imersão genérica
   return 'imersao';
 }
 window.resolveRevenueLine = resolveRevenueLine;
