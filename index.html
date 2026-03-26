@@ -2665,27 +2665,17 @@ function renderLiveDeals(rows,cols){
     const id='live-'+idx;
     const deal_id=g(row,'deal_id')||'';
     const emailLead=g(row,'email_lead')||g(row,'email')||'';
-    // Nome: prioridade nome_do_negocio (parse "Nome - Produto") > contact_name > email parse (pessoal) > email full (corporativo) > Deal #ID
+    // Nome: prioridade nome_do_negocio > contact_name > email parsed > Lead #
+    // contact_name agora vem do hubspot_contacts (nome + sobrenome) via sync
     const nomeNegocio=(g(row,'nome_do_negocio')||'').trim();
     const contactName=(g(row,'contact_name')||'').trim();
-    const PERSONAL_DOMAINS=/^(gmail|hotmail|outlook|yahoo|live|icloud|aol|protonmail|uol|bol|terra|ig|globo|msn)\./i;
     let nome='';
     if(nomeNegocio){
-      // dealname HubSpot formato "Nome Pessoa - Produto Mês/Ano" → extrai parte antes do " - "
       const parts=nomeNegocio.split(/\s*-\s*/);
       nome=parts[0].trim()||nomeNegocio;
     } else if(contactName) nome=contactName;
-    else if(emailLead){
-      const domain=emailLead.split('@')[1]||'';
-      const user=emailLead.split('@')[0]||'';
-      if(PERSONAL_DOMAINS.test(domain)){
-        // Email pessoal → parse username como nome (danielebonaa → Danielebonaa)
-        nome=user.replace(/[._-]/g,' ').replace(/\d+$/,'').trim().replace(/\b\w/g,c=>c.toUpperCase())||emailLead;
-      } else {
-        // Email corporativo → mostra email completo (evita "Gerenciamkt" de gerenciamkt@empresa.com)
-        nome=emailLead;
-      }
-    } else nome=deal_id?('Deal #'+deal_id):('Lead '+(idx+1));
+    else if(emailLead) nome=emailLead.split('@')[0].replace(/[._-]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+    else nome='Lead '+(idx+1);
     // Empresa: domínio do email
     const empresa=emailLead?emailLead.split('@')[1]||'—':'—';
     const cargo=g(row,'cargo')||'';
