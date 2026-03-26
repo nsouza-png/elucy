@@ -4412,7 +4412,7 @@ function extractSection(text, sectionName){
 }
 
 function escHtml(s){
-  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 // ── MARKDOWN RENDERER (LLM output → HTML bonito) ────────────────────

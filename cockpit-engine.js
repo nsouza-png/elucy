@@ -15,7 +15,7 @@
 
 // == HELPERS =======================================================
 function _sb(){ return window.getSB ? window.getSB() : null; }
-function _escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function _escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function _today(){ return new Date().toISOString().slice(0,10); }
 function _now(){ return new Date().toISOString(); }
 
@@ -699,7 +699,7 @@ function _texBuildDealCard(id, d){
     + '</div></div>'
     // ── BLOCO 4: Ação (próxima ação + recomendação ELUCY) ────────────
     + '<div class="deal-acao">'
-    + '<div class="acao-next"><div class="acao-lbl">Próxima Ação</div><div class="acao-val">'+escHtml(d._nextAction||d.dd||'—')+'</div>'+(d._timeline?'<div class="acao-sub">'+escHtml(d._timeline.actionLabel)+'</div>':'')+'</div>'
+    + '<div class="acao-next"><div class="acao-lbl">Próxima Ação</div><div class="acao-val">'+escHtml(d._nextAction&&d._nextAction.label||d.dd||'—')+'</div>'+(d._timeline?'<div class="acao-sub">'+escHtml(d._timeline.actionLabel||'')+'</div>':'')+'</div>'
     + '<div class="recom"><div class="recom-l">Recomendação ELUCY <span class="elucy-badge">MOTOR ATIVO</span></div>'
     + '<div class="recom-t" id="recom-tex-'+id+'">'+buildRecom(d)+'</div></div>'
     + '</div>'
