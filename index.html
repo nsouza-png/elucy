@@ -117,6 +117,7 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .btn-refresh{padding:5px 11px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);transition:.15s;display:flex;align-items:center;gap:5px}
 .btn-refresh:hover{border-color:var(--accent);color:var(--accent2);background:var(--adim)}
 .btn-refresh.spin-active svg{animation:spin .7s linear infinite;transform-origin:center}
+.sync-indicator{font-size:10px;color:var(--text2);display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:10px;background:var(--bg3);border:1px solid var(--border)}
 .btn-settings{padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);transition:.15s}
 .btn-settings:hover{border-color:var(--border2);color:var(--text)}
 .op-pill{background:var(--gdim);border:1px solid var(--green);border-radius:4px;padding:2px 7px;font-size:10px;color:var(--green);font-weight:700;display:none}
@@ -727,10 +728,7 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
     <div class="sb-h">
       <div class="sb-top">
         <span class="sb-title">Meu Pipeline</span>
-        <button class="btn-refresh" id="btn-refresh" onclick="refreshPipeline()" title="Sincronizar com funil_comercial">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
-          Atualizar
-        </button>
+        <span class="sync-indicator" id="sync-indicator" title="Sync automático a cada 30min">⚡ ao vivo</span>
       </div>
       <div class="sb-date" id="sbdate" style="font-size:11px;color:var(--text2);padding-bottom:6px">Dom, 22 Mar 2026</div>
       <div class="sb-stats">
@@ -1760,9 +1758,6 @@ async function callSyncDeals(){
   const {data:{session}}=await sb.auth.getSession();
   if(!session) return;
   _syncInProgress=true;
-  const btn=document.getElementById('btn-refresh');
-  if(btn){btn.disabled=true;btn.style.opacity='0.5';}
-  showSyncToast('load','Sincronizando com Databricks...');
   try{
     // 1. Enfileira sync request — schema real: operator_id(text), deal_id(text), request_type(text), status(text), deal_data(jsonb)
     const {error:insertErr} = await sb.from('cockpit_requests').insert({
@@ -1776,6 +1771,8 @@ async function callSyncDeals(){
     // 2. Recarrega deals do Supabase (dados atuais enquanto sync roda)
     await loadDealsFromSupabase(session.user.email);
     _lastSyncAt=Date.now();
+    const si=document.getElementById('sync-indicator');
+    if(si){ const d=new Date(); si.innerHTML='⚡ ' + d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'); }
     const el=document.getElementById('sbdate');
     const now=new Date();
     const ts=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
@@ -1785,7 +1782,6 @@ async function callSyncDeals(){
     showSyncToast('err','Falha ao solicitar sync: '+err.message);
   }finally{
     _syncInProgress=false;
-    if(btn){btn.disabled=false;btn.style.opacity='';}
   }
 }
 
@@ -2050,9 +2046,7 @@ function saveToken(email){
   if(s) s.innerHTML='<div class="sync-status sync-ok">Conectado. Carregando pipeline...</div>';
   setTimeout(()=>{
     closeTokenModal();
-    const btn=document.getElementById('btn-refresh');
-    if(btn) btn.classList.add('spin-active');
-    fetchPipeline(email,token,btn);
+    fetchPipeline(email,token,null);
   },700);
 }
 
@@ -2118,9 +2112,7 @@ function pickName(nome,_){
   document.getElementById('picker-modal').remove();
   localStorage.setItem('elucy_qualificador_name',nome);
   const token=localStorage.getItem('elucy_db_token');
-  const btn=document.getElementById('btn-refresh');
-  if(btn) btn.classList.add('spin-active');
-  fetchPipelineByName(nome,token,btn);
+  fetchPipelineByName(nome,token,null);
 }
 
 function fetchPipelineByName(nome,token,btn){
