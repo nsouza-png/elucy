@@ -600,10 +600,10 @@ function _texBuildDealCard(id, d){
     + '<button class="btn bp" onclick="showCopy(\''+id+'\',this)">Gerar Copy via ELUCY</button>'
     + '<button class="btn bs" id="btn-er-tex-'+id+'" onclick="toggleER(\''+id+'\',this)">ELUCI Report</button>'
     + '<button class="btn bs" data-color="clay" onclick="requestBusinessAnalysis(\''+id+'\',this)" style="border-color:var(--clay);color:var(--clay)">Análise de Mercado</button>'
-    + '<button class="wa-conv-btn" onclick="toggleWaPanel(\''+id+'\',this)">💬 Conversa</button>'
-    + '<button class="btn bs btn-sm" data-color="green" onclick="requestNotaCRM(\''+id+'\',this)" style="border-color:var(--green);color:var(--green)">📝 Nota CRM</button>'
-    + '<button class="btn bs btn-sm" onclick="window.open(\'https://app.hubspot.com/contacts/7186301/record/0-3/'+(d.deal_id||id)+'\',\'_blank\')" style="border-color:#ff7a59;color:#ff7a59">🔗 HubSpot</button>'
-    + '<button class="btn bs btn-sm" onclick="toggleCallPanel(\''+id+'\')" style="border-color:var(--accent2);color:var(--accent2)">📞 Ligar</button>'
+    + '<button class="wa-conv-btn" onclick="toggleWaPanel(\''+id+'\',this)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Conversa</button>'
+    + '<button class="btn bs btn-sm" data-color="green" onclick="requestNotaCRM(\''+id+'\',this)" style="border-color:var(--green);color:var(--green)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Nota CRM</button>'
+    + '<button class="btn bs btn-sm" onclick="window.open(\'https://app.hubspot.com/contacts/7186301/record/0-3/'+(d.deal_id||id)+'\',\'_blank\')" style="border-color:#ff7a59;color:#ff7a59"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> HubSpot</button>'
+    + '<button class="btn bs btn-sm" onclick="toggleCallPanel(\''+id+'\')" style="border-color:var(--accent2);color:var(--accent2)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.28a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.8 2.5h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.09a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg> Ligar</button>'
     + '</div>'
     + '<div class="co" id="co-'+id+'" style="'+(d._cachedCopyWA?'':'display:none')+'">'
     + '<div class="co-h"><span class="co-chan">Copy gerada</span>'
@@ -613,7 +613,7 @@ function _texBuildDealCard(id, d){
     + '<div class="co-txt" id="ct-'+id+'-crm" contenteditable="true" spellcheck="false" style="display:none;white-space:pre-wrap">'+(d._cachedCopyCRM?_escHtml(d._cachedCopyCRM):'')+'</div>'
     + '<div class="copy-actions">'
     + '<button class="btn bs btn-sm" onclick="clip(\'ct-'+id+'-wa\')">Copiar</button>'
-    + '<button class="btn bs btn-sm" onclick="openWhatsApp(\''+id+'\')" style="border-color:#25d366;color:#25d366">📱 WhatsApp</button>'
+    + '<button class="btn bs btn-sm" onclick="openWhatsApp(\''+id+'\')" style="border-color:#25d366;color:#25d366"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> WhatsApp</button>'
     + '<button class="btn bs btn-sm" onclick="clip(\'ct-'+id+'-crm\')">Copiar Nota</button>'
     + '</div></div></div>'
     + '<div class="ba" id="nota-'+id+'" style="display:none"></div>'
@@ -628,7 +628,7 @@ function _texBuildDealCard(id, d){
     + '<div class="call-panel-header"><span class="call-panel-title">Registrar Chamada</span><button class="call-panel-close" onclick="toggleCallPanel(\''+id+'\')">&#x2715;</button></div>'
     + '<div class="call-panel-body">'
     + '<div class="call-dialer-row">'
-    + '<button class="call-dialer-btn" onclick="openHubSpotDialer(\''+id+'\')">📞 Abrir Discador HubSpot</button>'
+    + '<button class="call-dialer-btn" onclick="openHubSpotDialer(\''+id+'\')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.28a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.8 2.5h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.09a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg> Abrir Discador HubSpot</button>'
     + '<span class="call-attempt-info" id="call-attempts-'+id+'"></span>'
     + '</div>'
     + '<div>'
@@ -853,7 +853,7 @@ window.texComplete = function(){
     _texStartTimer();
   } else {
     window.texClose();
-    if(window.showSyncToast) window.showSyncToast('ok','🎉 Fila concluída! Todas as tasks executadas.');
+    if(window.showSyncToast) window.showSyncToast('ok','Fila concluída! Todas as tasks executadas.');
   }
 };
 
@@ -1090,7 +1090,8 @@ window.cadenceGetInfo = function(dealId){
 };
 
 // Channel icons for UI
-var CHANNEL_ICONS = {whatsapp:'💬',phone:'📞',email:'📧',instagram:'📸'};
+var CHANNEL_ICONS = {whatsapp:'chat',phone:'phone',email:'email',instagram:'instagram'};
+var CHANNEL_SVG = {chat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',phone:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.28a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.8 2.5h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.09a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',email:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',instagram:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>',pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'};
 window.CHANNEL_ICONS = CHANNEL_ICONS;
 
 // Build cadence enrollment UI (for deal cards)
@@ -1114,14 +1115,14 @@ window.cadenceBuildUI = function(dealId){
   var stepHtml = steps.map(function(s, i){
     var done = enr.completedSteps.some(function(c){ return c.step===i; });
     var current = i === enr.currentStep && !enr.completed;
-    var icon = CHANNEL_ICONS[s.channel]||'📌';
+    var icon = CHANNEL_SVG[CHANNEL_ICONS[s.channel]]||CHANNEL_SVG.pin;
     var cls = done ? 'cad-step done' : current ? 'cad-step current' : 'cad-step';
     return '<div class="'+cls+'" title="D'+s.day+': '+_escHtml(s.action)+'">'
       + '<span class="cad-step-icon">'+icon+'</span>'
       + '<span class="cad-step-day">D'+s.day+'</span>'
       + '</div>';
   }).join('');
-  var statusLabel = enr.completed ? '✅ Completa' : enr.paused ? '⏸ Pausada' : '▶ Ativa';
+  var statusLabel = enr.completed ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="10" height="10"><polyline points="20 6 9 17 4 12"/></svg> Completa' : enr.paused ? '⏸ Pausada' : '▶ Ativa';
   return '<div class="cad-progress">'
     + '<div class="cad-header">'
     + '<span class="cad-name">'+_escHtml(tmpl?tmpl.name:enr.template)+'</span>'
@@ -2279,12 +2280,12 @@ if(window._currentUser){
 // ==================================================================
 
 var CADENCE_CHANNELS = {
-  whatsapp:  { label:'WhatsApp',  icon:'💬', color:'green' },
-  ligacao:   { label:'Ligação',   icon:'📞', color:'accent' },
-  email:     { label:'E-mail',    icon:'📧', color:'accent2' },
-  instagram: { label:'Instagram', icon:'📱', color:'clay' },
-  linkedin:  { label:'LinkedIn',  icon:'🔗', color:'accent2' },
-  tarefa:    { label:'Tarefa',    icon:'📋', color:'text2' }
+  whatsapp:  { label:'WhatsApp',  icon:'chat', color:'green' },
+  ligacao:   { label:'Ligação',   icon:'phone', color:'accent' },
+  email:     { label:'E-mail',    icon:'email', color:'accent2' },
+  instagram: { label:'Instagram', icon:'instagram', color:'clay' },
+  linkedin:  { label:'LinkedIn',  icon:'linkedin', color:'accent2' },
+  tarefa:    { label:'Tarefa',    icon:'clipboard', color:'text2' }
 };
 
 // Default cadence templates by tier/persona
@@ -2588,7 +2589,7 @@ function renderCadenceModal(dealId){
         var stepDate=new Date(startDate.getTime()+(step.day-1)*86400000);
         var dateStr=stepDate.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
         html+='<div class="cad-step'+(done?' done':'')+'" onclick="'+(done?'':'window.cadCompleteStep(\''+dealId+'\','+idx+')')+'">';
-        html+='<span class="cad-step-check">'+(done?'✅':'⬜')+'</span>';
+        html+='<span class="cad-step-check">'+(done?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>')+'</span>';
         html+='<span class="cad-step-day">D'+step.day+' ('+dateStr+')</span>';
         html+='<span class="cad-step-ch" style="color:var(--'+ch.color+')">'+ch.icon+' '+ch.label+'</span>';
         html+='<span class="cad-step-action">'+escH(step.action)+'</span>';
@@ -4882,7 +4883,7 @@ function renderSignalBadge(deal, compact){
   var label = sign + total.toFixed(2);
 
   if(compact){
-    return '<span style="background:'+bg+';border:1px solid '+color+';border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;color:'+color+';">⚡'+label+'</span>';
+    var zapSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="9" height="9"><path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2z"/></svg>'; return '<span style="background:'+bg+';border:1px solid '+color+';border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;color:'+color+';">⚡'+label+'</span>';
   }
 
   var html = '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-top:8px;">';
