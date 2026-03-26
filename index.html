@@ -104,8 +104,8 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .dm-res{display:none}.dm-res.show{display:block}.dm-ctx{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:8px;font-size:12px;color:var(--text2);line-height:1.6}
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:340px;gap:10px;text-align:center;padding:40px}.e-ic{font-size:36px;opacity:.4}.e-t{font-size:15px;font-weight:600}.e-s{font-size:12px;color:var(--text2);line-height:1.6;max-width:250px}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}.screen.on,.er,.card{animation:fadeIn .2s ease}
-.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease}
-.modal{background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:28px;width:420px;max-width:90vw;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+.modal-ov{position:fixed;inset:0;background:rgba(2,6,15,.75);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:200;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease}
+.modal{background:var(--bg2);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:24px 28px;width:440px;max-width:92vw;max-height:88vh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,.7);scrollbar-width:thin}
 .modal-t{font-size:var(--fs-h3);font-weight:var(--fw-xbold);margin-bottom:4px;line-height:var(--lh-tight)}.modal-s{font-size:var(--fs-body-sm);color:var(--text2);margin-bottom:20px;line-height:var(--lh-body)}
 .modal-f{display:flex;flex-direction:column;gap:4px;margin-bottom:14px}.modal-l{font-size:var(--fs-caption);color:var(--text2);text-transform:uppercase;letter-spacing:.5px;font-weight:var(--fw-bold)}
 .modal-i{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--text);outline:none;width:100%;font-family:inherit;transition:.15s}.modal-i:focus{border-color:var(--accent)}
@@ -1932,7 +1932,7 @@ function openSettings(){
           <input class="modal-i" id="op-token-input" type="password" placeholder="${tokenMask||'dapi...'}" autocomplete="off" style="font-family:monospace;font-size:12px">
         </div>
         <div class="modal-note">Token pessoal do Databricks (Settings → Developer → Access tokens). Armazenado apenas no seu navegador.</div>
-        ${savedToken?'<div style="font-size:10px;color:var(--green);margin-top:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Configurado</div></div>':'<div style="font-size:10px;color:var(--yellow);margin-top:4px">Sem token — o modo local não funcionará sem ele.</div>'}
+        ${savedToken?'<div style="font-size:10px;color:var(--green);margin-top:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Configurado</div>':'<div style="font-size:10px;color:var(--yellow);margin-top:4px">Sem token — o modo local não funcionará sem ele.</div>'}
       </div>
 
       <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
