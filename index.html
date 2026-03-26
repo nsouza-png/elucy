@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -370,6 +370,33 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .wa-bubble.sdr .wa-bubble-name{color:var(--accent2)}
 .wa-bubble-ts{font-size:9px;color:var(--text2);text-align:right;margin-top:2px}
 .wa-bubble-text{white-space:pre-wrap}
+/* Call Log Panel */
+.call-panel{display:none;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);margin-top:8px;overflow:hidden}
+.call-panel.show{display:block}
+.call-panel-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)}
+.call-panel-title{font-family:var(--font-title);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent2)}
+.call-panel-close{font-size:11px;cursor:pointer;color:var(--text2);border:none;background:none;padding:2px 6px}
+.call-panel-close:hover{color:var(--red)}
+.call-panel-body{padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.call-outcome-label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.call-outcome-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.call-outcome-btn{padding:8px 6px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:11px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s}
+.call-outcome-btn:hover{border-color:var(--accent);color:var(--accent)}
+.call-outcome-btn.sel-green{background:rgba(34,197,94,.12);border-color:var(--green);color:var(--green)}
+.call-outcome-btn.sel-red{background:rgba(239,68,68,.12);border-color:var(--red);color:var(--red)}
+.call-outcome-btn.sel-yellow{background:rgba(234,179,8,.12);border-color:var(--yellow);color:var(--yellow)}
+.call-outcome-btn.sel-accent{background:rgba(99,102,241,.15);border-color:var(--accent);color:var(--accent)}
+.call-notes-area{width:100%;min-height:60px;max-height:120px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;font-family:var(--font-body);padding:8px 10px;resize:vertical;line-height:1.5;outline:none;box-sizing:border-box}
+.call-notes-area::placeholder{color:var(--text2)}
+.call-notes-area:focus{border-color:var(--accent)}
+.call-dialer-row{display:flex;gap:8px;align-items:center}
+.call-dialer-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid var(--accent2);background:transparent;color:var(--accent2);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+.call-dialer-btn:hover{background:rgba(236,72,153,.1)}
+.call-attempt-info{font-size:10px;color:var(--text2)}
+.call-auto-task{font-size:11px;color:var(--text2);padding:8px 10px;background:var(--bg3);border-radius:6px;border:1px solid var(--border);display:none}
+.call-auto-task.show{display:block}
+.call-auto-task strong{color:var(--accent)}
+.call-save-row{display:flex;gap:8px;align-items:center;padding-top:4px;border-top:1px solid var(--border)}
 .wa-saved-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;background:var(--gdim);color:var(--green);border:1px solid rgba(34,197,94,.3)}
 /* Slack alerts */
 .slack-btn{position:relative;padding:5px 8px;border-radius:6px;font-size:13px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);transition:.15s;line-height:1;font-weight:600}
@@ -3441,9 +3468,199 @@ function toggleWaPanel(id,btnEl){
   if(btn) btn.classList.add('btn-on');
   // Carregar conversa salva do Supabase se ainda não carregou
   const chat=document.getElementById('wa-chat-'+id);
+
   if(chat&&!chat.dataset.loaded){
     loadWaConversation(id);
   }
+}
+
+// ═══════════════════════════════════════════════════════
+// CALL LOG UX — toggleCallPanel, selectCallOutcome,
+//               openHubSpotDialer, logCallResult
+// ═══════════════════════════════════════════════════════
+
+var _callOutcomeMap = {};  // id -> selected outcome
+
+function toggleCallPanel(id) {
+  const panel = document.getElementById('call-panel-' + id);
+  if (!panel) return;
+  const isOpen = panel.classList.contains('show');
+  if (isOpen) { panel.classList.remove('show'); return; }
+  panel.classList.add('show');
+  // Show attempt count
+  const attemptsEl = document.getElementById('call-attempts-' + id);
+  if (attemptsEl) {
+    const deal = window._allDeals && window._allDeals.find(function(d){ return d.deal_id == id || d.emailLead == id; });
+    const attempts = deal && deal._callAttempts ? deal._callAttempts : 0;
+    if (attempts > 0) {
+      attemptsEl.textContent = attempts + ' tentativa' + (attempts > 1 ? 's' : '') + ' registrada' + (attempts > 1 ? 's' : '');
+      if (attempts >= 3) attemptsEl.style.color = 'var(--yellow)';
+      if (attempts >= 4) attemptsEl.style.color = 'var(--red)';
+    }
+  }
+  // Reset state
+  _callOutcomeMap[id] = null;
+  const grid = panel.querySelector('.call-outcome-grid');
+  if (grid) grid.querySelectorAll('.call-outcome-btn').forEach(function(b){ b.className = 'call-outcome-btn'; });
+  const autoTask = document.getElementById('call-autotask-' + id);
+  if (autoTask) { autoTask.className = 'call-auto-task'; autoTask.innerHTML = ''; }
+  const notes = document.getElementById('call-notes-' + id);
+  if (notes) notes.value = '';
+}
+
+function selectCallOutcome(id, outcome, btnEl) {
+  _callOutcomeMap[id] = outcome;
+  // Visual: reset all buttons, highlight selected
+  const grid = btnEl.closest('.call-outcome-grid');
+  if (grid) grid.querySelectorAll('.call-outcome-btn').forEach(function(b){ b.className = 'call-outcome-btn'; });
+  var colorMap = {
+    answered: 'sel-green',
+    meeting_booked: 'sel-green',
+    no_answer: 'sel-yellow',
+    voicemail: 'sel-yellow',
+    call_dropped: 'sel-accent',
+    busy: 'sel-red'
+  };
+  btnEl.className = 'call-outcome-btn ' + (colorMap[outcome] || 'sel-accent');
+  // Preview auto-task
+  const autoTask = document.getElementById('call-autotask-' + id);
+  if (autoTask) {
+    const preview = _callAutoTaskPreview(id, outcome);
+    if (preview) {
+      autoTask.innerHTML = '<strong>Tarefa gerada automaticamente:</strong> ' + preview;
+      autoTask.className = 'call-auto-task show';
+    } else {
+      autoTask.className = 'call-auto-task';
+    }
+  }
+}
+
+function _callAutoTaskPreview(id, outcome) {
+  var deal = window._allDeals && window._allDeals.find(function(d){ return d.deal_id == id || d.emailLead == id; });
+  var attempts = deal && deal._callAttempts ? deal._callAttempts : 0;
+  switch (outcome) {
+    case 'voicemail':    return 'Tentar ligacao novamente em +4h';
+    case 'no_answer':
+      if (attempts === 0) return 'Tentar ligacao novamente em +4h';
+      if (attempts === 1) return 'Tentar ligacao novamente em +24h';
+      if (attempts >= 2) return 'Trocar canal (email/Instagram/WhatsApp) — +24h';
+      break;
+    case 'call_dropped': return 'Tentar ligacao novamente em +10min';
+    case 'busy':         return 'Tentar ligacao novamente em +2h';
+    case 'answered':     return 'FUP pos-chamada — registre proximo passo nas notas';
+    case 'meeting_booked': return 'Confirmacao da reuniao agendada (email/WhatsApp)';
+    default: return null;
+  }
+  return null;
+}
+
+function openHubSpotDialer(id) {
+  // UX placeholder — abre HubSpot no deal. API key sera conectada posteriormente.
+  var deal = window._allDeals && window._allDeals.find(function(d){ return d.deal_id == id || d.emailLead == id; });
+  var dealId = (deal && deal.deal_id) || id;
+  var url = 'https://app.hubspot.com/contacts/7186301/record/0-3/' + dealId;
+  window.open(url, '_blank');
+  // After a brief delay, the SDR will return and log the result
+}
+
+async function logCallResult(id) {
+  const outcome = _callOutcomeMap[id];
+  if (!outcome) {
+    alert('Selecione o resultado da chamada antes de salvar.');
+    return;
+  }
+  const notes = (document.getElementById('call-notes-' + id) || {}).value || '';
+  const deal = window._allDeals && window._allDeals.find(function(d){ return d.deal_id == id || d.emailLead == id; });
+  const dealId = (deal && deal.deal_id) || id;
+  const operatorEmail = window.OPERATOR_EMAIL || '';
+
+  const saveBtn = document.querySelector('#call-panel-' + id + ' .btn.bsuc');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Salvando...'; }
+
+  try {
+    // 1. Log to activity_log
+    if (window.IS_REMOTE && window.supabase) {
+      const callData = {
+        operator_email: operatorEmail,
+        deal_id: dealId,
+        action_type: 'call_logged',
+        details: { outcome: outcome, notes: notes, attempt_number: ((deal && deal._callAttempts) || 0) + 1 },
+        created_at: new Date().toISOString()
+      };
+      await window.supabase.from('activity_log').insert([callData]);
+
+      // 2. Auto-generate task based on outcome
+      await _createAutoCallTask(dealId, outcome, operatorEmail, deal);
+    }
+
+    // 3. Close panel and show toast
+    const panel = document.getElementById('call-panel-' + id);
+    if (panel) panel.classList.remove('show');
+    _showCallToast(outcome);
+
+    // 4. Increment local call attempts counter
+    if (deal) deal._callAttempts = ((deal._callAttempts) || 0) + 1;
+
+  } catch(e) {
+    console.error('logCallResult error:', e);
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Salvar Chamada'; }
+    alert('Erro ao salvar chamada: ' + e.message);
+  }
+}
+
+async function _createAutoCallTask(dealId, outcome, operatorEmail, deal) {
+  if (!window.supabase) return;
+  var attempts = (deal && deal._callAttempts) || 0;
+
+  var taskType = null, dueOffsetHours = null, label = null;
+
+  switch (outcome) {
+    case 'voicemail':
+      taskType = 'follow_up'; dueOffsetHours = 4; label = 'Retorno — caixa postal'; break;
+    case 'no_answer':
+      if (attempts < 2) { taskType = 'follow_up'; dueOffsetHours = 4; label = 'Retorno — nao atendeu'; }
+      else if (attempts < 3) { taskType = 'follow_up'; dueOffsetHours = 24; label = 'Retorno — segunda tentativa'; }
+      else { taskType = 'reativacao'; dueOffsetHours = 24; label = 'Trocar canal — Iron Dome risco'; }
+      break;
+    case 'call_dropped':
+      taskType = 'follow_up'; dueOffsetHours = 0.17; label = 'Retry — chamada caiu'; break;
+    case 'busy':
+      taskType = 'follow_up'; dueOffsetHours = 2; label = 'Retorno — ocupado'; break;
+    case 'answered':
+      taskType = 'follow_up'; dueOffsetHours = 24; label = 'FUP pos-chamada'; break;
+    case 'meeting_booked':
+      taskType = 'handoff_prep'; dueOffsetHours = 1; label = 'Confirmacao reuniao agendada'; break;
+  }
+
+  if (!taskType) return;
+
+  const dueAt = new Date(Date.now() + dueOffsetHours * 3600 * 1000).toISOString();
+  await window.supabase.from('deal_tasks').insert([{
+    deal_id: dealId,
+    operator_email: operatorEmail,
+    task_type: taskType,
+    label: label,
+    due_at: dueAt,
+    status: 'pending',
+    auto_generated: true,
+    trigger_event: 'call_' + outcome,
+    created_at: new Date().toISOString()
+  }]);
+}
+
+function _showCallToast(outcome) {
+  var outcomeLabels = {
+    answered: 'Atendeu', no_answer: 'Nao Atendeu', voicemail: 'Caixa Postal',
+    meeting_booked: 'Reuniao Marcada!', call_dropped: 'Chamada Caiu', busy: 'Ocupado'
+  };
+  var label = outcomeLabels[outcome] || outcome;
+  // Reutiliza toast existente se disponivel
+  if (window.showToast) { window.showToast('Chamada salva: ' + label); return; }
+  var toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:80px;right:20px;z-index:9999;background:var(--bg2);border:1px solid var(--accent);color:var(--text);padding:10px 16px;border-radius:8px;font-size:12px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+  toast.textContent = '📞 Chamada salva: ' + label;
+  document.body.appendChild(toast);
+  setTimeout(function(){ toast.remove(); }, 3000);
 }
 
 function parseWhatsAppMessages(raw){
