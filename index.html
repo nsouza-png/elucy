@@ -344,9 +344,23 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .wa-panel-close:hover{color:var(--red)}
 .wa-paste-area{width:100%;min-height:100px;max-height:180px;background:var(--bg);border:none;color:var(--text);font-size:12px;font-family:var(--font-body);padding:12px;resize:vertical;line-height:1.5;outline:none}
 .wa-paste-area::placeholder{color:var(--text2)}
-.wa-paste-actions{display:flex;gap:8px;padding:8px 14px;border-top:1px solid var(--border);align-items:center}
+.wa-paste-actions{display:flex;gap:8px;padding:8px 14px;border-top:1px solid var(--border);align-items:center;flex-wrap:wrap}
 .wa-paste-actions .btn{font-size:11px;padding:5px 12px}
 .wa-msg-count{font-size:10px;color:var(--text2);margin-left:auto}
+/* Conv Enrichment */
+.conv-signals-panel{margin:10px 14px;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);display:none}
+.conv-signals-panel.on{display:block}
+.conv-signals-header{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.conv-sig-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.conv-sig-tag{font-size:10px;padding:3px 8px;border-radius:10px;font-weight:600;background:rgba(99,102,241,.15);color:var(--accent);border:1px solid rgba(99,102,241,.3)}
+.conv-sig-tag.neg{background:rgba(239,68,68,.12);color:var(--red);border-color:rgba(239,68,68,.25)}
+.conv-sig-tag.neu{background:var(--bg3);color:var(--text2);border-color:var(--border)}
+.conv-spiced{margin-top:10px;border-top:1px solid var(--border);padding-top:10px}
+.conv-spiced-row{display:flex;gap:6px;align-items:flex-start;margin-bottom:6px;font-size:11px}
+.conv-spiced-key{min-width:70px;font-weight:700;color:var(--text2);flex-shrink:0}
+.conv-spiced-val{color:var(--text);line-height:1.45}
+.conv-enrich-loading{font-size:11px;color:var(--text2);padding:6px 0;display:flex;align-items:center;gap:6px}
+.conv-enrich-loading::before{content:'';width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;display:inline-block}
 .wa-chat{max-height:360px;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
 .wa-bubble{max-width:80%;padding:7px 11px;border-radius:8px;font-size:12px;line-height:1.5;word-wrap:break-word;position:relative}
 .wa-bubble.lead{background:#1a3a2a;border:1px solid #2d5a3e;align-self:flex-start;border-bottom-left-radius:2px}
@@ -3551,6 +3565,136 @@ async function processWaConversation(id){
   // Log atividade
   logActivity('whatsapp_pasted',deal.deal_id,{msg_count:msgs.length});
   logDealInteraction(deal.deal_id,'enrichment','Conversa WhatsApp colada: '+msgs.length+' mensagens');
+  // Salvar em conversation_messages (V9)
+  try{
+    const convRecord={
+      deal_id: String(deal.deal_id),
+      operator_email: email,
+      channel: 'whatsapp',
+      direction: 'inbound',
+      content_raw: raw,
+      content_normalized: msgs.map(m=>(m.role==='lead'?'LEAD':'SDR')+': '+m.text).join('\n'),
+      processed: false
+    };
+    await sb.from('conversation_messages').insert([convRecord]);
+  }catch(e){console.warn('conversation_messages insert error:',e);}
+  // Mostrar botão de extração de sinais
+  const enrichBtn=document.getElementById('btn-conv-enrich-'+id);
+  if(enrichBtn) enrichBtn.style.display='inline-flex';
+}
+
+async function requestConvEnrichment(id){
+  const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
+  if(!deal||!deal.deal_id){showSyncToast('err','Deal sem deal_id.');return;}
+  const sb=getSB();
+  const email=_currentUser&&_currentUser.email;
+  if(!sb||!email){showSyncToast('err','Supabase não conectado.');return;}
+  const panel=document.getElementById('conv-signals-'+id);
+  const body=document.getElementById('conv-sig-body-'+id);
+  if(panel) panel.classList.add('on');
+  if(body) body.innerHTML='<div class="conv-enrich-loading">Extraindo sinais e atualizando SPICED...</div>';
+  // Fast path via Intelligence API se disponível
+  if(window.ELUCY_API_ENABLED && window.ELUCY_API_KEY){
+    try{
+      const waChat=document.getElementById('wa-chat-'+id);
+      const convText=waChat?waChat.innerText:'';
+      const extraCtx='EXTRAIR_SINAIS_CONVERSACAO:true\nCONVERSA:\n'+convText;
+      const res=await callIntelligenceAPI(deal,'conv_enrichment',extraCtx);
+      if(res&&res.intelligence){
+        renderConvSignals(id, res.intelligence);
+        // Marcar como processado no Supabase
+        await sb.from('conversation_messages')
+          .update({processed:true, processed_at:new Date().toISOString()})
+          .eq('deal_id', String(deal.deal_id))
+          .eq('operator_email', email)
+          .eq('processed', false);
+        logActivity('conv_enrichment_done', deal.deal_id);
+        return;
+      }
+    }catch(e){console.warn('conv enrichment API error:',e);}
+  }
+  // Fallback: enfileirar no worker
+  try{
+    const waChat=document.getElementById('wa-chat-'+id);
+    const convText=waChat?waChat.innerText:'';
+    const reqId='conv_'+Date.now();
+    await sb.from('cockpit_requests').insert([{
+      operator_id: email,
+      deal_id: String(deal.deal_id),
+      request_type: 'conv_enrichment',
+      status: 'pending',
+      deal_data: {
+        ...deal,
+        conv_text: convText,
+        request_id: reqId
+      }
+    }]);
+    if(body) body.innerHTML='<div class="conv-enrich-loading">Enviado para processamento (~2min). Resultado aparecerá aqui via Realtime.</div>';
+    showSyncToast('ok','Extração de sinais enfileirada.');
+    logActivity('conv_enrichment_queued', deal.deal_id);
+    // Ouvir resposta via Realtime
+    const rtChan=sb.channel('conv-enrich-'+id+'-'+Date.now());
+    rtChan.on('postgres_changes',{event:'INSERT',schema:'public',table:'cockpit_responses',filter:'deal_id=eq.'+String(deal.deal_id)},
+      (payload)=>{
+        const d=payload.new;
+        if(d.request_type==='conv_enrichment'&&d.status==='done'){
+          renderConvSignals(id, d.output||'');
+          rtChan.unsubscribe();
+        }
+      }
+    ).subscribe();
+  }catch(e){
+    if(body) body.innerHTML='<div style="font-size:11px;color:var(--red)">Erro: '+escHtml(e.message)+'</div>';
+    showSyncToast('err','Erro ao enfileirar extração: '+e.message);
+  }
+}
+
+function renderConvSignals(id, raw){
+  const body=document.getElementById('conv-sig-body-'+id);
+  if(!body) return;
+  // Tentar parsear JSON estruturado do output
+  let signals=[], spiced={}, summary='';
+  try{
+    // Tentar extrair JSON do output
+    const jsonMatch=raw.match(/```json\s*([\s\S]*?)```/i)||raw.match(/\{[\s\S]*"signals"[\s\S]*\}/);
+    if(jsonMatch){
+      const parsed=JSON.parse(jsonMatch[1]||jsonMatch[0]);
+      signals=parsed.signals||[];
+      spiced=parsed.spiced_updates||parsed.spiced||{};
+      summary=parsed.summary||'';
+    }
+  }catch(e){}
+  // Se não conseguiu parsear, mostrar como texto formatado
+  if(!signals.length&&!Object.keys(spiced).length){
+    body.innerHTML='<div style="font-size:11px;color:var(--text);line-height:1.6;white-space:pre-wrap">'+escHtml(raw)+'</div>';
+    return;
+  }
+  const sigPosTypes=['buy_signal','champion_active','urgency_real','pain_confirmed','decision_authority','critical_event','timeline_confirmed'];
+  const sigNegTypes=['no_show','iron_dome','competitor_mentioned','budget_concern','authority_block'];
+  let html='';
+  if(signals.length){
+    html+='<div class="conv-sig-list">';
+    signals.forEach(s=>{
+      const type=(s.type||s.signal_type||'').toLowerCase();
+      const cls=sigPosTypes.includes(type)?'':sigNegTypes.includes(type)?'neg':'neu';
+      html+='<span class="conv-sig-tag '+cls+'">'+(s.label||s.type||s)+'</span>';
+    });
+    html+='</div>';
+  }
+  if(Object.keys(spiced).length){
+    html+='<div class="conv-spiced">';
+    html+='<div style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Atualizações SPICED</div>';
+    const spicedLabels={situation:'Situação',pain:'Dor',impact:'Impacto',critical_event:'Evento Crítico',decision:'Decisão',next_step:'Próx. Passo'};
+    Object.entries(spiced).forEach(([k,v])=>{
+      if(!v) return;
+      html+='<div class="conv-spiced-row"><span class="conv-spiced-key">'+(spicedLabels[k]||k)+'</span><span class="conv-spiced-val">'+escHtml(String(v))+'</span></div>';
+    });
+    html+='</div>';
+  }
+  if(summary){
+    html+='<div style="margin-top:10px;font-size:11px;color:var(--text2);line-height:1.5;border-top:1px solid var(--border);padding-top:8px">'+escHtml(summary)+'</div>';
+  }
+  body.innerHTML=html;
 }
 
 function renderWaChat(id, msgs){
@@ -3808,8 +3952,13 @@ function selectLiveDeal(id,d){
         <textarea class="wa-paste-area" id="wa-paste-${id}" placeholder="Cole aqui a conversa do WhatsApp com o lead...&#10;&#10;Formato aceito:&#10;[23/03/2026, 07:00:00] Nome: mensagem&#10;ou&#10;23/03/2026 07:00 - Nome: mensagem"></textarea>
         <div class="wa-paste-actions">
           <button class="btn bsuc btn-sm" onclick="processWaConversation('${id}')">Salvar conversa</button>
-          <button class="btn bs btn-sm" onclick="document.getElementById('wa-paste-${id}').value='';document.getElementById('wa-paste-${id}').style.display='block'">Limpar</button>
+          <button class="btn bs btn-sm" id="btn-conv-enrich-${id}" onclick="requestConvEnrichment('${id}')" style="border-color:var(--accent);color:var(--accent);display:none">⚡ Extrair Sinais ELUCY</button>
+          <button class="btn bs btn-sm" onclick="document.getElementById('wa-paste-${id}').value='';document.getElementById('wa-paste-${id}').style.display='block';document.getElementById('btn-conv-enrich-${id}').style.display='none';const cp=document.getElementById('conv-signals-${id}');if(cp)cp.classList.remove('on')">Limpar</button>
           <span class="wa-msg-count" id="wa-count-${id}"></span>
+        </div>
+        <div class="conv-signals-panel" id="conv-signals-${id}">
+          <div class="conv-signals-header"><span>⚡ Sinais Extraídos</span><span id="conv-sig-model-${id}" style="font-weight:400;font-size:10px;color:var(--text2)"></span></div>
+          <div id="conv-sig-body-${id}"></div>
         </div>
       </div>
     </div>
