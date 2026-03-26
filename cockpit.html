@@ -583,6 +583,38 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .fchip.on-green{background:var(--gdim);border-color:var(--green);color:var(--green)}
 .fchip.on-red{background:var(--rdim);border-color:var(--red);color:var(--red)}
 .fchip.on-yellow{background:var(--ydim);border-color:var(--yellow);color:var(--yellow)}
+/* ── Filter V2 Accordion ─────────────────────────────────────────────── */
+.fv2-header{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);cursor:pointer;user-select:none;margin-bottom:4px;transition:.15s}
+.fv2-header:hover{background:var(--bg4);border-color:var(--border2)}
+.fv2-title{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.fv2-subtitle{font-size:10px;color:var(--text2);margin-left:6px}
+.fv2-clear-btn{background:none;border:none;font-size:10px;color:var(--text2);cursor:pointer;padding:2px 4px;border-radius:4px;font-family:inherit;transition:.12s}
+.fv2-clear-btn:hover{color:var(--red)}
+.fv2-chevron{font-size:14px;color:var(--text2);transition:transform .2s;display:inline-block}
+.fv2-chevron.open{transform:rotate(90deg)}
+.fv2-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:6px}
+.fv2-group{border-bottom:1px solid var(--border)}
+.fv2-group:last-of-type{border-bottom:none}
+.fv2-group-head{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:none;padding:8px 10px;cursor:pointer;font-family:inherit;transition:.12s}
+.fv2-group-head:hover{background:rgba(255,255,255,.03)}
+.fv2-group-meta{display:flex;align-items:center;gap:6px;text-align:left}
+.fv2-group-label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
+.fv2-group-sum{font-size:10px;color:var(--accent2);font-weight:500;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fv2-group-chev{font-size:12px;color:var(--text2);transition:transform .2s;display:inline-block}
+.fv2-group.is-open .fv2-group-chev{transform:rotate(90deg)}
+.fv2-group-body{display:none;padding:0 10px 10px}
+.fv2-group.is-open .fv2-group-body{display:block}
+.fv2-chip-row{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.fv2-chip-row::-webkit-scrollbar{display:none}
+.fv2-chip-row .fchip{flex-shrink:0}
+.fv2-chip-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.fv2-chip-grid .fchip{text-align:center}
+.fv2-footer{padding:8px 10px;background:var(--bg3);border-top:1px solid var(--border)}
+.fv2-sort{background:var(--bg4);border:1px solid var(--border);color:var(--text);font-size:11px;border-radius:6px;padding:4px 6px;flex:1;font-family:inherit;outline:none}
+.fv2-btn-sec{flex:1;background:none;border:1px solid var(--border);color:var(--text2);font-size:11px;padding:6px;border-radius:6px;cursor:pointer;font-family:inherit;transition:.12s}
+.fv2-btn-sec:hover{border-color:var(--red);color:var(--red)}
+.fv2-btn-pri{flex:1;background:var(--adim);border:1px solid var(--accent);color:var(--accent2);font-size:11px;padding:6px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:600;transition:.12s}
+.fv2-btn-pri:hover{background:rgba(91,141,239,.15)}
 .sort-row{display:flex;align-items:center;gap:4px}
 .sort-sel{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:4px 22px 4px 8px;font-size:10px;color:var(--text2);outline:none;cursor:pointer;font-family:inherit;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7a90'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center}
 .sort-sel:focus{border-color:var(--accent)}
@@ -802,99 +834,193 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
     <div class="sb-search">
       <input class="srch" id="srch-input" placeholder="Buscar lead..." oninput="applyFilters()">
     </div>
-    <div class="sb-filters-toggle" onclick="document.getElementById('sb-filters-body').classList.toggle('collapsed');this.querySelector('.tgl-arrow').classList.toggle('up')">
-      <span style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Filtros</span>
-      <span class="tgl-arrow">▾</span>
+    <!-- ── FILTROS V2: Accordion + chips scrolláveis ──────────────────── -->
+    <div class="fv2-header" onclick="window._toggleFilterPanel()">
+      <div>
+        <span class="fv2-title">Filtros</span>
+        <span class="fv2-subtitle" id="fv2-active-count">6 dimensões</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="fv2-clear-btn" onclick="event.stopPropagation();window._clearAllFilters()" type="button">Limpar</button>
+        <span class="fv2-chevron" id="fv2-chevron">›</span>
+      </div>
     </div>
-    <div class="sb-filters collapsed" id="sb-filters-body">
-      <div class="filter-row">
-        <span class="filter-label">Etapa Operacional</span>
-        <span class="fchip on" data-filter="etapa" data-val="todos" onclick="toggleFilter(this,'etapa')">Todos</span>
-        <span class="fchip" data-filter="etapa" data-val="Dia 01" onclick="toggleFilter(this,'etapa')">D1</span>
-        <span class="fchip" data-filter="etapa" data-val="Dia 02" onclick="toggleFilter(this,'etapa')">D2</span>
-        <span class="fchip" data-filter="etapa" data-val="Dia 03" onclick="toggleFilter(this,'etapa')">D3</span>
-        <span class="fchip" data-filter="etapa" data-val="Dia 04" onclick="toggleFilter(this,'etapa')">D4</span>
-        <span class="fchip" data-filter="etapa" data-val="Dia 05" onclick="toggleFilter(this,'etapa')">D5</span>
-        <span class="fchip" data-filter="etapa" data-val="Dia 06" onclick="toggleFilter(this,'etapa')">D6</span>
-        <span class="fchip" data-filter="etapa" data-val="Conectados" onclick="toggleFilter(this,'etapa')">Conect.</span>
-        <span class="fchip" data-filter="etapa" data-val="Nova Oportunidade" onclick="toggleFilter(this,'etapa')">Nova Oport.</span>
-        <span class="fchip" data-filter="etapa" data-val="Agendamento" onclick="toggleFilter(this,'etapa')">Agend.</span>
-        <span class="fchip" data-filter="etapa" data-val="Entrevista Agendada" onclick="toggleFilter(this,'etapa')">Entrevista</span>
-        <span class="fchip" data-filter="etapa" data-val="Reagendamento" onclick="toggleFilter(this,'etapa')">Reagend.</span>
-      </div>
-      <div class="filter-row">
-        <span class="filter-label">Fase Comercial</span>
-        <span class="fchip on" data-filter="fase" data-val="todos" onclick="toggleFilter(this,'fase')">Todas</span>
-        <span class="fchip" data-filter="fase" data-val="Lead" onclick="toggleFilter(this,'fase')">Lead</span>
-        <span class="fchip" data-filter="fase" data-val="MQL" onclick="toggleFilter(this,'fase')">MQL</span>
-        <span class="fchip" data-filter="fase" data-val="SAL" onclick="toggleFilter(this,'fase')">SAL</span>
-        <span class="fchip" data-filter="fase" data-val="SQL" onclick="toggleFilter(this,'fase')">SQL</span>
-        <span class="fchip" data-filter="fase" data-val="Oportunidade" onclick="toggleFilter(this,'fase')">Oport.</span>
-        <span class="fchip" data-filter="fase" data-val="Negociacao" onclick="toggleFilter(this,'fase')">Negoc.</span>
-      </div>
-      <div class="filter-row">
-        <span class="filter-label">Linha</span>
-        <span class="fchip on" data-filter="linha" data-val="todos" onclick="toggleFilter(this,'linha')">Todas</span>
-        <span class="fchip" data-filter="linha" data-val="imersao" onclick="toggleFilter(this,'linha')">Imersão</span>
-        <span class="fchip" data-filter="linha" data-val="club" onclick="toggleFilter(this,'linha')">Club</span>
-        <span class="fchip" data-filter="linha" data-val="consulting" onclick="toggleFilter(this,'linha')">Consulting</span>
-        <span class="fchip" data-filter="linha" data-val="field_sales" onclick="toggleFilter(this,'linha')">Field Sales</span>
-        <span class="fchip" data-filter="linha" data-val="social_dm" onclick="toggleFilter(this,'linha')">Social DM</span>
-        <span class="fchip" data-filter="linha" data-val="eventos" onclick="toggleFilter(this,'linha')">Eventos</span>
-        <span class="fchip" data-filter="linha" data-val="digital" onclick="toggleFilter(this,'linha')">Digital</span>
-      </div>
-      <div class="filter-row">
-        <span class="filter-label">Aging</span>
-        <span class="fchip on" data-filter="aging" data-val="todos" onclick="toggleFilter(this,'aging')">Todos</span>
-        <span class="fchip" data-filter="aging" data-val="fresh" onclick="toggleFilter(this,'aging')">Fresh</span>
-        <span class="fchip" data-filter="aging" data-val="normal" onclick="toggleFilter(this,'aging')">Normal</span>
-        <span class="fchip" data-filter="aging" data-val="aging" onclick="toggleFilter(this,'aging')">Aging</span>
-        <span class="fchip" data-filter="aging" data-val="critical" onclick="toggleFilter(this,'aging')">Crítico</span>
-      </div>
-      <div class="filter-row">
-        <span class="filter-label">Canal</span>
-        <span class="fchip on" data-filter="canal" data-val="todos" onclick="toggleFilter(this,'canal')">Todos</span>
-        <span class="fchip" data-filter="canal" data-val="WhatsApp" onclick="toggleFilter(this,'canal')">WhatsApp</span>
-        <span class="fchip" data-filter="canal" data-val="Instagram" onclick="toggleFilter(this,'canal')">Instagram</span>
-        <span class="fchip" data-filter="canal" data-val="Form" onclick="toggleFilter(this,'canal')">Form</span>
-        <span class="fchip" data-filter="canal" data-val="Ligação" onclick="toggleFilter(this,'canal')">Ligação</span>
-        <span class="fchip" data-filter="canal" data-val="E-mail" onclick="toggleFilter(this,'canal')">E-mail</span>
-        <span class="fchip" data-filter="canal" data-val="Direto" onclick="toggleFilter(this,'canal')">Direto</span>
-      </div>
-      <div class="filter-row">
-        <span class="filter-label">Sinal</span>
-        <span class="fchip on" data-filter="sinal" data-val="todos" onclick="toggleFilter(this,'sinal')">Todos</span>
-        <span class="fchip" data-filter="sinal" data-val="BUY" onclick="toggleFilter(this,'sinal')">BUY</span>
-        <span class="fchip" data-filter="sinal" data-val="CHAMP" onclick="toggleFilter(this,'sinal')">CHAMP</span>
-        <span class="fchip" data-filter="sinal" data-val="RISK" onclick="toggleFilter(this,'sinal')">RISK</span>
-        <span class="fchip" data-filter="sinal" data-val="STALL" onclick="toggleFilter(this,'sinal')">STALL</span>
-        <span class="fchip" data-filter="sinal" data-val="DOME" onclick="toggleFilter(this,'sinal')">IRON DOME</span>
-      </div>
-      <div class="filter-row">
-        <span class="filter-label">SLA</span>
-        <span class="fchip on" data-filter="sla" data-val="todos" onclick="toggleFilter(this,'sla')">Todos</span>
-        <span class="fchip" data-filter="sla" data-val="risco" onclick="toggleFilter(this,'sla')">SLA Risco</span>
-      </div>
-      <div class="filter-row">
-        <span class="filter-label">Tier</span>
-        <span class="fchip on" data-filter="tier" data-val="todos" onclick="toggleFilter(this,'tier')">Todos</span>
-        <span class="fchip" data-filter="tier" data-val="diamond" onclick="toggleFilter(this,'tier')">Diamond</span>
-        <span class="fchip" data-filter="tier" data-val="gold" onclick="toggleFilter(this,'tier')">Gold</span>
-        <span class="fchip" data-filter="tier" data-val="silver" onclick="toggleFilter(this,'tier')">Silver</span>
-        <span class="fchip" data-filter="tier" data-val="bronze" onclick="toggleFilter(this,'tier')">Bronze</span>
-      </div>
-      <div class="sort-row">
-        <span style="font-size:10px;color:var(--text2)">Ordenar:</span>
-        <select class="sort-sel" id="sort-sel" onchange="applyFilters()">
-          <option value="urgencia">Urgência</option>
-          <option value="temp_desc">Temperatura ↓</option>
-          <option value="temp_asc">Temperatura ↑</option>
-          <option value="delta_desc">Dias ↓</option>
-          <option value="delta_asc">Dias ↑</option>
-          <option value="etapa">Etapa (pipeline)</option>
-          <option value="tier">Tier</option>
-          <option value="linha">Linha de Receita</option>
-        </select>
+    <div class="fv2-panel" id="fv2-panel" style="display:none">
+
+      <!-- ETAPA -->
+      <section class="fv2-group" id="fvg-etapa">
+        <button class="fv2-group-head" type="button" onclick="window._toggleFvGroup('fvg-etapa')">
+          <div class="fv2-group-meta">
+            <span class="fv2-group-label">Etapa</span>
+            <span class="fv2-group-sum" id="fvs-etapa">Todos</span>
+          </div>
+          <span class="fv2-group-chev">›</span>
+        </button>
+        <div class="fv2-group-body">
+          <div class="fv2-chip-row">
+            <span class="fchip on" data-filter="etapa" data-val="todos" onclick="toggleFilter(this,'etapa')">Todos</span>
+            <span class="fchip" data-filter="etapa" data-val="Dia 01" onclick="toggleFilter(this,'etapa')">D1</span>
+            <span class="fchip" data-filter="etapa" data-val="Dia 02" onclick="toggleFilter(this,'etapa')">D2</span>
+            <span class="fchip" data-filter="etapa" data-val="Dia 03" onclick="toggleFilter(this,'etapa')">D3</span>
+            <span class="fchip" data-filter="etapa" data-val="Dia 04" onclick="toggleFilter(this,'etapa')">D4</span>
+            <span class="fchip" data-filter="etapa" data-val="Dia 05" onclick="toggleFilter(this,'etapa')">D5</span>
+            <span class="fchip" data-filter="etapa" data-val="Dia 06" onclick="toggleFilter(this,'etapa')">D6</span>
+            <span class="fchip" data-filter="etapa" data-val="Conectados" onclick="toggleFilter(this,'etapa')">Conect.</span>
+            <span class="fchip" data-filter="etapa" data-val="Nova Oportunidade" onclick="toggleFilter(this,'etapa')">Nova Oport.</span>
+            <span class="fchip" data-filter="etapa" data-val="Agendamento" onclick="toggleFilter(this,'etapa')">Agend.</span>
+            <span class="fchip" data-filter="etapa" data-val="Entrevista Agendada" onclick="toggleFilter(this,'etapa')">Entrevista</span>
+            <span class="fchip" data-filter="etapa" data-val="Reagendamento" onclick="toggleFilter(this,'etapa')">Reagend.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- FASE -->
+      <section class="fv2-group" id="fvg-fase">
+        <button class="fv2-group-head" type="button" onclick="window._toggleFvGroup('fvg-fase')">
+          <div class="fv2-group-meta">
+            <span class="fv2-group-label">Fase</span>
+            <span class="fv2-group-sum" id="fvs-fase">Todas</span>
+          </div>
+          <span class="fv2-group-chev">›</span>
+        </button>
+        <div class="fv2-group-body">
+          <div class="fv2-chip-row">
+            <span class="fchip on" data-filter="fase" data-val="todos" onclick="toggleFilter(this,'fase')">Todas</span>
+            <span class="fchip" data-filter="fase" data-val="Lead" onclick="toggleFilter(this,'fase')">Lead</span>
+            <span class="fchip" data-filter="fase" data-val="MQL" onclick="toggleFilter(this,'fase')">MQL</span>
+            <span class="fchip" data-filter="fase" data-val="SAL" onclick="toggleFilter(this,'fase')">SAL</span>
+            <span class="fchip" data-filter="fase" data-val="SQL" onclick="toggleFilter(this,'fase')">SQL</span>
+            <span class="fchip" data-filter="fase" data-val="Oportunidade" onclick="toggleFilter(this,'fase')">Oport.</span>
+            <span class="fchip" data-filter="fase" data-val="Negociacao" onclick="toggleFilter(this,'fase')">Negoc.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- LINHA (lista compacta) -->
+      <section class="fv2-group" id="fvg-linha">
+        <button class="fv2-group-head" type="button" onclick="window._toggleFvGroup('fvg-linha')">
+          <div class="fv2-group-meta">
+            <span class="fv2-group-label">Linha</span>
+            <span class="fv2-group-sum" id="fvs-linha">Todas</span>
+          </div>
+          <span class="fv2-group-chev">›</span>
+        </button>
+        <div class="fv2-group-body">
+          <div class="fv2-chip-row">
+            <span class="fchip on" data-filter="linha" data-val="todos" onclick="toggleFilter(this,'linha')">Todas</span>
+            <span class="fchip" data-filter="linha" data-val="imersao" onclick="toggleFilter(this,'linha')">Imersão</span>
+            <span class="fchip" data-filter="linha" data-val="club" onclick="toggleFilter(this,'linha')">Club</span>
+            <span class="fchip" data-filter="linha" data-val="consulting" onclick="toggleFilter(this,'linha')">Consulting</span>
+            <span class="fchip" data-filter="linha" data-val="field_sales" onclick="toggleFilter(this,'linha')">Field Sales</span>
+            <span class="fchip" data-filter="linha" data-val="social_dm" onclick="toggleFilter(this,'linha')">Social DM</span>
+            <span class="fchip" data-filter="linha" data-val="eventos" onclick="toggleFilter(this,'linha')">Eventos</span>
+            <span class="fchip" data-filter="linha" data-val="digital" onclick="toggleFilter(this,'linha')">Digital</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- AGING -->
+      <section class="fv2-group" id="fvg-aging">
+        <button class="fv2-group-head" type="button" onclick="window._toggleFvGroup('fvg-aging')">
+          <div class="fv2-group-meta">
+            <span class="fv2-group-label">Aging</span>
+            <span class="fv2-group-sum" id="fvs-aging">Todos</span>
+          </div>
+          <span class="fv2-group-chev">›</span>
+        </button>
+        <div class="fv2-group-body">
+          <div class="fv2-chip-row">
+            <span class="fchip on" data-filter="aging" data-val="todos" onclick="toggleFilter(this,'aging')">Todos</span>
+            <span class="fchip" data-filter="aging" data-val="fresh" onclick="toggleFilter(this,'aging')">Fresh</span>
+            <span class="fchip" data-filter="aging" data-val="normal" onclick="toggleFilter(this,'aging')">Normal</span>
+            <span class="fchip" data-filter="aging" data-val="aging" onclick="toggleFilter(this,'aging')">Aging</span>
+            <span class="fchip" data-filter="aging" data-val="critical" onclick="toggleFilter(this,'aging')">Crítico</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- CANAL (grid 2 colunas) -->
+      <section class="fv2-group" id="fvg-canal">
+        <button class="fv2-group-head" type="button" onclick="window._toggleFvGroup('fvg-canal')">
+          <div class="fv2-group-meta">
+            <span class="fv2-group-label">Canal</span>
+            <span class="fv2-group-sum" id="fvs-canal">Todos</span>
+          </div>
+          <span class="fv2-group-chev">›</span>
+        </button>
+        <div class="fv2-group-body">
+          <div class="fv2-chip-grid">
+            <span class="fchip on" data-filter="canal" data-val="todos" onclick="toggleFilter(this,'canal')">Todos</span>
+            <span class="fchip" data-filter="canal" data-val="WhatsApp" onclick="toggleFilter(this,'canal')">WhatsApp</span>
+            <span class="fchip" data-filter="canal" data-val="Instagram" onclick="toggleFilter(this,'canal')">Instagram</span>
+            <span class="fchip" data-filter="canal" data-val="Form" onclick="toggleFilter(this,'canal')">Form</span>
+            <span class="fchip" data-filter="canal" data-val="Ligação" onclick="toggleFilter(this,'canal')">Ligação</span>
+            <span class="fchip" data-filter="canal" data-val="E-mail" onclick="toggleFilter(this,'canal')">E-mail</span>
+            <span class="fchip" data-filter="canal" data-val="Direto" onclick="toggleFilter(this,'canal')">Direto</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- SINAL -->
+      <section class="fv2-group" id="fvg-sinal">
+        <button class="fv2-group-head" type="button" onclick="window._toggleFvGroup('fvg-sinal')">
+          <div class="fv2-group-meta">
+            <span class="fv2-group-label">Sinal</span>
+            <span class="fv2-group-sum" id="fvs-sinal">Todos</span>
+          </div>
+          <span class="fv2-group-chev">›</span>
+        </button>
+        <div class="fv2-group-body">
+          <div class="fv2-chip-row">
+            <span class="fchip on" data-filter="sinal" data-val="todos" onclick="toggleFilter(this,'sinal')">Todos</span>
+            <span class="fchip" data-filter="sinal" data-val="BUY" onclick="toggleFilter(this,'sinal')">BUY</span>
+            <span class="fchip" data-filter="sinal" data-val="CHAMP" onclick="toggleFilter(this,'sinal')">CHAMP</span>
+            <span class="fchip" data-filter="sinal" data-val="RISK" onclick="toggleFilter(this,'sinal')">RISK</span>
+            <span class="fchip" data-filter="sinal" data-val="STALL" onclick="toggleFilter(this,'sinal')">STALL</span>
+            <span class="fchip" data-filter="sinal" data-val="DOME" onclick="toggleFilter(this,'sinal')">IRON DOME</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- TIER + SLA (colapsados secundários) -->
+      <section class="fv2-group" id="fvg-tier">
+        <button class="fv2-group-head" type="button" onclick="window._toggleFvGroup('fvg-tier')">
+          <div class="fv2-group-meta">
+            <span class="fv2-group-label">Tier</span>
+            <span class="fv2-group-sum" id="fvs-tier">Todos</span>
+          </div>
+          <span class="fv2-group-chev">›</span>
+        </button>
+        <div class="fv2-group-body">
+          <div class="fv2-chip-row">
+            <span class="fchip on" data-filter="tier" data-val="todos" onclick="toggleFilter(this,'tier')">Todos</span>
+            <span class="fchip" data-filter="tier" data-val="diamond" onclick="toggleFilter(this,'tier')">Diamond</span>
+            <span class="fchip" data-filter="tier" data-val="gold" onclick="toggleFilter(this,'tier')">Gold</span>
+            <span class="fchip" data-filter="tier" data-val="silver" onclick="toggleFilter(this,'tier')">Silver</span>
+            <span class="fchip" data-filter="tier" data-val="bronze" onclick="toggleFilter(this,'tier')">Bronze</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- FOOTER STICKY: Ordenar + Limpar + Aplicar -->
+      <div class="fv2-footer">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+          <span style="font-size:10px;color:var(--text2);white-space:nowrap">Ordenar:</span>
+          <select class="sort-sel fv2-sort" id="sort-sel" onchange="applyFilters()">
+            <option value="urgencia">Urgência</option>
+            <option value="temp_desc">Temperatura ↓</option>
+            <option value="temp_asc">Temperatura ↑</option>
+            <option value="delta_desc">Dias ↓</option>
+            <option value="delta_asc">Dias ↑</option>
+            <option value="etapa">Etapa</option>
+            <option value="tier">Tier</option>
+            <option value="linha">Linha</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="fv2-btn-sec" type="button" onclick="window._clearAllFilters()">Limpar tudo</button>
+          <button class="fv2-btn-pri" type="button" onclick="window._toggleFilterPanel()">Aplicar</button>
+        </div>
       </div>
     </div>
     <div class="deal-list" id="deal-list">
@@ -1369,9 +1495,65 @@ function resetDMA(id){
   document.getElementById('dst-'+id).textContent='Ativo';
 }
 
-// ── FILTROS, ORDENAÇÃO, SINAIS ───────────────────────────────────────
+// ── FILTROS V2: Accordion + chips scrolláveis ──────────────────────────
 
 const ACTIVE_FILTERS={fase:'todos',etapa:'todos',tier:'todos',linha:'todos',aging:'todos',sla:'todos',canal:'todos',sinal:'todos'};
+
+// Mapa de label amigável por grupo/val
+var FV2_LABELS={
+  etapa:{'todos':'Todos','Dia 01':'D1','Dia 02':'D2','Dia 03':'D3','Dia 04':'D4','Dia 05':'D5','Dia 06':'D6','Conectados':'Conect.','Nova Oportunidade':'Nova Oport.','Agendamento':'Agend.','Entrevista Agendada':'Entrevista','Reagendamento':'Reagend.'},
+  fase:{'todos':'Todas','Lead':'Lead','MQL':'MQL','SAL':'SAL','SQL':'SQL','Oportunidade':'Oport.','Negociacao':'Negoc.'},
+  linha:{'todos':'Todas','imersao':'Imersão','club':'Club','consulting':'Consulting','field_sales':'Field Sales','social_dm':'Social DM','eventos':'Eventos','digital':'Digital'},
+  aging:{'todos':'Todos','fresh':'Fresh','normal':'Normal','aging':'Aging','critical':'Crítico'},
+  canal:{'todos':'Todos','WhatsApp':'WA','Instagram':'IG','Form':'Form','Ligação':'Tel','E-mail':'Email','Direto':'Direto'},
+  sinal:{'todos':'Todos','BUY':'BUY','CHAMP':'CHAMP','RISK':'RISK','STALL':'STALL','DOME':'DOME'},
+  tier:{'todos':'Todos','diamond':'Diamond','gold':'Gold','silver':'Silver','bronze':'Bronze'}
+};
+
+window._toggleFilterPanel = function(){
+  var panel = document.getElementById('fv2-panel');
+  var chev = document.getElementById('fv2-chevron');
+  if(!panel) return;
+  var open = panel.style.display === 'none' || panel.style.display === '';
+  panel.style.display = open ? 'block' : 'none';
+  if(chev) chev.classList.toggle('open', open);
+};
+
+window._toggleFvGroup = function(groupId){
+  var grp = document.getElementById(groupId);
+  if(!grp) return;
+  // Fecha outros grupos abertos
+  document.querySelectorAll('.fv2-group.is-open').forEach(function(g){
+    if(g.id !== groupId) g.classList.remove('is-open');
+  });
+  grp.classList.toggle('is-open');
+};
+
+window._updateFvSummary = function(group){
+  var val = ACTIVE_FILTERS[group];
+  var el = document.getElementById('fvs-'+group);
+  if(!el) return;
+  var labels = FV2_LABELS[group]||{};
+  el.textContent = labels[val] || val || 'Todos';
+  // Colorir se selecionado
+  el.style.color = (val === 'todos' || !val) ? 'var(--text2)' : 'var(--accent2)';
+  // Update count badge no header
+  var activeCount = Object.values(ACTIVE_FILTERS).filter(function(v){ return v !== 'todos'; }).length;
+  var subEl = document.getElementById('fv2-active-count');
+  if(subEl) subEl.textContent = activeCount > 0 ? activeCount + ' ativo'+(activeCount>1?'s':'') : '6 dimensões';
+};
+
+window._clearAllFilters = function(){
+  Object.keys(ACTIVE_FILTERS).forEach(function(g){ ACTIVE_FILTERS[g] = 'todos'; });
+  // Reset all fchips
+  document.querySelectorAll('.fchip[data-filter]').forEach(function(c){
+    c.classList.remove('on','on-green','on-red','on-yellow');
+    if(c.dataset.val === 'todos') c.classList.add('on');
+  });
+  // Reset summaries
+  Object.keys(ACTIVE_FILTERS).forEach(function(g){ window._updateFvSummary(g); });
+  applyFilters();
+};
 
 function toggleFilter(el,group){
   document.querySelectorAll(`.fchip[data-filter="${group}"]`).forEach(c=>{
@@ -1383,6 +1565,7 @@ function toggleFilter(el,group){
   else if(val==='STALL'||val==='DOME') el.classList.add('on-yellow');
   else el.classList.add('on');
   ACTIVE_FILTERS[group]=val;
+  if(window._updateFvSummary) window._updateFvSummary(group);
   applyFilters();
 }
 
