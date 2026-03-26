@@ -391,6 +391,28 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .wa-bubble.sdr .wa-bubble-name{color:var(--accent2)}
 .wa-bubble-ts{font-size:9px;color:var(--text2);text-align:right;margin-top:2px}
 .wa-bubble-text{white-space:pre-wrap}
+.conv-channel-bar{display:flex;gap:6px;padding:8px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
+.conv-ch-btn{padding:3px 10px;border-radius:14px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid var(--border);color:var(--text2);background:transparent;transition:.15s;display:inline-flex;align-items:center;gap:4px}
+.conv-ch-btn:hover{border-color:var(--accent);color:var(--accent)}
+.conv-ch-btn.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
+.conv-ch-btn.sel[data-ch="whatsapp"]{background:#25d366;border-color:#25d366;color:#fff}
+.conv-ch-btn.sel[data-ch="instagram"]{background:#e1306c;border-color:#e1306c;color:#fff}
+.conv-ch-btn.sel[data-ch="email"]{background:var(--blue);border-color:var(--blue);color:#fff}
+.conv-ch-btn.sel[data-ch="call"]{background:var(--yellow);border-color:var(--yellow);color:#111}
+.conv-ch-btn.sel[data-ch="other"]{background:var(--text2);border-color:var(--text2);color:#fff}
+.wa-bubble.ch-instagram{background:#2a1a2a;border-color:#5a2d4e}
+.wa-bubble.ch-instagram .wa-bubble-name{color:#e1306c}
+.wa-bubble.ch-email{background:#1a2a3a;border-color:#2d4a5e}
+.wa-bubble.ch-email .wa-bubble-name{color:var(--blue)}
+.wa-bubble.ch-call{background:#2a2a1a;border-color:#5e5a2d}
+.wa-bubble.ch-call .wa-bubble-name{color:var(--yellow)}
+.conv-ch-tag{font-size:8px;padding:1px 5px;border-radius:8px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-left:auto;display:inline-block}
+.conv-ch-tag.t-whatsapp{background:#25d36620;color:#25d366}
+.conv-ch-tag.t-instagram{background:#e1306c20;color:#e1306c}
+.conv-ch-tag.t-email{background:rgba(96,165,250,.15);color:var(--blue)}
+.conv-ch-tag.t-call{background:rgba(250,204,21,.15);color:var(--yellow)}
+.conv-ch-tag.t-other{background:rgba(148,163,184,.15);color:var(--text2)}
+.conv-date-sep{text-align:center;padding:6px 0;font-size:9px;color:var(--text2);font-weight:600;letter-spacing:.5px}
 /* Call Log Panel */
 .call-panel{display:none;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);margin-top:8px;overflow:hidden}
 .call-panel.show{display:block}
@@ -3087,11 +3109,11 @@ async function loadDealFullHistory(dealId){
   const email=_currentUser&&_currentUser.email;
   if(!sb||!email||!dealId) return '';
   try{
-    // 1. Conversas WhatsApp salvas pelo SDR
+    // 1. Conversas multi-canal salvas pelo SDR
     const {data:waData}=await sb.from('deal_interactions')
       .select('content,created_at,interaction_type')
       .eq('deal_id',dealId).eq('operator_id',email)
-      .in('interaction_type',['whatsapp_msg_sdr','whatsapp_msg_lead'])
+      .in('interaction_type',['whatsapp_msg_sdr','whatsapp_msg_lead','instagram_msg_sdr','instagram_msg_lead','email_msg_sdr','email_msg_lead','call_note_sdr','call_note_lead','other_msg_sdr','other_msg_lead'])
       .order('created_at',{ascending:true}).limit(50);
     // 2. Copys e análises anteriores
     const {data:prevData}=await sb.from('deal_interactions')
@@ -3108,16 +3130,22 @@ async function loadDealFullHistory(dealId){
 
     let histParts=[];
 
-    // Monta conversa WhatsApp
+    // Monta conversas multi-canal
     if(waData&&waData.length){
-      let waLines=waData.map(m=>{
+      const byChannel={};
+      waData.forEach(m=>{
+        const ch=(TIPO_TO_CHANNEL&&TIPO_TO_CHANNEL[m.interaction_type])||'whatsapp';
+        if(!byChannel[ch]) byChannel[ch]=[];
         try{
           const c=JSON.parse(m.content);
-          const role=m.interaction_type==='whatsapp_msg_lead'?'LEAD':'SDR';
-          return `[${c.date||''} ${c.time||''}] ${role}: ${c.text||''}`;
-        }catch(e){return m.content;}
+          const role=m.interaction_type.includes('_lead')?'LEAD':'SDR';
+          byChannel[ch].push(`[${c.date||''} ${c.time||''}] ${role}: ${c.text||''}`);
+        }catch(e){byChannel[ch].push(m.content);}
       });
-      histParts.push('CONVERSA WHATSAPP (mais recente primeiro):\n'+waLines.join('\n'));
+      Object.entries(byChannel).forEach(([ch,lines])=>{
+        const label=(CHANNEL_LABELS&&CHANNEL_LABELS[ch])||ch;
+        histParts.push('CONVERSA '+label.toUpperCase()+':\n'+lines.join('\n'));
+      });
     }
 
     // Monta engagement timeline
@@ -3793,7 +3821,7 @@ function renderNotaRich(text){
   return html;
 }
 
-// ── WHATSAPP CONVERSATION FLOW ──────────────────────────────────────
+// ── CONVERSATION FLOW (multi-channel) ──────────────────────────────
 
 function toggleWaPanel(id,btnEl){
   const panel=document.getElementById('wa-panel-'+id);
@@ -4123,75 +4151,128 @@ function classifyMsgSender(msgs, dealData){
   return msgs.map(m=>({...m,role:m.sender.toLowerCase()===leadSender?'lead':'sdr'}));
 }
 
-async function processWaConversation(id){
+// Track selected channel per deal panel
+window._convChannel={};
+function selectConvChannel(id,ch,btn){
+  window._convChannel[id]=ch;
+  const bar=document.getElementById('conv-ch-bar-'+id);
+  if(bar) bar.querySelectorAll('.conv-ch-btn').forEach(b=>b.classList.remove('sel'));
+  if(btn) btn.classList.add('sel');
+  const ta=document.getElementById('wa-paste-'+id);
+  if(!ta) return;
+  const hints={
+    whatsapp:'Cole aqui a conversa do WhatsApp com o lead...\n\nFormato: [23/03/2026, 07:00] Nome: mensagem',
+    instagram:'Cole aqui a conversa do Instagram DM com o lead...\n\nCada mensagem em uma linha. Prefixe com "EU:" ou "LEAD:" para diferenciar.',
+    email:'Cole aqui o email trocado com o lead...\n\nPrefixe com "EU:" ou "LEAD:" para diferenciar remetente.',
+    call:'Resuma a ligação com o lead aqui...\n\nPode ser texto livre — será salvo como nota de ligação.',
+    other:'Cole aqui a interação com o lead (LinkedIn, SMS, presencial, etc)...'
+  };
+  ta.placeholder=hints[ch]||hints.other;
+}
+
+function getActiveChannel(id){
+  return window._convChannel[id]||'whatsapp';
+}
+
+const CHANNEL_LABELS={whatsapp:'WhatsApp',instagram:'Instagram',email:'Email',call:'Ligação',other:'Outro'};
+const CHANNEL_TIPOS={
+  whatsapp:{lead:'whatsapp_msg_lead',sdr:'whatsapp_msg_sdr',raw:'whatsapp_raw'},
+  instagram:{lead:'instagram_msg_lead',sdr:'instagram_msg_sdr',raw:'instagram_raw'},
+  email:{lead:'email_msg_lead',sdr:'email_msg_sdr',raw:'email_raw'},
+  call:{lead:'call_note_lead',sdr:'call_note_sdr',raw:'call_raw'},
+  other:{lead:'other_msg_lead',sdr:'other_msg_sdr',raw:'other_raw'}
+};
+
+function parseGenericMessages(raw, channel){
+  // For WhatsApp, use the structured parser
+  if(channel==='whatsapp'){
+    const waMsgs=parseWhatsAppMessages(raw);
+    if(waMsgs.length) return waMsgs;
+  }
+  // For all channels: try to detect EU:/LEAD:/SDR: prefixes
+  const lines=raw.split('\n').filter(l=>l.trim());
+  const prefixRe=/^(EU|SDR|LEAD|ME):\s*/i;
+  const hasPrefixes=lines.some(l=>prefixRe.test(l));
+  if(hasPrefixes){
+    return lines.filter(l=>l.trim()).map(l=>{
+      const pm=l.match(prefixRe);
+      if(pm){
+        const role=pm[1].toUpperCase()==='LEAD'?'lead':'sdr';
+        return {date:'',time:'',sender:role==='lead'?'Lead':'SDR',text:l.replace(prefixRe,'').trim(),role};
+      }
+      return {date:'',time:'',sender:'SDR',text:l.trim(),role:'sdr'};
+    });
+  }
+  // No prefixes — save as single block from SDR (e.g. call notes)
+  return [{date:'',time:'',sender:'SDR',text:raw.trim(),role:'sdr'}];
+}
+
+async function processConversation(id){
   const textarea=document.getElementById('wa-paste-'+id);
   const raw=(textarea&&textarea.value||'').trim();
   if(!raw){showSyncToast('err','Cole a conversa antes de salvar.');return;}
   const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
   if(!deal||!deal.deal_id){showSyncToast('err','Deal sem deal_id.');return;}
+  const channel=getActiveChannel(id);
+  const tipos=CHANNEL_TIPOS[channel]||CHANNEL_TIPOS.other;
   // Parse
-  let msgs=parseWhatsAppMessages(raw);
-  if(!msgs.length){
-    // Fallback: se não parseou, salva como bloco único
-    msgs=[{date:'',time:'',sender:'SDR',text:raw,role:'sdr'}];
-  } else {
+  let msgs=parseGenericMessages(raw, channel);
+  if(channel==='whatsapp'&&msgs.length>1){
     msgs=classifyMsgSender(msgs, deal);
   }
   const countEl=document.getElementById('wa-count-'+id);
-  if(countEl) countEl.textContent=msgs.length+' mensagen'+(msgs.length!==1?'s':'');
+  if(countEl) countEl.textContent=msgs.length+' msg'+(msgs.length!==1?'s':'')+' ('+CHANNEL_LABELS[channel]+')';
   const sb=getSB();
   const email=_currentUser&&_currentUser.email;
   if(!sb||!email){showSyncToast('err','Supabase não conectado.');return;}
-  // Inserir cada mensagem como registro individual
-  // Schema real: deal_id, operator_id, operator_email, tipo, conteudo
+  // Build records
   const records=msgs.map((m,i)=>({
     deal_id:String(deal.deal_id),
     operator_id:email,
     operator_email:email,
-    tipo:m.role==='lead'?'whatsapp_msg_lead':'whatsapp_msg_sdr',
-    conteudo:JSON.stringify({sender:m.sender,text:m.text,date:m.date,time:m.time,index:i,role:m.role})
+    tipo:m.role==='lead'?tipos.lead:tipos.sdr,
+    conteudo:JSON.stringify({sender:m.sender,text:m.text,date:m.date,time:m.time,index:i,role:m.role,channel})
   }));
-  // Também salvar bloco bruto como enrichment para o worker
   records.push({
     deal_id:String(deal.deal_id),
     operator_id:email,
     operator_email:email,
-    tipo:'whatsapp_raw',
+    tipo:tipos.raw,
     conteudo:raw
   });
-  showSyncToast('ok','Salvando '+msgs.length+' mensagens...');
+  showSyncToast('ok','Salvando '+msgs.length+' mensagens ('+CHANNEL_LABELS[channel]+')...');
   const {data,error}=await sb.from('lead_enrichments').insert(records).select();
   if(error){
     showSyncToast('err','Erro ao salvar: '+error.message);
     return;
   }
   showSyncToast('ok',msgs.length+' mensagens salvas!');
-  // Esconder textarea, mostrar chat visual
-  textarea.style.display='none';
-  renderWaChat(id, msgs);
-  // Badge de salvo
-  const badge=document.getElementById('wa-badge-'+id);
-  if(badge) badge.innerHTML='<span class="wa-saved-badge">' + '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' + ' '+msgs.length+' msgs</span>';
-  // Log atividade
-  logActivity('whatsapp_pasted',deal.deal_id,{msg_count:msgs.length});
-  logDealInteraction(deal.deal_id,'enrichment','Conversa WhatsApp colada: '+msgs.length+' mensagens');
-  // Salvar em conversation_messages (V9)
+  textarea.value='';
+  // Reload full conversation (accumulate)
+  await loadConversation(id);
+  // Badge
+  updateConvBadge(id);
+  // Log
+  logActivity(channel+'_pasted',deal.deal_id,{msg_count:msgs.length,channel});
+  logDealInteraction(deal.deal_id,'enrichment','Conversa '+CHANNEL_LABELS[channel]+' colada: '+msgs.length+' mensagens');
+  // conversation_messages
   try{
-    const convRecord={
+    await sb.from('conversation_messages').insert([{
       deal_id: String(deal.deal_id),
       operator_email: email,
-      channel: 'whatsapp',
+      channel: channel,
       direction: 'inbound',
       content_raw: raw,
       content_normalized: msgs.map(m=>(m.role==='lead'?'LEAD':'SDR')+': '+m.text).join('\n'),
       processed: false
-    };
-    await sb.from('conversation_messages').insert([convRecord]);
+    }]);
   }catch(e){console.warn('conversation_messages insert error:',e);}
-  // Mostrar botão de extração de sinais
   const enrichBtn=document.getElementById('btn-conv-enrich-'+id);
   if(enrichBtn) enrichBtn.style.display='inline-flex';
 }
+
+// Backward compat alias
+async function processWaConversation(id){ return processConversation(id); }
 
 async function requestConvEnrichment(id){
   const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
@@ -4315,12 +4396,20 @@ function renderWaChat(id, msgs){
     chat.innerHTML='<div style="padding:16px;text-align:center;color:var(--text2);font-size:12px">Nenhuma conversa registrada.</div>';
     return;
   }
+  let lastChannel='';
   chat.innerHTML=msgs.map(m=>{
     const cls=m.role==='lead'?'lead':'sdr';
+    const ch=m.channel||'whatsapp';
+    const chCls=ch!=='whatsapp'?(' ch-'+ch):'';
     const name=escHtml(m.sender||cls.toUpperCase());
     const text=escHtml(m.text||'');
     const ts=m.date&&m.time?(m.date+' '+m.time):'';
-    return '<div class="wa-bubble '+cls+'">'+
+    let sep='';
+    if(ch!==lastChannel){
+      lastChannel=ch;
+      sep='<div class="conv-date-sep"><span class="conv-ch-tag t-'+ch+'">'+(CHANNEL_LABELS[ch]||ch)+'</span></div>';
+    }
+    return sep+'<div class="wa-bubble '+cls+chCls+'">'+
       '<div class="wa-bubble-name">'+name+'</div>'+
       '<div class="wa-bubble-text">'+text+'</div>'+
       (ts?'<div class="wa-bubble-ts">'+ts+'</div>':'')+
@@ -4329,7 +4418,21 @@ function renderWaChat(id, msgs){
   chat.scrollTop=chat.scrollHeight;
 }
 
-async function loadWaConversation(id){
+function updateConvBadge(id){
+  const chat=document.getElementById('wa-chat-'+id);
+  const badge=document.getElementById('wa-badge-'+id);
+  if(!chat||!badge) return;
+  const count=chat.querySelectorAll('.wa-bubble').length;
+  if(count>0){
+    badge.innerHTML='<span class="wa-saved-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> '+count+' msgs</span>';
+  }
+}
+
+// All message tipos across channels (excludes _raw)
+const ALL_MSG_TIPOS=['whatsapp_msg_lead','whatsapp_msg_sdr','instagram_msg_lead','instagram_msg_sdr','email_msg_lead','email_msg_sdr','call_note_lead','call_note_sdr','other_msg_lead','other_msg_sdr'];
+const TIPO_TO_CHANNEL={whatsapp_msg_lead:'whatsapp',whatsapp_msg_sdr:'whatsapp',instagram_msg_lead:'instagram',instagram_msg_sdr:'instagram',email_msg_lead:'email',email_msg_sdr:'email',call_note_lead:'call',call_note_sdr:'call',other_msg_lead:'other',other_msg_sdr:'other'};
+
+async function loadConversation(id){
   const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
   if(!deal||!deal.deal_id) return;
   const sb=getSB();
@@ -4339,29 +4442,32 @@ async function loadWaConversation(id){
     .select('*')
     .eq('deal_id',String(deal.deal_id))
     .eq('operator_email',email)
-    .in('tipo',['whatsapp_msg_lead','whatsapp_msg_sdr'])
+    .in('tipo',ALL_MSG_TIPOS)
     .order('created_at',{ascending:true});
   if(error||!data||!data.length) return;
-  // Parsear registros em mensagens
   const msgs=data.map(row=>{
+    const ch=TIPO_TO_CHANNEL[row.tipo]||'whatsapp';
     try{
       const c=JSON.parse(row.conteudo);
-      return {sender:c.sender||'',text:c.text||'',date:c.date||'',time:c.time||'',role:c.role||'lead'};
+      return {sender:c.sender||'',text:c.text||'',date:c.date||'',time:c.time||'',role:c.role||(row.tipo.includes('_lead')?'lead':'sdr'),channel:c.channel||ch};
     }catch(e){
-      return {sender:'',text:row.conteudo,date:'',time:'',role:row.tipo==='whatsapp_msg_lead'?'lead':'sdr'};
+      return {sender:'',text:row.conteudo,date:'',time:'',role:row.tipo.includes('_lead')?'lead':'sdr',channel:ch};
     }
   });
   if(msgs.length){
     renderWaChat(id, msgs);
-    // Esconder textarea, mostrar badge
     const textarea=document.getElementById('wa-paste-'+id);
-    if(textarea) textarea.style.display='none';
-    const badge=document.getElementById('wa-badge-'+id);
-    if(badge) badge.innerHTML='<span class="wa-saved-badge">' + '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' + ' '+msgs.length+' msgs</span>';
+    if(textarea) textarea.style.display='block'; // Keep textarea visible for adding more
+    updateConvBadge(id);
     const countEl=document.getElementById('wa-count-'+id);
     if(countEl) countEl.textContent=msgs.length+' mensagen'+(msgs.length!==1?'s':'');
+    const enrichBtn=document.getElementById('btn-conv-enrich-'+id);
+    if(enrichBtn) enrichBtn.style.display='inline-flex';
   }
 }
+
+// Backward compat alias
+async function loadWaConversation(id){ return loadConversation(id); }
 
 function injectElucyReport(targetId, report){
   const reportEl=document.getElementById('er-'+targetId);
@@ -4556,14 +4662,21 @@ function selectLiveDeal(id,d){
       <div class="ba" id="nota-${id}" style="display:none"></div>
       <div class="wa-panel" id="wa-panel-${id}">
         <div class="wa-panel-header">
-          <span class="wa-panel-title">Conversa WhatsApp</span>
+          <span class="wa-panel-title">Conversas</span>
           <span id="wa-badge-${id}"></span>
           <button class="wa-panel-close" onclick="toggleWaPanel('${id}')">✕</button>
         </div>
+        <div class="conv-channel-bar" id="conv-ch-bar-${id}">
+          <button class="conv-ch-btn sel" data-ch="whatsapp" onclick="selectConvChannel('${id}','whatsapp',this)">WhatsApp</button>
+          <button class="conv-ch-btn" data-ch="instagram" onclick="selectConvChannel('${id}','instagram',this)">Instagram</button>
+          <button class="conv-ch-btn" data-ch="email" onclick="selectConvChannel('${id}','email',this)">Email</button>
+          <button class="conv-ch-btn" data-ch="call" onclick="selectConvChannel('${id}','call',this)">Ligação</button>
+          <button class="conv-ch-btn" data-ch="other" onclick="selectConvChannel('${id}','other',this)">Outro</button>
+        </div>
         <div class="wa-chat" id="wa-chat-${id}"></div>
-        <textarea class="wa-paste-area" id="wa-paste-${id}" placeholder="Cole aqui a conversa do WhatsApp com o lead...&#10;&#10;Formato aceito:&#10;[23/03/2026, 07:00:00] Nome: mensagem&#10;ou&#10;23/03/2026 07:00 - Nome: mensagem"></textarea>
+        <textarea class="wa-paste-area" id="wa-paste-${id}" placeholder="Cole aqui a conversa com o lead...&#10;&#10;Formatos aceitos:&#10;WhatsApp: [23/03/2026, 07:00] Nome: mensagem&#10;Instagram/Outro: texto livre (cada linha = 1 mensagem)&#10;&#10;Novas mensagens são adicionadas ao histórico existente."></textarea>
         <div class="wa-paste-actions">
-          <button class="btn bsuc btn-sm" onclick="processWaConversation('${id}')">Salvar conversa</button>
+          <button class="btn bsuc btn-sm" onclick="processConversation('${id}')">Salvar conversa</button>
           <button class="btn bs btn-sm" id="btn-conv-enrich-${id}" onclick="requestConvEnrichment('${id}')" style="border-color:var(--accent);color:var(--accent);display:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2z"/></svg> Extrair Sinais ELUCY</button>
           <button class="btn bs btn-sm" onclick="document.getElementById('wa-paste-${id}').value='';document.getElementById('wa-paste-${id}').style.display='block';document.getElementById('btn-conv-enrich-${id}').style.display='none';const cp=document.getElementById('conv-signals-${id}');if(cp)cp.classList.remove('on')">Limpar</button>
           <span class="wa-msg-count" id="wa-count-${id}"></span>
