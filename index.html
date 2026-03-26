@@ -65,7 +65,7 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .di{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;margin-bottom:6px;cursor:pointer;transition:.15s;border-left:3px solid transparent}.di:hover{border-color:var(--border2);background:var(--bg4)}.di.on{border-color:var(--accent)!important;background:rgba(91,141,239,.06)}.di.sla{border-left-color:var(--red)}.di.dome{border-left-color:var(--yellow)}
 .di-name{font-size:var(--fs-body);font-weight:var(--fw-semibold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;color:#fff}.di-co{font-size:var(--fs-caption);color:var(--text2);margin-bottom:6px}.di-meta{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .tb{display:inline-flex;align-items:center;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700}.th{background:var(--gdim);color:var(--green);border:1px solid var(--green)}.tw{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}.tc{background:var(--rdim);color:var(--red);border:1px solid var(--red)}
-.fc{background:var(--bg4);border:1px solid var(--border);border-radius:4px;padding:2px 5px;font-size:10px;color:var(--text2)}.fc-fase{background:rgba(91,141,239,.08);border:1px solid rgba(91,141,239,.25);color:var(--accent2)}.cc{font-size:10px;padding:2px 5px;border-radius:4px;font-weight:600}.cwa{background:rgba(37,211,102,.12);color:#25d366;border:1px solid #25d366}.cig{background:rgba(225,48,108,.12);color:#e1306c;border:1px solid #e1306c}.ccl{background:var(--bdim);color:var(--blue);border:1px solid var(--blue)}.di-day{font-size:10px;color:var(--text2);margin-left:auto}
+.fc{background:var(--bg4);border:1px solid var(--border);border-radius:4px;padding:2px 5px;font-size:10px;color:var(--text2)}.fc-fase{background:rgba(91,141,239,.08);border:1px solid rgba(91,141,239,.25);color:var(--accent2)}.fc-linha{background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.18);color:var(--green);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle}.cc{font-size:10px;padding:2px 5px;border-radius:4px;font-weight:600}.cwa{background:rgba(37,211,102,.12);color:#25d366;border:1px solid #25d366}.cig{background:rgba(225,48,108,.12);color:#e1306c;border:1px solid #e1306c}.ccl{background:var(--bdim);color:var(--blue);border:1px solid var(--blue)}.di-day{font-size:10px;color:var(--text2);margin-left:auto}
 #ct{flex:1;overflow-y:auto;padding:18px 20px}.screen{display:none}.screen.on{display:block}
 .card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:18px;margin-bottom:14px}
 .sec-t{font-family:var(--font-body);font-size:var(--fs-body);font-weight:var(--fw-bold);color:#fff;letter-spacing:.2px}
@@ -75,6 +75,27 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .dch{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}.dca{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;flex-shrink:0}.dci{flex:1}.dcn{font-size:var(--fs-h3);font-weight:var(--fw-xbold);margin-bottom:1px;line-height:var(--lh-tight)}.dcs{font-size:var(--fs-body-sm);color:var(--text2);margin-bottom:7px}.tags-row{display:flex;gap:5px;flex-wrap:wrap}
 .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}.ic{background:var(--glass);border:1px solid var(--border);border-radius:var(--r);padding:11px 12px;transition:.2s}.ic:hover{background:rgba(255,255,255,.04)}.ic-l{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;font-weight:var(--fw-bold)}.ic-v{font-size:var(--fs-body);font-weight:var(--fw-semibold)}.ic-s{font-size:var(--fs-caption);color:var(--text2);margin-top:2px}
 .tg{background:var(--glass);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:14px}.tg-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.tg-lbl{font-size:var(--fs-body-sm);color:var(--text2)}.tg-sub{font-size:var(--fs-caption);color:var(--text2);margin-top:5px}.tgv{font-family:var(--font-body);font-size:var(--fs-h1);font-weight:var(--fw-xbold)}.tgv-h{color:var(--green)}.tgv-w{color:var(--yellow)}.tgv-c{color:var(--red)}
+/* ── V9 Deal Card Hierarchy ─────────────────────────────────────────── */
+.deal-estado{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:12px;padding:0 2px}
+.estado-badge{display:inline-flex;align-items:center;padding:4px 9px;border-radius:20px;font-size:var(--fs-caption);font-weight:var(--fw-semibold);letter-spacing:.2px}
+.eb-etapa{background:var(--adim);border:1px solid rgba(91,141,239,.25);color:var(--accent2)}
+.eb-fase{background:var(--glass);border:1px solid var(--border2);color:var(--text)}
+.eb-linha{background:var(--gdim);border:1px solid rgba(52,211,153,.2);color:var(--green);font-size:10px}
+.estado-arrow{color:var(--text2);font-size:14px;line-height:1}
+.estado-sep{color:var(--border2);margin:0 2px}
+.deal-prior{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start;margin-bottom:12px}
+.prior-temp{flex:1}
+.prior-aging{background:var(--glass);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;text-align:center;min-width:80px}
+.aging-val{margin:6px 0}
+.deal-acao{margin-bottom:14px}
+.acao-next{background:var(--glass);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:10px}
+.acao-lbl{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;font-weight:var(--fw-bold);margin-bottom:4px}
+.acao-val{font-size:var(--fs-body);font-weight:var(--fw-medium);line-height:var(--lh-normal)}
+.acao-sub{font-size:var(--fs-caption);color:var(--accent2);margin-top:3px}
+.info-grid-toggle{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--glass);border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px;cursor:pointer;user-select:none;transition:.15s}
+.info-grid-toggle:hover{background:rgba(255,255,255,.04);border-color:var(--border2)}
+.igt-lbl{font-size:var(--fs-caption);color:var(--text2);font-weight:var(--fw-medium)}
+.igt-arrow{font-size:14px;color:var(--text2);transition:.2s}
 .bar{background:var(--bg4);border-radius:4px;height:6px;overflow:hidden}.bf{height:100%;border-radius:4px}.bf-h{background:linear-gradient(90deg,#f59e0b,#22c55e)}.bf-w{background:linear-gradient(90deg,#ef4444,#f59e0b)}.bf-c{background:#ef4444}
 .recom{background:rgba(91,141,239,.06);border:1px solid rgba(91,141,239,.15);border-radius:var(--r);padding:13px 15px;margin-bottom:14px;box-shadow:0 0 16px rgba(91,141,239,.04)}.recom-l{font-size:10px;color:var(--accent2);font-weight:var(--fw-bold);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}.recom-t{font-size:var(--fs-body);line-height:var(--lh-body)}
 .alrt{padding:10px 13px;border-radius:var(--r);font-size:var(--fs-body-sm);margin-bottom:11px;line-height:var(--lh-normal)}.al-w{background:var(--ydim);border:1px solid var(--yellow);color:var(--yellow)}.al-d{background:var(--rdim);border:1px solid var(--red);color:var(--red)}.al-i{background:var(--adim);border:1px solid var(--accent);color:var(--accent2)}
@@ -191,7 +212,7 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .task-btn:hover{border-color:var(--accent);color:var(--accent2);background:var(--adim)}
 .task-btn-next{margin-left:auto;border-color:var(--accent);color:var(--accent2);background:var(--adim)}
 /* ── Task Execution Mode (HubSpot-style) ──────────────────── */
-.tex-overlay{position:fixed;inset:0;z-index:900;background:rgba(2,6,15,.85);backdrop-filter:blur(6px);display:none;flex-direction:column;overflow:hidden}
+.tex-overlay{position:fixed;inset:0;z-index:900;background:rgba(2,6,15,.97);backdrop-filter:blur(6px);display:none;flex-direction:column;overflow:hidden}
 .tex-overlay.open{display:flex}
 .tex-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
 .tex-nav-left{display:flex;align-items:center;gap:10px}
@@ -206,7 +227,7 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .tex-nav-right{display:flex;align-items:center;gap:8px}
 .tex-close{width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.12s}
 .tex-close:hover{border-color:var(--red);color:var(--red);background:var(--rdim)}
-.tex-body{flex:1;overflow-y:auto;padding:20px;display:flex;gap:16px}
+.tex-body{flex:1;overflow-y:auto;padding:20px;display:flex;gap:16px;background:var(--bg)}
 .tex-deal{flex:1;min-width:0;max-width:780px;margin:0 auto}
 .tex-sidebar{width:260px;flex-shrink:0;display:flex;flex-direction:column;gap:10px}
 .tex-task-info{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px}
@@ -562,6 +583,38 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .fchip.on-green{background:var(--gdim);border-color:var(--green);color:var(--green)}
 .fchip.on-red{background:var(--rdim);border-color:var(--red);color:var(--red)}
 .fchip.on-yellow{background:var(--ydim);border-color:var(--yellow);color:var(--yellow)}
+/* ── Filter V2 Accordion ─────────────────────────────────────────────── */
+.fv2-header{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);cursor:pointer;user-select:none;margin-bottom:4px;transition:.15s}
+.fv2-header:hover{background:var(--bg4);border-color:var(--border2)}
+.fv2-title{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.fv2-subtitle{font-size:10px;color:var(--text2);margin-left:6px}
+.fv2-clear-btn{background:none;border:none;font-size:10px;color:var(--text2);cursor:pointer;padding:2px 4px;border-radius:4px;font-family:inherit;transition:.12s}
+.fv2-clear-btn:hover{color:var(--red)}
+.fv2-chevron{font-size:14px;color:var(--text2);transition:transform .2s;display:inline-block}
+.fv2-chevron.open{transform:rotate(90deg)}
+.fv2-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:6px}
+.fv2-group{border-bottom:1px solid var(--border)}
+.fv2-group:last-of-type{border-bottom:none}
+.fv2-group-head{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:none;padding:8px 10px;cursor:pointer;font-family:inherit;transition:.12s}
+.fv2-group-head:hover{background:rgba(255,255,255,.03)}
+.fv2-group-meta{display:flex;align-items:center;gap:6px;text-align:left}
+.fv2-group-label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
+.fv2-group-sum{font-size:10px;color:var(--accent2);font-weight:500;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fv2-group-chev{font-size:12px;color:var(--text2);transition:transform .2s;display:inline-block}
+.fv2-group.is-open .fv2-group-chev{transform:rotate(90deg)}
+.fv2-group-body{display:none;padding:0 10px 10px}
+.fv2-group.is-open .fv2-group-body{display:block}
+.fv2-chip-row{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.fv2-chip-row::-webkit-scrollbar{display:none}
+.fv2-chip-row .fchip{flex-shrink:0}
+.fv2-chip-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.fv2-chip-grid .fchip{text-align:center}
+.fv2-footer{padding:8px 10px;background:var(--bg3);border-top:1px solid var(--border)}
+.fv2-sort{background:var(--bg4);border:1px solid var(--border);color:var(--text);font-size:11px;border-radius:6px;padding:4px 6px;flex:1;font-family:inherit;outline:none}
+.fv2-btn-sec{flex:1;background:none;border:1px solid var(--border);color:var(--text2);font-size:11px;padding:6px;border-radius:6px;cursor:pointer;font-family:inherit;transition:.12s}
+.fv2-btn-sec:hover{border-color:var(--red);color:var(--red)}
+.fv2-btn-pri{flex:1;background:var(--adim);border:1px solid var(--accent);color:var(--accent2);font-size:11px;padding:6px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:600;transition:.12s}
+.fv2-btn-pri:hover{background:rgba(91,141,239,.15)}
 .sort-row{display:flex;align-items:center;gap:4px}
 .sort-sel{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:4px 22px 4px 8px;font-size:10px;color:var(--text2);outline:none;cursor:pointer;font-family:inherit;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7a90'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center}
 .sort-sel:focus{border-color:var(--accent)}
@@ -717,6 +770,7 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
   <button class="ntab" onclick="setScreen('pipeline',this)">Pipeline</button>
   <button class="ntab" onclick="setScreen('tasks',this)">Tasks <span class="tab-count" id="task-count"></span></button>
   <button class="ntab" onclick="setScreen('reports',this)">Reports</button>
+  <button class="ntab" onclick="setScreen('prevendas',this)">Pre-Vendas</button>
   <button class="ntab" onclick="setScreen('intelligence',this)">Intel</button>
   <div class="tbr">
     <span class="op-pill" id="op-pill">CRM Sincronizado</span>
@@ -781,99 +835,193 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
     <div class="sb-search">
       <input class="srch" id="srch-input" placeholder="Buscar lead..." oninput="applyFilters()">
     </div>
-    <div class="sb-filters-toggle" onclick="document.getElementById('sb-filters-body').classList.toggle('collapsed');this.querySelector('.tgl-arrow').classList.toggle('up')">
-      <span style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Filtros</span>
-      <span class="tgl-arrow">▾</span>
+    <!-- ── FILTROS V2: Accordion + chips scrolláveis ──────────────────── -->
+    <div class="fv2-header" onclick="window._toggleFilterPanel()">
+      <div>
+        <span class="fv2-title">Filtros</span>
+        <span class="fv2-subtitle" id="fv2-active-count">6 dimensões</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="fv2-clear-btn" onclick="event.stopPropagation();window._clearAllFilters()" type="button">Limpar</button>
+        <span class="fv2-chevron" id="fv2-chevron">›</span>
+      </div>
     </div>
-    <div class="sb-filters collapsed" id="sb-filters-body">
-      <div class="filter-row">
-        <span class="filter-label">Etapa Operacional</span>
-        <span class="fchip on" data-filter="etapa" data-val="todos" onclick="toggleFilter(this,'etapa')">Todos</span>
-        <span class="fchip" data-filter="etapa" data-val="Dia 01" onclick="toggleFilter(this,'etapa')">D1</span>
-        <span class="fchip" data-filter="etapa" data-val="Dia 02" onclick="toggleFilter(this,'etapa')">D2</span>
-        <span class="fchip" data-filter="etapa" data-val="Dia 03" onclick="toggleFilter(this,'etapa')">D3</span>
-        <span class="fchip" data-filter="etapa" data-val="Dia 04" onclick="toggleFilter(this,'etapa')">D4</span>
-        <span class="fchip" data-filter="etapa" data-val="Dia 05" onclick="toggleFilter(this,'etapa')">D5</span>
-        <span class="fchip" data-filter="etapa" data-val="Dia 06" onclick="toggleFilter(this,'etapa')">D6</span>
-        <span class="fchip" data-filter="etapa" data-val="Conectados" onclick="toggleFilter(this,'etapa')">Conect.</span>
-        <span class="fchip" data-filter="etapa" data-val="Nova Oportunidade" onclick="toggleFilter(this,'etapa')">Nova Oport.</span>
-        <span class="fchip" data-filter="etapa" data-val="Agendamento" onclick="toggleFilter(this,'etapa')">Agend.</span>
-        <span class="fchip" data-filter="etapa" data-val="Entrevista Agendada" onclick="toggleFilter(this,'etapa')">Entrevista</span>
-        <span class="fchip" data-filter="etapa" data-val="Reagendamento" onclick="toggleFilter(this,'etapa')">Reagend.</span>
-      </div>
-      <div class="filter-row">
-        <span class="filter-label">Fase Comercial</span>
-        <span class="fchip on" data-filter="fase" data-val="todos" onclick="toggleFilter(this,'fase')">Todas</span>
-        <span class="fchip" data-filter="fase" data-val="Lead" onclick="toggleFilter(this,'fase')">Lead</span>
-        <span class="fchip" data-filter="fase" data-val="MQL" onclick="toggleFilter(this,'fase')">MQL</span>
-        <span class="fchip" data-filter="fase" data-val="SAL" onclick="toggleFilter(this,'fase')">SAL</span>
-        <span class="fchip" data-filter="fase" data-val="SQL" onclick="toggleFilter(this,'fase')">SQL</span>
-        <span class="fchip" data-filter="fase" data-val="Oportunidade" onclick="toggleFilter(this,'fase')">Oport.</span>
-        <span class="fchip" data-filter="fase" data-val="Negociacao" onclick="toggleFilter(this,'fase')">Negoc.</span>
-      </div>
-      <div class="filter-row">
-        <span class="filter-label">Linha</span>
-        <span class="fchip on" data-filter="linha" data-val="todos" onclick="toggleFilter(this,'linha')">Todas</span>
-        <span class="fchip" data-filter="linha" data-val="imersao" onclick="toggleFilter(this,'linha')">Imersão</span>
-        <span class="fchip" data-filter="linha" data-val="club" onclick="toggleFilter(this,'linha')">Club</span>
-        <span class="fchip" data-filter="linha" data-val="consulting" onclick="toggleFilter(this,'linha')">Consulting</span>
-        <span class="fchip" data-filter="linha" data-val="field_sales" onclick="toggleFilter(this,'linha')">Field Sales</span>
-        <span class="fchip" data-filter="linha" data-val="social_dm" onclick="toggleFilter(this,'linha')">Social DM</span>
-        <span class="fchip" data-filter="linha" data-val="eventos" onclick="toggleFilter(this,'linha')">Eventos</span>
-        <span class="fchip" data-filter="linha" data-val="digital" onclick="toggleFilter(this,'linha')">Digital</span>
-      </div>
-      <div class="filter-row">
-        <span class="filter-label">Aging</span>
-        <span class="fchip on" data-filter="aging" data-val="todos" onclick="toggleFilter(this,'aging')">Todos</span>
-        <span class="fchip" data-filter="aging" data-val="fresh" onclick="toggleFilter(this,'aging')">Fresh</span>
-        <span class="fchip" data-filter="aging" data-val="normal" onclick="toggleFilter(this,'aging')">Normal</span>
-        <span class="fchip" data-filter="aging" data-val="aging" onclick="toggleFilter(this,'aging')">Aging</span>
-        <span class="fchip" data-filter="aging" data-val="critical" onclick="toggleFilter(this,'aging')">Crítico</span>
-      </div>
-      <div class="filter-row">
-        <span class="filter-label">Canal</span>
-        <span class="fchip on" data-filter="canal" data-val="todos" onclick="toggleFilter(this,'canal')">Todos</span>
-        <span class="fchip" data-filter="canal" data-val="WhatsApp" onclick="toggleFilter(this,'canal')">WhatsApp</span>
-        <span class="fchip" data-filter="canal" data-val="Instagram" onclick="toggleFilter(this,'canal')">Instagram</span>
-        <span class="fchip" data-filter="canal" data-val="Form" onclick="toggleFilter(this,'canal')">Form</span>
-        <span class="fchip" data-filter="canal" data-val="Ligação" onclick="toggleFilter(this,'canal')">Ligação</span>
-        <span class="fchip" data-filter="canal" data-val="E-mail" onclick="toggleFilter(this,'canal')">E-mail</span>
-        <span class="fchip" data-filter="canal" data-val="Direto" onclick="toggleFilter(this,'canal')">Direto</span>
-      </div>
-      <div class="filter-row">
-        <span class="filter-label">Sinal</span>
-        <span class="fchip on" data-filter="sinal" data-val="todos" onclick="toggleFilter(this,'sinal')">Todos</span>
-        <span class="fchip" data-filter="sinal" data-val="BUY" onclick="toggleFilter(this,'sinal')">BUY</span>
-        <span class="fchip" data-filter="sinal" data-val="CHAMP" onclick="toggleFilter(this,'sinal')">CHAMP</span>
-        <span class="fchip" data-filter="sinal" data-val="RISK" onclick="toggleFilter(this,'sinal')">RISK</span>
-        <span class="fchip" data-filter="sinal" data-val="STALL" onclick="toggleFilter(this,'sinal')">STALL</span>
-        <span class="fchip" data-filter="sinal" data-val="DOME" onclick="toggleFilter(this,'sinal')">IRON DOME</span>
-      </div>
-      <div class="filter-row">
-        <span class="filter-label">SLA</span>
-        <span class="fchip on" data-filter="sla" data-val="todos" onclick="toggleFilter(this,'sla')">Todos</span>
-        <span class="fchip" data-filter="sla" data-val="risco" onclick="toggleFilter(this,'sla')">SLA Risco</span>
-      </div>
-      <div class="filter-row">
-        <span class="filter-label">Tier</span>
-        <span class="fchip on" data-filter="tier" data-val="todos" onclick="toggleFilter(this,'tier')">Todos</span>
-        <span class="fchip" data-filter="tier" data-val="diamond" onclick="toggleFilter(this,'tier')">Diamond</span>
-        <span class="fchip" data-filter="tier" data-val="gold" onclick="toggleFilter(this,'tier')">Gold</span>
-        <span class="fchip" data-filter="tier" data-val="silver" onclick="toggleFilter(this,'tier')">Silver</span>
-        <span class="fchip" data-filter="tier" data-val="bronze" onclick="toggleFilter(this,'tier')">Bronze</span>
-      </div>
-      <div class="sort-row">
-        <span style="font-size:10px;color:var(--text2)">Ordenar:</span>
-        <select class="sort-sel" id="sort-sel" onchange="applyFilters()">
-          <option value="urgencia">Urgência</option>
-          <option value="temp_desc">Temperatura ↓</option>
-          <option value="temp_asc">Temperatura ↑</option>
-          <option value="delta_desc">Dias ↓</option>
-          <option value="delta_asc">Dias ↑</option>
-          <option value="etapa">Etapa (pipeline)</option>
-          <option value="tier">Tier</option>
-          <option value="linha">Linha de Receita</option>
-        </select>
+    <div class="fv2-panel" id="fv2-panel" style="display:none">
+
+      <!-- ETAPA -->
+      <section class="fv2-group" id="fvg-etapa">
+        <button class="fv2-group-head" type="button" onclick="window._toggleFvGroup('fvg-etapa')">
+          <div class="fv2-group-meta">
+            <span class="fv2-group-label">Etapa</span>
+            <span class="fv2-group-sum" id="fvs-etapa">Todos</span>
+          </div>
+          <span class="fv2-group-chev">›</span>
+        </button>
+        <div class="fv2-group-body">
+          <div class="fv2-chip-row">
+            <span class="fchip on" data-filter="etapa" data-val="todos" onclick="toggleFilter(this,'etapa')">Todos</span>
+            <span class="fchip" data-filter="etapa" data-val="Dia 01" onclick="toggleFilter(this,'etapa')">D1</span>
+            <span class="fchip" data-filter="etapa" data-val="Dia 02" onclick="toggleFilter(this,'etapa')">D2</span>
+            <span class="fchip" data-filter="etapa" data-val="Dia 03" onclick="toggleFilter(this,'etapa')">D3</span>
+            <span class="fchip" data-filter="etapa" data-val="Dia 04" onclick="toggleFilter(this,'etapa')">D4</span>
+            <span class="fchip" data-filter="etapa" data-val="Dia 05" onclick="toggleFilter(this,'etapa')">D5</span>
+            <span class="fchip" data-filter="etapa" data-val="Dia 06" onclick="toggleFilter(this,'etapa')">D6</span>
+            <span class="fchip" data-filter="etapa" data-val="Conectados" onclick="toggleFilter(this,'etapa')">Conect.</span>
+            <span class="fchip" data-filter="etapa" data-val="Nova Oportunidade" onclick="toggleFilter(this,'etapa')">Nova Oport.</span>
+            <span class="fchip" data-filter="etapa" data-val="Agendamento" onclick="toggleFilter(this,'etapa')">Agend.</span>
+            <span class="fchip" data-filter="etapa" data-val="Entrevista Agendada" onclick="toggleFilter(this,'etapa')">Entrevista</span>
+            <span class="fchip" data-filter="etapa" data-val="Reagendamento" onclick="toggleFilter(this,'etapa')">Reagend.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- FASE -->
+      <section class="fv2-group" id="fvg-fase">
+        <button class="fv2-group-head" type="button" onclick="window._toggleFvGroup('fvg-fase')">
+          <div class="fv2-group-meta">
+            <span class="fv2-group-label">Fase</span>
+            <span class="fv2-group-sum" id="fvs-fase">Todas</span>
+          </div>
+          <span class="fv2-group-chev">›</span>
+        </button>
+        <div class="fv2-group-body">
+          <div class="fv2-chip-row">
+            <span class="fchip on" data-filter="fase" data-val="todos" onclick="toggleFilter(this,'fase')">Todas</span>
+            <span class="fchip" data-filter="fase" data-val="Lead" onclick="toggleFilter(this,'fase')">Lead</span>
+            <span class="fchip" data-filter="fase" data-val="MQL" onclick="toggleFilter(this,'fase')">MQL</span>
+            <span class="fchip" data-filter="fase" data-val="SAL" onclick="toggleFilter(this,'fase')">SAL</span>
+            <span class="fchip" data-filter="fase" data-val="SQL" onclick="toggleFilter(this,'fase')">SQL</span>
+            <span class="fchip" data-filter="fase" data-val="Oportunidade" onclick="toggleFilter(this,'fase')">Oport.</span>
+            <span class="fchip" data-filter="fase" data-val="Negociacao" onclick="toggleFilter(this,'fase')">Negoc.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- LINHA (lista compacta) -->
+      <section class="fv2-group" id="fvg-linha">
+        <button class="fv2-group-head" type="button" onclick="window._toggleFvGroup('fvg-linha')">
+          <div class="fv2-group-meta">
+            <span class="fv2-group-label">Linha</span>
+            <span class="fv2-group-sum" id="fvs-linha">Todas</span>
+          </div>
+          <span class="fv2-group-chev">›</span>
+        </button>
+        <div class="fv2-group-body">
+          <div class="fv2-chip-row">
+            <span class="fchip on" data-filter="linha" data-val="todos" onclick="toggleFilter(this,'linha')">Todas</span>
+            <span class="fchip" data-filter="linha" data-val="imersao" onclick="toggleFilter(this,'linha')">Imersão</span>
+            <span class="fchip" data-filter="linha" data-val="club" onclick="toggleFilter(this,'linha')">Club</span>
+            <span class="fchip" data-filter="linha" data-val="consulting" onclick="toggleFilter(this,'linha')">Consulting</span>
+            <span class="fchip" data-filter="linha" data-val="field_sales" onclick="toggleFilter(this,'linha')">Field Sales</span>
+            <span class="fchip" data-filter="linha" data-val="social_dm" onclick="toggleFilter(this,'linha')">Social DM</span>
+            <span class="fchip" data-filter="linha" data-val="eventos" onclick="toggleFilter(this,'linha')">Eventos</span>
+            <span class="fchip" data-filter="linha" data-val="digital" onclick="toggleFilter(this,'linha')">Digital</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- AGING -->
+      <section class="fv2-group" id="fvg-aging">
+        <button class="fv2-group-head" type="button" onclick="window._toggleFvGroup('fvg-aging')">
+          <div class="fv2-group-meta">
+            <span class="fv2-group-label">Aging</span>
+            <span class="fv2-group-sum" id="fvs-aging">Todos</span>
+          </div>
+          <span class="fv2-group-chev">›</span>
+        </button>
+        <div class="fv2-group-body">
+          <div class="fv2-chip-row">
+            <span class="fchip on" data-filter="aging" data-val="todos" onclick="toggleFilter(this,'aging')">Todos</span>
+            <span class="fchip" data-filter="aging" data-val="fresh" onclick="toggleFilter(this,'aging')">Fresh</span>
+            <span class="fchip" data-filter="aging" data-val="normal" onclick="toggleFilter(this,'aging')">Normal</span>
+            <span class="fchip" data-filter="aging" data-val="aging" onclick="toggleFilter(this,'aging')">Aging</span>
+            <span class="fchip" data-filter="aging" data-val="critical" onclick="toggleFilter(this,'aging')">Crítico</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- CANAL (grid 2 colunas) -->
+      <section class="fv2-group" id="fvg-canal">
+        <button class="fv2-group-head" type="button" onclick="window._toggleFvGroup('fvg-canal')">
+          <div class="fv2-group-meta">
+            <span class="fv2-group-label">Canal</span>
+            <span class="fv2-group-sum" id="fvs-canal">Todos</span>
+          </div>
+          <span class="fv2-group-chev">›</span>
+        </button>
+        <div class="fv2-group-body">
+          <div class="fv2-chip-grid">
+            <span class="fchip on" data-filter="canal" data-val="todos" onclick="toggleFilter(this,'canal')">Todos</span>
+            <span class="fchip" data-filter="canal" data-val="WhatsApp" onclick="toggleFilter(this,'canal')">WhatsApp</span>
+            <span class="fchip" data-filter="canal" data-val="Instagram" onclick="toggleFilter(this,'canal')">Instagram</span>
+            <span class="fchip" data-filter="canal" data-val="Form" onclick="toggleFilter(this,'canal')">Form</span>
+            <span class="fchip" data-filter="canal" data-val="Ligação" onclick="toggleFilter(this,'canal')">Ligação</span>
+            <span class="fchip" data-filter="canal" data-val="E-mail" onclick="toggleFilter(this,'canal')">E-mail</span>
+            <span class="fchip" data-filter="canal" data-val="Direto" onclick="toggleFilter(this,'canal')">Direto</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- SINAL -->
+      <section class="fv2-group" id="fvg-sinal">
+        <button class="fv2-group-head" type="button" onclick="window._toggleFvGroup('fvg-sinal')">
+          <div class="fv2-group-meta">
+            <span class="fv2-group-label">Sinal</span>
+            <span class="fv2-group-sum" id="fvs-sinal">Todos</span>
+          </div>
+          <span class="fv2-group-chev">›</span>
+        </button>
+        <div class="fv2-group-body">
+          <div class="fv2-chip-row">
+            <span class="fchip on" data-filter="sinal" data-val="todos" onclick="toggleFilter(this,'sinal')">Todos</span>
+            <span class="fchip" data-filter="sinal" data-val="BUY" onclick="toggleFilter(this,'sinal')">BUY</span>
+            <span class="fchip" data-filter="sinal" data-val="CHAMP" onclick="toggleFilter(this,'sinal')">CHAMP</span>
+            <span class="fchip" data-filter="sinal" data-val="RISK" onclick="toggleFilter(this,'sinal')">RISK</span>
+            <span class="fchip" data-filter="sinal" data-val="STALL" onclick="toggleFilter(this,'sinal')">STALL</span>
+            <span class="fchip" data-filter="sinal" data-val="DOME" onclick="toggleFilter(this,'sinal')">IRON DOME</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- TIER + SLA (colapsados secundários) -->
+      <section class="fv2-group" id="fvg-tier">
+        <button class="fv2-group-head" type="button" onclick="window._toggleFvGroup('fvg-tier')">
+          <div class="fv2-group-meta">
+            <span class="fv2-group-label">Tier</span>
+            <span class="fv2-group-sum" id="fvs-tier">Todos</span>
+          </div>
+          <span class="fv2-group-chev">›</span>
+        </button>
+        <div class="fv2-group-body">
+          <div class="fv2-chip-row">
+            <span class="fchip on" data-filter="tier" data-val="todos" onclick="toggleFilter(this,'tier')">Todos</span>
+            <span class="fchip" data-filter="tier" data-val="diamond" onclick="toggleFilter(this,'tier')">Diamond</span>
+            <span class="fchip" data-filter="tier" data-val="gold" onclick="toggleFilter(this,'tier')">Gold</span>
+            <span class="fchip" data-filter="tier" data-val="silver" onclick="toggleFilter(this,'tier')">Silver</span>
+            <span class="fchip" data-filter="tier" data-val="bronze" onclick="toggleFilter(this,'tier')">Bronze</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- FOOTER STICKY: Ordenar + Limpar + Aplicar -->
+      <div class="fv2-footer">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+          <span style="font-size:10px;color:var(--text2);white-space:nowrap">Ordenar:</span>
+          <select class="sort-sel fv2-sort" id="sort-sel" onchange="applyFilters()">
+            <option value="urgencia">Urgência</option>
+            <option value="temp_desc">Temperatura ↓</option>
+            <option value="temp_asc">Temperatura ↑</option>
+            <option value="delta_desc">Dias ↓</option>
+            <option value="delta_asc">Dias ↑</option>
+            <option value="etapa">Etapa</option>
+            <option value="tier">Tier</option>
+            <option value="linha">Linha</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="fv2-btn-sec" type="button" onclick="window._clearAllFilters()">Limpar tudo</button>
+          <button class="fv2-btn-pri" type="button" onclick="window._toggleFilterPanel()">Aplicar</button>
+        </div>
       </div>
     </div>
     <div class="deal-list" id="deal-list">
@@ -945,6 +1093,11 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
         <div id="rp-daily-chart"><div style="font-size:11px;color:var(--text2);padding:8px">Carregando...</div></div>
       </div>
   </div>
+    <div class="screen" id="screen-prevendas">
+      <div id="screen-reports-v4">
+        <div style="font-size:12px;color:var(--text2);padding:20px;text-align:center">Carregando Pre-Vendas Intelligence...</div>
+      </div>
+    </div>
     <div class="screen" id="screen-intelligence">
       <div style="margin-bottom:16px">
         <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:3px">Inteligência Operacional</div>
@@ -958,6 +1111,8 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
         <span class="intel-dim" onclick="window._intelDim('channel',this)">Canal</span>
         <span class="intel-dim" onclick="window._intelDim('task',this)">Tasks</span>
         <span class="intel-dim" onclick="window._intelDim('value',this)">Valor</span>
+        <span class="intel-dim" onclick="window._intelDim('forecast',this)" style="border-color:var(--accent2);color:var(--accent2)">Forecast</span>
+        <span class="intel-dim" onclick="window._intelDim('framework',this)" style="border-color:var(--clay);color:var(--clay)">Framework</span>
         <span class="intel-dim" onclick="window._intelDim('performance',this)" style="border-color:var(--gold);color:var(--gold)">Performance V3</span>
       </div>
       <div id="intel-content">
@@ -1178,13 +1333,13 @@ let cur=null;
 function setScreen(n,el){
   document.querySelectorAll('#ct > .screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
-  const screenMap={home:'screen-home',pipeline:'screen-pipeline',tasks:'screen-tasks',reports:'screen-reports',intelligence:'screen-intelligence',dm:'screen-dm'};
+  const screenMap={home:'screen-home',pipeline:'screen-pipeline',tasks:'screen-tasks',reports:'screen-reports',prevendas:'screen-prevendas',intelligence:'screen-intelligence',dm:'screen-dm'};
   const target=document.getElementById(screenMap[n]||'screen-home');
   if(target) target.classList.add('on');
   if(el){ el.classList.add('on'); }
   else {
     const tabs=document.querySelectorAll('.ntab');
-    const tabMap={home:0,pipeline:1,tasks:2,reports:3,intelligence:4};
+    const tabMap={home:0,pipeline:1,tasks:2,reports:3,prevendas:4,intelligence:5};
     const idx=tabMap[n]!=null?tabMap[n]:0;
     if(tabs[idx]) tabs[idx].classList.add('on');
   }
@@ -1192,6 +1347,7 @@ function setScreen(n,el){
   if(n==='tasks' && window.renderTaskRunner) window.renderTaskRunner();
   if(n==='intelligence') renderIntelligence();
   if(n==='reports') loadReportsScreen();
+  if(n==='prevendas' && window.ReportsV4) window.ReportsV4.renderReportsV4('screen-reports-v4');
 }
 
 // V3: Task filter handler
@@ -1346,9 +1502,65 @@ function resetDMA(id){
   document.getElementById('dst-'+id).textContent='Ativo';
 }
 
-// ── FILTROS, ORDENAÇÃO, SINAIS ───────────────────────────────────────
+// ── FILTROS V2: Accordion + chips scrolláveis ──────────────────────────
 
 const ACTIVE_FILTERS={fase:'todos',etapa:'todos',tier:'todos',linha:'todos',aging:'todos',sla:'todos',canal:'todos',sinal:'todos'};
+
+// Mapa de label amigável por grupo/val
+var FV2_LABELS={
+  etapa:{'todos':'Todos','Dia 01':'D1','Dia 02':'D2','Dia 03':'D3','Dia 04':'D4','Dia 05':'D5','Dia 06':'D6','Conectados':'Conect.','Nova Oportunidade':'Nova Oport.','Agendamento':'Agend.','Entrevista Agendada':'Entrevista','Reagendamento':'Reagend.'},
+  fase:{'todos':'Todas','Lead':'Lead','MQL':'MQL','SAL':'SAL','SQL':'SQL','Oportunidade':'Oport.','Negociacao':'Negoc.'},
+  linha:{'todos':'Todas','imersao':'Imersão','club':'Club','consulting':'Consulting','field_sales':'Field Sales','social_dm':'Social DM','eventos':'Eventos','digital':'Digital'},
+  aging:{'todos':'Todos','fresh':'Fresh','normal':'Normal','aging':'Aging','critical':'Crítico'},
+  canal:{'todos':'Todos','WhatsApp':'WA','Instagram':'IG','Form':'Form','Ligação':'Tel','E-mail':'Email','Direto':'Direto'},
+  sinal:{'todos':'Todos','BUY':'BUY','CHAMP':'CHAMP','RISK':'RISK','STALL':'STALL','DOME':'DOME'},
+  tier:{'todos':'Todos','diamond':'Diamond','gold':'Gold','silver':'Silver','bronze':'Bronze'}
+};
+
+window._toggleFilterPanel = function(){
+  var panel = document.getElementById('fv2-panel');
+  var chev = document.getElementById('fv2-chevron');
+  if(!panel) return;
+  var open = panel.style.display === 'none' || panel.style.display === '';
+  panel.style.display = open ? 'block' : 'none';
+  if(chev) chev.classList.toggle('open', open);
+};
+
+window._toggleFvGroup = function(groupId){
+  var grp = document.getElementById(groupId);
+  if(!grp) return;
+  // Fecha outros grupos abertos
+  document.querySelectorAll('.fv2-group.is-open').forEach(function(g){
+    if(g.id !== groupId) g.classList.remove('is-open');
+  });
+  grp.classList.toggle('is-open');
+};
+
+window._updateFvSummary = function(group){
+  var val = ACTIVE_FILTERS[group];
+  var el = document.getElementById('fvs-'+group);
+  if(!el) return;
+  var labels = FV2_LABELS[group]||{};
+  el.textContent = labels[val] || val || 'Todos';
+  // Colorir se selecionado
+  el.style.color = (val === 'todos' || !val) ? 'var(--text2)' : 'var(--accent2)';
+  // Update count badge no header
+  var activeCount = Object.values(ACTIVE_FILTERS).filter(function(v){ return v !== 'todos'; }).length;
+  var subEl = document.getElementById('fv2-active-count');
+  if(subEl) subEl.textContent = activeCount > 0 ? activeCount + ' ativo'+(activeCount>1?'s':'') : '6 dimensões';
+};
+
+window._clearAllFilters = function(){
+  Object.keys(ACTIVE_FILTERS).forEach(function(g){ ACTIVE_FILTERS[g] = 'todos'; });
+  // Reset all fchips
+  document.querySelectorAll('.fchip[data-filter]').forEach(function(c){
+    c.classList.remove('on','on-green','on-red','on-yellow');
+    if(c.dataset.val === 'todos') c.classList.add('on');
+  });
+  // Reset summaries
+  Object.keys(ACTIVE_FILTERS).forEach(function(g){ window._updateFvSummary(g); });
+  applyFilters();
+};
 
 function toggleFilter(el,group){
   document.querySelectorAll(`.fchip[data-filter="${group}"]`).forEach(c=>{
@@ -1360,6 +1572,7 @@ function toggleFilter(el,group){
   else if(val==='STALL'||val==='DOME') el.classList.add('on-yellow');
   else el.classList.add('on');
   ACTIVE_FILTERS[group]=val;
+  if(window._updateFvSummary) window._updateFvSummary(group);
   applyFilters();
 }
 
@@ -2500,12 +2713,11 @@ function renderLiveDeals(rows,cols){
       <div class="di-name">${nome}</div>
       <div class="di-co">${empresa}${cargo?' · '+cargo:''}</div>
       <div class="di-meta">
-        <span class="tb ${tc}">${tl} ${temp}</span>
-        <span class="fc">${etapa||'—'}</span>
-        ${fase&&fase!==etapa?`<span class="fc fc-fase">${fase}</span>`:''}
-        <span class="cc ${cc}">${canal}</span>
-        <span class="tb ${sigCls[signal]||'sig-buy'}" style="margin-left:2px">${sigLabels[signal]||signal}</span>
-        <span class="urg-badge ${uc}" title="Score urgência">${urgency}</span>
+        <span class="fc">${typeof _fmtEtapa==='function'?_fmtEtapa(etapa||''):etapa||'—'}</span>
+        <span class="fc fc-linha" title="${linhaReceita||''}">
+          ${typeof _fmtLinha==='function'?_fmtLinha(linhaReceita||''):(linhaReceita||'').replace(/^\[(?:IM|ON|RF|ED|FD|CS)\]\s*/i,'').slice(0,18)||'—'}
+        </span>
+        <span class="tb ${agingBand==='critical'?'sig-risk':agingBand==='aging'?'sig-stall':'t-gray'}">${delta}d${signal&&signal!=='NORMAL'?' · '+signal:''}</span>
       </div>
       <div id="di-signal-${id}" style="margin-top:4px;"></div>
       <div class="di-qa">
@@ -4529,6 +4741,8 @@ function renderIntelligence(){
   else if(dim==='channel') _renderChannel(ct,AE);
   else if(dim==='task') _renderTask(ct,AE);
   else if(dim==='value') _renderValue(ct,AE);
+  else if(dim==='forecast') _renderForecast(ct,allDeals,deals);
+  else if(dim==='framework') _renderFramework(ct,allDeals,deals);
 }
 
 function _iBar(label,count,max,total,extraStyle){
@@ -4848,6 +5062,111 @@ function _renderValue(ct,AE){
       return _iKpi(fmtBRL(v.total),k.toUpperCase()+' ('+v.count+')',k==='diamond'?'#f59e0b':k==='gold'?'#a78bfa':'var(--text)');
     }).join('')+'</div>');
 
+  ct.innerHTML=html;
+}
+
+// ── Forecast Intelligence Tab ─────────────────────────────────────────
+function _renderForecast(ct,allDeals,deals){
+  var html='';
+  // KPIs gerais
+  var scored=deals.filter(function(d){return d._forecastV6&&d._forecastV6.score!=null;});
+  var avgScore=scored.length?Math.round(scored.reduce(function(s,d){return s+d._forecastV6.score;},0)/scored.length*100):0;
+  var avgConf=scored.length?Math.round(scored.reduce(function(s,d){return s+(d._forecastV6.confidence||0);},0)/scored.length*100):0;
+  var highProb=scored.filter(function(d){return d._forecastV6.score>=0.7;}).length;
+  var medProb=scored.filter(function(d){return d._forecastV6.score>=0.4&&d._forecastV6.score<0.7;}).length;
+  var lowProb=scored.filter(function(d){return d._forecastV6.score<0.4;}).length;
+  var totalWeighted=scored.reduce(function(s,d){return s+(d._forecastV6.score*(d.revenueRaw||0));},0);
+  html+=renderSection(1,'Forecast do Pipeline',
+    '<div class="intel-kpi-row">'+
+    _iKpi(avgScore+'%','Score médio','var(--accent2)')+
+    _iKpi(avgConf+'%','Confiança média','var(--green)')+
+    _iKpi(scored.length,'Deals scored')+
+    _iKpi(fmtBRL(Math.round(totalWeighted)),'Pipeline ponderado','var(--gold)')+
+    '</div>');
+  // Distribuição por faixa
+  html+=renderSection(2,'Distribuição por Probabilidade',
+    '<div class="intel-kpi-row">'+
+    _iKpi(highProb,'Alta (≥70%)','var(--green)')+
+    _iKpi(medProb,'Média (40-69%)','var(--yellow)')+
+    _iKpi(lowProb,'Baixa (<40%)','var(--red)')+
+    '</div>');
+  // Top 10 deals por score
+  var sorted=scored.slice().sort(function(a,b){return b._forecastV6.score-a._forecastV6.score;}).slice(0,10);
+  html+=renderSection(3,'Top Deals por Score',
+    '<table class="intel-table"><thead><tr><th>Deal</th><th>Linha</th><th>Score</th><th>Conf.</th><th>Valor</th></tr></thead><tbody>'+
+    sorted.map(function(d){
+      var s=Math.round(d._forecastV6.score*100);
+      var c=Math.round((d._forecastV6.confidence||0)*100);
+      var col=s>=70?'var(--green)':s>=40?'var(--yellow)':'var(--red)';
+      return '<tr><td>'+_escHtml(d.nome||'—')+'</td><td style="font-size:10px;color:var(--text2)">'+_escHtml(_fmtLinha(d.linhaReceita||d.linha_de_receita_vigente||''))+'</td><td style="color:'+col+';font-weight:700">'+s+'%</td><td style="color:var(--text2)">'+c+'%</td><td style="color:var(--green)">'+fmtBRL(d.revenueRaw)+'</td></tr>';
+    }).join('')+'</tbody></table>');
+  // Score por fase
+  var byFase={};
+  scored.forEach(function(d){var f=d.fase||d.fase_atual_no_processo||'—';if(!byFase[f])byFase[f]={sum:0,cnt:0};byFase[f].sum+=d._forecastV6.score;byFase[f].cnt++;});
+  var faseKeys=Object.keys(byFase).sort(function(a,b){return byFase[b].sum/byFase[b].cnt-byFase[a].sum/byFase[a].cnt;});
+  var maxFase=1;
+  html+=renderSection(4,'Score Médio por Fase',
+    faseKeys.map(function(f){
+      var avg=Math.round(byFase[f].sum/byFase[f].cnt*100);
+      var col=avg>=70?'rgba(52,211,153,0.5)':avg>=40?'rgba(245,197,66,0.5)':'rgba(248,113,113,0.5)';
+      return _iBar(f+' ('+byFase[f].cnt+'d)',avg,100,100,'background:'+col);
+    }).join(''));
+  ct.innerHTML=html;
+}
+
+// ── Framework Intelligence Tab ────────────────────────────────────────
+function _renderFramework(ct,allDeals,deals){
+  var html='';
+  // Deals com framework extractions
+  var withFw=deals.filter(function(d){return d._frameworkRuntime&&d._frameworkRuntime.qualitative_score!=null;});
+  var withoutFw=deals.filter(function(d){return !d._frameworkRuntime||d._frameworkRuntime.qualitative_score==null;});
+  var avgQs=withFw.length?Math.round(withFw.reduce(function(s,d){return s+d._frameworkRuntime.qualitative_score;},0)/withFw.length*100):0;
+  var avgCov=withFw.length?Math.round(withFw.reduce(function(s,d){return s+(d._frameworkRuntime.coverage_pct||0);},0)/withFw.length):0;
+  var gapCount=withFw.filter(function(d){return d._frameworkRuntime.qualitative_score<0.6;}).length;
+  html+=renderSection(1,'Cobertura Framework',
+    '<div class="intel-kpi-row">'+
+    _iKpi(withFw.length,'Deals analisados','var(--accent2)')+
+    _iKpi(withoutFw.length,'Sem extração','var(--text2)')+
+    _iKpi(avgQs+'%','Score qualitativo médio',avgQs>=70?'var(--green)':avgQs>=50?'var(--yellow)':'var(--red)')+
+    _iKpi(avgCov+'%','Cobertura média','var(--green)')+
+    '</div>');
+  // Gaps críticos (score < 60%)
+  var gapDeals=withFw.filter(function(d){return d._frameworkRuntime.qualitative_score<0.6;}).sort(function(a,b){return a._frameworkRuntime.qualitative_score-b._frameworkRuntime.qualitative_score;}).slice(0,8);
+  html+=renderSection(2,'Gaps Críticos (Score < 60%)',
+    gapDeals.length?
+    '<table class="intel-table"><thead><tr><th>Deal</th><th>Framework</th><th>Score Q.</th><th>Cobertura</th><th>Próx. Ação</th></tr></thead><tbody>'+
+    gapDeals.map(function(d){
+      var fw=d._frameworkRuntime;
+      var s=Math.round(fw.qualitative_score*100);
+      var c=Math.round((fw.coverage_pct||0));
+      return '<tr><td>'+_escHtml(d.nome||'—')+'</td><td style="font-size:10px;color:var(--clay)">'+_escHtml(d._framework||'—')+'</td><td style="color:var(--red);font-weight:700">'+s+'%</td><td>'+c+'%</td><td style="font-size:10px;color:var(--text2)">'+_escHtml(d._nextAction||'—')+'</td></tr>';
+    }).join('')+'</tbody></table>'
+    :'<div style="padding:12px;color:var(--green);font-size:12px">Nenhum gap crítico identificado.</div>');
+  // Distribuição de scores qualitativos
+  var buckets={'Excelente (≥80%)':0,'Bom (60-79%)':0,'Gap (40-59%)':0,'Crítico (<40%)':0};
+  withFw.forEach(function(d){
+    var s=d._frameworkRuntime.qualitative_score*100;
+    if(s>=80) buckets['Excelente (≥80%)']++;
+    else if(s>=60) buckets['Bom (60-79%)']++;
+    else if(s>=40) buckets['Gap (40-59%)']++;
+    else buckets['Crítico (<40%)']++;
+  });
+  var maxBk=Math.max.apply(null,Object.values(buckets).concat([1]));
+  html+=renderSection(3,'Distribuição de Score Qualitativo',
+    Object.keys(buckets).map(function(k){
+      var colors={'Excelente (≥80%)':'rgba(52,211,153,0.5)','Bom (60-79%)':'rgba(91,141,239,0.5)','Gap (40-59%)':'rgba(245,197,66,0.5)','Crítico (<40%)':'rgba(248,113,113,0.5)'};
+      return _iBar(k,buckets[k],maxBk,withFw.length||1,'background:'+colors[k]);
+    }).join(''));
+  // Top deals por score qualitativo
+  var topFw=withFw.slice().sort(function(a,b){return b._frameworkRuntime.qualitative_score-a._frameworkRuntime.qualitative_score;}).slice(0,8);
+  html+=renderSection(4,'Top Deals por Score Qualitativo',
+    '<table class="intel-table"><thead><tr><th>Deal</th><th>Framework</th><th>Score Q.</th><th>Cob.</th><th>Valor</th></tr></thead><tbody>'+
+    topFw.map(function(d){
+      var fw=d._frameworkRuntime;
+      var s=Math.round(fw.qualitative_score*100);
+      var col=s>=70?'var(--green)':s>=50?'var(--yellow)':'var(--red)';
+      return '<tr><td>'+_escHtml(d.nome||'—')+'</td><td style="font-size:10px;color:var(--clay)">'+_escHtml(d._framework||'—')+'</td><td style="color:'+col+';font-weight:700">'+s+'%</td><td style="color:var(--text2)">'+Math.round(fw.coverage_pct||0)+'%</td><td style="color:var(--green)">'+fmtBRL(d.revenueRaw)+'</td></tr>';
+    }).join('')+'</tbody></table>');
   ct.innerHTML=html;
 }
 
@@ -5200,5 +5519,6 @@ function initSlackAlerts(){
 </div>
 <script src="cockpit-engine.js"></script>
 <script src="analytics-engine.js"></script>
+<script src="reports-v4-engine.js"></script>
 </body>
 </html>
