@@ -547,7 +547,7 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .sb-filters-toggle{display:flex;align-items:center;justify-content:space-between;padding:6px 14px;cursor:pointer;border-bottom:1px solid var(--border);flex-shrink:0;user-select:none}
 .sb-filters-toggle:hover{background:var(--bg3)}
 .tgl-arrow{font-size:11px;color:var(--text2);transition:transform .2s}.tgl-arrow.up{transform:rotate(180deg)}
-.sb-filters{padding:6px 14px 8px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:5px;overflow:hidden;transition:max-height .35s ease,padding .25s ease;max-height:520px}
+.sb-filters{padding:6px 14px 8px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:5px;overflow:hidden;transition:max-height .35s ease,padding .25s ease;max-height:680px}
 .sb-filters.collapsed{max-height:0;padding-top:0;padding-bottom:0;border-bottom:none}
 .ig-toggle{display:flex;align-items:center;justify-content:space-between;padding:8px 0;cursor:pointer;user-select:none;margin-bottom:4px}
 .ig-toggle:hover .ig-toggle-label{color:var(--text)}
@@ -787,9 +787,8 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
     </div>
     <div class="sb-filters collapsed" id="sb-filters-body">
       <div class="filter-row">
-        <span class="filter-label">Etapa</span>
+        <span class="filter-label">Etapa Operacional</span>
         <span class="fchip on" data-filter="etapa" data-val="todos" onclick="toggleFilter(this,'etapa')">Todos</span>
-        <span class="fchip" data-filter="etapa" data-val="Novo Lead" onclick="toggleFilter(this,'etapa')">MQL</span>
         <span class="fchip" data-filter="etapa" data-val="Dia 01" onclick="toggleFilter(this,'etapa')">D1</span>
         <span class="fchip" data-filter="etapa" data-val="Dia 02" onclick="toggleFilter(this,'etapa')">D2</span>
         <span class="fchip" data-filter="etapa" data-val="Dia 03" onclick="toggleFilter(this,'etapa')">D3</span>
@@ -803,7 +802,7 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
         <span class="fchip" data-filter="etapa" data-val="Reagendamento" onclick="toggleFilter(this,'etapa')">Reagend.</span>
       </div>
       <div class="filter-row">
-        <span class="filter-label">Fase</span>
+        <span class="filter-label">Fase Comercial</span>
         <span class="fchip on" data-filter="fase" data-val="todos" onclick="toggleFilter(this,'fase')">Todas</span>
         <span class="fchip" data-filter="fase" data-val="Lead" onclick="toggleFilter(this,'fase')">Lead</span>
         <span class="fchip" data-filter="fase" data-val="MQL" onclick="toggleFilter(this,'fase')">MQL</span>
@@ -830,6 +829,25 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
         <span class="fchip" data-filter="aging" data-val="normal" onclick="toggleFilter(this,'aging')">Normal</span>
         <span class="fchip" data-filter="aging" data-val="aging" onclick="toggleFilter(this,'aging')">Aging</span>
         <span class="fchip" data-filter="aging" data-val="critical" onclick="toggleFilter(this,'aging')">Crítico</span>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">Canal</span>
+        <span class="fchip on" data-filter="canal" data-val="todos" onclick="toggleFilter(this,'canal')">Todos</span>
+        <span class="fchip" data-filter="canal" data-val="WhatsApp" onclick="toggleFilter(this,'canal')">WhatsApp</span>
+        <span class="fchip" data-filter="canal" data-val="Instagram" onclick="toggleFilter(this,'canal')">Instagram</span>
+        <span class="fchip" data-filter="canal" data-val="Form" onclick="toggleFilter(this,'canal')">Form</span>
+        <span class="fchip" data-filter="canal" data-val="Ligação" onclick="toggleFilter(this,'canal')">Ligação</span>
+        <span class="fchip" data-filter="canal" data-val="E-mail" onclick="toggleFilter(this,'canal')">E-mail</span>
+        <span class="fchip" data-filter="canal" data-val="Direto" onclick="toggleFilter(this,'canal')">Direto</span>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">Sinal</span>
+        <span class="fchip on" data-filter="sinal" data-val="todos" onclick="toggleFilter(this,'sinal')">Todos</span>
+        <span class="fchip" data-filter="sinal" data-val="BUY" onclick="toggleFilter(this,'sinal')">BUY</span>
+        <span class="fchip" data-filter="sinal" data-val="CHAMP" onclick="toggleFilter(this,'sinal')">CHAMP</span>
+        <span class="fchip" data-filter="sinal" data-val="RISK" onclick="toggleFilter(this,'sinal')">RISK</span>
+        <span class="fchip" data-filter="sinal" data-val="STALL" onclick="toggleFilter(this,'sinal')">STALL</span>
+        <span class="fchip" data-filter="sinal" data-val="DOME" onclick="toggleFilter(this,'sinal')">IRON DOME</span>
       </div>
       <div class="filter-row">
         <span class="filter-label">SLA</span>
@@ -1330,7 +1348,7 @@ function resetDMA(id){
 
 // ── FILTROS, ORDENAÇÃO, SINAIS ───────────────────────────────────────
 
-const ACTIVE_FILTERS={fase:'todos',etapa:'todos',tier:'todos',linha:'todos',aging:'todos',sla:'todos'};
+const ACTIVE_FILTERS={fase:'todos',etapa:'todos',tier:'todos',linha:'todos',aging:'todos',sla:'todos',canal:'todos',sinal:'todos'};
 
 function toggleFilter(el,group){
   document.querySelectorAll(`.fchip[data-filter="${group}"]`).forEach(c=>{
@@ -1387,6 +1405,8 @@ function applyFilters(){
   const fLinha=ACTIVE_FILTERS.linha;
   const fAging=ACTIVE_FILTERS.aging;
   const fSla=ACTIVE_FILTERS.sla;
+  const fCanal=ACTIVE_FILTERS.canal;
+  const fSinal=ACTIVE_FILTERS.sinal;
   const sortBy=(document.getElementById('sort-sel')||{}).value||'urgencia';
 
   const map=window._COCKPIT_DEAL_MAP||{};
@@ -1430,6 +1450,16 @@ function applyFilters(){
     // filtro SLA risco
     if(fSla==='risco'){
       if((deal._urgency||0)<60){di.style.display='none';return;}
+    }
+    // filtro canal
+    if(fCanal!=='todos'){
+      const canal=(deal.canal||deal._canal||'').toLowerCase();
+      if(!canal.includes(fCanal.toLowerCase())){di.style.display='none';return;}
+    }
+    // filtro sinal / saúde do deal
+    if(fSinal!=='todos'){
+      const sig=(deal._signal||'').toUpperCase();
+      if(sig!==fSinal.toUpperCase()){di.style.display='none';return;}
     }
     di.style.display='';
     visible.push({el:di,deal,id});
@@ -3563,26 +3593,30 @@ function toggleCallPanel(id) {
   if (notes) notes.value = '';
 }
 
+var _callNextStepMap = {};
+
 function selectCallOutcome(id, outcome, btnEl) {
   _callOutcomeMap[id] = outcome;
-  // Visual: reset all buttons, highlight selected
+  delete _callNextStepMap[id];
+  // Visual: reset all buttons in outcome grid, highlight selected
   const grid = btnEl.closest('.call-outcome-grid');
   if (grid) grid.querySelectorAll('.call-outcome-btn').forEach(function(b){ b.className = 'call-outcome-btn'; });
   var colorMap = {
-    answered: 'sel-green',
-    meeting_booked: 'sel-green',
-    no_answer: 'sel-yellow',
-    voicemail: 'sel-yellow',
-    call_dropped: 'sel-accent',
+    answered: 'sel-green', meeting_booked: 'sel-green', callback_requested: 'sel-green',
+    no_answer: 'sel-yellow', voicemail: 'sel-yellow',
+    call_dropped: 'sel-accent', wrong_number: 'sel-accent',
     busy: 'sel-red'
   };
   btnEl.className = 'call-outcome-btn ' + (colorMap[outcome] || 'sel-accent');
+  // Mostrar sub-grid de proximo passo se atendeu
+  const nextStepRow = document.getElementById('call-next-step-row-' + id);
+  if (nextStepRow) nextStepRow.style.display = (outcome === 'answered') ? 'block' : 'none';
   // Preview auto-task
   const autoTask = document.getElementById('call-autotask-' + id);
   if (autoTask) {
-    const preview = _callAutoTaskPreview(id, outcome);
+    const preview = _callAutoTaskPreview(id, outcome, null);
     if (preview) {
-      autoTask.innerHTML = '<strong>Tarefa gerada automaticamente:</strong> ' + preview;
+      autoTask.innerHTML = '<strong>Tarefa automática:</strong> ' + preview;
       autoTask.className = 'call-auto-task show';
     } else {
       autoTask.className = 'call-auto-task';
@@ -3590,23 +3624,49 @@ function selectCallOutcome(id, outcome, btnEl) {
   }
 }
 
-function _callAutoTaskPreview(id, outcome) {
-  var deal = window._allDeals && window._allDeals.find(function(d){ return d.deal_id == id || d.emailLead == id; });
+function selectCallNextStep(id, nextStep, btnEl) {
+  _callNextStepMap[id] = nextStep;
+  const grid = btnEl.closest('.call-outcome-grid');
+  if (grid) grid.querySelectorAll('.call-outcome-btn').forEach(function(b){ b.className = 'call-outcome-btn'; });
+  btnEl.className = 'call-outcome-btn sel-green';
+  // Atualiza preview
+  const autoTask = document.getElementById('call-autotask-' + id);
+  if (autoTask) {
+    const preview = _callAutoTaskPreview(id, 'answered', nextStep);
+    if (preview) {
+      autoTask.innerHTML = '<strong>Tarefa automática:</strong> ' + preview;
+      autoTask.className = 'call-auto-task show';
+    }
+  }
+}
+
+function _callAutoTaskPreview(id, outcome, nextStep) {
+  var deal = window._COCKPIT_DEAL_MAP && window._COCKPIT_DEAL_MAP[id];
+  if (!deal && window._allDeals) deal = window._allDeals.find(function(d){ return d.deal_id == id || d.emailLead == id; });
   var attempts = deal && deal._callAttempts ? deal._callAttempts : 0;
+  var isHot = deal && (deal._aging && (deal._aging.band === 'fresh' || deal._aging.band === 'normal') || (deal._urgency || 0) >= 60);
   switch (outcome) {
-    case 'voicemail':    return 'Tentar ligacao novamente em +4h';
+    case 'voicemail':
+      return isHot ? 'Retornar ligacao em +2h (deal quente)' : 'Retornar ligacao em +24h';
     case 'no_answer':
-      if (attempts === 0) return 'Tentar ligacao novamente em +4h';
-      if (attempts === 1) return 'Tentar ligacao novamente em +24h';
-      if (attempts >= 2) return 'Trocar canal (email/Instagram/WhatsApp) — +24h';
-      break;
-    case 'call_dropped': return 'Tentar ligacao novamente em +10min';
-    case 'busy':         return 'Tentar ligacao novamente em +2h';
-    case 'answered':     return 'FUP pos-chamada — registre proximo passo nas notas';
-    case 'meeting_booked': return 'Confirmacao da reuniao agendada (email/WhatsApp)';
+      if (attempts < 2) return 'Retornar ligacao em +4h (tentativa ' + (attempts+1) + ')';
+      if (attempts < 3) return 'Retornar ligacao em +24h (tentativa ' + (attempts+1) + ')';
+      return 'Trocar canal — Iron Dome ativo em +24h';
+    case 'call_dropped': return 'Retry imediato — ligacao caiu (+10min)';
+    case 'busy':         return 'Retornar em +2h — estava ocupado';
+    case 'callback_requested': return 'Callback no horario combinado — verificar notas';
+    case 'wrong_number': return 'Atualizar contato no CRM — numero invalido';
+    case 'answered':
+      var ns = nextStep || _callNextStepMap[id];
+      if (ns === 'meeting_scheduled') return 'Confirmacao de reuniao em +24h + reminder em -1h';
+      if (ns === 'next_step_defined') return 'FUP na data combinada (verificar notas)';
+      if (ns === 'objection_open')    return 'Task de requalificacao — objecao aberta em +24h';
+      if (ns === 'no_next_step')      return 'Repair de proximo passo em +2h';
+      return 'Selecione o proximo passo acima';
+    case 'meeting_booked':
+      return 'Confirmacao +24h antes + Reminder +1h antes da reuniao';
     default: return null;
   }
-  return null;
 }
 
 function openHubSpotDialer(id) {
@@ -3666,47 +3726,73 @@ async function logCallResult(id) {
 async function _createAutoCallTask(dealId, outcome, operatorEmail, deal) {
   if (!window.supabase) return;
   var attempts = (deal && deal._callAttempts) || 0;
-
-  var taskType = null, dueOffsetHours = null, label = null;
+  var isHot = deal && (deal._aging && (deal._aging.band === 'fresh' || deal._aging.band === 'normal') || (deal._urgency || 0) >= 60);
+  var nextStep = _callNextStepMap[dealId] || null;
+  var tasks = []; // pode gerar múltiplas tasks (ex: meeting_booked)
 
   switch (outcome) {
     case 'voicemail':
-      taskType = 'follow_up'; dueOffsetHours = 4; label = 'Retorno — caixa postal'; break;
+      tasks.push({ taskType:'follow_up', hours: isHot ? 2 : 24, label:'Retorno — caixa postal' + (isHot?' (deal quente)':'') });
+      break;
     case 'no_answer':
-      if (attempts < 2) { taskType = 'follow_up'; dueOffsetHours = 4; label = 'Retorno — nao atendeu'; }
-      else if (attempts < 3) { taskType = 'follow_up'; dueOffsetHours = 24; label = 'Retorno — segunda tentativa'; }
-      else { taskType = 'reativacao'; dueOffsetHours = 24; label = 'Trocar canal — Iron Dome risco'; }
+      if (attempts < 2)      tasks.push({ taskType:'follow_up',   hours:4,  label:'Retorno — nao atendeu (tentativa '+(attempts+1)+')' });
+      else if (attempts < 3) tasks.push({ taskType:'follow_up',   hours:24, label:'Retorno — segunda tentativa' });
+      else                   tasks.push({ taskType:'reativacao',  hours:24, label:'Trocar canal — Iron Dome risco' });
       break;
     case 'call_dropped':
-      taskType = 'follow_up'; dueOffsetHours = 0.17; label = 'Retry — chamada caiu'; break;
+      tasks.push({ taskType:'follow_up', hours:0.17, label:'Retry — chamada caiu' });
+      break;
     case 'busy':
-      taskType = 'follow_up'; dueOffsetHours = 2; label = 'Retorno — ocupado'; break;
+      tasks.push({ taskType:'follow_up', hours:2, label:'Retorno — estava ocupado' });
+      break;
+    case 'callback_requested':
+      tasks.push({ taskType:'follow_up', hours:0, label:'Callback combinado — verificar horario nas notas', useNotes:true });
+      break;
+    case 'wrong_number':
+      tasks.push({ taskType:'reativacao', hours:0, label:'Atualizar numero no CRM — contato invalido' });
+      break;
     case 'answered':
-      taskType = 'follow_up'; dueOffsetHours = 24; label = 'FUP pos-chamada'; break;
+      if (nextStep === 'meeting_scheduled') {
+        tasks.push({ taskType:'handoff_prep', hours:24, label:'Confirmacao de reuniao' });
+        // reminder 1h antes = se tiver data no notas, usar; senão -1h da confirmação
+        tasks.push({ taskType:'follow_up', hours:23, label:'Reminder 1h antes da reuniao' });
+      } else if (nextStep === 'next_step_defined') {
+        tasks.push({ taskType:'follow_up', hours:24, label:'FUP na data combinada — proximo passo definido' });
+      } else if (nextStep === 'objection_open') {
+        tasks.push({ taskType:'reativacao', hours:24, label:'Requalificacao — objecao aberta na chamada' });
+      } else {
+        // no_next_step ou sem seleção
+        tasks.push({ taskType:'follow_up', hours:2, label:'Repair de proximo passo — chamada sem next step' });
+      }
+      break;
     case 'meeting_booked':
-      taskType = 'handoff_prep'; dueOffsetHours = 1; label = 'Confirmacao reuniao agendada'; break;
+      tasks.push({ taskType:'handoff_prep', hours:24, label:'Confirmacao de reuniao agendada' });
+      tasks.push({ taskType:'follow_up',    hours:23, label:'Reminder 1h antes da reuniao' });
+      break;
   }
 
-  if (!taskType) return;
-
-  const dueAt = new Date(Date.now() + dueOffsetHours * 3600 * 1000).toISOString();
-  await window.supabase.from('deal_tasks').insert([{
-    deal_id: dealId,
-    operator_email: operatorEmail,
-    task_type: taskType,
-    label: label,
-    due_at: dueAt,
-    status: 'pending',
-    auto_generated: true,
-    trigger_event: 'call_' + outcome,
-    created_at: new Date().toISOString()
-  }]);
+  for (var i = 0; i < tasks.length; i++) {
+    var t = tasks[i];
+    var dueAt = new Date(Date.now() + t.hours * 3600 * 1000).toISOString();
+    await window.supabase.from('deal_tasks').insert([{
+      deal_id: dealId,
+      operator_email: operatorEmail,
+      task_type: t.taskType,
+      label: t.label,
+      due_at: dueAt,
+      status: 'pending',
+      auto_generated: true,
+      trigger_event: 'call_' + outcome + (nextStep ? '_' + nextStep : ''),
+      created_at: new Date().toISOString()
+    }]);
+  }
 }
 
 function _showCallToast(outcome) {
   var outcomeLabels = {
     answered: 'Atendeu', no_answer: 'Nao Atendeu', voicemail: 'Caixa Postal',
-    meeting_booked: 'Reuniao Marcada!', call_dropped: 'Chamada Caiu', busy: 'Ocupado'
+    meeting_booked: 'Reuniao Marcada!', call_dropped: 'Chamada Caiu', busy: 'Ocupado',
+    callback_requested: 'Callback combinado', wrong_number: 'Numero invalido'
   };
   var label = outcomeLabels[outcome] || outcome;
   // Reutiliza toast existente se disponivel
@@ -4183,9 +4269,9 @@ function selectLiveDeal(id,d){
         <span class="tgl-arrow">▾</span>
       </div>
       <div class="info-grid collapsed">
-        <div class="ic"><div class="ic-l">Etapa</div><div class="ic-v">${d.etapa||d.etapa_atual_no_pipeline||'—'}</div><div class="ic-s">${d.delta} dias no CRM${d._timeline?' · Criado '+d._timeline.createdDate:''}</div></div>
-        <div class="ic"><div class="ic-l">Fase</div><div class="ic-v">${d.fase||d.fase_atual_no_processo||'—'}</div><div class="ic-s">${d.linhaReceita||d.linha_de_receita_vigente||'—'}</div></div>
-        <div class="ic"><div class="ic-l">Canal</div><div class="ic-v">${d.canal}</div><div class="ic-s">${d.utm_medium||'—'}</div></div>
+        <div class="ic"><div class="ic-l">Etapa Operacional</div><div class="ic-v">${d.etapa||d.etapa_atual_no_pipeline||'—'}</div><div class="ic-s">${d.linhaReceita||d.linha_de_receita_vigente||'—'}</div></div>
+        <div class="ic"><div class="ic-l">Fase Comercial</div><div class="ic-v">${d.fase||d.fase_atual_no_processo||'—'}</div><div class="ic-s">${d.canal||'—'}</div></div>
+        <div class="ic"><div class="ic-l">Aging CRM</div><div class="ic-v" style="color:${d._aging&&d._aging.band==='critical'?'var(--red)':d._aging&&d._aging.band==='aging'?'var(--yellow)':'inherit'}">${d.delta}d</div><div class="ic-s">${d._aging?d._aging.band:'—'}${d._timeline?' · Criado '+d._timeline.createdDate:''}</div></div>
         <div class="ic"><div class="ic-l">Dia FUP</div><div class="ic-v">${d.dd}</div><div class="ic-s">${d._timeline?d._timeline.actionLabel:''}</div></div>
         <div class="ic"><div class="ic-l">Velocidade</div><div class="ic-v">${d._timeline?d._timeline.velocityLabel:'—'}</div><div class="ic-s">${d._timeline?d._timeline.velocity+' etapas/dia':''}</div></div>
         <div class="ic"><div class="ic-l">SLA</div><div class="ic-v" style="color:${d._timeline&&(d._timeline.slaStatus==='overdue'||d._timeline.slaStatus==='critical')?'var(--red)':d._timeline&&d._timeline.slaStatus==='at_risk'?'var(--yellow)':'var(--green)'}">${d._timeline?d._timeline.slaLabel:'—'}</div><div class="ic-s">${d._timeline?(d._timeline.daysToSLA>=0?d._timeline.daysToSLA+'d restantes':Math.abs(d._timeline.daysToSLA)+'d estourado'):''}</div></div>
