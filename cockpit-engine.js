@@ -19,6 +19,42 @@ function _escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function _today(){ return new Date().toISOString().slice(0,10); }
 function _now(){ return new Date().toISOString(); }
 
+// UX Writer — normaliza nomes canônicos para exibição visual
+// Remove prefixos técnicos [IM], [ON], [SKL], [EV] das linhas de receita
+function _fmtLinha(linha){
+  if(!linha) return '—';
+  return linha.replace(/^\[[\w]+\]\s*/,'').trim();
+}
+// Encurta etapa operacional para chips/badges (valor real preservado em data-val)
+function _fmtEtapa(etapa){
+  if(!etapa) return '—';
+  var map={'Dia 01':'D1','Dia 02':'D2','Dia 03':'D3','Dia 04':'D4','Dia 05':'D5',
+    'Entrevista Agendada':'Entrevista','Reagendamento':'Reagend.',
+    'Nova Oportunidade':'Nova Oport.','Conectados':'Conect.',
+    'Novo Lead':'Novo Lead','Agendamento':'Agend.'};
+  return map[etapa]||etapa;
+}
+// Canal de origem (canal_de_marketing) normalizado para UI
+function _fmtOrigem(canalMkt, utm){
+  var c=(canalMkt||'').toLowerCase();
+  if(c.includes('instagram')||c.includes('ig')||c.includes('social dm')) return 'Instagram';
+  if(c.includes('whatsapp')||c.includes('whats')) return 'WhatsApp';
+  if(c.includes('field')||c.includes('outbound')||c.includes('ligação')) return 'Ligação';
+  if(c.includes('email')||c.includes('e-mail')) return 'E-mail';
+  if(c.includes('google')||c.includes('cpc')) return 'Google Ads';
+  if(c.includes('meta')||c.includes('facebook')) return 'Meta Ads';
+  if(c.includes('evento')) return 'Evento';
+  if(c.includes('indicação')||c.includes('indicacao')) return 'Indicação';
+  if(c.includes('organic')||c.includes('orgân')) return 'Orgânico';
+  // fallback utm_medium
+  var u=(utm||'').toLowerCase();
+  if(u==='tallis'||u==='nardon'||u==='alfredo') return 'Instagram (DM)';
+  if(u.includes('social')) return 'Instagram';
+  if(u.includes('whats')) return 'WhatsApp';
+  if(u==='cpc'||u.includes('google')) return 'Google Ads';
+  return canalMkt||utm||'Direto';
+}
+
 // ==================================================================
 // LAYER 1 — OPERATOR CONTEXT
 // Define o contexto base da sessao. Toda tela usa como chave primaria.
@@ -586,13 +622,13 @@ function _texBuildDealCard(id, d){
     + '<div class="bar"><div class="bf '+barClass+'" style="width:'+d.temp+'%"></div></div>'
     + '<div class="tg-sub">'+tempSub+'</div></div>'
     + '<div class="info-grid">'
-    + '<div class="ic"><div class="ic-l">Etapa Operacional</div><div class="ic-v">'+escHtml(d.etapa||d.etapa_atual_no_pipeline||'—')+'</div><div class="ic-s">'+escHtml(d.linhaReceita||d.linha_de_receita_vigente||'—')+'</div></div>'
-    + '<div class="ic"><div class="ic-l">Fase Comercial</div><div class="ic-v">'+escHtml(d.fase||d.fase_atual_no_processo||'—')+'</div><div class="ic-s">'+escHtml(d.canal||'—')+'</div></div>'
+    + '<div class="ic"><div class="ic-l">Etapa Operacional</div><div class="ic-v">'+_escHtml(_fmtEtapa(d.etapa||d.etapa_atual_no_pipeline||''))+'</div><div class="ic-s">'+_escHtml(_fmtLinha(d.linhaReceita||d.linha_de_receita_vigente||''))+'</div></div>'
+    + '<div class="ic"><div class="ic-l">Fase Comercial</div><div class="ic-v">'+_escHtml(d.fase||d.fase_atual_no_processo||'—')+'</div><div class="ic-s">'+_escHtml(_fmtOrigem(d.canal_de_marketing||'', d.utm_medium||d.canal||''))+'</div></div>'
     + '<div class="ic"><div class="ic-l">Aging CRM</div><div class="ic-v" style="color:'+(d._aging&&d._aging.band==='critical'?'var(--red)':d._aging&&d._aging.band==='aging'?'var(--yellow)':'var(--text)')+'">'+d.delta+'d</div><div class="ic-s">'+(d._aging?d._aging.band:'—')+'</div></div>'
     + '<div class="ic"><div class="ic-l">SLA</div><div class="ic-v" style="color:'+(d._timeline&&(d._timeline.slaStatus==='overdue'||d._timeline.slaStatus==='critical')?'var(--red)':d._timeline&&d._timeline.slaStatus==='at_risk'?'var(--yellow)':'var(--green)')+'">'+((d._timeline?d._timeline.slaLabel:'—'))+'</div><div class="ic-s">'+(d._timeline?(d._timeline.daysToSLA>=0?d._timeline.daysToSLA+'d restantes':Math.abs(d._timeline.daysToSLA)+'d estourado'):'')+'</div></div>'
     + '<div class="ic"><div class="ic-l">Próxima Ação</div><div class="ic-v" style="font-size:12px">'+escHtml(d._nextAction||d.dd||'—')+'</div><div class="ic-s">'+(d._timeline?d._timeline.actionLabel:'')+'</div></div>'
     + '<div class="ic"><div class="ic-l">Forecast</div><div class="ic-v" style="color:var(--accent2)">'+(d._forecastV6&&d._forecastV6.score!=null?Math.round(d._forecastV6.score*100)+'%':(d._timeline?Math.round((d._timeline.adjustedProbability||0)*100)+'%':'—'))+'</div><div class="ic-s">'+(d._forecastV6&&d._forecastV6.confidence!=null?'Conf. '+Math.round(d._forecastV6.confidence*100)+'%':'')+'</div></div>'
-    + '<div class="ic"><div class="ic-l">Valor G4</div><div class="ic-v" style="color:var(--green)">'+fmtBRL(d.revenueRaw)+'</div><div class="ic-s">'+escHtml(d.utm_medium||'—')+'</div></div>'
+    + '<div class="ic"><div class="ic-l">Valor G4</div><div class="ic-v" style="color:var(--green)">'+fmtBRL(d.revenueRaw)+'</div><div class="ic-s">Time de dados</div></div>'
     + '<div class="ic"><div class="ic-l">Valor ELUCY</div><div class="ic-v" style="color:var(--accent2)">'+fmtBRL(d.elucyValor)+'</div></div>'
     + '</div>'
     + '<div class="recom"><div class="recom-l">Recomendação ELUCY <span class="elucy-badge">MOTOR ATIVO</span></div>'

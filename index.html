@@ -2371,26 +2371,28 @@ function renderLiveDeals(rows,cols){
     if(!skipped) t+=8;
     return Math.max(10,Math.min(100,t));
   }
-  // Canal derivado da linha_de_receita_vigente (fonte canônica)
-  function canalFromLinha(linha){
-    const l=(linha||'').toLowerCase();
-    if(l.includes('social dm')||l.includes('social media')||l.includes('[im] social')) return 'Instagram';
-    if(l.includes('whats')||l.includes('wp')) return 'WhatsApp';
-    if(l.includes('form')||l.includes('google')||l.includes('orgânico')||l.includes('organico')) return 'Form';
-    if(l.includes('field')||l.includes('outbound')) return 'Ligação';
-    if(l.includes('email')||l.includes('e-mail')) return 'E-mail';
-    return null; // sem match — fallback para utm_medium
+  // Canal derivado de canal_de_marketing (campo canônico) com fallback utm_medium
+  // NUNCA derivar canal de linha_de_receita_vigente — são dimensões diferentes
+  function canalFromCanalMarketing(canalMkt){
+    const c=(canalMkt||'').toLowerCase();
+    if(c.includes('instagram')||c.includes('ig')||c.includes('social dm')) return 'Instagram';
+    if(c.includes('whatsapp')||c.includes('whats')||c.includes('wp')) return 'WhatsApp';
+    if(c.includes('field')||c.includes('outbound')||c.includes('ligação')||c.includes('ligacao')) return 'Ligação';
+    if(c.includes('email')||c.includes('e-mail')) return 'E-mail';
+    if(c.includes('form')||c.includes('google')||c.includes('orgânico')||c.includes('organico')||c.includes('inbound')) return 'Form';
+    if(c.includes('evento')) return 'Evento';
+    return null;
   }
   function canalFallback(utm){
     const u=(utm||'').toLowerCase();
-    if(u==='tallis'||u==='nardon'||u==='alfredo'||u.includes('social')) return 'Instagram';
+    if(u==='tallis'||u==='nardon'||u==='alfredo'||u.includes('social')||u.includes('ig')) return 'Instagram';
     if(u.includes('whats')||u==='wp') return 'WhatsApp';
     if(u==='cpc'||u.includes('google')) return 'Form';
     if(!utm) return 'Direto';
     return utm.length>18?utm.slice(0,18)+'…':utm;
   }
-  function resolveCanal(linha,utm){
-    return canalFromLinha(linha)||canalFallback(utm);
+  function resolveCanal(canalMkt, utm){
+    return canalFromCanalMarketing(canalMkt)||canalFallback(utm);
   }
   function canalClass(canal){
     if(canal==='Instagram') return 'cig';
@@ -2439,10 +2441,12 @@ function renderLiveDeals(rows,cols){
     const motivoLost=g(row,'motivo_lost')||'';
     const tier=(g(row,'tier_da_oportunidade')||'').toLowerCase();
     const delta=resolveDelta(row);
-    // Canal: derivado da linha_de_receita_vigente (canônico) com fallback utm_medium
+    // Canal: derivado de canal_de_marketing (canônico) com fallback utm_medium
+    // linha_de_receita_vigente é taxonomia de receita, NÃO define canal
     const linhaReceita=g(row,'linha_de_receita_vigente')||'';
+    const canalMkt=g(row,'canal_de_marketing')||'';
     const utm=g(row,'utm_medium')||'';
-    const canal=resolveCanal(linhaReceita,utm);
+    const canal=resolveCanal(canalMkt,utm);
     // Valor da oportunidade (time de dados)
     const revenueRaw=parseFloat(g(row,'revenue'))||0;
     const temp=calcTemp(row);
@@ -4269,8 +4273,8 @@ function selectLiveDeal(id,d){
         <span class="tgl-arrow">▾</span>
       </div>
       <div class="info-grid collapsed">
-        <div class="ic"><div class="ic-l">Etapa Operacional</div><div class="ic-v">${d.etapa||d.etapa_atual_no_pipeline||'—'}</div><div class="ic-s">${d.linhaReceita||d.linha_de_receita_vigente||'—'}</div></div>
-        <div class="ic"><div class="ic-l">Fase Comercial</div><div class="ic-v">${d.fase||d.fase_atual_no_processo||'—'}</div><div class="ic-s">${d.canal||'—'}</div></div>
+        <div class="ic"><div class="ic-l">Etapa Operacional</div><div class="ic-v">${typeof _fmtEtapa==='function'?_fmtEtapa(d.etapa||d.etapa_atual_no_pipeline||''):d.etapa||d.etapa_atual_no_pipeline||'—'}</div><div class="ic-s">${typeof _fmtLinha==='function'?_fmtLinha(d.linhaReceita||d.linha_de_receita_vigente||''):d.linhaReceita||d.linha_de_receita_vigente||'—'}</div></div>
+        <div class="ic"><div class="ic-l">Fase Comercial</div><div class="ic-v">${d.fase||d.fase_atual_no_processo||'—'}</div><div class="ic-s">${typeof _fmtOrigem==='function'?_fmtOrigem(d.canal_de_marketing||'',d.utm_medium||d.canal||''):d.canal||'—'}</div></div>
         <div class="ic"><div class="ic-l">Aging CRM</div><div class="ic-v" style="color:${d._aging&&d._aging.band==='critical'?'var(--red)':d._aging&&d._aging.band==='aging'?'var(--yellow)':'inherit'}">${d.delta}d</div><div class="ic-s">${d._aging?d._aging.band:'—'}${d._timeline?' · Criado '+d._timeline.createdDate:''}</div></div>
         <div class="ic"><div class="ic-l">Dia FUP</div><div class="ic-v">${d.dd}</div><div class="ic-s">${d._timeline?d._timeline.actionLabel:''}</div></div>
         <div class="ic"><div class="ic-l">Velocidade</div><div class="ic-v">${d._timeline?d._timeline.velocityLabel:'—'}</div><div class="ic-s">${d._timeline?d._timeline.velocity+' etapas/dia':''}</div></div>
@@ -4939,7 +4943,7 @@ function dmLoadDealInsights(d){
   set('dm-li-scale',d.p_comprou_scale==='true'?'SIM':'NAO');set('dm-li-club',d.p_comprou_club==='true'?'SIM':'NAO');
   set('dm-li-fase',d.fase_atual_no_processo);set('dm-li-delta',d.delta_t?d.delta_t+'d':'—');
   set('dm-li-receita',d.revenue?'R$ '+Number(d.revenue).toLocaleString('pt-BR'):'—');
-  set('dm-li-linha',d.linha_de_receita_vigente);set('dm-li-origem',d.origem_do_deal||d.canal_de_marketing);
+  set('dm-li-linha',typeof _fmtLinha==='function'?_fmtLinha(d.linha_de_receita_vigente||''):d.linha_de_receita_vigente);set('dm-li-origem',d.origem_do_deal||d.canal_de_marketing);
   set('dm-li-sdr',d.qualificador_name);set('dm-li-closer',d.proprietario_name);
   const skip=document.getElementById('dm-skip-warn');if(skip) skip.style.display=(d.event_skipped&&d.event_skipped!=='false')?'block':'none';
 }
