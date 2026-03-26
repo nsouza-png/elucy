@@ -4571,10 +4571,11 @@ function _renderGlobal(ct,AE,allDeals,deals){
 
     // By Line summary
     var lineData=g.byLine.data;
-    var lineKeys=Object.keys(lineData).sort(function(a,b){return lineData[b].active-lineData[a].active;});
+    // funil_marketing é time de geração de demanda — não pertence ao SDR view
+    var lineKeys=Object.keys(lineData).filter(function(k){return k!=='funil_marketing';}).sort(function(a,b){return lineData[b].active-lineData[a].active;});
     var maxLine=Math.max.apply(null,lineKeys.map(function(k){return lineData[k].active;}).concat([1]));
     html+=renderSection(3,'Pipeline por Linha de Receita',
-      lineKeys.map(function(k){return _iBar(k,lineData[k].active,maxLine,total);}).join(''));
+      lineKeys.map(function(k){return _iBar(fmtRevLine(k),lineData[k].active,maxLine,total);}).join(''));
 
     // By Stage summary
     var stageData=g.byStage.data;
@@ -4701,14 +4702,15 @@ function _renderOperator(ct,AE){
 function _renderLine(ct,AE){
   var data=AE.calcByLine().data;
   var speed=AE.calcSpeed().data;
-  var keys=Object.keys(data).sort(function(a,b){return data[b].active-data[a].active;});
+  // funil_marketing é geração de demanda (time de mkt) — fora do escopo SDR
+  var keys=Object.keys(data).filter(function(k){return k!=='funil_marketing';}).sort(function(a,b){return data[b].active-data[a].active;});
   var total=keys.reduce(function(s,k){return s+data[k].active;},0);
   var maxActive=Math.max.apply(null,keys.map(function(k){return data[k].active;}).concat([1]));
 
   var html='';
   // Summary bar
   html+=renderSection(1,'Deals Ativos por Linha',
-    keys.map(function(k){return _iBar(k,data[k].active,maxActive,total);}).join(''));
+    keys.map(function(k){return _iBar(fmtRevLine(k),data[k].active,maxActive,total);}).join(''));
 
   // Table
   html+=renderSection(2,'Detalhamento por Linha',
@@ -4716,7 +4718,7 @@ function _renderLine(ct,AE){
     keys.map(function(k){
       var d=data[k];
       var v=speed[k]?speed[k].avgVelocity:'—';
-      return '<tr><td style="font-weight:600">'+k+'</td><td>'+d.active+'</td><td style="color:var(--green)">'+d.won+'</td><td style="color:var(--red)">'+d.lost+'</td><td>'+d.winRate+'%</td><td>'+d.avgAging+'d</td><td style="color:var(--red)">'+d.atRisk+'</td><td>'+fmtBRL(d.totalValue)+'</td><td>'+v+'</td></tr>';
+      return '<tr><td style="font-weight:600">'+fmtRevLine(k)+'</td><td>'+d.active+'</td><td style="color:var(--green)">'+d.won+'</td><td style="color:var(--red)">'+d.lost+'</td><td>'+d.winRate+'%</td><td>'+d.avgAging+'d</td><td style="color:var(--red)">'+d.atRisk+'</td><td>'+fmtBRL(d.totalValue)+'</td><td>'+v+'</td></tr>';
     }).join('')+'</tbody></table>');
 
   // DQI by line (async)
@@ -4725,7 +4727,7 @@ function _renderLine(ct,AE){
     var dqiKeys=Object.keys(dqiData).sort(function(a,b){return dqiData[b].avgDQI-dqiData[a].avgDQI;});
     if(dqiKeys.length){
       var dqiHtml=renderSection(3,'DQI por Linha',
-        '<div class="intel-kpi-row">'+dqiKeys.map(function(k){return _iKpi(dqiData[k].avgDQI,k+' ('+dqiData[k].deals+'d)',dqiData[k].avgDQI>=60?'var(--green)':dqiData[k].avgDQI>=30?'var(--yellow)':'var(--red)');}).join('')+'</div>');
+        '<div class="intel-kpi-row">'+dqiKeys.filter(function(k){return k!=='funil_marketing';}).map(function(k){return _iKpi(dqiData[k].avgDQI,fmtRevLine(k)+' ('+dqiData[k].deals+'d)',dqiData[k].avgDQI>=60?'var(--green)':dqiData[k].avgDQI>=30?'var(--yellow)':'var(--red)');}).join('')+'</div>');
       ct.innerHTML+=dqiHtml;
     }
   });
@@ -4863,6 +4865,20 @@ function renderCard(title,content){
 function fmtEtapa(e){
   const map={'novo lead':'MQL','dia 01':'D1','dia 02':'D2','dia 03':'D3','dia 04':'D4','dia 05':'D5','dia 06':'D6','conectados':'Conectado','agendamento':'Agendamento','reagendamento':'Reagendamento','entrevista agendada':'Entrevista'};
   return map[(e||'').toLowerCase()]||e;
+}
+// UX Writer — converte chave interna de linha de receita para label canônico
+function fmtRevLine(k){
+  const rl=window.REVENUE_LINES||{};
+  if(rl[k]&&rl[k].label) return rl[k].label;
+  // fallbacks diretos caso REVENUE_LINES não esteja carregado
+  const fallback={
+    funil_marketing:'Funil de Marketing',turmas:'Turmas',
+    projetos_eventos:'Projetos & Eventos',social_dm:'Social DM',
+    social_dm_k:'Social DM K',selfcheckout:'Self Checkout',
+    reativacao:'Reativação',expansao:'Expansão',renovacao:'Renovação',
+    field_sales:'Field Sales',aquisicao:'Time de Vendas',nao_definido:'Não Definido'
+  };
+  return fallback[k]||k;
 }
 
 

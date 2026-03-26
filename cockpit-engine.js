@@ -221,8 +221,10 @@ function resolveRevenueLine(deal){
   if(lr.includes('parceria')||lr.includes('patrocín')||lr.includes('indica')) return 'projetos_eventos';
   if(lr.includes('scale experience')||lr.includes('g4 pelo brasil')||lr.includes('g4 alumni')||lr.includes('g4 valley')) return 'projetos_eventos';
 
-  // Fallback final — funil de marketing (forma mais comum de entrada sem grupo definido)
-  return 'funil_marketing';
+  // Fallback final — nao_definido
+  // funil_marketing NÃO é fallback — é um grupo real com leads vindos de campanhas pagas
+  // Se o grupo não veio preenchido do Databricks, não assumir que é Funil de Marketing
+  return 'nao_definido';
 }
 window.resolveRevenueLine = resolveRevenueLine;
 
