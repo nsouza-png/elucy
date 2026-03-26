@@ -592,7 +592,7 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .fv2-clear-btn:hover{color:var(--red)}
 .fv2-chevron{font-size:14px;color:var(--text2);transition:transform .2s;display:inline-block}
 .fv2-chevron.open{transform:rotate(90deg)}
-.fv2-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:6px}
+.fv2-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow-y:auto;overflow-x:hidden;max-height:45vh;margin-bottom:6px;scrollbar-width:thin}
 .fv2-group{border-bottom:1px solid var(--border)}
 .fv2-group:last-of-type{border-bottom:none}
 .fv2-group-head{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:none;padding:8px 10px;cursor:pointer;font-family:inherit;transition:.12s}
@@ -1525,6 +1525,34 @@ window._toggleFilterPanel = function(){
   panel.style.display = open ? 'block' : 'none';
   if(chev) chev.classList.toggle('open', open);
 };
+
+// Wheel-passthrough: filtros que não podem scrollar propagam wheel para deal-list
+(function(){
+  var sb = document.getElementById('sb');
+  if(!sb) return;
+  sb.addEventListener('wheel', function(e){
+    var dl = document.getElementById('deal-list');
+    if(!dl) return;
+    // Se o target está dentro do fv2-panel e o panel não pode scroll mais, forward para deal-list
+    var panel = document.getElementById('fv2-panel');
+    if(panel && panel.contains(e.target)){
+      var atTop = panel.scrollTop <= 0 && e.deltaY < 0;
+      var atBottom = (panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 1) && e.deltaY > 0;
+      if(atTop || atBottom){
+        dl.scrollTop += e.deltaY;
+        e.preventDefault();
+      }
+    }
+    // Se target está na header, search, ou stats — forward para deal-list
+    if(!panel || !panel.contains(e.target)){
+      var inDealList = dl.contains(e.target);
+      if(!inDealList){
+        dl.scrollTop += e.deltaY;
+        e.preventDefault();
+      }
+    }
+  }, {passive: false});
+})();
 
 window._toggleFvGroup = function(groupId){
   var grp = document.getElementById(groupId);
