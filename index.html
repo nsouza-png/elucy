@@ -3354,12 +3354,18 @@ async function requestElucyCopy(deal_id, dealData, targetId, canal){
     }
 
     // ── FALLBACK: Supabase worker queue ──
+    // REGRA: Tom de founder SÓ se canal_de_fup == Instagram E fase <= MQL (pré-qualificação)
+    // Pós-MQL → SEMPRE WhatsApp com tom SDR, independente da origem do lead
+    const faseLower = (dealData.fase||dealData.fase_atual_no_processo||'').toLowerCase();
+    const isSocialDMPreMQL = (canal === 'Instagram') && (faseLower === 'lead' || faseLower === 'mql' || faseLower === 'novo lead' || !faseLower);
+    const copyChannel = isSocialDMPreMQL ? 'Instagram' : 'WhatsApp';
     initRealtimeSubscription();
     const {data,error}=await sb.from('cockpit_requests').insert({
       operator_id: email,
       deal_id: deal_id,
       request_type: 'copy',
-      copy_mode: canal||'WhatsApp',
+      copy_mode: copyChannel,
+      canal_origem: canal||'',
       deal_data: dealData,
       status: 'pending'
     }).select().single();
