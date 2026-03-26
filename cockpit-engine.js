@@ -805,7 +805,14 @@ function _texUpdateUI(){
 
   // Deal card
   var wrap = document.getElementById('tex-deal-card');
-  wrap.innerHTML = _texBuildDealCard(t.id, d);
+  try {
+    var cardHtml = _texBuildDealCard(t.id, d);
+    if(wrap) wrap.innerHTML = cardHtml;
+    else console.error('[tex] tex-deal-card element not found');
+  } catch(e) {
+    console.error('[tex] _texBuildDealCard error:', e);
+    if(wrap) wrap.innerHTML = '<div class="card" style="color:var(--red);padding:20px"><b>Erro ao renderizar deal card:</b><br><pre style="white-space:pre-wrap;font-size:11px;margin-top:8px;color:var(--text2)">'+_escHtml(e.message+'\n'+e.stack)+'</pre></div>';
+  }
 
   // Load cached outputs if remote
   if(window.IS_REMOTE && window.loadDealCache) window.loadDealCache(d.deal_id || t.id, t.id);

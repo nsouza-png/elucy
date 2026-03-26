@@ -212,7 +212,7 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .task-btn:hover{border-color:var(--accent);color:var(--accent2);background:var(--adim)}
 .task-btn-next{margin-left:auto;border-color:var(--accent);color:var(--accent2);background:var(--adim)}
 /* ── Task Execution Mode (HubSpot-style) ──────────────────── */
-.tex-overlay{position:fixed;inset:0;z-index:900;background:rgba(2,6,15,.85);backdrop-filter:blur(6px);display:none;flex-direction:column;overflow:hidden}
+.tex-overlay{position:fixed;inset:0;z-index:900;background:rgba(2,6,15,.97);backdrop-filter:blur(6px);display:none;flex-direction:column;overflow:hidden}
 .tex-overlay.open{display:flex}
 .tex-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
 .tex-nav-left{display:flex;align-items:center;gap:10px}
@@ -227,8 +227,8 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .tex-nav-right{display:flex;align-items:center;gap:8px}
 .tex-close{width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.12s}
 .tex-close:hover{border-color:var(--red);color:var(--red);background:var(--rdim)}
-.tex-body{flex:1;overflow-y:auto;padding:20px;display:flex;gap:16px}
-.tex-deal{flex:1;min-width:0;max-width:780px;margin:0 auto}
+.tex-body{flex:1;overflow-y:auto;padding:20px;display:flex;gap:16px;background:var(--bg)}
+.tex-deal{flex:1;min-width:0;max-width:780px;margin:0 auto;overflow-y:auto}
 .tex-sidebar{width:260px;flex-shrink:0;display:flex;flex-direction:column;gap:10px}
 .tex-task-info{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px}
 .tex-task-type{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
@@ -592,7 +592,7 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
 .fv2-clear-btn:hover{color:var(--red)}
 .fv2-chevron{font-size:14px;color:var(--text2);transition:transform .2s;display:inline-block}
 .fv2-chevron.open{transform:rotate(90deg)}
-.fv2-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:6px}
+.fv2-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow-y:auto;overflow-x:hidden;max-height:45vh;margin-bottom:6px;scrollbar-width:thin}
 .fv2-group{border-bottom:1px solid var(--border)}
 .fv2-group:last-of-type{border-bottom:none}
 .fv2-group-head{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:none;padding:8px 10px;cursor:pointer;font-family:inherit;transition:.12s}
@@ -770,6 +770,7 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
   <button class="ntab" onclick="setScreen('pipeline',this)">Pipeline</button>
   <button class="ntab" onclick="setScreen('tasks',this)">Tasks <span class="tab-count" id="task-count"></span></button>
   <button class="ntab" onclick="setScreen('reports',this)">Reports</button>
+  <button class="ntab" onclick="setScreen('prevendas',this)">Pre-Vendas</button>
   <button class="ntab" onclick="setScreen('intelligence',this)">Intel</button>
   <div class="tbr">
     <span class="op-pill" id="op-pill">CRM Sincronizado</span>
@@ -1092,6 +1093,11 @@ body{background:var(--bg);background-image:radial-gradient(ellipse at 50% -10%,r
         <div id="rp-daily-chart"><div style="font-size:11px;color:var(--text2);padding:8px">Carregando...</div></div>
       </div>
   </div>
+    <div class="screen" id="screen-prevendas">
+      <div id="screen-reports-v4">
+        <div style="font-size:12px;color:var(--text2);padding:20px;text-align:center">Carregando Pre-Vendas Intelligence...</div>
+      </div>
+    </div>
     <div class="screen" id="screen-intelligence">
       <div style="margin-bottom:16px">
         <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:3px">Inteligência Operacional</div>
@@ -1327,13 +1333,13 @@ let cur=null;
 function setScreen(n,el){
   document.querySelectorAll('#ct > .screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
-  const screenMap={home:'screen-home',pipeline:'screen-pipeline',tasks:'screen-tasks',reports:'screen-reports',intelligence:'screen-intelligence',dm:'screen-dm'};
+  const screenMap={home:'screen-home',pipeline:'screen-pipeline',tasks:'screen-tasks',reports:'screen-reports',prevendas:'screen-prevendas',intelligence:'screen-intelligence',dm:'screen-dm'};
   const target=document.getElementById(screenMap[n]||'screen-home');
   if(target) target.classList.add('on');
   if(el){ el.classList.add('on'); }
   else {
     const tabs=document.querySelectorAll('.ntab');
-    const tabMap={home:0,pipeline:1,tasks:2,reports:3,intelligence:4};
+    const tabMap={home:0,pipeline:1,tasks:2,reports:3,prevendas:4,intelligence:5};
     const idx=tabMap[n]!=null?tabMap[n]:0;
     if(tabs[idx]) tabs[idx].classList.add('on');
   }
@@ -1341,6 +1347,7 @@ function setScreen(n,el){
   if(n==='tasks' && window.renderTaskRunner) window.renderTaskRunner();
   if(n==='intelligence') renderIntelligence();
   if(n==='reports') loadReportsScreen();
+  if(n==='prevendas' && window.ReportsV4) window.ReportsV4.renderReportsV4('screen-reports-v4');
 }
 
 // V3: Task filter handler
@@ -1518,6 +1525,34 @@ window._toggleFilterPanel = function(){
   panel.style.display = open ? 'block' : 'none';
   if(chev) chev.classList.toggle('open', open);
 };
+
+// Wheel-passthrough: filtros que não podem scrollar propagam wheel para deal-list
+(function(){
+  var sb = document.getElementById('sb');
+  if(!sb) return;
+  sb.addEventListener('wheel', function(e){
+    var dl = document.getElementById('deal-list');
+    if(!dl) return;
+    // Se o target está dentro do fv2-panel e o panel não pode scroll mais, forward para deal-list
+    var panel = document.getElementById('fv2-panel');
+    if(panel && panel.contains(e.target)){
+      var atTop = panel.scrollTop <= 0 && e.deltaY < 0;
+      var atBottom = (panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 1) && e.deltaY > 0;
+      if(atTop || atBottom){
+        dl.scrollTop += e.deltaY;
+        e.preventDefault();
+      }
+    }
+    // Se target está na header, search, ou stats — forward para deal-list
+    if(!panel || !panel.contains(e.target)){
+      var inDealList = dl.contains(e.target);
+      if(!inDealList){
+        dl.scrollTop += e.deltaY;
+        e.preventDefault();
+      }
+    }
+  }, {passive: false});
+})();
 
 window._toggleFvGroup = function(groupId){
   var grp = document.getElementById(groupId);
@@ -3319,12 +3354,18 @@ async function requestElucyCopy(deal_id, dealData, targetId, canal){
     }
 
     // ── FALLBACK: Supabase worker queue ──
+    // REGRA: Tom de founder SÓ se canal_de_fup == Instagram E fase <= MQL (pré-qualificação)
+    // Pós-MQL → SEMPRE WhatsApp com tom SDR, independente da origem do lead
+    const faseLower = (dealData.fase||dealData.fase_atual_no_processo||'').toLowerCase();
+    const isSocialDMPreMQL = (canal === 'Instagram') && (faseLower === 'lead' || faseLower === 'mql' || faseLower === 'novo lead' || !faseLower);
+    const copyChannel = isSocialDMPreMQL ? 'Instagram' : 'WhatsApp';
     initRealtimeSubscription();
     const {data,error}=await sb.from('cockpit_requests').insert({
       operator_id: email,
       deal_id: deal_id,
       request_type: 'copy',
-      copy_mode: canal||'WhatsApp',
+      copy_mode: copyChannel,
+      canal_origem: canal||'',
       deal_data: dealData,
       status: 'pending'
     }).select().single();
@@ -5512,5 +5553,6 @@ function initSlackAlerts(){
 </div>
 <script src="cockpit-engine.js"></script>
 <script src="analytics-engine.js"></script>
+<script src="reports-v4-engine.js"></script>
 </body>
 </html>
