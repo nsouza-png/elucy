@@ -25,6 +25,15 @@ function _fmtLinha(linha){
   if(!linha) return '—';
   return linha.replace(/^\[[\w]+\]\s*/,'').trim();
 }
+// Returns HTML span with title showing original prefix (e.g. [IM] = Imersão Presencial)
+var _PREFIX_LABELS={'IM':'Imersão Presencial','ON':'Online','RF':'Reforma','ED':'Educação','FD':'Field','CS':'Customer Success'};
+function _fmtLinhaHtml(linha){
+  if(!linha) return '<span>—</span>';
+  var m=linha.match(/^\[([\w]+)\]\s*/);
+  var label=linha.replace(/^\[[\w]+\]\s*/,'').trim();
+  var title=m?(_PREFIX_LABELS[m[1].toUpperCase()]||m[1])+': '+label:label;
+  return '<span title="'+_escHtml(title)+'">'+_escHtml(label)+'</span>';
+}
 // Encurta etapa operacional para chips/badges (valor real preservado em data-val)
 function _fmtEtapa(etapa){
   if(!etapa) return '—';
@@ -502,6 +511,34 @@ function renderTaskRunner(filterType){
     statsHtml += '</div>';
   }
 
+  // ── Recomendação de Focus Mode baseada na composição dos deals ──────
+  (function(){
+    var allDeals = window._COCKPIT_DEAL_MAP ? Object.values(window._COCKPIT_DEAL_MAP) : [];
+    if(!allDeals.length) return;
+    var active = allDeals.filter(function(d){ var s=(d.statusDeal||'').toLowerCase(); return s!=='perdido'&&s!=='ganho'&&s!=='desqualificado'; });
+    // Contagens por critério
+    var hotDeals = active.filter(function(d){ return d.tc==='th'; }).length;
+    var slaRisk  = active.filter(function(d){ return (d._urgency||0)>=60; }).length;
+    var handoffReady = active.filter(function(d){ var f=d.fase||d.fase_atual_no_processo||''; return f.toLowerCase().includes('oportunidade')||f.toLowerCase().includes('handoff'); }).length;
+    var dmPending = active.filter(function(d){ var e=d.etapa||d.etapa_atual_no_pipeline||''; return e.toLowerCase().includes('social')||e.toLowerCase().includes('dm'); }).length;
+    var coldDeals = active.filter(function(d){ return d.tc==='tc'&&(d.delta||0)>7; }).length;
+    // Determinar modo recomendado
+    var recMode = 'qualificacao';
+    var recLabel = 'Qualificação';
+    var recReason = 'Modos de equilíbrio — pipeline sem sinal dominante.';
+    var recColor = 'var(--accent2)';
+    if(slaRisk >= 3){ recMode='velocidade'; recLabel='Velocidade'; recReason=slaRisk+' deals com SLA em risco — priorize contato imediato.'; recColor='var(--red)'; }
+    else if(hotDeals >= 5){ recMode='alta_performance'; recLabel='Alta Performance'; recReason=hotDeals+' deals quentes ativos — máxima conversão agora.'; recColor='var(--green)'; }
+    else if(handoffReady >= 3){ recMode='handoff'; recLabel='Handoff'; recReason=handoffReady+' deals prontos para passagem ao Closer.'; recColor='var(--gold)'; }
+    else if(dmPending >= 4){ recMode='social_dm'; recLabel='Social DM'; recReason=dmPending+' deals em canais digitais aguardando touchpoint.'; recColor='var(--clay)'; }
+    else if(coldDeals >= 6){ recMode='reativacao'; recLabel='Reativação'; recReason=coldDeals+' deals frios (>7d) — reative antes de perder.'; recColor='var(--yellow)'; }
+    statsHtml += '<div class="task-rec-banner" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px">'
+      + '<span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;font-weight:700;white-space:nowrap">Modo recomendado</span>'
+      + '<span style="font-size:12px;font-weight:700;color:'+recColor+'">'+recLabel+'</span>'
+      + '<span style="font-size:11px;color:var(--text2);flex:1">'+recReason+'</span>'
+      + '</div>';
+  })();
+
   // Task cards
   var cardsHtml = tasks.map(function(t,idx){
     var d = t.deal;
@@ -597,7 +634,8 @@ var _texTimer = null;   // interval id
 var _texSeconds = 0;    // elapsed seconds
 var _texDisposition = null; // selected disposition
 
-// Helper: build the deal card HTML (reuses selectLiveDeal template)
+// Helper: build the deal card HTML — V9 Hierarchy (above-the-fold canonical)
+// Bloco 1: Identidade | Bloco 2: Estado | Bloco 3: Prioridade | Bloco 4: Ação | Info-grid colapsado
 function _texBuildDealCard(id, d){
   if(!d) return '<div class="task-empty">Deal não encontrado</div>';
   var fmtBRL = window.fmtBRL || function(v){return v?'R$ '+Number(v).toLocaleString('pt-BR'):'—';};
@@ -606,7 +644,28 @@ function _texBuildDealCard(id, d){
   var tempSub=d.tc==='th'?'Quente — ação imediata':d.tc==='tw'?'Morno — reengajamento':'Frio — risco de perda';
   var buildRecom = window.buildRecomText || function(){return '';};
   var escHtml = window.escHtml || _escHtml;
+
+  // SLA badge color
+  var slaCls = d._timeline&&(d._timeline.slaStatus==='overdue'||d._timeline.slaStatus==='critical')?'t-risk':d._timeline&&d._timeline.slaStatus==='at_risk'?'t-stall':'t-gray';
+  var slaLabel = d._timeline?d._timeline.slaLabel:'SLA —';
+
+  // Aging badge color
+  var agingCls = d._aging&&d._aging.band==='critical'?'t-risk':d._aging&&d._aging.band==='aging'?'t-stall':'t-gray';
+  var agingDays = (d.delta||0)+'d';
+
+  // Signal badge
+  var signalBadge = d._signal==='BUY'?'<span class="tag t-buy">BUY</span>'
+    :d._signal==='RISK'?'<span class="tag t-risk">RISK</span>'
+    :d._signal==='STALL'?'<span class="tag t-stall">STALL</span>'
+    :d._signal==='CHAMP'?'<span class="tag t-champ">CHAMP</span>'
+    :d._signal==='DOME'?'<span class="tag t-stall">IRON DOME</span>':'';
+
+  // Forecast
+  var fcScore = d._forecastV6&&d._forecastV6.score!=null?Math.round(d._forecastV6.score*100)+'%':(d._timeline?Math.round((d._timeline.adjustedProbability||0)*100)+'%':'—');
+  var fcConf  = d._forecastV6&&d._forecastV6.confidence!=null?'Conf. '+Math.round(d._forecastV6.confidence*100)+'%':'';
+
   return '<div class="card">'
+    // ── BLOCO 1: Identidade ──────────────────────────────────────────
     + '<div class="dch">'
     + '<div class="dca">'+((d.emailLead||d.nome||'?')[0]).toUpperCase()+'</div>'
     + '<div class="dci">'
@@ -614,29 +673,52 @@ function _texBuildDealCard(id, d){
     + '<div class="dcs">'+escHtml(d.cargo||'—')+' · '+escHtml(d.emailLead||d.empresa||'')+'</div>'
     + '<div class="tags-row">'
     + '<span class="tag t-gray">'+escHtml(d.tier||'—')+'</span>'
-    + '<span class="tag t-gray">'+escHtml(d.etapa||d.etapa_atual_no_pipeline||'—')+'</span>'
-    + (d.fase||d.fase_atual_no_processo?'<span class="tag t-acc">'+escHtml(d.fase||d.fase_atual_no_processo||'')+'</span>':'')
-    + (d._signal==='BUY'?'<span class="tag t-buy">BUY</span>':d._signal==='RISK'?'<span class="tag t-risk">RISK</span>':d._signal==='STALL'?'<span class="tag t-stall">STALL</span>':d._signal==='CHAMP'?'<span class="tag t-champ">CHAMP</span>':d._signal==='DOME'?'<span class="tag t-stall">IRON DOME</span>':'')
+    + signalBadge
+    + '<span class="tag '+slaCls+'">'+escHtml(slaLabel)+'</span>'
     + ((d._urgency||0)>=60?'<span class="tag t-risk">SLA RISCO</span>':'')
-    + '</div></div></div>'
-    + '<div class="tg">'
-    + '<div class="tg-row"><span class="tg-lbl">Temperatura do Deal</span><span class="tgv '+tgvClass+'">'+d.temp+'</span></div>'
+    + '</div>'
+    + '</div></div>'
+    // ── BLOCO 2: Estado (etapa + fase como badges horizontais) ───────
+    + '<div class="deal-estado">'
+    + '<span class="estado-badge eb-etapa">'+escHtml(_fmtEtapa(d.etapa||d.etapa_atual_no_pipeline||'—'))+'</span>'
+    + (d.fase||d.fase_atual_no_processo?'<span class="estado-arrow">›</span><span class="estado-badge eb-fase">'+escHtml(d.fase||d.fase_atual_no_processo)+'</span>':'')
+    + '<span class="estado-sep">·</span>'
+    + '<span class="estado-badge eb-linha">'+_fmtLinhaHtml(d.linhaReceita||d.linha_de_receita_vigente||'')+'</span>'
+    + '</div>'
+    // ── BLOCO 3: Prioridade (temperatura + aging lado a lado) ────────
+    + '<div class="deal-prior">'
+    + '<div class="prior-temp">'
+    + '<div class="tg-row"><span class="tg-lbl">Temperatura</span><span class="tgv '+tgvClass+'">'+d.temp+'%</span></div>'
     + '<div class="bar"><div class="bf '+barClass+'" style="width:'+d.temp+'%"></div></div>'
-    + '<div class="tg-sub">'+tempSub+'</div></div>'
-    + '<div class="info-grid">'
-    + '<div class="ic"><div class="ic-l">Etapa Operacional</div><div class="ic-v">'+_escHtml(_fmtEtapa(d.etapa||d.etapa_atual_no_pipeline||''))+'</div><div class="ic-s">'+_escHtml(_fmtLinha(d.linhaReceita||d.linha_de_receita_vigente||''))+'</div></div>'
-    + '<div class="ic"><div class="ic-l">Fase Comercial</div><div class="ic-v">'+_escHtml(d.fase||d.fase_atual_no_processo||'—')+'</div><div class="ic-s">'+_escHtml(_fmtOrigem(d.canal_de_marketing||'', d.utm_medium||d.canal||''))+'</div></div>'
-    + '<div class="ic"><div class="ic-l">Aging CRM</div><div class="ic-v" style="color:'+(d._aging&&d._aging.band==='critical'?'var(--red)':d._aging&&d._aging.band==='aging'?'var(--yellow)':'var(--text)')+'">'+d.delta+'d</div><div class="ic-s">'+(d._aging?d._aging.band:'—')+'</div></div>'
-    + '<div class="ic"><div class="ic-l">SLA</div><div class="ic-v" style="color:'+(d._timeline&&(d._timeline.slaStatus==='overdue'||d._timeline.slaStatus==='critical')?'var(--red)':d._timeline&&d._timeline.slaStatus==='at_risk'?'var(--yellow)':'var(--green)')+'">'+((d._timeline?d._timeline.slaLabel:'—'))+'</div><div class="ic-s">'+(d._timeline?(d._timeline.daysToSLA>=0?d._timeline.daysToSLA+'d restantes':Math.abs(d._timeline.daysToSLA)+'d estourado'):'')+'</div></div>'
-    + '<div class="ic"><div class="ic-l">Próxima Ação</div><div class="ic-v" style="font-size:12px">'+escHtml(d._nextAction||d.dd||'—')+'</div><div class="ic-s">'+(d._timeline?d._timeline.actionLabel:'')+'</div></div>'
-    + '<div class="ic"><div class="ic-l">Forecast</div><div class="ic-v" style="color:var(--accent2)">'+(d._forecastV6&&d._forecastV6.score!=null?Math.round(d._forecastV6.score*100)+'%':(d._timeline?Math.round((d._timeline.adjustedProbability||0)*100)+'%':'—'))+'</div><div class="ic-s">'+(d._forecastV6&&d._forecastV6.confidence!=null?'Conf. '+Math.round(d._forecastV6.confidence*100)+'%':'')+'</div></div>'
+    + '<div class="tg-sub">'+tempSub+'</div>'
+    + '</div>'
+    + '<div class="prior-aging">'
+    + '<div class="tg-lbl">Aging CRM</div>'
+    + '<div class="aging-val"><span class="tag '+agingCls+'">'+agingDays+'</span></div>'
+    + '<div class="tg-sub">'+(d._aging?d._aging.band:'—')+'</div>'
+    + '</div></div>'
+    // ── BLOCO 4: Ação (próxima ação + recomendação ELUCY) ────────────
+    + '<div class="deal-acao">'
+    + '<div class="acao-next"><div class="acao-lbl">Próxima Ação</div><div class="acao-val">'+escHtml(d._nextAction||d.dd||'—')+'</div>'+(d._timeline?'<div class="acao-sub">'+escHtml(d._timeline.actionLabel)+'</div>':'')+'</div>'
+    + '<div class="recom"><div class="recom-l">Recomendação ELUCY <span class="elucy-badge">MOTOR ATIVO</span></div>'
+    + '<div class="recom-t" id="recom-tex-'+id+'">'+buildRecom(d)+'</div></div>'
+    + '</div>'
+    // ── Alertas ──────────────────────────────────────────────────────
+    + ((d._urgency||0)>=60?'<div class="alrt al-d">SLA em risco — deal sem avanço por '+(d._delta||d.delta||0)+' dias.</div>':'')
+    + (d._signal==='DOME'?'<div class="alrt al-w">Iron Dome ativo — +10 dias sem resposta.</div>':'')
+    // ── INFO-GRID colapsado por padrão ───────────────────────────────
+    + '<div class="info-grid-toggle" onclick="(function(el){var g=el.nextElementSibling;var open=g.style.display!==\'none\';g.style.display=open?\'none\':\'\';el.querySelector(\'.igt-arrow\').textContent=open?\'›\':\' \'})(this)">'
+    + '<span class="igt-lbl">Detalhes: Forecast '+fcScore+' · '+escHtml(fmtBRL(d.revenueRaw))+'</span>'
+    + '<span class="igt-arrow">›</span>'
+    + '</div>'
+    + '<div class="info-grid" style="display:none">'
+    + '<div class="ic"><div class="ic-l">Etapa Operacional</div><div class="ic-v">'+_escHtml(_fmtEtapa(d.etapa||d.etapa_atual_no_pipeline||''))+'</div><div class="ic-s">'+_escHtml(_fmtOrigem(d.canal_de_marketing||'', d.utm_medium||d.canal||''))+'</div></div>'
+    + '<div class="ic"><div class="ic-l">Fase Comercial</div><div class="ic-v">'+_escHtml(d.fase||d.fase_atual_no_processo||'—')+'</div><div class="ic-s">'+_fmtLinhaHtml(d.linhaReceita||d.linha_de_receita_vigente||'')+'</div></div>'
+    + '<div class="ic"><div class="ic-l">SLA</div><div class="ic-v" style="color:'+(d._timeline&&(d._timeline.slaStatus==='overdue'||d._timeline.slaStatus==='critical')?'var(--red)':d._timeline&&d._timeline.slaStatus==='at_risk'?'var(--yellow)':'var(--green)')+'">'+slaLabel+'</div><div class="ic-s">'+(d._timeline?(d._timeline.daysToSLA>=0?d._timeline.daysToSLA+'d restantes':Math.abs(d._timeline.daysToSLA)+'d estourado'):'')+'</div></div>'
+    + '<div class="ic"><div class="ic-l">Forecast</div><div class="ic-v" style="color:var(--accent2)">'+fcScore+'</div><div class="ic-s">'+fcConf+'</div></div>'
     + '<div class="ic"><div class="ic-l">Valor G4</div><div class="ic-v" style="color:var(--green)">'+fmtBRL(d.revenueRaw)+'</div><div class="ic-s">Time de dados</div></div>'
     + '<div class="ic"><div class="ic-l">Valor ELUCY</div><div class="ic-v" style="color:var(--accent2)">'+fmtBRL(d.elucyValor)+'</div></div>'
     + '</div>'
-    + '<div class="recom"><div class="recom-l">Recomendação ELUCY <span class="elucy-badge">MOTOR ATIVO</span></div>'
-    + '<div class="recom-t" id="recom-tex-'+id+'">'+buildRecom(d)+'</div></div>'
-    + ((d._urgency||0)>=60?'<div class="alrt al-d">SLA em risco — deal sem avanço por '+(d._delta||d.delta||0)+' dias.</div>':'')
-    + (d._signal==='DOME'?'<div class="alrt al-w">Iron Dome ativo — +10 dias sem resposta.</div>':'')
     + '<div class="row">'
     + '<button class="btn bp" onclick="showCopy(\''+id+'\',this)">Gerar Copy via ELUCY</button>'
     + '<button class="btn bs" id="btn-er-tex-'+id+'" onclick="toggleER(\''+id+'\',this)">ELUCI Report</button>'
@@ -806,15 +888,43 @@ window.texDisp = function(btn){
 };
 
 // Skip: go to next without logging
+// SKIP_REASONS: structured skip capture before advancing
+var SKIP_REASONS = [
+  { id:'no_time',       label:'Sem tempo agora',      icon:'⏱' },
+  { id:'wrong_priority',label:'Não é prioridade',     icon:'↓' },
+  { id:'waiting_info',  label:'Aguardando info',       icon:'⏳' },
+  { id:'already_done',  label:'Já foi tratado',        icon:'✓' },
+  { id:'not_relevant',  label:'Não relevante',         icon:'✗' }
+];
+
 window.texSkip = function(){
+  var overlay = document.getElementById('tex-overlay');
+  if(!overlay) return;
+  // Show inline skip-reason picker if not already shown
+  var existing = document.getElementById('tex-skip-picker');
+  if(existing){ existing.remove(); return; }
+  var picker = document.createElement('div');
+  picker.id = 'tex-skip-picker';
+  picker.style.cssText = 'position:absolute;bottom:70px;left:50%;transform:translateX(-50%);background:#111620;border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 14px;z-index:200;min-width:260px;box-shadow:0 8px 24px rgba(0,0,0,.6)';
+  picker.innerHTML = '<div style="font-size:10px;color:#6b7a90;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;font-weight:700">Motivo do skip</div>'
+    + SKIP_REASONS.map(function(r){
+        return '<button onclick="window._texConfirmSkip(\''+r.id+'\')" style="display:block;width:100%;text-align:left;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:6px;color:#e8ecf2;font-size:12px;padding:7px 10px;margin-bottom:5px;cursor:pointer;font-family:inherit">'
+          +r.icon+' '+r.label+'</button>';
+      }).join('');
+  overlay.style.position = 'relative';
+  overlay.appendChild(picker);
+};
+
+window._texConfirmSkip = function(reasonId){
+  var picker = document.getElementById('tex-skip-picker');
+  if(picker) picker.remove();
   var t = _texQueue[_texIdx];
-  // V5: persist skip to deal_tasks
   if(t){
     var sb = window._sb ? window._sb() : null;
     var opId = window.getOperatorId ? window.getOperatorId() : null;
     if(sb && opId){
       sb.from('deal_tasks')
-        .update({ task_status:'skipped', completed_at: new Date().toISOString(), disposition:'skipped_by_operator' })
+        .update({ task_status:'skipped', completed_at: new Date().toISOString(), disposition:'skipped_by_operator', skip_reason: reasonId })
         .eq('deal_id', t.deal.deal_id || t.id)
         .eq('operator_email', opId)
         .eq('task_type', t.taskType)
@@ -1237,32 +1347,57 @@ async function loadRealMetrics(periodDays){
 window.loadRealMetrics = loadRealMetrics;
 
 // Operator Score (5 components)
+// V9 Operator Score — 7 componentes
+// C1 Qualificados (0.18) | C2 Handoff (0.25) | C3 Win Rate (0.25) | C4 Velocidade (0.10)
+// C5 DQI (0.10) | C6 Forecast Confidence (0.07) | C7 Framework Coverage (0.05)
 async function calcOperatorScore(periodDays){
   var metrics = await loadRealMetrics(periodDays||30);
   if(!metrics) return null;
   var map=window._COCKPIT_DEAL_MAP||{};
   var allDeals=Object.values(map);
+  var active=allDeals.filter(function(d){var s=(d.statusDeal||'').toLowerCase();return s!=='perdido'&&s!=='ganho'&&s!=='desqualificado';});
+
+  // C1 — Qualificados (FUPs diários vs meta 15/dia)
   var dailyAvgFups=metrics.fups/Math.max(periodDays||30,1);
-  var qualificados_norm=Math.min(1,dailyAvgFups/15);
-  var handoff_norm=metrics.copies>0?Math.min(1,metrics.dvl_confirmed/metrics.copies):0;
+  var c1=Math.min(1,dailyAvgFups/15);
+
+  // C2 — Handoff (DVL confirmados vs copies geradas)
+  var c2=metrics.copies>0?Math.min(1,metrics.dvl_confirmed/metrics.copies):0;
+
+  // C3 — Win Rate (deals avançados para Agendamento+)
   var advancedDeals=allDeals.filter(function(d){
     var e=(d._etapa||d.etapa||'').toLowerCase();
     return e.includes('agend')||e.includes('entrevista')||e==='conectados';
   }).length;
-  var win_rate=metrics.unique_deals>0?Math.min(1,advancedDeals/metrics.unique_deals):0;
-  var totalDelta=allDeals.reduce(function(s,d){return s+(d._delta||d.delta||0);},0);
-  var avgDelta=allDeals.length>0?totalDelta/allDeals.length:5;
-  var speed_score=Math.max(0,Math.min(1,1-(avgDelta-1)/14));
+  var c3=metrics.unique_deals>0?Math.min(1,advancedDeals/metrics.unique_deals):0;
+
+  // C4 — Velocidade (aging médio, ideal ≤5d)
+  var totalDelta=active.reduce(function(s,d){return s+(d._delta||d.delta||0);},0);
+  var avgDelta=active.length>0?totalDelta/active.length:5;
+  var c4=Math.max(0,Math.min(1,1-(avgDelta-1)/14));
+
+  // C5 — DQI (análises + confirmações + correções vs deals)
   var dqiRaw=metrics.analyses+(metrics.dvl_confirmed*2)+(metrics.corrections*0.5);
-  var dqi=Math.min(1,dqiRaw/Math.max(metrics.unique_deals,1));
-  var score=Math.round((qualificados_norm*0.2+handoff_norm*0.3+win_rate*0.3+speed_score*0.1+dqi*0.1)*1000);
+  var c5=Math.min(1,dqiRaw/Math.max(metrics.unique_deals,1));
+
+  // C6 — Forecast Confidence V7 (média de confiança dos deals scorados)
+  var scoredDeals=active.filter(function(d){return d._forecastV6&&d._forecastV6.confidence!=null;});
+  var c6=scoredDeals.length>0?Math.min(1,scoredDeals.reduce(function(s,d){return s+d._forecastV6.confidence;},0)/scoredDeals.length):0.5;
+
+  // C7 — Framework Coverage (deals com extração vs deals ativos)
+  var fwDeals=active.filter(function(d){return d._frameworkRuntime&&d._frameworkRuntime.qualitative_score!=null;}).length;
+  var c7=active.length>0?Math.min(1,fwDeals/active.length):0;
+
+  var score=Math.round((c1*0.18+c2*0.25+c3*0.25+c4*0.10+c5*0.10+c6*0.07+c7*0.05)*1000);
   return {
     score:score,
-    qualificados_norm:Math.round(qualificados_norm*100),
-    handoff_norm:Math.round(handoff_norm*100),
-    win_rate:Math.round(win_rate*100),
-    speed_score:Math.round(speed_score*100),
-    dqi:Math.round(dqi*100),
+    qualificados_norm:Math.round(c1*100),
+    handoff_norm:Math.round(c2*100),
+    win_rate:Math.round(c3*100),
+    speed_score:Math.round(c4*100),
+    dqi:Math.round(c5*100),
+    forecast_conf:Math.round(c6*100),
+    framework_cov:Math.round(c7*100),
     avgDelta:Math.round(avgDelta*10)/10,
     metrics:metrics
   };
@@ -1614,15 +1749,17 @@ async function renderHome(){
   }
   html += '</div>';
 
-  // BLOCO 3 — Desempenho
+  // BLOCO 3 — Desempenho (V9 Score — 7 componentes)
   html += '<div class="home-block">'
-    + '<div class="home-block-title">Meu Desempenho</div>'
+    + '<div class="home-block-title">Meu Desempenho <span style="font-size:9px;color:var(--text2);font-weight:400">Score V9</span></div>'
     + '<div class="home-perf-grid">'
-    + '<div class="home-perf-kpi"><div class="home-perf-v" id="home-score">--</div><div class="home-perf-l">Score</div></div>'
+    + '<div class="home-perf-kpi"><div class="home-perf-v" id="home-score">--</div><div class="home-perf-l">Score V9</div></div>'
     + '<div class="home-perf-kpi"><div class="home-perf-v" id="home-streak">--</div><div class="home-perf-l">Streak</div></div>'
     + '<div class="home-perf-kpi"><div class="home-perf-v">'+allDeals.length+'</div><div class="home-perf-l">Ativos</div></div>'
     + '<div class="home-perf-kpi"><div class="home-perf-v">'+atRisk.length+'</div><div class="home-perf-l">Em Risco</div></div>'
-    + '</div></div>';
+    + '</div>'
+    + '<div id="home-score-breakdown" style="margin-top:8px"></div>'
+    + '</div>';
 
   // BLOCO 4 — Inteligencia Elucy
   html += '<div class="home-block">'
@@ -1640,11 +1777,36 @@ async function renderHome(){
 
   wrap.innerHTML = html;
 
-  // Async: load gamification for score/streak
+  // Async: load gamification for score/streak + V9 score breakdown
   calcGamification().then(function(gam){
     if(!gam) return;
     var sc=document.getElementById('home-score'); if(sc) sc.textContent=gam.operatorScore||gam.todayScore;
     var sk=document.getElementById('home-streak'); if(sk) sk.textContent=gam.streak+'d';
+  });
+  calcOperatorScore(30).then(function(ops){
+    if(!ops) return;
+    var bd=document.getElementById('home-score-breakdown');
+    if(!bd) return;
+    var comps=[
+      {k:'qualificados_norm',l:'Qualif.',w:'18%'},
+      {k:'handoff_norm',l:'Handoff',w:'25%'},
+      {k:'win_rate',l:'Win Rate',w:'25%'},
+      {k:'speed_score',l:'Velocid.',w:'10%'},
+      {k:'dqi',l:'DQI',w:'10%'},
+      {k:'forecast_conf',l:'Forecast',w:'7%'},
+      {k:'framework_cov',l:'Framework',w:'5%'}
+    ];
+    var html='<div style="display:flex;gap:3px;align-items:flex-end;height:36px">';
+    comps.forEach(function(c){
+      var v=ops[c.k]||0;
+      var col=v>=70?'var(--green)':v>=40?'var(--yellow)':'var(--red)';
+      html+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px" title="'+c.l+': '+v+'%">'
+        +'<div style="width:100%;background:'+col+';opacity:.85;border-radius:2px 2px 0 0;height:'+Math.max(4,Math.round(v*0.28))+'px"></div>'
+        +'<div style="font-size:8px;color:var(--text2);text-align:center;line-height:1.1">'+c.l+'</div>'
+        +'</div>';
+    });
+    html+='</div>';
+    bd.innerHTML=html;
   });
 }
 window.renderHome = renderHome;
