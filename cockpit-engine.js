@@ -576,7 +576,8 @@ function _texBuildDealCard(id, d){
     + '<div class="dcs">'+escHtml(d.cargo||'—')+' · '+escHtml(d.emailLead||d.empresa||'')+'</div>'
     + '<div class="tags-row">'
     + '<span class="tag t-gray">'+escHtml(d.tier||'—')+'</span>'
-    + '<span class="tag t-gray">'+escHtml(d.etapa||d.fase||'')+'</span>'
+    + '<span class="tag t-gray">'+escHtml(d.etapa||d.etapa_atual_no_pipeline||'—')+'</span>'
+    + (d.fase||d.fase_atual_no_processo?'<span class="tag t-acc">'+escHtml(d.fase||d.fase_atual_no_processo||'')+'</span>':'')
     + (d._signal==='BUY'?'<span class="tag t-buy">BUY</span>':d._signal==='RISK'?'<span class="tag t-risk">RISK</span>':d._signal==='STALL'?'<span class="tag t-stall">STALL</span>':d._signal==='CHAMP'?'<span class="tag t-champ">CHAMP</span>':d._signal==='DOME'?'<span class="tag t-stall">IRON DOME</span>':'')
     + ((d._urgency||0)>=60?'<span class="tag t-risk">SLA RISCO</span>':'')
     + '</div></div></div>'
@@ -585,8 +586,9 @@ function _texBuildDealCard(id, d){
     + '<div class="bar"><div class="bf '+barClass+'" style="width:'+d.temp+'%"></div></div>'
     + '<div class="tg-sub">'+tempSub+'</div></div>'
     + '<div class="info-grid">'
-    + '<div class="ic"><div class="ic-l">Etapa</div><div class="ic-v">'+escHtml(d.etapa||d.fase||'')+'</div><div class="ic-s">'+(d.fase?'Fase: '+d.fase+' · ':'')+d.delta+' dias no CRM</div></div>'
-    + '<div class="ic"><div class="ic-l">Canal</div><div class="ic-v">'+escHtml(d.canal||'')+'</div><div class="ic-s">'+escHtml(d.linhaReceita||d.utm_medium||'—')+'</div></div>'
+    + '<div class="ic"><div class="ic-l">Etapa</div><div class="ic-v">'+escHtml(d.etapa||d.etapa_atual_no_pipeline||'—')+'</div><div class="ic-s">'+d.delta+' dias no CRM</div></div>'
+    + '<div class="ic"><div class="ic-l">Fase</div><div class="ic-v">'+escHtml(d.fase||d.fase_atual_no_processo||'—')+'</div><div class="ic-s">'+escHtml(d.linhaReceita||d.linha_de_receita_vigente||'—')+'</div></div>'
+    + '<div class="ic"><div class="ic-l">Canal</div><div class="ic-v">'+escHtml(d.canal||'')+'</div><div class="ic-s">'+escHtml(d.utm_medium||'—')+'</div></div>'
     + '<div class="ic"><div class="ic-l">Dia FUP</div><div class="ic-v">'+escHtml(d.dd||'')+'</div><div class="ic-s">'+(d._timeline?d._timeline.actionLabel:'')+'</div></div>'
     + '<div class="ic"><div class="ic-l">SLA</div><div class="ic-v" style="color:'+(d._timeline&&(d._timeline.slaStatus==='overdue'||d._timeline.slaStatus==='critical')?'var(--red)':d._timeline&&d._timeline.slaStatus==='at_risk'?'var(--yellow)':'var(--green)')+'">'+((d._timeline?d._timeline.slaLabel:'—'))+'</div><div class="ic-s">'+(d._timeline?(d._timeline.daysToSLA>=0?d._timeline.daysToSLA+'d restantes':Math.abs(d._timeline.daysToSLA)+'d estourado'):'')+'</div></div>'
     + '<div class="ic"><div class="ic-l">Valor G4</div><div class="ic-v" style="color:var(--green)">'+fmtBRL(d.revenueRaw)+'</div></div>'
