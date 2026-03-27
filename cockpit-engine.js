@@ -3209,18 +3209,69 @@ function calcForecastV6(deal){
   var forecast_score_adjusted = +((forecast_score_raw * qualitative_weight * framework_qs) - no_show_penalty).toFixed(4);
   forecast_score_adjusted = Math.max(0, Math.min(1.0, forecast_score_adjusted));
 
-  // --- CONFIDENCE ---
-  var data_points = 0;
-  if(deal._noteAnalysis) data_points += 2;
-  if(showState !== 'unknown') data_points += 2;
-  if(tp > 0) data_points += Math.min(3, tp);
-  if(deal._timeline && deal._timeline.stagesVisited > 1) data_points += 1;
-  if(cargo) data_points += 1;
-  // V7: framework extractions boost confidence
-  if(framework_data && framework_data.extraction_count > 0) data_points += Math.min(3, framework_data.extraction_count);
-  if(framework_data && framework_data.overall_coverage >= 0.45) data_points += 1;
-  // confidence: 0-1 based on data richness (V7 max 13)
-  var forecast_confidence = +(Math.min(1.0, data_points / 13)).toFixed(4);
+  // --- CONFIDENCE (V10 — 7-component weighted formula) ---
+  // 1) Framework Evidence Score (0.28)
+  var fc_spiced_cov = (framework_data && framework_data.spiced_coverage) || 0;
+  var fc_meddic_cov = (framework_data && framework_data.meddic_coverage) || 0;
+  var fc_overall_cov = (framework_data && framework_data.overall_coverage) || 0;
+  var fc_next_step = (framework_data && framework_data.next_step_clarity) || 0;
+  var fc_authority = (framework_data && framework_data.authority_score) || 0;
+  var fc_note_q = (framework_data && framework_data.note_quality_score) || 0;
+  var framework_evidence_score =
+    (fc_spiced_cov * 0.25) + (fc_meddic_cov * 0.20) + (fc_overall_cov * 0.20) +
+    (fc_next_step * 0.15) + (fc_authority * 0.10) + (fc_note_q * 0.10);
+
+  // 2) Source Density Score (0.18)
+  var na = deal._noteAnalysis;
+  var conf_notes_count = na ? (na.notes_count || na.count || 1) : 0;
+  var conf_notes_density = conf_notes_count >= 3 ? 1.00 : conf_notes_count === 2 ? 0.75 : conf_notes_count === 1 ? 0.50 : 0.10;
+  var conf_meet_count = deal._meetingCount || 0;
+  var conf_meet_density = conf_meet_count >= 2 ? 1.00 : conf_meet_count === 1 ? 0.70 : 0.20;
+  var source_density_score = (conf_notes_density * 0.55) + (conf_meet_density * 0.45);
+
+  // 3) Recency Reliability Score (0.16)
+  var conf_last_touch = deal._lastTouch ? new Date(deal._lastTouch) : null;
+  var conf_days_since = conf_last_touch ? Math.max(0, (Date.now() - conf_last_touch.getTime()) / 86400000) : 30;
+  var recency_reliability_score;
+  if(conf_days_since <= 1) recency_reliability_score = 1.00;
+  else if(conf_days_since <= 3) recency_reliability_score = 0.85;
+  else if(conf_days_since <= 7) recency_reliability_score = 0.65;
+  else if(conf_days_since <= 14) recency_reliability_score = 0.40;
+  else recency_reliability_score = 0.20;
+
+  // 4) Meeting Reliability Score (0.14)
+  var conf_shows = (showState === 'show') ? 1 : 0;
+  var conf_meet_q = (framework_data && framework_data.meeting_quality_score) || 0;
+  var meeting_reliability_score = (Math.min(conf_shows, 1) * 0.60) + (conf_meet_q * 0.40);
+
+  // 5) Signal Stability Score (0.10)
+  var sig = deal._signalRuntime || {};
+  var sig_pos = sig.positive_score || 0;
+  var sig_neg = sig.negative_score || 0;
+  var sig_total = sig.signal_total || 0;
+  var signal_balance = 1 - Math.min(Math.abs(sig_pos - sig_neg), 1);
+  var signal_stability_score =
+    (signal_balance * 0.40) +
+    ((1 - Math.min(sig_neg, 1)) * 0.30) +
+    ((1 - Math.min(Math.abs(sig_total), 1)) * 0.30);
+
+  // 6) Data Trust Contribution (0.10) — from L19 if available
+  var conf_data_trust = (deal._dataQuality && deal._dataQuality.data_trust_score) || 0.50;
+
+  // 7) Framework confidence_score (0.04) — from extractor
+  var conf_fw_confidence = (framework_data && framework_data.confidence_score) || 0;
+
+  // Final weighted formula
+  var forecast_confidence = +(
+    (framework_evidence_score * 0.28) +
+    (source_density_score * 0.18) +
+    (recency_reliability_score * 0.16) +
+    (meeting_reliability_score * 0.14) +
+    (signal_stability_score * 0.10) +
+    (conf_data_trust * 0.10) +
+    (conf_fw_confidence * 0.04)
+  ).toFixed(4);
+  forecast_confidence = Math.min(1, Math.max(0, forecast_confidence));
   var confidence_level = forecast_confidence >= 0.7 ? 'high' : forecast_confidence >= 0.4 ? 'medium' : 'low';
 
   // --- FORECAST VALUE ---
@@ -5532,6 +5583,717 @@ function calcSignalAlerts(intelligenceData){
 }
 window.calcSignalAlerts = calcSignalAlerts;
 
-console.log('[cockpit-engine v9.1] 18-Layer Architecture loaded — Signal Engine V8 + Qualitative Forecast V7 + Framework Extractor');
+// ==================================================================
+// LAYER 19 — DATA QUALITY ENGINE (V10)
+// Mede confiabilidade do deal para forecast, score, analytics e priorização.
+// Output: data_trust_score 0-1, data_quality_band (high/medium/low/critical).
+// Persiste em deal_data_quality_runtime.
+// ==================================================================
+
+function calcDataQualityV19(deal, notesData, meetingsData){
+  var fr = deal._frameworkRuntime || {};
+  var fc = deal._forecastV6 || {};
+
+  // -- 1) Completeness Score --
+  var has = function(v){ return v !== null && v !== undefined && v !== '' && v !== 0; };
+  var completeness_score =
+    (has(deal.etapa || deal.pipeline_stage || deal._stage) ? 0.10 : 0) +
+    (has(deal.statusDeal || deal.deal_status) ? 0.05 : 0) +
+    (has(deal._persona || deal.persona) ? 0.10 : 0) +
+    (has(deal._framework || fr.framework_version) ? 0.10 : 0) +
+    (has(deal._nextAction || deal.next_best_action) ? 0.10 : 0) +
+    (has(fr.spiced_coverage) && fr.spiced_coverage > 0 ? 0.15 : 0) +
+    (has(fr.overall_coverage) && fr.overall_coverage > 0 ? 0.15 : 0) +
+    (has(fc.forecast_confidence) && fc.forecast_confidence > 0 ? 0.15 : 0) +
+    ((notesData && notesData.count > 0) ? 0.10 : 0);
+
+  // -- 2) Consistency Score --
+  var status = (deal.statusDeal || deal.deal_status || '').toLowerCase();
+  var stage = (deal.etapa || deal.pipeline_stage || deal._stage || '').toLowerCase();
+  var showState = deal._showState || deal.show_state || '';
+  var meetCount = (meetingsData && meetingsData.count) || 0;
+
+  var status_stage_conflict = ((status === 'ganho' || status === 'perdido' || status === 'won' || status === 'lost')
+    && stage.indexOf('negoci') < 0 && stage.indexOf('proposta') < 0 && stage.indexOf('ganho') < 0 && stage.indexOf('perdido') < 0
+    && stage.length > 0) ? 1 : 0;
+  var show_without_meeting = (showState === 'show' && meetCount === 0) ? 1 : 0;
+  var high_conf_low_coverage = ((fc.forecast_confidence || 0) > 0.80 && (fr.overall_coverage || 0) < 0.20) ? 1 : 0;
+  var advanced_low_authority = ((stage.indexOf('negoci') >= 0 || stage.indexOf('proposta') >= 0 || stage.indexOf('oportunidade') >= 0)
+    && (fr.authority_score || 0) < 0.20) ? 1 : 0;
+
+  var consistency_penalty =
+    (status_stage_conflict * 0.35) +
+    (show_without_meeting * 0.20) +
+    (high_conf_low_coverage * 0.25) +
+    (advanced_low_authority * 0.20);
+  var consistency_score = 1 - Math.min(1, Math.max(0, consistency_penalty));
+
+  // -- 3) Recency Score --
+  var lastTouch = deal._lastTouch ? new Date(deal._lastTouch) : null;
+  var lastNote = (notesData && notesData.last_at) ? new Date(notesData.last_at) : null;
+  var lastMeeting = (meetingsData && meetingsData.last_at) ? new Date(meetingsData.last_at) : null;
+  var candidates = [lastTouch, lastNote, lastMeeting].filter(function(d){ return d && !isNaN(d.getTime()); });
+  var lastEventAt = candidates.length > 0 ? new Date(Math.max.apply(null, candidates)) : null;
+  var daysSince = lastEventAt ? Math.max(0, (Date.now() - lastEventAt.getTime()) / 86400000) : 30;
+
+  var recency_score;
+  if(daysSince <= 1) recency_score = 1.00;
+  else if(daysSince <= 3) recency_score = 0.85;
+  else if(daysSince <= 7) recency_score = 0.65;
+  else if(daysSince <= 14) recency_score = 0.40;
+  else recency_score = 0.20;
+
+  // -- 4) Evidence Score --
+  var nc = (notesData && notesData.count) || 0;
+  var mc = meetCount;
+  var notes_density = nc >= 3 ? 1.00 : nc === 2 ? 0.75 : nc === 1 ? 0.50 : 0.10;
+  var meetings_density = mc >= 2 ? 1.00 : mc === 1 ? 0.70 : 0.20;
+  var evidence_score = (notes_density * 0.55) + (meetings_density * 0.45);
+
+  // -- Final Score --
+  var data_trust_score = +(
+    (completeness_score * 0.30) +
+    (consistency_score * 0.30) +
+    (recency_score * 0.20) +
+    (evidence_score * 0.20)
+  ).toFixed(4);
+  data_trust_score = Math.min(1, Math.max(0, data_trust_score));
+
+  var band = data_trust_score >= 0.80 ? 'high' : data_trust_score >= 0.60 ? 'medium' : data_trust_score >= 0.40 ? 'low' : 'critical';
+
+  return {
+    completeness_score: +completeness_score.toFixed(4),
+    consistency_score: +consistency_score.toFixed(4),
+    recency_score: +recency_score.toFixed(4),
+    evidence_score: +evidence_score.toFixed(4),
+    data_trust_score: data_trust_score,
+    data_quality_band: band,
+    explain_json: JSON.stringify({
+      completeness: completeness_score, consistency: consistency_score,
+      recency: recency_score, evidence: evidence_score,
+      penalties: { status_stage_conflict: status_stage_conflict, show_without_meeting: show_without_meeting,
+        high_conf_low_coverage: high_conf_low_coverage, advanced_low_authority: advanced_low_authority },
+      days_since_last_event: Math.round(daysSince), notes_count: nc, meetings_count: mc
+    })
+  };
+}
+window.calcDataQualityV19 = calcDataQualityV19;
+
+async function syncDataQualityRuntimeV19(){
+  var sb = _sb(); if(!sb) return null;
+  var email = getOperatorId(); if(!email) return null;
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var dealIds = Object.keys(map);
+  if(!dealIds.length) return null;
+
+  // Batch load notes and meetings counts
+  var notesRes = await sb.rpc('get_notes_summary_by_deals', { deal_ids: dealIds }).catch(function(){ return { data: null }; });
+  var meetRes = await sb.rpc('get_meetings_summary_by_deals', { deal_ids: dealIds }).catch(function(){ return { data: null }; });
+
+  // Fallback: load from tables directly if RPCs don't exist
+  var notesMap = {};
+  var meetingsMap = {};
+
+  if(notesRes && notesRes.data){
+    (notesRes.data || []).forEach(function(r){ notesMap[r.deal_id] = r; });
+  } else {
+    var nRes = await sb.from('note_analysis').select('deal_id,created_at').in('deal_id', dealIds);
+    (nRes.data || []).forEach(function(r){
+      if(!notesMap[r.deal_id]) notesMap[r.deal_id] = { count: 0, last_at: null };
+      notesMap[r.deal_id].count++;
+      if(!notesMap[r.deal_id].last_at || r.created_at > notesMap[r.deal_id].last_at) notesMap[r.deal_id].last_at = r.created_at;
+    });
+  }
+
+  if(meetRes && meetRes.data){
+    (meetRes.data || []).forEach(function(r){ meetingsMap[r.deal_id] = r; });
+  } else {
+    var mRes = await sb.from('meetings').select('deal_id,happened_at,status').in('deal_id', dealIds);
+    (mRes.data || []).forEach(function(r){
+      if(!meetingsMap[r.deal_id]) meetingsMap[r.deal_id] = { count: 0, last_at: null, shows: 0 };
+      meetingsMap[r.deal_id].count++;
+      if(r.status === 'show') meetingsMap[r.deal_id].shows++;
+      if(r.happened_at && (!meetingsMap[r.deal_id].last_at || r.happened_at > meetingsMap[r.deal_id].last_at)) meetingsMap[r.deal_id].last_at = r.happened_at;
+    });
+  }
+
+  var rows = [];
+  dealIds.forEach(function(id){
+    var d = map[id];
+    if((d.statusDeal||'').toLowerCase()==='perdido'||(d.statusDeal||'').toLowerCase()==='ganho') return;
+    var result = calcDataQualityV19(d, notesMap[id] || { count:0, last_at:null }, meetingsMap[id] || { count:0, last_at:null, shows:0 });
+    result.deal_id = id;
+    result.operator_email = email;
+    result.updated_at = new Date().toISOString();
+    rows.push(result);
+    // Attach to deal map
+    d._dataQuality = result;
+  });
+
+  if(rows.length){
+    var res = await sb.from('deal_data_quality_runtime').upsert(rows, { onConflict: 'deal_id' });
+    if(res.error) console.warn('[L19] sync error:', res.error.message);
+    else console.log('[L19] Data Quality synced for ' + rows.length + ' deals');
+  }
+  return rows;
+}
+window.syncDataQualityRuntimeV19 = syncDataQualityRuntimeV19;
+
+// ==================================================================
+// LAYER 20 — TRANSITION RULES ENGINE (V10)
+// Valida se o deal pode avançar de estágio com legitimidade.
+// Output: transition_readiness_score 0-1, transition_valid boolean.
+// Persiste em deal_transition_runtime.
+// ==================================================================
+
+function calcTransitionReadinessV20(deal, notesData, meetingsData){
+  var fr = deal._frameworkRuntime || {};
+  var fc = deal._forecastV6 || {};
+  var dq = deal._dataQuality || {};
+  var stage = (deal.etapa || deal.pipeline_stage || deal._stage || '').toLowerCase();
+  var nc = (notesData && notesData.count) || 0;
+  var shows = (meetingsData && meetingsData.shows) || 0;
+  var scheduled = (meetingsData && meetingsData.scheduled) || 0;
+
+  // Determine target stage
+  var STAGE_ORDER = ['novo lead','dia 01','dia 02','dia 03','dia 04','dia 05','conectados','agendamento','entrevista agendada','nova oportunidade','oportunidade','negociacao','proposta'];
+  var currentIdx = -1;
+  for(var i=0; i<STAGE_ORDER.length; i++){
+    if(stage.indexOf(STAGE_ORDER[i]) >= 0){ currentIdx = i; break; }
+  }
+  var targetStage = currentIdx >= 0 && currentIdx < STAGE_ORDER.length - 1 ? STAGE_ORDER[currentIdx + 1] : '';
+
+  // Readiness formulas by target
+  var readiness = 0;
+  var targetNorm = targetStage.toLowerCase();
+
+  if(targetNorm === 'conectados'){
+    readiness =
+      (nc > 0 ? 0.20 : 0) +
+      ((fr.next_step_clarity||0) >= 0.30 ? 0.20 : 0) +
+      ((fr.note_quality_score||0) >= 0.40 ? 0.20 : 0) +
+      ((fr.spiced_coverage||0) >= 0.20 ? 0.20 : 0) +
+      ((fc.forecast_confidence||0) >= 0.30 ? 0.20 : 0);
+  } else if(targetNorm === 'agendamento'){
+    readiness =
+      ((fr.next_step_clarity||0) * 0.30) +
+      ((fr.authority_score||0) * 0.20) +
+      ((fr.spiced_avg||0) * 0.20) +
+      ((fr.note_quality_score||0) * 0.10) +
+      (Math.min(nc / 3, 1) * 0.10) +
+      ((fc.forecast_confidence||0) * 0.10);
+  } else if(targetNorm === 'entrevista agendada'){
+    var schedReady =
+      ((fr.next_step_clarity||0) * 0.30) +
+      ((fr.authority_score||0) * 0.20) +
+      ((fr.spiced_avg||0) * 0.20) +
+      ((fr.note_quality_score||0) * 0.10) +
+      (Math.min(nc / 3, 1) * 0.10) +
+      ((fc.forecast_confidence||0) * 0.10);
+    readiness =
+      (schedReady * 0.50) +
+      (Math.min(scheduled, 1) * 0.30) +
+      ((fr.authority_score||0) * 0.20);
+  } else if(targetNorm.indexOf('oportunidade') >= 0){
+    readiness =
+      ((fr.spiced_avg||0) * 0.22) +
+      ((fr.meddic_avg||0) * 0.18) +
+      ((fr.authority_score||0) * 0.18) +
+      ((fr.next_step_clarity||0) * 0.12) +
+      ((fr.overall_coverage||0) * 0.10) +
+      (Math.min(shows, 1) * 0.10) +
+      ((fr.note_quality_score||0) * 0.05) +
+      ((fc.forecast_confidence||0) * 0.05);
+  } else if(targetNorm === 'negociacao' || targetNorm === 'proposta'){
+    var oppReady =
+      ((fr.spiced_avg||0) * 0.22) +
+      ((fr.meddic_avg||0) * 0.18) +
+      ((fr.authority_score||0) * 0.18) +
+      ((fr.next_step_clarity||0) * 0.12) +
+      ((fr.overall_coverage||0) * 0.10) +
+      (Math.min(shows, 1) * 0.10) +
+      ((fr.note_quality_score||0) * 0.05) +
+      ((fc.forecast_confidence||0) * 0.05);
+    readiness =
+      (oppReady * 0.45) +
+      ((fr.authority_score||0) * 0.20) +
+      ((fr.meddic_avg||0) * 0.15) +
+      ((fc.forecast_score_adjusted||0) * 0.10) +
+      ((fr.next_step_clarity||0) * 0.10);
+  } else {
+    // Default: simple readiness for early pipeline (D1-D5)
+    readiness =
+      (nc > 0 ? 0.30 : 0) +
+      ((fr.next_step_clarity||0) >= 0.20 ? 0.30 : 0) +
+      ((fc.forecast_confidence||0) >= 0.20 ? 0.20 : 0) +
+      (Math.min(nc, 1) * 0.20);
+  }
+
+  readiness = Math.min(1, Math.max(0, readiness));
+
+  // Hard blocks
+  var blocks = [];
+  if((dq.data_trust_score || 0) < 0.40) blocks.push('data_trust_critical');
+  var statusLow = (deal.statusDeal||deal.deal_status||'').toLowerCase();
+  if(statusLow === 'ganho' || statusLow === 'perdido' || statusLow === 'won' || statusLow === 'lost') blocks.push('deal_closed');
+  if((fr.authority_score||0) < 0.20 && (targetNorm.indexOf('oportunidade') >= 0 || targetNorm === 'negociacao'))
+    blocks.push('authority_too_low');
+  if(shows === 0 && (targetNorm.indexOf('oportunidade') >= 0 || targetNorm === 'negociacao'))
+    blocks.push('no_shows');
+  if((fr.next_step_clarity||0) < 0.20 && (targetNorm === 'agendamento' || targetNorm === 'entrevista agendada' || targetNorm.indexOf('oportunidade') >= 0))
+    blocks.push('no_next_step');
+
+  var valid = blocks.length === 0 && readiness >= 0.40;
+
+  return {
+    current_pipeline_stage: stage,
+    target_pipeline_stage: targetStage,
+    transition_readiness_score: +readiness.toFixed(4),
+    transition_valid: valid,
+    transition_block_reason: blocks.length > 0 ? blocks.join(', ') : null,
+    transition_gap_count: blocks.length,
+    gaps_json: JSON.stringify(blocks)
+  };
+}
+window.calcTransitionReadinessV20 = calcTransitionReadinessV20;
+
+async function syncTransitionRuntimeV20(){
+  var sb = _sb(); if(!sb) return null;
+  var email = getOperatorId(); if(!email) return null;
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var dealIds = Object.keys(map);
+  if(!dealIds.length) return null;
+
+  // Reuse notes/meetings data from L19 if attached
+  var rows = [];
+  dealIds.forEach(function(id){
+    var d = map[id];
+    if((d.statusDeal||'').toLowerCase()==='perdido'||(d.statusDeal||'').toLowerCase()==='ganho') return;
+
+    // Use cached data from L19 sync
+    var notesData = { count: 0, last_at: null };
+    var meetingsData = { count: 0, last_at: null, shows: 0, scheduled: 0 };
+    if(d._notesData) notesData = d._notesData;
+    if(d._meetingsData) meetingsData = d._meetingsData;
+
+    var result = calcTransitionReadinessV20(d, notesData, meetingsData);
+    result.deal_id = id;
+    result.operator_email = email;
+    result.updated_at = new Date().toISOString();
+    rows.push(result);
+    d._transition = result;
+  });
+
+  if(rows.length){
+    var res = await sb.from('deal_transition_runtime').upsert(rows, { onConflict: 'deal_id' });
+    if(res.error) console.warn('[L20] sync error:', res.error.message);
+    else console.log('[L20] Transition Rules synced for ' + rows.length + ' deals');
+  }
+  return rows;
+}
+window.syncTransitionRuntimeV20 = syncTransitionRuntimeV20;
+
+// ==================================================================
+// LAYER 21 — PORTFOLIO PRIORITIZATION ENGINE (V10)
+// Diz qual deal o SDR deve atacar agora, olhando o pipe inteiro.
+// Output: portfolio_priority_score 0-1, portfolio_rank, priority_band.
+// Persiste em deal_portfolio_runtime.
+// ==================================================================
+
+function calcPortfolioPriorityV21(allDeals){
+  if(!allDeals || !allDeals.length) return [];
+
+  // Find max forecast_value for normalization
+  var maxForecastValue = 1;
+  allDeals.forEach(function(d){
+    var fv = (d._forecastV6 && d._forecastV6.forecast_value) || 0;
+    if(fv > maxForecastValue) maxForecastValue = fv;
+  });
+
+  var RISK_WEIGHT = { critical: 1.0, high: 0.8, medium: 0.5, low: 0.2 };
+
+  var results = allDeals.map(function(d){
+    var fc = d._forecastV6 || {};
+    var fr = d._frameworkRuntime || {};
+    var dq = d._dataQuality || {};
+    var tr = d._transition || {};
+    var ag = d._aging || 0;
+
+    // 1) Value Leverage Score (0.35)
+    var normForecastValue = maxForecastValue > 0 ? (fc.forecast_value || 0) / maxForecastValue : 0;
+    var normValueScore = (d._oppValue || 0) / 100;
+    var value_leverage_score = (normForecastValue * 0.60) + (normValueScore * 0.40);
+    value_leverage_score = Math.min(1, Math.max(0, value_leverage_score));
+
+    // 2) Urgency Score (0.30)
+    var riskState = d._riskState || d.risk_state || 'medium';
+    var riskW = RISK_WEIGHT[riskState] || 0.5;
+    var normAging = Math.min(ag / 14, 1);
+    var urgency_score =
+      (normAging * 0.40) +
+      (riskW * 0.30) +
+      ((1 - (fc.forecast_confidence || 0)) * 0.15) +
+      ((1 - (fr.next_step_clarity || 0)) * 0.15);
+    urgency_score = Math.min(1, Math.max(0, urgency_score));
+
+    // 3) Actionability Score (0.25)
+    var actionability_score =
+      ((tr.transition_readiness_score || 0) * 0.35) +
+      ((fr.authority_score || 0) * 0.15) +
+      ((fr.overall_coverage || 0) * 0.15) +
+      ((dq.data_trust_score || 0) * 0.15) +
+      ((fr.qualitative_score || 1.0) >= 1.0 ? 0.5 : (fr.qualitative_score || 0.5) * 0.10 / 0.10) +
+      ((fc.forecast_score_adjusted || 0) * 0.10);
+    // Fix actionability qualitative component
+    var qs_norm = fr.qualitative_score ? Math.min(1, Math.max(0, (fr.qualitative_score - 0.20) / 1.10)) : 0.5;
+    actionability_score =
+      ((tr.transition_readiness_score || 0) * 0.35) +
+      ((fr.authority_score || 0) * 0.15) +
+      ((fr.overall_coverage || 0) * 0.15) +
+      ((dq.data_trust_score || 0) * 0.15) +
+      (qs_norm * 0.10) +
+      ((fc.forecast_score_adjusted || 0) * 0.10);
+    actionability_score = Math.min(1, Math.max(0, actionability_score));
+
+    // 4) Neglect Score (0.10)
+    var lastActivity = d._lastTouch ? new Date(d._lastTouch) : null;
+    var daysSinceActivity = lastActivity ? Math.max(0, (Date.now() - lastActivity.getTime()) / 86400000) : 14;
+    var neglect_score;
+    if(daysSinceActivity <= 1) neglect_score = 0.10;
+    else if(daysSinceActivity <= 3) neglect_score = 0.30;
+    else if(daysSinceActivity <= 7) neglect_score = 0.60;
+    else neglect_score = 1.00;
+
+    // Final Score
+    var portfolio_priority_score = +(
+      (value_leverage_score * 0.35) +
+      (urgency_score * 0.30) +
+      (actionability_score * 0.25) +
+      (neglect_score * 0.10)
+    ).toFixed(4);
+    portfolio_priority_score = Math.min(1, Math.max(0, portfolio_priority_score));
+
+    var priority_band = portfolio_priority_score >= 0.80 ? 'p1' : portfolio_priority_score >= 0.65 ? 'p2' : portfolio_priority_score >= 0.50 ? 'p3' : 'p4';
+
+    // Recommended queue
+    var recommended_queue = 'default';
+    if(urgency_score >= 0.75 && (fr.next_step_clarity||0) < 0.30) recommended_queue = 'next_step_repair';
+    else if((riskState === 'high' || riskState === 'critical') && ag > 5) recommended_queue = 'follow_up';
+    else if((tr.transition_readiness_score||0) >= 0.70 && normForecastValue > 0.60) recommended_queue = 'alta_performance';
+    else if((fr.overall_coverage||0) < 0.40) recommended_queue = 'framework_gap_fill';
+
+    return {
+      deal_id: d.dealId || d.deal_id,
+      value_leverage_score: +value_leverage_score.toFixed(4),
+      urgency_score: +urgency_score.toFixed(4),
+      actionability_score: +actionability_score.toFixed(4),
+      neglect_score: +neglect_score.toFixed(4),
+      portfolio_priority_score: portfolio_priority_score,
+      priority_band: priority_band,
+      recommended_queue: recommended_queue,
+      explain_json: JSON.stringify({
+        value_leverage: value_leverage_score, urgency: urgency_score,
+        actionability: actionability_score, neglect: neglect_score,
+        risk_state: riskState, aging: ag, forecast_value: fc.forecast_value||0
+      })
+    };
+  });
+
+  // Sort by priority score descending and assign rank
+  results.sort(function(a, b){ return b.portfolio_priority_score - a.portfolio_priority_score; });
+  results.forEach(function(r, i){ r.portfolio_rank = i + 1; });
+
+  return results;
+}
+window.calcPortfolioPriorityV21 = calcPortfolioPriorityV21;
+
+async function syncPortfolioRuntimeV21(){
+  var sb = _sb(); if(!sb) return null;
+  var email = getOperatorId(); if(!email) return null;
+  var map = window._COCKPIT_DEAL_MAP || {};
+
+  var activeDeals = [];
+  Object.keys(map).forEach(function(id){
+    var d = map[id];
+    if((d.statusDeal||'').toLowerCase()==='perdido'||(d.statusDeal||'').toLowerCase()==='ganho') return;
+    activeDeals.push(d);
+  });
+
+  if(!activeDeals.length) return null;
+  var results = calcPortfolioPriorityV21(activeDeals);
+
+  var rows = results.map(function(r){
+    r.operator_email = email;
+    r.updated_at = new Date().toISOString();
+    return r;
+  });
+
+  // Attach to deal map
+  rows.forEach(function(r){
+    if(map[r.deal_id]) map[r.deal_id]._portfolio = r;
+  });
+
+  if(rows.length){
+    var res = await sb.from('deal_portfolio_runtime').upsert(rows, { onConflict: 'deal_id' });
+    if(res.error) console.warn('[L21] sync error:', res.error.message);
+    else console.log('[L21] Portfolio Priority synced for ' + rows.length + ' deals | P1:' + rows.filter(function(r){return r.priority_band==='p1';}).length + ' P2:' + rows.filter(function(r){return r.priority_band==='p2';}).length);
+  }
+  return rows;
+}
+window.syncPortfolioRuntimeV21 = syncPortfolioRuntimeV21;
+
+// ==================================================================
+// LAYER 22 — ATTRIBUTION ENGINE (V10)
+// Mede o que causou avanço no deal: call, whatsapp, note, framework, meeting, DM.
+// Janela de atribuição: 72h.
+// Persiste em deal_attribution_events e deal_attribution_runtime.
+// ==================================================================
+
+var ACTIVITY_BASE_WEIGHT = {
+  call_logged: 0.22, meeting_booked: 0.28, meeting_done: 0.30,
+  whatsapp_pasted: 0.10, copy_generated: 0.08, copy_sent_wa: 0.18,
+  note_created: 0.10, analysis_generated: 0.12, framework_gap_fill: 0.20,
+  dm_touchpoint: 0.16
+};
+var OUTCOME_WEIGHT = {
+  stage_advance: 0.30, forecast_gain: 0.20, meeting_booked: 0.20,
+  show_happened: 0.15, opportunity_created: 0.15
+};
+
+function calcProximityWeight(hoursApart){
+  if(hoursApart <= 6) return 1.00;
+  if(hoursApart <= 24) return 0.75;
+  if(hoursApart <= 48) return 0.50;
+  if(hoursApart <= 72) return 0.25;
+  return 0;
+}
+
+async function calcAttributionV22(dealId, windowHours){
+  var sb = _sb(); if(!sb) return null;
+  windowHours = windowHours || 72;
+
+  // Load activities for this deal
+  var actRes = await sb.from('activity_log')
+    .select('activity_type,created_at,metadata')
+    .eq('deal_id', dealId)
+    .order('created_at', { ascending: false })
+    .limit(100);
+  var activities = actRes.data || [];
+
+  // Load stage history (outcomes: stage_advance)
+  var stageRes = await sb.from('deal_stage_history')
+    .select('from_stage,to_stage,changed_at')
+    .eq('deal_id', dealId)
+    .order('changed_at', { ascending: false })
+    .limit(50);
+  var stageChanges = stageRes.data || [];
+
+  // Load forecast events (outcomes: forecast_gain)
+  var fcRes = await sb.from('forecast_events')
+    .select('event_type,delta_forecast,created_at')
+    .eq('deal_id', dealId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  var forecastEvents = fcRes.data || [];
+
+  // Load meetings (outcomes: meeting_booked, show_happened)
+  var meetRes = await sb.from('meetings')
+    .select('status,happened_at,created_at')
+    .eq('deal_id', dealId)
+    .limit(50);
+  var meetings = meetRes.data || [];
+
+  // Build outcome list
+  var outcomes = [];
+  stageChanges.forEach(function(sc){
+    var oType = 'stage_advance';
+    if(sc.to_stage && sc.to_stage.toLowerCase().indexOf('oportunidade') >= 0) oType = 'opportunity_created';
+    outcomes.push({ type: oType, at: new Date(sc.changed_at) });
+  });
+  forecastEvents.forEach(function(fe){
+    if((fe.delta_forecast||0) > 0) outcomes.push({ type: 'forecast_gain', at: new Date(fe.created_at) });
+  });
+  meetings.forEach(function(m){
+    if(m.created_at) outcomes.push({ type: 'meeting_booked', at: new Date(m.created_at) });
+    if(m.status === 'show' && m.happened_at) outcomes.push({ type: 'show_happened', at: new Date(m.happened_at) });
+  });
+
+  if(!outcomes.length || !activities.length) return { events: [], summary: { top_driver: null, advancement_score: 0, diversity_score: 0 } };
+
+  // Calculate attribution for each outcome-activity pair
+  var allContributions = [];
+  outcomes.forEach(function(outcome){
+    var windowActivities = [];
+    var outTime = outcome.at.getTime();
+    var oWeight = OUTCOME_WEIGHT[outcome.type] || 0.10;
+
+    activities.forEach(function(act){
+      var actTime = new Date(act.created_at).getTime();
+      var hoursApart = (outTime - actTime) / 3600000;
+      if(hoursApart < 0 || hoursApart > windowHours) return;
+
+      var proximity = calcProximityWeight(hoursApart);
+      if(proximity === 0) return;
+
+      var actType = act.activity_type || 'unknown';
+      var baseW = ACTIVITY_BASE_WEIGHT[actType] || 0.05;
+      var contribution = baseW * proximity * oWeight;
+
+      windowActivities.push({
+        activity_type: actType,
+        activity_at: act.created_at,
+        proximity_weight: proximity,
+        activity_base_weight: baseW,
+        outcome_weight: oWeight,
+        attribution_contribution: +contribution.toFixed(6)
+      });
+    });
+
+    // Normalize within this outcome's window
+    var totalContrib = 0;
+    windowActivities.forEach(function(wa){ totalContrib += wa.attribution_contribution; });
+
+    windowActivities.forEach(function(wa){
+      wa.normalized_attribution = totalContrib > 0 ? +(wa.attribution_contribution / totalContrib).toFixed(6) : 0;
+      wa.deal_id = dealId;
+      wa.outcome_type = outcome.type;
+      wa.outcome_at = outcome.at.toISOString();
+      allContributions.push(wa);
+    });
+  });
+
+  // Aggregate by activity type
+  var byType = {};
+  var advancementScore = 0;
+  allContributions.forEach(function(c){
+    if(!byType[c.activity_type]) byType[c.activity_type] = 0;
+    byType[c.activity_type] += c.normalized_attribution;
+    if(c.outcome_type === 'stage_advance' || c.outcome_type === 'opportunity_created'){
+      advancementScore += c.normalized_attribution;
+    }
+  });
+
+  // Top driver
+  var topDriver = null;
+  var topVal = 0;
+  Object.keys(byType).forEach(function(t){
+    if(byType[t] > topVal){ topVal = byType[t]; topDriver = t; }
+  });
+
+  // Diversity score
+  var significantTypes = Object.keys(byType).filter(function(t){ return byType[t] >= 0.15; });
+  var diversityScore = Math.min(1, significantTypes.length / 5);
+
+  return {
+    events: allContributions,
+    summary: {
+      top_attribution_driver: topDriver,
+      advancement_attribution_score: +Math.min(1, advancementScore).toFixed(4),
+      attribution_diversity_score: +diversityScore.toFixed(4),
+      channel_attribution_json: JSON.stringify(byType)
+    }
+  };
+}
+window.calcAttributionV22 = calcAttributionV22;
+
+async function syncAttributionRuntimeV22(){
+  var sb = _sb(); if(!sb) return null;
+  var email = getOperatorId(); if(!email) return null;
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var dealIds = Object.keys(map);
+  if(!dealIds.length) return null;
+
+  var summaries = [];
+  // Process in batches to avoid overload (max 20 at a time)
+  var batch = dealIds.filter(function(id){
+    var d = map[id];
+    return !((d.statusDeal||'').toLowerCase()==='perdido'||(d.statusDeal||'').toLowerCase()==='ganho');
+  }).slice(0, 20);
+
+  for(var i = 0; i < batch.length; i++){
+    var id = batch[i];
+    try {
+      var result = await calcAttributionV22(id);
+      if(result && result.summary){
+        var row = {
+          deal_id: id,
+          operator_email: email,
+          top_attribution_driver: result.summary.top_attribution_driver,
+          advancement_attribution_score: result.summary.advancement_attribution_score,
+          attribution_diversity_score: result.summary.attribution_diversity_score,
+          channel_attribution_json: result.summary.channel_attribution_json,
+          updated_at: new Date().toISOString()
+        };
+        summaries.push(row);
+        if(map[id]) map[id]._attribution = result.summary;
+
+        // Persist events (last 50 per deal to avoid bloat)
+        if(result.events.length > 0){
+          var eventRows = result.events.slice(0, 50).map(function(e){
+            return {
+              deal_id: e.deal_id, outcome_type: e.outcome_type, outcome_at: e.outcome_at,
+              activity_type: e.activity_type, activity_at: e.activity_at,
+              proximity_weight: e.proximity_weight, activity_base_weight: e.activity_base_weight,
+              outcome_weight: e.outcome_weight, attribution_contribution: e.attribution_contribution,
+              normalized_attribution: e.normalized_attribution
+            };
+          });
+          await sb.from('deal_attribution_events').insert(eventRows).catch(function(err){ console.warn('[L22] event insert error:', err); });
+        }
+      }
+    } catch(err){
+      console.warn('[L22] attribution error for deal ' + id + ':', err);
+    }
+  }
+
+  if(summaries.length){
+    var res = await sb.from('deal_attribution_runtime').upsert(summaries, { onConflict: 'deal_id' });
+    if(res.error) console.warn('[L22] sync error:', res.error.message);
+    else console.log('[L22] Attribution synced for ' + summaries.length + ' deals');
+  }
+  return summaries;
+}
+window.syncAttributionRuntimeV22 = syncAttributionRuntimeV22;
+
+// ==================================================================
+// DAG ORCHESTRATOR — Executa as 22 layers na ordem correta sem ciclos
+// Fase 1: Base (L1-L3,L6,L8,L10,L11) — já executadas no boot
+// Fase 2: Inteligência Estrutural (L16,L18,L19)
+// Fase 3: Forecast (L13)
+// Fase 4: Governança (L20)
+// Fase 5: Priorização (L21)
+// Fase 6: Performance (L5,L14,L15,L12,L7)
+// Fase 7: Retrospectivo (L22)
+// ==================================================================
+
+async function runIntelligenceDAG(){
+  console.log('[DAG] Starting 22-Layer Intelligence DAG...');
+  var t0 = Date.now();
+
+  try {
+    // Phase 2: Data Quality (L19) — depends on base data only
+    console.log('[DAG] Phase 2: L19 Data Quality...');
+    await syncDataQualityRuntimeV19();
+
+    // Phase 4: Transition Rules (L20) — depends on L19
+    console.log('[DAG] Phase 4: L20 Transition Rules...');
+    await syncTransitionRuntimeV20();
+
+    // Phase 5: Portfolio Prioritization (L21) — depends on L19, L20
+    console.log('[DAG] Phase 5: L21 Portfolio Prioritization...');
+    await syncPortfolioRuntimeV21();
+
+    // Phase 7: Attribution (L22) — retrospective, batch
+    console.log('[DAG] Phase 7: L22 Attribution...');
+    await syncAttributionRuntimeV22();
+
+    console.log('[DAG] 22-Layer DAG completed in ' + (Date.now() - t0) + 'ms');
+  } catch(err){
+    console.error('[DAG] Error:', err);
+  }
+}
+window.runIntelligenceDAG = runIntelligenceDAG;
+
+console.log('[cockpit-engine v10.0] 22-Layer Architecture loaded — L19 Data Quality + L20 Transition Rules + L21 Portfolio Priority + L22 Attribution');
 
 })();
