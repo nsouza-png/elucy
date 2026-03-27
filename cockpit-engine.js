@@ -4210,27 +4210,235 @@ async function calcPerformanceReportV3(periodType, periodKey){
 }
 window.calcPerformanceReportV3 = calcPerformanceReportV3;
 
-// ── UI RENDERER ──
-function renderPerformanceReportV3(report, containerId){
-  var el = document.getElementById(containerId || 'perf-report-v3');
-  if(!el || !report) return;
+// ── LAYER 15B — NARRATIVE ENGINE ──
+// Compara período atual vs anterior e gera narrativas inteligentes
+function generatePerformanceNarratives(current, previous){
+  var narratives = [];
+  if(!current) return narratives;
 
-  var s = report.scores;
+  var cs = current.scores || {};
+  var ps = previous ? (previous.scores || {}) : null;
+
+  function delta(cur, prev){ return prev ? cur - prev : 0; }
+  function pctDelta(cur, prev){ return prev && prev > 0 ? Math.round((cur - prev) / prev * 100) : 0; }
+  function arrow(d){ return d > 0 ? '↑' : d < 0 ? '↓' : '→'; }
+  function arrowColor(d, invert){ var good = invert ? d < 0 : d > 0; return good ? 'var(--green)' : d === 0 ? 'var(--text2)' : 'var(--red)'; }
+  function bandEmoji(b){ return b === 'elite' ? '🏆' : b === 'forte' ? '💪' : b === 'estavel' ? '⚡' : b === 'atencao' ? '⚠️' : '🚨'; }
+
+  // 1. Score geral
+  var scoreDelta = ps ? delta(cs.final, ps.final) : 0;
+  var scoreNarr = 'Score geral: ' + cs.final + '/100 (' + (current.band || '').toUpperCase() + ')';
+  if(ps){
+    scoreNarr += ' — ' + arrow(scoreDelta) + ' ' + (scoreDelta > 0 ? '+' : '') + scoreDelta + ' pts vs período anterior';
+    if(scoreDelta >= 5) scoreNarr += '. Evolução sólida, manter ritmo.';
+    else if(scoreDelta <= -5) scoreNarr += '. Queda relevante — revisar disciplina e volume.';
+    else scoreNarr += '. Estável.';
+  }
+  narratives.push({ type:'score', text:scoreNarr, delta:scoreDelta, icon: bandEmoji(current.band) });
+
+  // 2. Volume
+  var cv = current.volume || {};
+  var pv = previous ? (previous.volume || {}) : null;
+  var fupsDelta = pv ? delta(cv.fups_sent, pv.fups_sent) : 0;
+  var dealsDelta = pv ? delta(cv.deals_worked, pv.deals_worked) : 0;
+  var volText = cv.deals_worked + ' deals trabalhados, ' + cv.fups_sent + ' FUPs, ' + cv.dms_sent + ' DMs';
+  if(pv){
+    if(fupsDelta > 0) volText += '. FUPs ' + arrow(fupsDelta) + ' +' + fupsDelta + ' — cadência em alta.';
+    else if(fupsDelta < 0) volText += '. FUPs ' + arrow(fupsDelta) + ' ' + fupsDelta + ' — atenção ao volume de contatos.';
+  }
+  if(cv.handoffs > 0) volText += ' ' + cv.handoffs + ' handoff' + (cv.handoffs > 1 ? 's' : '') + ' realizados.';
+  narratives.push({ type:'volume', text:volText, delta:fupsDelta, color: arrowColor(fupsDelta) });
+
+  // 3. Conversão
+  var cc = current.conversion || {};
+  var pc = previous ? (previous.conversion || {}) : null;
+  var crMqlSal = Math.round((cc.mql_sal || 0) * 100);
+  var crShowOpp = Math.round((cc.show_opp || 0) * 100);
+  var convText = 'MQL→SAL: ' + crMqlSal + '%';
+  if(pc){
+    var prevCrMql = Math.round((pc.mql_sal || 0) * 100);
+    var crDelta = crMqlSal - prevCrMql;
+    convText += ' (' + arrow(crDelta) + (crDelta > 0 ? '+' : '') + crDelta + 'pp)';
+  }
+  convText += ', Show→OPP: ' + crShowOpp + '%';
+  if(pc){
+    var prevShowOpp = Math.round((pc.show_opp || 0) * 100);
+    var soDelta = crShowOpp - prevShowOpp;
+    convText += ' (' + arrow(soDelta) + (soDelta > 0 ? '+' : '') + soDelta + 'pp)';
+    if(soDelta >= 5) convText += '. Qualificação de shows melhorou — frameworks afiados.';
+    else if(soDelta <= -5) convText += '. Shows convertendo menos — reforçar SPICED/Challenger antes da reunião.';
+  }
+  narratives.push({ type:'conversion', text:convText, delta:0, color:'var(--accent)' });
+
+  // 4. Velocidade
+  var csp = current.speed || {};
+  var psp = previous ? (previous.speed || {}) : null;
+  var speedText = 'Aging médio: ' + csp.avg_aging_days + 'd';
+  if(psp){
+    var ageDelta = delta(csp.avg_aging_days, psp.avg_aging_days);
+    speedText += ' (' + arrow(-ageDelta) + Math.abs(ageDelta) + 'd)'; // inverted: less is better
+    if(ageDelta > 2) speedText += '. Pipeline envelhecendo — ativar Iron Dome nos deals parados.';
+    else if(ageDelta < -1) speedText += '. Pipeline acelerando — bom sinal de fluidez.';
+  }
+  var slaRate = Math.round((csp.sla_risk_rate || 0) * 100);
+  speedText += '. SLA Risk: ' + slaRate + '%';
+  if(slaRate > 30) speedText += ' — alto, priorizar deals com SLA estourado.';
+  narratives.push({ type:'speed', text:speedText, delta:0, color: arrowColor(-(csp.avg_aging_days - (psp ? psp.avg_aging_days : csp.avg_aging_days))) });
+
+  // 5. Qualidade/DQI
+  var cq = current.quality || {};
+  var pq = previous ? (previous.quality || {}) : null;
+  var dqi = Math.round((cq.dqi || 0) * 100);
+  var qualText = 'DQI: ' + dqi + '/100';
+  if(pq){
+    var dqiPrev = Math.round((pq.dqi || 0) * 100);
+    var dqiDelta = dqi - dqiPrev;
+    qualText += ' (' + arrow(dqiDelta) + (dqiDelta > 0 ? '+' : '') + dqiDelta + ')';
+  }
+  // Find weakest quality dimension
+  var qualDims = [
+    {k:'notes_quality_rate', l:'qualidade de notas'},
+    {k:'next_step_rate', l:'próximos passos'},
+    {k:'authority_rate', l:'mapeamento de autoridade'},
+    {k:'pain_rate', l:'clareza de dor'},
+    {k:'no_show_treatment_rate', l:'tratamento de no-show'}
+  ];
+  var weakest = null; var weakVal = 999;
+  qualDims.forEach(function(d){
+    var v = (cq[d.k] || 0);
+    if(v < weakVal){ weakVal = v; weakest = d; }
+  });
+  if(weakest && weakVal < 0.5){
+    qualText += '. Ponto fraco: ' + weakest.l + ' (' + Math.round(weakVal * 100) + '%) — foco de melhoria.';
+  }
+  narratives.push({ type:'quality', text:qualText, delta:0, color: dqi >= 70 ? 'var(--green)' : dqi >= 50 ? 'var(--yellow)' : 'var(--red)' });
+
+  // 6. Forecast
+  var cfc = current.forecast || {};
+  var confAvg = Math.round((cfc.forecast_confidence_avg || 0) * 100);
+  var inflated = Math.round((cfc.inflated_pipeline_rate || 0) * 100);
+  var fcText = 'Confiança média: ' + confAvg + '%, pipeline inflado: ' + inflated + '%';
+  if(inflated > 20) fcText += '. Atenção: mais de 20% do pipeline sem sustentação — recalibrar scores ou adicionar contexto.';
+  else if(confAvg >= 70) fcText += '. Forecast saudável — dados suficientes para decisão.';
+  narratives.push({ type:'forecast', text:fcText, delta:0, color: confAvg >= 60 ? 'var(--green)' : 'var(--yellow)' });
+
+  // 7. Receita
+  var cr = current.revenue || {};
+  var pr = previous ? (previous.revenue || {}) : null;
+  var revText = 'Receita influenciada: R$ ' + ((cr.revenue_influenced || 0) / 1000).toFixed(0) + 'k';
+  if(pr && pr.revenue_influenced > 0){
+    var revDelta = pctDelta(cr.revenue_influenced, pr.revenue_influenced);
+    revText += ' (' + arrow(revDelta) + (revDelta > 0 ? '+' : '') + revDelta + '%)';
+  }
+  revText += '. Ticket médio: R$ ' + ((cr.avg_ticket || cr.revenue_per_deal || 0) / 1000).toFixed(1) + 'k';
+  narratives.push({ type:'revenue', text:revText, delta:0, color:'var(--green)' });
+
+  // 8. Top insight — puxar a narrativa mais relevante como headline
+  var headline = '';
+  if(cs.final >= 90) headline = 'Performance elite — você está no top tier. Manter e ensinar o time.';
+  else if(cs.final >= 75) headline = 'Performance forte — bom ritmo. Foco nos pontos fracos para subir.';
+  else if(cs.final >= 60) headline = 'Performance estável — há espaço pra crescer. Priorize volume e conversão.';
+  else if(cs.final >= 45) headline = 'Atenção — resultados abaixo do esperado. Revisar cadência e qualidade.';
+  else headline = 'Crítico — ação imediata necessária. Alinhar com líder e reestruturar rotina.';
+  narratives.unshift({ type:'headline', text:headline, delta:scoreDelta, icon: bandEmoji(current.band) });
+
+  return narratives;
+}
+window.generatePerformanceNarratives = generatePerformanceNarratives;
+
+// Get previous period key for comparison
+function _getPrevPeriodKey(periodType, periodKey){
+  if(periodType === 'daily'){
+    var d = new Date(periodKey + 'T12:00:00');
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0,10);
+  }
+  if(periodType === 'weekly'){
+    var parts = periodKey.split('-W');
+    var wn = parseInt(parts[1]) - 1;
+    if(wn < 1) return (parseInt(parts[0]) - 1) + '-W52';
+    return parts[0] + '-W' + String(wn).padStart(2,'0');
+  }
+  // monthly
+  var mp = periodKey.split('-');
+  var y = parseInt(mp[0]); var m = parseInt(mp[1]) - 1;
+  if(m < 1){ y--; m = 12; }
+  return y + '-' + String(m).padStart(2,'0');
+}
+window._getPrevPeriodKey = _getPrevPeriodKey;
+
+// State for current performance view
+var _perfViewState = { periodType:'month', periodKey:null, report:null, prevReport:null };
+
+// ── UI RENDERER V4 (with period selector + narratives) ──
+async function renderPerformanceReportV3(report, containerId){
+  var el = document.getElementById(containerId || 'perf-report-v3');
+  if(!el) return;
+
+  // If called with report directly (legacy), render it
+  if(report){
+    _perfViewState.report = report;
+    _perfViewState.periodType = report.period_type || 'month';
+    _perfViewState.periodKey = report.period_key;
+  }
+  if(!_perfViewState.report) return;
+
+  report = _perfViewState.report;
+  var s = report.scores || {};
   var bandColors = { elite:'var(--gold)', forte:'var(--green)', estavel:'var(--accent)', atencao:'var(--yellow)', critico:'var(--red)' };
   var bandColor = bandColors[report.band] || 'var(--text)';
+  var fmtBRL = window.fmtBRL || function(v){return 'R$ '+(v||0).toLocaleString('pt-BR');};
+
+  // Generate narratives
+  var narratives = generatePerformanceNarratives(report, _perfViewState.prevReport);
 
   var html = '';
+
+  // ── Period Selector ──
+  html += '<div class="pv3-period-bar">';
+  [['daily','Hoje'],['weekly','Semana'],['month','Mês']].forEach(function(p){
+    var active = _perfViewState.periodType === p[0] ? ' pv3-ptab-on' : '';
+    html += '<button class="pv3-ptab'+active+'" onclick="switchPerfPeriod(\''+p[0]+'\')">'+p[1]+'</button>';
+  });
+  html += '</div>';
+
+  // ── Headline Narrative ──
+  var hl = narratives.length > 0 ? narratives[0] : null;
+  if(hl && hl.type === 'headline'){
+    html += '<div class="pv3-headline">';
+    html += '<span class="pv3-hl-icon">'+(hl.icon||'')+'</span>';
+    html += '<span class="pv3-hl-text">'+hl.text+'</span>';
+    html += '</div>';
+  }
 
   // ── Header: Score + Band ──
   html += '<div class="pv3-header">';
   html += '<div class="pv3-score-ring" style="border-color:'+bandColor+'"><span class="pv3-score-num">'+s.final+'</span><span class="pv3-score-label">'+report.band.toUpperCase()+'</span></div>';
   html += '<div class="pv3-header-info"><div class="pv3-op-name">'+_escHtml(report.qualificador_name || report.operator_email)+'</div>';
-  html += '<div class="pv3-period">'+report.period_key+' · '+report.period_type+'</div></div>';
+  var periodLabels = { daily:'Diário', weekly:'Semanal', month:'Mensal' };
+  html += '<div class="pv3-period">'+(report.period_key||'')+' · '+(periodLabels[report.period_type]||report.period_type)+'</div></div>';
   html += '<div class="pv3-scores-mini">';
   ['volume','conversion','speed','quality','forecast','revenue'].forEach(function(k){
-    html += '<div class="pv3-sm"><div class="pv3-sm-v">'+s[k]+'</div><div class="pv3-sm-l">'+k.charAt(0).toUpperCase()+k.slice(1)+'</div></div>';
+    var prev = _perfViewState.prevReport ? (_perfViewState.prevReport.scores || {})[k] : null;
+    var d = prev != null ? s[k] - prev : 0;
+    var arw = d > 0 ? ' ↑' : d < 0 ? ' ↓' : '';
+    var arwCol = d > 0 ? 'var(--green)' : d < 0 ? 'var(--red)' : '';
+    html += '<div class="pv3-sm"><div class="pv3-sm-v">'+s[k]+'<span style="font-size:9px;color:'+arwCol+'">'+arw+'</span></div><div class="pv3-sm-l">'+k.charAt(0).toUpperCase()+k.slice(1)+'</div></div>';
   });
   html += '</div></div>';
+
+  // ── Narratives Section ──
+  html += '<div class="pv3-narratives">';
+  html += '<div class="pv3-sec-title">Insights do Período</div>';
+  narratives.forEach(function(n){
+    if(n.type === 'headline') return;
+    var typeLabels = { score:'Score', volume:'Volume', conversion:'Conversão', speed:'Velocidade', quality:'Qualidade', forecast:'Forecast', revenue:'Receita' };
+    html += '<div class="pv3-narr-card">';
+    html += '<div class="pv3-narr-type" style="color:'+(n.color||'var(--text2)')+'">'+( typeLabels[n.type] || n.type)+'</div>';
+    html += '<div class="pv3-narr-text">'+n.text+'</div>';
+    html += '</div>';
+  });
+  html += '</div>';
 
   // ── Faixa 1: Meta ──
   var m = report.meta;
@@ -4264,7 +4472,14 @@ function renderPerformanceReportV3(report, containerId){
   [['mql_sal','MQL→SAL'],['sal_connected','SAL→Con.'],['connected_scheduled','Con.→Ag.'],
    ['scheduled_show','Ag.→Show'],['show_opp','Show→OPP'],['opp_won','OPP→Won']].forEach(function(pair){
     var val = Math.round((c[pair[0]] || 0) * 100);
-    html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+val+'%</div><div class="pv3-kpi-l">'+pair[1]+'</div></div>';
+    var prevC = _perfViewState.prevReport ? (_perfViewState.prevReport.conversion || {}) : null;
+    var prevVal = prevC ? Math.round((prevC[pair[0]] || 0) * 100) : null;
+    var dStr = '';
+    if(prevVal != null){
+      var dd = val - prevVal;
+      if(dd !== 0) dStr = '<span style="font-size:9px;color:'+(dd>0?'var(--green)':'var(--red)')+'">'+(dd>0?'↑':'↓')+Math.abs(dd)+'pp</span>';
+    }
+    html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+val+'% '+dStr+'</div><div class="pv3-kpi-l">'+pair[1]+'</div></div>';
   });
   html += '</div></div>';
 
@@ -4272,9 +4487,17 @@ function renderPerformanceReportV3(report, containerId){
   var v = report.volume;
   html += '<div class="pv3-section"><div class="pv3-sec-title">Volume Operacional</div>';
   html += '<div class="pv3-kpi-row">';
+  var prevVol = _perfViewState.prevReport ? (_perfViewState.prevReport.volume || {}) : null;
   [['deals_worked','Deals'],['fups_sent','FUPs'],['dms_sent','DMs'],['analyses_generated','Análises'],
    ['notes_created','Notes'],['meetings_booked','Reuniões'],['handoffs','Handoffs']].forEach(function(pair){
-    html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+v[pair[0]]+'</div><div class="pv3-kpi-l">'+pair[1]+'</div></div>';
+    var cur = v[pair[0]] || 0;
+    var dStr = '';
+    if(prevVol){
+      var prev = prevVol[pair[0]] || 0;
+      var dd = cur - prev;
+      if(dd !== 0) dStr = '<span style="font-size:9px;color:'+(dd>0?'var(--green)':'var(--red)')+'">'+(dd>0?'↑+':'↓')+Math.abs(dd)+'</span>';
+    }
+    html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+cur+' '+dStr+'</div><div class="pv3-kpi-l">'+pair[1]+'</div></div>';
   });
   html += '</div></div>';
 
@@ -4312,7 +4535,6 @@ function renderPerformanceReportV3(report, containerId){
 
   // ── Faixa 8: Receita ──
   var r = report.revenue;
-  var fmtBRL = window.fmtBRL || function(v){return 'R$ '+(v||0).toLocaleString('pt-BR');};
   html += '<div class="pv3-section"><div class="pv3-sec-title">Impacto em Receita</div>';
   html += '<div class="pv3-kpi-row">';
   html += '<div class="pv3-kpi"><div class="pv3-kpi-v" style="color:var(--green)">'+fmtBRL(r.revenue_influenced)+'</div><div class="pv3-kpi-l">Receita Influenciada</div></div>';
@@ -4346,6 +4568,47 @@ function renderPerformanceReportV3(report, containerId){
   el.innerHTML = html;
 }
 window.renderPerformanceReportV3 = renderPerformanceReportV3;
+
+// ── Period Switcher ──
+async function switchPerfPeriod(periodType){
+  var el = document.getElementById('perf-report-v3');
+  if(el) el.innerHTML = '<div style="padding:20px;color:var(--text2)">Calculando '+({daily:'dia',weekly:'semana',month:'mês'}[periodType]||periodType)+'...</div>';
+
+  var now = new Date();
+  var periodKey;
+  if(periodType === 'daily'){
+    periodKey = now.toISOString().slice(0,10);
+  } else if(periodType === 'weekly'){
+    var oneJan = new Date(now.getFullYear(), 0, 1);
+    var wn = Math.ceil(((now - oneJan) / 86400000 + oneJan.getDay() + 1) / 7);
+    periodKey = now.getFullYear() + '-W' + String(wn).padStart(2,'0');
+  } else {
+    periodKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  }
+
+  _perfViewState.periodType = periodType;
+  _perfViewState.periodKey = periodKey;
+
+  // Calculate current period
+  var report = null;
+  if(window.calcPerformanceReportV3){
+    report = await window.calcPerformanceReportV3(periodType, periodKey);
+  }
+  _perfViewState.report = report;
+
+  // Calculate previous period for comparison
+  var prevKey = _getPrevPeriodKey(periodType, periodKey);
+  var prevReport = null;
+  try {
+    if(window.calcPerformanceReportV3){
+      prevReport = await window.calcPerformanceReportV3(periodType, prevKey);
+    }
+  } catch(e){ console.warn('[perf-v4] prev period error:', e.message); }
+  _perfViewState.prevReport = prevReport;
+
+  if(report) renderPerformanceReportV3(report);
+}
+window.switchPerfPeriod = switchPerfPeriod;
 
 // ==================================================================
 // LAYER 16 — FRAMEWORK EXTRACTOR ENGINE (V7.1)
