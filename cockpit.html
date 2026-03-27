@@ -5358,10 +5358,13 @@ function _renderOperator(ct,AE){
 
 // ── LINE ──
 function _renderLine(ct,AE){
-  var data=(AE.calcByLine()||{data:{}}).data||{};
+  var rawLine;
+  try{ rawLine=AE.calcByLine(); }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro ao calcular linhas: '+e.message+'</div>'; return; }
+  var data=(rawLine||{data:{}}).data||{};
   var speed=((function(){try{return AE.calcSpeed();}catch(e){return{data:{}};}})()).data||{};
   // funil_marketing é geração de demanda (time de mkt) — fora do escopo SDR
   var keys=Object.keys(data).filter(function(k){return k!=='funil_marketing';}).sort(function(a,b){return data[b].active-data[a].active;});
+  if(!keys.length){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Nenhuma linha de receita identificada. Verifique se os deals possuem grupo_de_receita ou linha_de_receita_vigente.</div>'; return; }
   var total=keys.reduce(function(s,k){return s+data[k].active;},0);
   var maxActive=Math.max.apply(null,keys.map(function(k){return data[k].active;}).concat([1]));
 
@@ -5396,7 +5399,9 @@ function _renderLine(ct,AE){
 
 // ── STAGE ──
 function _renderStage(ct,AE){
-  var data=AE.calcByStage().data;
+  var rawStage;
+  try{ rawStage=AE.calcByStage(); }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro ao calcular etapas: '+e.message+'</div>'; return; }
+  var data=(rawStage||{data:{}}).data||{};
   var keys=Object.keys(data).sort(function(a,b){return (data[a].order||99)-(data[b].order||99);});
   var total=keys.reduce(function(s,k){return s+data[k].count;},0);
   var maxCount=Math.max.apply(null,keys.map(function(k){return data[k].count;}).concat([1]));
@@ -5428,7 +5433,9 @@ function _renderStage(ct,AE){
 
 // ── CHANNEL ──
 function _renderChannel(ct,AE){
-  var data=AE.calcByChannel().data;
+  var rawChannel;
+  try{ rawChannel=AE.calcByChannel(); }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro ao calcular canais: '+e.message+'</div>'; return; }
+  var data=(rawChannel||{data:{}}).data||{};
   var keys=Object.keys(data).sort(function(a,b){return data[b].active-data[a].active;});
   var total=keys.reduce(function(s,k){return s+data[k].active;},0);
   var maxActive=Math.max.apply(null,keys.map(function(k){return data[k].active;}).concat([1]));
@@ -5449,7 +5456,9 @@ function _renderChannel(ct,AE){
 
 // ── TASK ──
 function _renderTask(ct,AE){
-  var data=AE.calcByTask().data;
+  var rawTask;
+  try{ rawTask=AE.calcByTask(); }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro ao calcular tasks: '+e.message+'</div>'; return; }
+  var data=(rawTask||{data:{}}).data||{};
   var keys=Object.keys(data).sort(function(a,b){return data[b].count-data[a].count;});
   var totalTasks=keys.reduce(function(s,k){return s+data[k].count;},0);
   var maxCount=Math.max.apply(null,keys.map(function(k){return data[k].count;}).concat([1]));
@@ -5470,7 +5479,9 @@ function _renderTask(ct,AE){
 
 // ── VALUE ──
 function _renderValue(ct,AE){
-  var data=AE.calcValue();
+  var data;
+  try{ data=AE.calcValue(); }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro ao calcular valores: '+e.message+'</div>'; return; }
+  if(!data||data.totalActive===0){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Nenhum deal ativo com valor calculado.</div>'; return; }
   var html='';
 
   // Total
@@ -5487,7 +5498,7 @@ function _renderValue(ct,AE){
   html+=renderSection(2,'Valor por Linha',
     lineKeys.map(function(k){
       var v=data.byLine[k];
-      return '<div class="intel-bar-row"><span class="intel-bar-label" title="'+k+'">'+(k.length>22?k.slice(0,22)+'...':k)+'</span><div class="intel-bar-bg"><div class="intel-bar-fill" style="width:'+Math.max(5,v.total/maxLineVal*100)+'%;background:linear-gradient(90deg,rgba(34,197,94,0.4),rgba(34,197,94,0.7))"><span class="intel-bar-v">'+fmtBRL(v.total)+'</span></div></div><span class="intel-bar-pct">'+v.count+' deals</span></div>';
+      return '<div class="intel-bar-row"><span class="intel-bar-label" title="'+fmtRevLine(k)+'">'+fmtRevLine(k)+'</span><div class="intel-bar-bg"><div class="intel-bar-fill" style="width:'+Math.max(5,v.total/maxLineVal*100)+'%;background:linear-gradient(90deg,rgba(34,197,94,0.4),rgba(34,197,94,0.7))"><span class="intel-bar-v">'+fmtBRL(v.total)+'</span></div></div><span class="intel-bar-pct">'+v.count+' deals</span></div>';
     }).join(''));
 
   // By Stage
@@ -5512,9 +5523,11 @@ function _renderValue(ct,AE){
 
 // ── Forecast Intelligence Tab ─────────────────────────────────────────
 function _renderForecast(ct,allDeals,deals){
+  try{
   var html='';
   // KPIs gerais
   var scored=deals.filter(function(d){return d._forecastV6&&d._forecastV6.score!=null;});
+  if(!scored.length){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Nenhum deal com forecast calculado. Os scores sao gerados apos o enrich do pipeline.</div>'; return; }
   var avgScore=scored.length?Math.round(scored.reduce(function(s,d){return s+d._forecastV6.score;},0)/scored.length*100):0;
   var avgConf=scored.length?Math.round(scored.reduce(function(s,d){return s+(d._forecastV6.confidence||0);},0)/scored.length*100):0;
   var highProb=scored.filter(function(d){return d._forecastV6.score>=0.7;}).length;
@@ -5557,10 +5570,12 @@ function _renderForecast(ct,allDeals,deals){
       return _iBar(f+' ('+byFase[f].cnt+'d)',avg,100,100,'background:'+col);
     }).join(''));
   ct.innerHTML=html;
+  }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro no forecast: '+e.message+'</div>'; }
 }
 
 // ── Framework Intelligence Tab ────────────────────────────────────────
 function _renderFramework(ct,allDeals,deals){
+  try{
   var html='';
   // Deals com framework extractions
   var withFw=deals.filter(function(d){return d._frameworkRuntime&&d._frameworkRuntime.qualitative_score!=null;});
@@ -5613,6 +5628,7 @@ function _renderFramework(ct,allDeals,deals){
       return '<tr><td>'+_escHtml(d.nome||'—')+'</td><td style="font-size:10px;color:var(--clay)">'+_escHtml(d._framework||'—')+'</td><td style="color:'+col+';font-weight:700">'+s+'%</td><td style="color:var(--text2)">'+Math.round(fw.coverage_pct||0)+'%</td><td style="color:var(--green)">'+fmtBRL(d.revenueRaw)+'</td></tr>';
     }).join('')+'</tbody></table>');
   ct.innerHTML=html;
+  }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro no framework: '+e.message+'</div>'; }
 }
 
 function renderSection(num,title,content){
