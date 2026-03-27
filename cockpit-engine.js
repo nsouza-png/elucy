@@ -2419,6 +2419,20 @@ function calcTimelineIntelligence(deal){
     nextActionTemporal='No ritmo. Próxima ação em ~'+Math.max(1,daysToSLA)+'d.';
   }
 
+  // ── RESPONSE PROPENSITY (V10) ──
+  // Estima chance do lead responder baseado em sinais disponíveis
+  var sig = deal._signalRuntime || {};
+  var recencyNorm = slaStatus === 'on_track' ? 1.0 : slaStatus === 'at_risk' ? 0.65 : slaStatus === 'overdue' ? 0.40 : 0.20;
+  var channelSuccess = deal._dmRuntime ? Math.min(1, (deal._dmRuntime.reply_count || 0) / Math.max(1, deal._dmRuntime.touchpoint_count || 1)) : 0.50;
+  var recentReplyRate = deal._dmRuntime ? (deal._dmRuntime.last_reply_days != null && deal._dmRuntime.last_reply_days <= 3 ? 0.80 : 0.30) : 0.40;
+  var signalHealth = sig.signal_total != null ? Math.max(0, Math.min(1, (sig.signal_total + 5) / 10)) : 0.50;
+  var response_propensity = +(
+    recentReplyRate * 0.35 +
+    channelSuccess * 0.25 +
+    recencyNorm * 0.20 +
+    signalHealth * 0.20
+  ).toFixed(4);
+
   return {
     // Idade
     ageDays:ageDays, ageWeeks:ageWeeks, ageBucket:ageBucket,
@@ -2443,6 +2457,8 @@ function calcTimelineIntelligence(deal){
     bestContactHour:bestContactHour, createdDayOfWeek:createdDayOfWeek,
     // Score
     timingScore:timingScore,
+    // V10: Response Propensity
+    responsePropensity:response_propensity,
     // Ação
     nextActionTemporal:nextActionTemporal
   };
@@ -3362,6 +3378,16 @@ var _origEnrichDealContext = enrichDealContext;
 function enrichDealContextV6(deal){
   _origEnrichDealContext(deal);
   if(!deal._forecastV6) deal._forecastV6 = calcForecastV6(deal);
+  // V10: context_confidence — mede completude dos dados derivados do deal
+  var cc = (deal._revLine ? 0.10 : 0)
+    + ((deal.etapa || deal._etapa) ? 0.10 : 0)
+    + ((deal.fase || deal._fase) ? 0.10 : 0)
+    + (deal._persona ? 0.10 : 0)
+    + (deal._framework ? 0.10 : 0)
+    + ((deal._oppValue && deal._oppValue > 0) ? 0.10 : 0)
+    + ((deal._nextAction && deal._nextAction.type !== 'follow_up') ? 0.15 : 0)
+    + ((deal._dataQuality ? deal._dataQuality.data_trust_score : 0) * 0.25);
+  deal._contextConfidence = Math.min(1, Math.max(0, +cc.toFixed(4)));
   return deal;
 }
 window.enrichDealContext = enrichDealContextV6;
@@ -3728,6 +3754,17 @@ async function calcOperatorPerformance(periodType, periodKey){
   ).toFixed(4);
 
   // ==================================================
+  // BLOCO 7: PIPELINE HYGIENE (V10)
+  // ==================================================
+  var pipeline_hygiene_score = +(
+    (1 - inflated_pipeline_rate) * 0.30
+    + (1 - no_context_rate) * 0.25
+    + (dqi) * 0.20
+    + (_pct(runtimeDeals.filter(function(r){ return r.next_best_action && r.next_best_action !== 'follow_up'; }).length, activeDeals)) * 0.15
+    + (_pct(runtimeDeals.filter(function(r){ return r.next_best_action; }).length, activeDeals)) * 0.10
+  ).toFixed(4);
+
+  // ==================================================
   // SCORE FINAL (7 componentes ponderados)
   // ==================================================
   var final_score = +(
@@ -3822,12 +3859,14 @@ async function calcOperatorPerformance(periodType, periodKey){
     forecast_value_total: forecast_value_total,
     pipeline_value: forecast_value_total,
     ganho_value: revenue_influenced,
+    // Bloco 7 — Pipeline Hygiene (V10)
+    pipeline_hygiene_score: +pipeline_hygiene_score,
     // Final
     final_score: +final_score,
     overall_score: final_100,
     performance_band: performance_band,
     alerts: alerts,
-    formula_version: 'v7.0',
+    formula_version: 'v10.0',
     source: 'cockpit_engine'
   };
 
@@ -3918,10 +3957,11 @@ async function syncOperatorEfficiency(periodType, periodKey){
       funnel: { mql:perf.mql_count, sal:perf.sal_count, opp:perf.opp_count, won:perf.ganho_count, lost:perf.perdido_count },
       speed: { aging_avg:perf.aging_avg, touch_delay:perf.touch_delay_avg, sla_risk:perf.sla_risk_rate, inactive:perf.inactive_rate }
     }),
+    pipeline_hygiene_score: perf.pipeline_hygiene_score,
     scores_json: JSON.stringify({
       volume:perf.volume_score, conversion:perf.conversion_score, speed:perf.speed_score,
       discipline:perf.discipline_score, dqi:perf.dqi, forecast:perf.forecast_quality_score,
-      revenue:perf.revenue_score, final:perf.final_score
+      revenue:perf.revenue_score, pipeline_hygiene:perf.pipeline_hygiene_score, final:perf.final_score
     }),
     updated_at: new Date().toISOString()
   };
@@ -4427,7 +4467,6 @@ async function renderPerformanceReportV3(report, containerId){
   var el = document.getElementById(containerId || 'perf-report-v3');
   if(!el) return;
 
-  // If called with report directly (legacy), render it
   if(report){
     _perfViewState.report = report;
     _perfViewState.periodType = report.period_type || 'month';
@@ -4437,184 +4476,218 @@ async function renderPerformanceReportV3(report, containerId){
 
   report = _perfViewState.report;
   var s = report.scores || {};
-  var bandColors = { elite:'var(--gold)', forte:'var(--green)', estavel:'var(--accent)', atencao:'var(--yellow)', critico:'var(--red)' };
+  var bandColors = { elite:'var(--green)', forte:'var(--green)', estavel:'var(--accent)', atencao:'var(--yellow)', critico:'var(--red)' };
   var bandColor = bandColors[report.band] || 'var(--text)';
   var fmtBRL = window.fmtBRL || function(v){return 'R$ '+(v||0).toLocaleString('pt-BR');};
-
-  // Generate narratives
   var narratives = generatePerformanceNarratives(report, _perfViewState.prevReport);
+  var prevS = _perfViewState.prevReport ? (_perfViewState.prevReport.scores || {}) : {};
 
+  function _delta(cur, prev){ if(prev == null) return ''; var d = cur - prev; if(d === 0) return ''; return '<span style="font-size:10px;margin-left:4px;color:'+(d>0?'var(--green)':'var(--red)')+'">'+(d>0?'↑':'↓')+Math.abs(d)+'</span>'; }
+  function _bar(pct, color){ return '<div class="bar" style="margin-top:4px"><div class="bf" style="width:'+Math.min(100,Math.max(0,pct))+'%;background:'+(color||'var(--accent)')+'"></div></div>'; }
+  function _barColor(pct){ return pct >= 70 ? 'var(--green)' : pct >= 50 ? 'var(--yellow)' : 'var(--red)'; }
   var html = '';
 
   // ── Period Selector ──
-  html += '<div class="pv3-period-bar">';
+  html += '<div style="display:flex;gap:6px;margin-bottom:14px">';
   [['daily','Hoje'],['weekly','Semana'],['month','Mês']].forEach(function(p){
-    var active = _perfViewState.periodType === p[0] ? ' pv3-ptab-on' : '';
-    html += '<button class="pv3-ptab'+active+'" onclick="switchPerfPeriod(\''+p[0]+'\')">'+p[1]+'</button>';
+    var active = _perfViewState.periodType === p[0];
+    html += '<button class="tag" style="cursor:pointer;'+(active?'background:var(--accent);color:#fff':'')+ '" onclick="switchPerfPeriod(\''+p[0]+'\')">'+p[1]+'</button>';
   });
   html += '</div>';
 
-  // ── Headline Narrative ──
-  var hl = narratives.length > 0 ? narratives[0] : null;
-  if(hl && hl.type === 'headline'){
-    html += '<div class="pv3-headline">';
-    html += '<span class="pv3-hl-icon">'+(hl.icon||'')+'</span>';
-    html += '<span class="pv3-hl-text">'+hl.text+'</span>';
+  // ── BLOCO 1: Hero Card ──
+  var bandLabel = { elite:'ELITE', forte:'FORTE', estavel:'ESTÁVEL', atencao:'ATENÇÃO', critico:'CRÍTICO' };
+  html += '<section class="card perf-hero">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start">';
+  html += '<div>';
+  html += '<div class="t-label">Performance V3</div>';
+  html += '<div class="t-h1">'+_escHtml(report.qualificador_name || report.operator_email)+'</div>';
+  var periodLabels = { daily:'Diário', weekly:'Semanal', month:'Mensal' };
+  html += '<div class="t-body-sm" style="color:var(--text2)">'+(report.period_key||'')+' · '+(periodLabels[report.period_type]||report.period_type)+'</div>';
+  html += '</div>';
+  html += '<div class="tag" style="background:'+bandColor+';color:#fff;font-size:var(--fs-caption);font-weight:700">'+(bandLabel[report.band]||report.band)+'</div>';
+  html += '</div>';
+
+  html += '<div class="info-grid" style="margin-top:14px;grid-template-columns:1.2fr .8fr .8fr">';
+  html += '<div class="ic"><div class="ic-l">Score Final</div><div class="ic-v" style="font-size:var(--fs-display);font-weight:800">'+s.final+_delta(s.final, prevS.final)+'</div></div>';
+  html += '<div class="ic"><div class="ic-l">Forecast Quality</div><div class="ic-v">'+(s.forecast||0)+'</div>'+_bar(s.forecast||0)+'</div>';
+  html += '<div class="ic"><div class="ic-l">Pipeline Hygiene</div><div class="ic-v">'+(s.quality||0)+'</div>'+_bar(s.quality||0)+'</div>';
+  html += '</div>';
+  html += '</section>';
+
+  // ── BLOCO 2: Meta e Progresso ──
+  var m = report.meta;
+  var salPct = m.target_sal > 0 ? Math.round(m.actual_sal / m.target_sal * 100) : 0;
+  var oppPct = m.target_opp > 0 ? Math.round(m.actual_opp / m.target_opp * 100) : 0;
+  var revPct = m.target_revenue > 0 ? Math.round((m.actual_revenue||0) / m.target_revenue * 100) : 0;
+  var achPct = Math.round((m.achievement_rate||0) * 100);
+
+  html += '<section class="card" style="margin-top:14px">';
+  html += '<div class="sec-t">Meta e Progresso</div>';
+  html += '<div class="info-grid perf-meta-grid">';
+  html += '<div class="ic"><div class="ic-l">SAL</div><div class="ic-v">'+(m.actual_sal||0)+' / '+(m.target_sal||0)+'</div>'+_bar(salPct, _barColor(salPct))+'</div>';
+  html += '<div class="ic"><div class="ic-l">OPP</div><div class="ic-v">'+(m.actual_opp||0)+' / '+(m.target_opp||0)+'</div>'+_bar(oppPct, _barColor(oppPct))+'</div>';
+  html += '<div class="ic"><div class="ic-l">Receita</div><div class="ic-v">'+fmtBRL(m.actual_revenue||0)+' / '+fmtBRL(m.target_revenue||0)+'</div>'+_bar(revPct, _barColor(revPct))+'</div>';
+  html += '<div class="ic"><div class="ic-l">Pace</div><div class="ic-v">'+achPct+'%</div>';
+  html += achPct < 70 ? '<div class="tag" style="margin-top:4px;background:var(--red);color:#fff">ATENÇÃO</div>' : achPct < 90 ? '<div class="tag" style="margin-top:4px;background:var(--yellow);color:#000">ALERTA</div>' : '<div class="tag" style="margin-top:4px;background:var(--green);color:#fff">OK</div>';
+  html += '</div>';
+  html += '</div></section>';
+
+  // ── BLOCO 3: Dimensões do Score (grid 2x4) ──
+  html += '<section class="card" style="margin-top:14px">';
+  html += '<div class="sec-t">Dimensões do Score</div>';
+  html += '<div class="info-grid perf-dimension-grid">';
+  var dims = [
+    {k:'volume',l:'Volume'},{k:'conversion',l:'Conversão'},{k:'speed',l:'Velocidade'},
+    {k:'quality',l:'Qualidade'},{k:'forecast',l:'Forecast'},{k:'revenue',l:'Receita'}
+  ];
+  dims.forEach(function(dim){
+    var val = s[dim.k] || 0;
+    var prev = prevS[dim.k];
+    html += '<div class="ic"><div class="ic-l">'+dim.l+'</div><div class="ic-v">'+val+_delta(val, prev)+'</div>'+_bar(val, _barColor(val))+'</div>';
+  });
+  html += '</div></section>';
+
+  // ── BLOCO 4: Narrativas (3 cards lado a lado) ──
+  var narrTypes = {
+    headline: null,
+    bottleneck: { title:'Maior Gargalo', icon:'⚠' },
+    leverage: { title:'Maior Alavanca', icon:'⚡' },
+    next_action: { title:'Próxima Ação', icon:'→' }
+  };
+  var narrCards = [];
+  narratives.forEach(function(n){
+    if(n.type === 'headline') return;
+    if(narrCards.length < 3) narrCards.push(n);
+  });
+  if(narrCards.length){
+    html += '<div class="info-grid" style="margin-top:14px;grid-template-columns:repeat('+Math.min(3, narrCards.length)+',1fr);gap:12px">';
+    var narrTitles = ['Maior Gargalo','Maior Alavanca','Próxima Ação'];
+    narrCards.forEach(function(n, i){
+      var typeLabels = { score:'Score', volume:'Volume', conversion:'Conversão', speed:'Velocidade', quality:'Qualidade', forecast:'Forecast', revenue:'Receita' };
+      html += '<article class="card">';
+      html += '<div class="sec-t">'+(narrTitles[i]||typeLabels[n.type]||n.type)+'</div>';
+      html += '<div class="t-h3" style="margin-top:4px">'+(typeLabels[n.type] || n.type)+'</div>';
+      html += '<div class="t-body-sm" style="color:var(--text2);margin-top:4px">'+n.text+'</div>';
+      html += '</article>';
+    });
     html += '</div>';
   }
 
-  // ── Header: Score + Band ──
-  html += '<div class="pv3-header">';
-  html += '<div class="pv3-score-ring" style="border-color:'+bandColor+'"><span class="pv3-score-num">'+s.final+'</span><span class="pv3-score-label">'+report.band.toUpperCase()+'</span></div>';
-  html += '<div class="pv3-header-info"><div class="pv3-op-name">'+_escHtml(report.qualificador_name || report.operator_email)+'</div>';
-  var periodLabels = { daily:'Diário', weekly:'Semanal', month:'Mensal' };
-  html += '<div class="pv3-period">'+(report.period_key||'')+' · '+(periodLabels[report.period_type]||report.period_type)+'</div></div>';
-  html += '<div class="pv3-scores-mini">';
-  ['volume','conversion','speed','quality','forecast','revenue'].forEach(function(k){
-    var prev = _perfViewState.prevReport ? (_perfViewState.prevReport.scores || {})[k] : null;
-    var d = prev != null ? s[k] - prev : 0;
-    var arw = d > 0 ? ' ↑' : d < 0 ? ' ↓' : '';
-    var arwCol = d > 0 ? 'var(--green)' : d < 0 ? 'var(--red)' : '';
-    html += '<div class="pv3-sm"><div class="pv3-sm-v">'+s[k]+'<span style="font-size:9px;color:'+arwCol+'">'+arw+'</span></div><div class="pv3-sm-l">'+k.charAt(0).toUpperCase()+k.slice(1)+'</div></div>';
-  });
-  html += '</div></div>';
-
-  // ── Narratives Section ──
-  html += '<div class="pv3-narratives">';
-  html += '<div class="pv3-sec-title">Insights do Período</div>';
-  narratives.forEach(function(n){
-    if(n.type === 'headline') return;
-    var typeLabels = { score:'Score', volume:'Volume', conversion:'Conversão', speed:'Velocidade', quality:'Qualidade', forecast:'Forecast', revenue:'Receita' };
-    html += '<div class="pv3-narr-card">';
-    html += '<div class="pv3-narr-type" style="color:'+(n.color||'var(--text2)')+'">'+( typeLabels[n.type] || n.type)+'</div>';
-    html += '<div class="pv3-narr-text">'+n.text+'</div>';
-    html += '</div>';
-  });
-  html += '</div>';
-
-  // ── Faixa 1: Meta ──
-  var m = report.meta;
-  html += '<div class="pv3-section"><div class="pv3-sec-title">Meta e Progresso</div>';
-  html += '<div class="pv3-kpi-row">';
-  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+m.actual_sal+'/'+m.target_sal+'</div><div class="pv3-kpi-l">SAL</div></div>';
-  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+m.actual_opp+'/'+m.target_opp+'</div><div class="pv3-kpi-l">OPP</div></div>';
-  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+(Math.round(m.achievement_rate * 100))+'%</div><div class="pv3-kpi-l">Atingimento</div></div>';
-  html += '</div></div>';
-
-  // ── Faixa 2: Funil ──
+  // ── BLOCO 5: Funil Visual ──
   var f = report.funnel;
-  html += '<div class="pv3-section"><div class="pv3-sec-title">Funil</div>';
-  html += '<div class="pv3-funnel">';
+  html += '<section class="card" style="margin-top:14px">';
+  html += '<div class="sec-t">Funil</div>';
+  var maxF = Math.max(f.mql, 1);
   var funnelStages = [
     {k:'mql',l:'MQL'},{k:'sal',l:'SAL'},{k:'connected',l:'Conect.'},{k:'scheduled',l:'Agend.'},
     {k:'show',l:'Show'},{k:'opp',l:'OPP'},{k:'won',l:'Won'}
   ];
-  var maxF = Math.max(f.mql, 1);
+  html += '<div class="tg" style="margin-top:8px">';
   funnelStages.forEach(function(st){
-    var pct = Math.round((f[st.k] / maxF) * 100);
-    html += '<div class="pv3-funnel-bar"><div class="pv3-fb-fill" style="width:'+pct+'%"></div>';
-    html += '<div class="pv3-fb-label">'+st.l+' <b>'+f[st.k]+'</b></div></div>';
+    var val = f[st.k] || 0;
+    var pct = Math.round(val / maxF * 100);
+    html += '<div class="tg-row" style="align-items:center;gap:8px">';
+    html += '<div class="t-label" style="min-width:48px">'+st.l+'</div>';
+    html += '<div style="flex:1">'+_bar(pct, 'var(--accent)')+'</div>';
+    html += '<div class="tgv" style="min-width:32px;text-align:right">'+val+'</div>';
+    html += '</div>';
   });
-  html += '</div></div>';
+  html += '</div></section>';
 
-  // ── Faixa 3: Conversão ──
+  // ── BLOCO 6: Conversão por Etapa ──
   var c = report.conversion;
-  html += '<div class="pv3-section"><div class="pv3-sec-title">Conversão por Etapa</div>';
-  html += '<div class="pv3-kpi-row">';
+  html += '<section class="card" style="margin-top:14px">';
+  html += '<div class="sec-t">Conversão por Etapa</div>';
+  html += '<div class="info-grid perf-meta-grid" style="margin-top:8px">';
+  var prevC = _perfViewState.prevReport ? (_perfViewState.prevReport.conversion || {}) : null;
   [['mql_sal','MQL→SAL'],['sal_connected','SAL→Con.'],['connected_scheduled','Con.→Ag.'],
    ['scheduled_show','Ag.→Show'],['show_opp','Show→OPP'],['opp_won','OPP→Won']].forEach(function(pair){
     var val = Math.round((c[pair[0]] || 0) * 100);
-    var prevC = _perfViewState.prevReport ? (_perfViewState.prevReport.conversion || {}) : null;
     var prevVal = prevC ? Math.round((prevC[pair[0]] || 0) * 100) : null;
-    var dStr = '';
-    if(prevVal != null){
-      var dd = val - prevVal;
-      if(dd !== 0) dStr = '<span style="font-size:9px;color:'+(dd>0?'var(--green)':'var(--red)')+'">'+(dd>0?'↑':'↓')+Math.abs(dd)+'pp</span>';
-    }
-    html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+val+'% '+dStr+'</div><div class="pv3-kpi-l">'+pair[1]+'</div></div>';
+    var dStr = _delta(val, prevVal);
+    html += '<div class="ic"><div class="ic-l">'+pair[1]+'</div><div class="ic-v">'+val+'%'+dStr+'</div>'+_bar(val, _barColor(val))+'</div>';
   });
-  html += '</div></div>';
+  html += '</div></section>';
 
-  // ── Faixa 4: Volume ──
-  var v = report.volume;
-  html += '<div class="pv3-section"><div class="pv3-sec-title">Volume Operacional</div>';
-  html += '<div class="pv3-kpi-row">';
-  var prevVol = _perfViewState.prevReport ? (_perfViewState.prevReport.volume || {}) : null;
-  [['deals_worked','Deals'],['fups_sent','FUPs'],['dms_sent','DMs'],['analyses_generated','Análises'],
-   ['notes_created','Notes'],['meetings_booked','Reuniões'],['handoffs','Handoffs']].forEach(function(pair){
-    var cur = v[pair[0]] || 0;
-    var dStr = '';
-    if(prevVol){
-      var prev = prevVol[pair[0]] || 0;
-      var dd = cur - prev;
-      if(dd !== 0) dStr = '<span style="font-size:9px;color:'+(dd>0?'var(--green)':'var(--red)')+'">'+(dd>0?'↑+':'↓')+Math.abs(dd)+'</span>';
-    }
-    html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+cur+' '+dStr+'</div><div class="pv3-kpi-l">'+pair[1]+'</div></div>';
-  });
-  html += '</div></div>';
-
-  // ── Faixa 5: Velocidade ──
-  var sp = report.speed;
-  html += '<div class="pv3-section"><div class="pv3-sec-title">Velocidade / Disciplina</div>';
-  html += '<div class="pv3-kpi-row">';
-  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+sp.avg_aging_days+'d</div><div class="pv3-kpi-l">Aging Médio</div></div>';
-  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+Math.round(sp.sla_risk_rate*100)+'%</div><div class="pv3-kpi-l">SLA Risk</div></div>';
-  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+sp.deals_sla_risk+'</div><div class="pv3-kpi-l">Deals SLA</div></div>';
-  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+Math.round(sp.inactive_rate*100)+'%</div><div class="pv3-kpi-l">Inativos</div></div>';
-  html += '</div></div>';
-
-  // ── Faixa 6: Qualidade ──
+  // ── BLOCO 7: Qualidade Operacional ──
   var q = report.quality;
-  html += '<div class="pv3-section"><div class="pv3-sec-title">Qualidade Operacional · DQI '+Math.round(q.dqi*100)+'</div>';
-  html += '<div class="pv3-qual-bars">';
+  html += '<section class="card" style="margin-top:14px">';
+  html += '<div class="sec-t">Qualidade Operacional · DQI '+Math.round(q.dqi*100)+'</div>';
+  html += '<div class="tg" style="margin-top:8px">';
   [['notes_quality_rate','Notes Quality'],['next_step_rate','Next Step'],['authority_rate','Authority'],
    ['pain_rate','Pain Clarity'],['meeting_logging_rate','Meetings'],['no_show_treatment_rate','No-Show']].forEach(function(pair){
     var pct = Math.round((q[pair[0]] || 0) * 100);
-    var col = pct >= 70 ? 'var(--green)' : pct >= 50 ? 'var(--yellow)' : 'var(--red)';
-    html += '<div class="pv3-qbar"><div class="pv3-qbar-label">'+pair[1]+'</div><div class="pv3-qbar-track"><div class="pv3-qbar-fill" style="width:'+pct+'%;background:'+col+'"></div></div><div class="pv3-qbar-val">'+pct+'%</div></div>';
+    var col = _barColor(pct);
+    html += '<div class="tg-row" style="align-items:center;gap:8px">';
+    html += '<div class="t-label" style="min-width:100px">'+pair[1]+'</div>';
+    html += '<div style="flex:1"><div class="bar"><div class="bf" style="width:'+pct+'%;background:'+col+'"></div></div></div>';
+    html += '<div class="tgv" style="min-width:36px;text-align:right">'+pct+'%</div>';
+    html += '</div>';
   });
-  html += '</div></div>';
+  html += '</div></section>';
 
-  // ── Faixa 7: Forecast ──
+  // ── BLOCO 8: Forecast Quality ──
   var fc = report.forecast;
-  html += '<div class="pv3-section"><div class="pv3-sec-title">Forecast Quality</div>';
-  html += '<div class="pv3-kpi-row">';
-  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+Math.round(fc.forecast_confidence_avg*100)+'%</div><div class="pv3-kpi-l">Confidence</div></div>';
-  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+Math.round(fc.inflated_pipeline_rate*100)+'%</div><div class="pv3-kpi-l">Inflado</div></div>';
-  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+Math.round(fc.low_context_rate*100)+'%</div><div class="pv3-kpi-l">Sem Contexto</div></div>';
-  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+fc.deals_with_forecast+'</div><div class="pv3-kpi-l">Com Forecast</div></div>';
-  html += '</div></div>';
+  html += '<section class="card" style="margin-top:14px">';
+  html += '<div class="sec-t">Forecast Quality</div>';
+  html += '<div class="info-grid perf-meta-grid" style="margin-top:8px">';
+  html += '<div class="ic"><div class="ic-l">Confidence</div><div class="ic-v">'+Math.round(fc.forecast_confidence_avg*100)+'%</div>'+_bar(Math.round(fc.forecast_confidence_avg*100))+'</div>';
+  html += '<div class="ic"><div class="ic-l">Inflado</div><div class="ic-v">'+Math.round(fc.inflated_pipeline_rate*100)+'%</div>'+_bar(Math.round((1-fc.inflated_pipeline_rate)*100), 'var(--green)')+'</div>';
+  html += '<div class="ic"><div class="ic-l">Sem Contexto</div><div class="ic-v">'+Math.round(fc.low_context_rate*100)+'%</div>'+_bar(Math.round((1-fc.low_context_rate)*100), 'var(--green)')+'</div>';
+  html += '<div class="ic"><div class="ic-l">Com Forecast</div><div class="ic-v">'+fc.deals_with_forecast+'</div></div>';
+  html += '</div></section>';
 
-  // ── Faixa 8: Receita ──
+  // ── BLOCO 9: Receita ──
   var r = report.revenue;
-  html += '<div class="pv3-section"><div class="pv3-sec-title">Impacto em Receita</div>';
-  html += '<div class="pv3-kpi-row">';
-  html += '<div class="pv3-kpi"><div class="pv3-kpi-v" style="color:var(--green)">'+fmtBRL(r.revenue_influenced)+'</div><div class="pv3-kpi-l">Receita Influenciada</div></div>';
-  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+fmtBRL(r.revenue_per_deal)+'</div><div class="pv3-kpi-l">Rev/Deal</div></div>';
-  html += '<div class="pv3-kpi"><div class="pv3-kpi-v">'+fmtBRL(r.revenue_per_handoff)+'</div><div class="pv3-kpi-l">Rev/Handoff</div></div>';
-  html += '</div></div>';
+  html += '<section class="card" style="margin-top:14px">';
+  html += '<div class="sec-t">Impacto em Receita</div>';
+  html += '<div class="info-grid" style="grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px">';
+  html += '<div class="ic"><div class="ic-l">Receita Influenciada</div><div class="ic-v" style="color:var(--green)">'+fmtBRL(r.revenue_influenced)+'</div></div>';
+  html += '<div class="ic"><div class="ic-l">Rev/Deal</div><div class="ic-v">'+fmtBRL(r.revenue_per_deal)+'</div></div>';
+  html += '<div class="ic"><div class="ic-l">Rev/Handoff</div><div class="ic-v">'+fmtBRL(r.revenue_per_handoff)+'</div></div>';
+  html += '</div></section>';
 
-  // ── Faixa 9: Linha de Receita breakdown ──
+  // ── BLOCO 10: Breakdown Operacional ──
+  var v = report.volume;
+  html += '<section class="card" style="margin-top:14px">';
+  html += '<div class="sec-t">Breakdown Operacional</div>';
+  html += '<div class="tg" style="margin-top:8px">';
+  [['deals_worked','Deals Trabalhados'],['fups_sent','FUPs'],['dms_sent','DMs'],
+   ['analyses_generated','Análises'],['notes_created','Notes'],
+   ['meetings_booked','Reuniões'],['handoffs','Handoffs']].forEach(function(pair){
+    html += '<div class="tg-row"><div class="t-label">'+pair[1]+'</div><div class="tgv">'+(v[pair[0]]||0)+'</div></div>';
+  });
+  html += '</div></section>';
+
+  // ── BLOCO 11: Linha de Receita ──
   var lp = report.linePerf;
   var rlKeys = Object.keys(lp).sort(function(a,b){ return (lp[b].leads||0)-(lp[a].leads||0); });
   if(rlKeys.length > 0){
-    html += '<div class="pv3-section"><div class="pv3-sec-title">Eficiência por Linha de Receita</div>';
-    html += '<div class="pv3-line-table"><table><thead><tr>';
-    html += '<th>Linha</th><th>Leads</th><th>SAL</th><th>Con.</th><th>Ag.</th><th>Show</th><th>OPP</th><th>Won</th><th>CR M→S</th><th>Aging</th>';
+    html += '<section class="card" style="margin-top:14px">';
+    html += '<div class="sec-t">Eficiência por Linha de Receita</div>';
+    html += '<div style="overflow-x:auto;margin-top:8px">';
+    html += '<table class="tg" style="width:100%;border-collapse:collapse;font-size:var(--fs-caption)">';
+    html += '<thead><tr style="border-bottom:1px solid var(--border)">';
+    ['Linha','Leads','SAL','Con.','Ag.','Show','OPP','Won','CR','Aging'].forEach(function(th){
+      html += '<th style="text-align:left;padding:6px 8px;color:var(--text2);font-weight:600">'+th+'</th>';
+    });
     html += '</tr></thead><tbody>';
     rlKeys.forEach(function(rl){
       var l = lp[rl];
       var cfg = REVENUE_LINES[rl] || { label: rl };
       var avgA = l.aging.length > 0 ? Math.round(l.aging.reduce(function(a,b){return a+b;},0) / l.aging.length * 10) / 10 : 0;
-      html += '<tr>';
-      html += '<td><b>'+_escHtml(cfg.label)+'</b></td>';
-      html += '<td>'+l.leads+'</td><td>'+l.sal+'</td><td>'+l.connected+'</td><td>'+l.scheduled+'</td>';
-      html += '<td>'+l.show+'</td><td>'+l.opp+'</td><td>'+l.won+'</td>';
-      html += '<td>'+(l.leads>0?Math.round(l.sal/l.leads*100):0)+'%</td>';
-      html += '<td>'+avgA+'d</td>';
+      var cr = l.leads > 0 ? Math.round(l.sal / l.leads * 100) : 0;
+      html += '<tr style="border-bottom:1px solid var(--border)">';
+      html += '<td style="padding:6px 8px;font-weight:600">'+_escHtml(cfg.label)+'</td>';
+      [l.leads,l.sal,l.connected,l.scheduled,l.show,l.opp,l.won].forEach(function(val){
+        html += '<td style="padding:6px 8px">'+val+'</td>';
+      });
+      html += '<td style="padding:6px 8px;color:'+_barColor(cr)+'">'+cr+'%</td>';
+      html += '<td style="padding:6px 8px">'+avgA+'d</td>';
       html += '</tr>';
     });
-    html += '</tbody></table></div></div>';
+    html += '</tbody></table></div></section>';
   }
 
   el.innerHTML = html;
@@ -4828,12 +4901,33 @@ async function consolidateFrameworkRuntime(dealId){
     updated_at: new Date().toISOString()
   };
 
+  // V10: Framework Consistency Score
+  // Mede concordância entre fontes e recência dos dados
+  var sourceTypes = {};
+  extractions.forEach(function(ex){ sourceTypes[ex.source_type||'unknown'] = true; });
+  var distinctSources = Object.keys(sourceTypes).length;
+  // Cross-source agreement: se >1 fonte concorda nas médias (desvio baixo)
+  var cross_source_agreement = distinctSources >= 2 ? Math.min(1, 0.50 + (distinctSources - 1) * 0.20) : 0.30;
+  // Recency alignment: quão recente é a última extração
+  var lastExtMs = new Date(extractions[0].created_at || '').getTime();
+  var daysSinceExt = isNaN(lastExtMs) ? 30 : Math.floor((Date.now() - lastExtMs) / 86400000);
+  var recency_alignment = daysSinceExt <= 1 ? 1.0 : daysSinceExt <= 3 ? 0.85 : daysSinceExt <= 7 ? 0.65 : daysSinceExt <= 14 ? 0.40 : 0.20;
+  // Evidence density
+  var evidence_density = Math.min(1, extractions.length / 5);
+  var framework_consistency_score = +(
+    cross_source_agreement * 0.50 +
+    recency_alignment * 0.30 +
+    evidence_density * 0.20
+  ).toFixed(4);
+  row.framework_consistency_score = framework_consistency_score;
+
   // Calc qualitative_score
   row.qualitative_score = calcQualitativeScore(row);
   row.explain_json = JSON.stringify({
     spiced: sp, meddic: md, auxiliary: aux,
     coverage: { spiced: spiced_coverage, meddic: meddic_coverage, overall: overall_coverage },
     qualitative_score: row.qualitative_score,
+    framework_consistency_score: framework_consistency_score,
     extraction_count: extractions.length
   });
 
@@ -5263,10 +5357,30 @@ function calcSignalScore(signals){
   var catScores = { behavioral:0, framework:0, pipeline:0, quality:0, forecast:0, revenue:0 };
   var posSignals = [], negSignals = [];
 
+  // V10: Signal Redundancy Dedup — penaliza sinais que sobrepõem framework/forecast
+  var frameworkSignals = {};
+  var forecastSignals = {};
   signals.forEach(function(s){
     var def = SIGNAL_REGISTRY[s.signal_type];
     if(!def) return;
-    var w = def.w || s.weight || 0;
+    if(def.cat === 'framework') frameworkSignals[s.signal_type] = true;
+    if(def.cat === 'forecast') forecastSignals[s.signal_type] = true;
+  });
+
+  signals.forEach(function(s){
+    var def = SIGNAL_REGISTRY[s.signal_type];
+    if(!def) return;
+    var baseW = def.w || s.weight || 0;
+    // V10: Redundancy penalty — sinais pipeline/quality que repetem info de framework/forecast
+    var redundancy = 0;
+    if(def.cat === 'pipeline' || def.cat === 'quality'){
+      if(s.signal_type === 'no_next_step' && frameworkSignals.next_step_defined) redundancy += 0.40;
+      if(s.signal_type === 'no_touch_recent' && forecastSignals.forecast_low_confidence) redundancy += 0.30;
+      if(s.signal_type === 'no_note' && frameworkSignals.pain_missing) redundancy += 0.25;
+    }
+    redundancy = Math.min(1, redundancy);
+    var w = +(baseW * (1 - redundancy)).toFixed(4);
+    s.effective_weight = w;
     var impact = +(w * def.pol).toFixed(4);
     s.impact_score = impact;
     catScores[def.cat] = +(( catScores[def.cat]||0 ) + Math.abs(w) * def.pol).toFixed(4);
