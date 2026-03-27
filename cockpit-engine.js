@@ -4022,11 +4022,11 @@ async function calcPerformanceReportV3(periodType, periodKey){
     var diff = (Date.now() - new Date(r.last_touch_at).getTime()) / (1000*60*60*24);
     return diff > 5;
   }).length;
-  var inactiveRate = deals.length > 0 ? inactiveCount / deals.length : 0;
+  var inactiveRate = deals.length > 0 ? Math.min(1, inactiveCount / deals.length) : 0;
 
   var speed = {
     avg_aging_days: Math.round(avgAging * 10) / 10,
-    sla_risk_rate: Math.round(slaRiskRate * 1000) / 1000,
+    sla_risk_rate: Math.min(1, Math.round(slaRiskRate * 1000) / 1000),
     inactive_rate: Math.round(inactiveRate * 1000) / 1000,
     deals_sla_risk: slaRiskCount,
     deals_inactive: inactiveCount
@@ -4048,16 +4048,17 @@ async function calcPerformanceReportV3(periodType, periodKey){
     if(r.show_state === 'no_show' && payload.no_show_treated) dealsWithNoShowTreated++;
   });
 
-  var notesQualityRate = dealsWithNote / totalDeals;
-  var nextStepRate = dealsWithNextStep / totalDeals;
-  var authorityRate = dealsWithAuthority / totalDeals;
-  var painRate = dealsWithPain / totalDeals;
-  var meetingRate = dealsWithMeeting / totalDeals;
+  var notesQualityRate = Math.min(1, dealsWithNote / totalDeals);
+  var nextStepRate = Math.min(1, dealsWithNextStep / totalDeals);
+  var authorityRate = Math.min(1, dealsWithAuthority / totalDeals);
+  var painRate = Math.min(1, dealsWithPain / totalDeals);
+  var meetingRate = Math.min(1, dealsWithMeeting / totalDeals);
   var noShowTreatRate = runtimeData.filter(function(r){return r.show_state==='no_show';}).length > 0
-    ? dealsWithNoShowTreated / runtimeData.filter(function(r){return r.show_state==='no_show';}).length : 1;
+    ? Math.min(1, dealsWithNoShowTreated / runtimeData.filter(function(r){return r.show_state==='no_show';}).length) : 1;
 
   var dqi = (notesQualityRate * 0.20) + (nextStepRate * 0.20) + (authorityRate * 0.15)
     + (painRate * 0.15) + (meetingRate * 0.10) + (noShowTreatRate * 0.10) + (0.5 * 0.10);
+  dqi = Math.min(1, dqi);
 
   var quality = {
     dqi: Math.round(dqi * 1000) / 1000,
