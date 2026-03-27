@@ -452,6 +452,40 @@ function buildTaskQueue(filterType, filterRevLine){
 }
 window.buildTaskQueue = buildTaskQueue;
 
+// V10: Task Execution Score — mede qualidade de execução de tasks pelo operador
+function calcTaskExecutionScore(){
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var totalTasks = 0, completedTasks = 0, skippedTasks = 0, onTimeTasks = 0, qualityCompleted = 0;
+  Object.keys(map).forEach(function(id){
+    var d = map[id];
+    if(!d._taskHistory) return;
+    var history = d._taskHistory;
+    if(!Array.isArray(history)) return;
+    history.forEach(function(t){
+      totalTasks++;
+      if(t.status === 'completed') completedTasks++;
+      if(t.status === 'skipped') skippedTasks++;
+      if(t.completed_on_time) onTimeTasks++;
+      if(t.status === 'completed' && t.quality_ok !== false) qualityCompleted++;
+    });
+  });
+  if(totalTasks === 0) return { score: 0.50, completion_rate: 0, on_time_rate: 0, quality_rate: 0, skip_rate: 0 };
+  var completion_rate = completedTasks / totalTasks;
+  var on_time_rate = completedTasks > 0 ? onTimeTasks / completedTasks : 0;
+  var quality_rate = completedTasks > 0 ? qualityCompleted / completedTasks : 0;
+  var low_skip_rate = 1 - (skippedTasks / totalTasks);
+  var timer_adherence = on_time_rate; // proxy
+  var score = +(
+    completion_rate * 0.30 +
+    on_time_rate * 0.20 +
+    quality_rate * 0.25 +
+    low_skip_rate * 0.15 +
+    timer_adherence * 0.10
+  ).toFixed(4);
+  return { score: score, completion_rate: +completion_rate.toFixed(4), on_time_rate: +on_time_rate.toFixed(4), quality_rate: +quality_rate.toFixed(4), skip_rate: +(skippedTasks/totalTasks).toFixed(4) };
+}
+window.calcTaskExecutionScore = calcTaskExecutionScore;
+
 // Renderiza a fila de tarefas na tela Tasks
 function renderTaskRunner(filterType){
   var tasks = buildTaskQueue(filterType);
@@ -1395,13 +1429,22 @@ async function calcOperatorScore(periodDays){
   var fwDeals=active.filter(function(d){return d._frameworkRuntime&&d._frameworkRuntime.qualitative_score!=null;}).length;
   var c7=active.length>0?Math.min(1,fwDeals/active.length):0;
 
-  var score=Math.round((c1*0.18+c2*0.25+c3*0.25+c4*0.10+c5*0.10+c6*0.07+c7*0.05)*1000);
+  // V10: Unified 7-component formula (aligned with L14 calcOperatorPerformance)
+  var score=Math.round((c1*0.15+c2*0.25+c3*0.10+c4*0.10+c5*0.15+c6*0.15+c7*0.10)*1000);
   return {
     score:score,
+    // Unified component names
+    volume_score:Math.round(c1*100),
+    conversion_score:Math.round(c2*100),
+    speed_score:Math.round(c4*100),
+    discipline_score:Math.round(c3*100),
+    dqi_score:Math.round(c5*100),
+    forecast_quality_score:Math.round(c6*100),
+    revenue_score:Math.round(c7*100),
+    // Legacy aliases
     qualificados_norm:Math.round(c1*100),
     handoff_norm:Math.round(c2*100),
     win_rate:Math.round(c3*100),
-    speed_score:Math.round(c4*100),
     dqi:Math.round(c5*100),
     forecast_conf:Math.round(c6*100),
     framework_cov:Math.round(c7*100),
@@ -1570,6 +1613,40 @@ function analyzeProductUsage(){
       suggestion:'Abra o Task Runner para executar'
     });
   }
+
+  // V10: Module Friction Score — mede fricção de UX por módulo
+  var modules = { home:0, pipeline:0, tasks:0, dm:0, reports:0, intelligence:0 };
+  var moduleErrors = { home:0, pipeline:0, tasks:0, dm:0, reports:0, intelligence:0 };
+  var totalInteractions = 0;
+  // Estimar fricção baseado em patterns de uso observáveis
+  var dwellByModule = window._moduleTimers || {};
+  Object.keys(modules).forEach(function(mod){
+    var dwell = dwellByModule[mod] || 0;
+    var errors = moduleErrors[mod] || 0;
+    modules[mod] = dwell;
+    totalInteractions += dwell;
+  });
+  // Calcular friction_score geral (alto = mais fricção = ruim)
+  var high_dropoff_rate = 0, long_idle_rate = 0, repeat_click_rate = 0, error_rate = 0, backtrack_rate = 0;
+  if(totalInteractions > 0){
+    // Estimar por ratio de módulos pouco visitados
+    var usedModules = Object.keys(modules).filter(function(k){ return modules[k] > 0; }).length;
+    high_dropoff_rate = Math.max(0, 1 - (usedModules / 6)); // mais módulos não usados = mais dropoff
+    long_idle_rate = window._idleRate || 0.15;
+    error_rate = window._errorRate || 0.05;
+  }
+  var module_friction_score = +(
+    high_dropoff_rate * 0.35 +
+    long_idle_rate * 0.20 +
+    repeat_click_rate * 0.20 +
+    error_rate * 0.15 +
+    backtrack_rate * 0.10
+  ).toFixed(4);
+  insights.push({ type:'friction', severity: module_friction_score > 0.40 ? 'warning' : 'info',
+    message:'Friction score UX: '+Math.round(module_friction_score*100)+'% — '+(module_friction_score > 0.40 ? 'Módulos subutilizados, simplificar navegação' : 'Navegação fluida'),
+    suggestion: module_friction_score > 0.40 ? 'Explorar tabs menos usados (DM, Reports, Intelligence)' : 'Manter uso diversificado dos módulos',
+    friction_score: module_friction_score
+  });
 
   return insights;
 }
@@ -3040,6 +3117,55 @@ async function saveDMTouchpointV5(leadId, tpType, description, channel, framewor
 if(typeof saveDMTouchpoint === 'function') saveDMTouchpoint = saveDMTouchpointV5;
 window.saveDMTouchpoint = saveDMTouchpointV5;
 
+// V10: DM Momentum Score — mede velocidade e saúde do pipeline DM de um lead
+function calcDMMomentumScore(leadId){
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var deal = null;
+  Object.keys(map).forEach(function(id){
+    var d = map[id];
+    if(d.lead_id === leadId || d.dealId === leadId || id === leadId) deal = d;
+  });
+  if(!deal) return { score: 0.50, components: {} };
+  var dmR = deal._dmRuntime || {};
+  var tpCount = dmR.touchpoint_count || 0;
+  var replyCount = dmR.reply_count || 0;
+  var meetingBooked = dmR.meeting_booked || false;
+  var lastReplyDays = dmR.last_reply_days != null ? dmR.last_reply_days : 30;
+  var sig = deal._signalRuntime || {};
+  var signalHealth = sig.signal_total != null ? Math.max(0, Math.min(1, (sig.signal_total + 5) / 10)) : 0.50;
+
+  // tp_progress_rate: quanto avançou (reply > 0 = progresso)
+  var tp_progress_rate = tpCount > 0 ? Math.min(1, replyCount / tpCount) : 0;
+  // reply_recency: quão recente é a última resposta
+  var reply_recency_score = lastReplyDays <= 1 ? 1.0 : lastReplyDays <= 3 ? 0.75 : lastReplyDays <= 7 ? 0.50 : lastReplyDays <= 14 ? 0.30 : 0.10;
+  // meeting_book_rate
+  var meeting_book_rate = meetingBooked ? 1.0 : 0;
+  // touchpoint_consistency: proporção de tps por semana de idade
+  var ageDays = deal._delta || deal.delta || 7;
+  var ageWeeks = Math.max(1, Math.floor(ageDays / 7));
+  var touchpoint_consistency = Math.min(1, tpCount / (ageWeeks * 2)); // ideal: 2 TPs por semana
+
+  var dm_momentum_score = +(
+    tp_progress_rate * 0.35 +
+    reply_recency_score * 0.20 +
+    meeting_book_rate * 0.20 +
+    signalHealth * 0.15 +
+    touchpoint_consistency * 0.10
+  ).toFixed(4);
+
+  return {
+    score: dm_momentum_score,
+    components: {
+      tp_progress_rate: +tp_progress_rate.toFixed(4),
+      reply_recency_score: +reply_recency_score.toFixed(4),
+      meeting_book_rate: meeting_book_rate,
+      signal_health: +signalHealth.toFixed(4),
+      touchpoint_consistency: +touchpoint_consistency.toFixed(4)
+    }
+  };
+}
+window.calcDMMomentumScore = calcDMMomentumScore;
+
 // ==================================================================
 // LAYER 12 — SNAPSHOT SCHEDULER (V5)
 // Gera daily snapshot local e envia ao analytics_snapshots
@@ -4433,6 +4559,25 @@ function generatePerformanceNarratives(current, previous){
   else if(cs.final >= 45) headline = 'Atenção — resultados abaixo do esperado. Revisar cadência e qualidade.';
   else headline = 'Crítico — ação imediata necessária. Alinhar com líder e reestruturar rotina.';
   narratives.unshift({ type:'headline', text:headline, delta:scoreDelta, icon: bandEmoji(current.band) });
+
+  // V10: Narrative Confidence — quão confiáveis são essas narrativas
+  var fc = current.forecast || {};
+  var q = current.quality || {};
+  var funnel = current.funnel || {};
+  var data_trust_avg = (fc.forecast_confidence_avg || 0);
+  var attribution_strength = (funnel.won > 0 || funnel.opp > 0) ? 0.70 : 0.30;
+  var sample_size_score = Math.min(1, (funnel.mql || 0) / 50); // 50 leads = sample suficiente
+  var forecast_confidence_avg = (fc.forecast_confidence_avg || 0);
+  var transition_validity_rate = (q.next_step_rate || 0);
+  var narrative_confidence = +(
+    data_trust_avg * 0.30 +
+    attribution_strength * 0.20 +
+    sample_size_score * 0.20 +
+    forecast_confidence_avg * 0.15 +
+    transition_validity_rate * 0.15
+  ).toFixed(4);
+  // Attach confidence to all narratives
+  narratives.forEach(function(n){ n.narrative_confidence = narrative_confidence; });
 
   return narratives;
 }
