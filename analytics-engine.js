@@ -79,7 +79,8 @@ function _pct(num, den){ return den > 0 ? Math.round(num/den*1000)/10 : 0; }
 // calcByOperator() — Métricas do operador atual
 // ==================================================================
 async function calcByOperator(periodDays){
-  var activities = await _loadActivity(periodDays || 30);
+  var activities = [];
+  try { activities = await _loadActivity(periodDays || 30); } catch(e){ console.warn('[analytics] _loadActivity failed, using empty:',e.message); }
   var deals = _deals().filter(function(d){
     var s=(d.statusDeal||'').toLowerCase();
     return s!=='perdido'&&s!=='ganho';
@@ -307,15 +308,28 @@ function calcByTask(){
 // calcGlobal() — Overview geral (usa todas as dimensões)
 // ==================================================================
 async function calcGlobal(periodDays){
-  var operator = await calcByOperator(periodDays);
-  var byLine = calcByLine();
-  var byStage = calcByStage();
-  var byChannel = calcByChannel();
-  var byTask = calcByTask();
+  var _emptyOp = {dimension:'operator',period:periodDays||30,metrics:{fups:0,analyses:0,copies:0,dvl:0,dms:0,notes:0,enrichments:0,uniqueDeals:0,total:0},pipeline:{activeDeals:0,avgAging:0,atRisk:0},scores:{overall:0,qualification:0,handoff:0,winRate:0,speed:0,dqi:0},byDay:{}};
+  var operator;
+  try { operator = await calcByOperator(periodDays); } catch(e){ console.warn('[analytics] calcByOperator failed:',e.message); operator = _emptyOp; }
+  if(!operator || !operator.scores) operator = _emptyOp;
+
+  var byLine, byStage, byChannel, byTask;
+  try { byLine = calcByLine(); } catch(e){ console.warn('[analytics] calcByLine failed:',e.message); byLine = {dimension:'line',data:{}}; }
+  try { byStage = calcByStage(); } catch(e){ console.warn('[analytics] calcByStage failed:',e.message); byStage = {dimension:'stage',data:{}}; }
+  try { byChannel = calcByChannel(); } catch(e){ console.warn('[analytics] calcByChannel failed:',e.message); byChannel = {dimension:'channel',data:{}}; }
+  try { byTask = calcByTask(); } catch(e){ console.warn('[analytics] calcByTask failed:',e.message); byTask = {dimension:'task',data:{}}; }
 
   var deals = _deals();
   var active = deals.filter(function(d){ var s=(d.statusDeal||'').toLowerCase(); return s!=='perdido'&&s!=='ganho'; });
   var totalValue = active.reduce(function(s,d){ return s+(d.elucyValor||d.revenueRaw||0); },0);
+
+  // Enrich operator pipeline from local deals if Supabase was unavailable
+  if(operator.pipeline.activeDeals===0 && active.length>0){
+    var totalAging = active.reduce(function(s,d){ return s+(d._delta||d.delta||0); },0);
+    operator.pipeline.activeDeals = active.length;
+    operator.pipeline.avgAging = active.length>0 ? Math.round(totalAging/active.length*10)/10 : 0;
+    operator.pipeline.atRisk = active.filter(function(d){ var aging=d._aging||_calcAgingRisk(d); return aging&&aging.isAtRisk; }).length;
+  }
 
   return {
     dimension: 'global',
@@ -372,7 +386,8 @@ function calcSpeed(){
 // calcDQI() — Decision Quality Index dimensionado
 // ==================================================================
 async function calcDQI(periodDays){
-  var activities = await _loadActivity(periodDays || 30);
+  var activities = [];
+  try { activities = await _loadActivity(periodDays || 30); } catch(e){ console.warn('[analytics] _loadActivity failed in calcDQI:',e.message); }
   var deals = _deals();
 
   // DQI per deal

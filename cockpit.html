@@ -628,6 +628,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .pv3-narr-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;margin-bottom:6px;display:flex;align-items:flex-start;gap:10px}
 .pv3-narr-type{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;min-width:72px;padding-top:2px;flex-shrink:0}
 .pv3-narr-text{font-size:12px;color:var(--text);line-height:1.5;font-weight:400}
+/* Performance V3 — Apple HIG components */
+.perf-hero{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));backdrop-filter:blur(14px);box-shadow:var(--shadow-lg)}
+.perf-meta-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.perf-dimension-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media(max-width:980px){.perf-meta-grid,.perf-dimension-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.perf-meta-grid,.perf-dimension-grid{grid-template-columns:1fr}}
 /* Intelligence dashboard */
 .intel-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
 .intel-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:15px;overflow:hidden}
@@ -5142,15 +5148,20 @@ function renderIntelligence(){
   ct.innerHTML='<div class="intel-loading">Calculando...</div>';
   var dim=_intelCurrentDim;
 
-  if(dim==='global') _renderGlobal(ct,AE,allDeals,deals);
-  else if(dim==='operator') _renderOperator(ct,AE);
-  else if(dim==='line') _renderLine(ct,AE);
-  else if(dim==='stage') _renderStage(ct,AE);
-  else if(dim==='channel') _renderChannel(ct,AE);
-  else if(dim==='task') _renderTask(ct,AE);
-  else if(dim==='value') _renderValue(ct,AE);
-  else if(dim==='forecast') _renderForecast(ct,allDeals,deals);
-  else if(dim==='framework') _renderFramework(ct,allDeals,deals);
+  try{
+    if(dim==='global') _renderGlobal(ct,AE,allDeals,deals);
+    else if(dim==='operator') _renderOperator(ct,AE);
+    else if(dim==='line') _renderLine(ct,AE);
+    else if(dim==='stage') _renderStage(ct,AE);
+    else if(dim==='channel') _renderChannel(ct,AE);
+    else if(dim==='task') _renderTask(ct,AE);
+    else if(dim==='value') _renderValue(ct,AE);
+    else if(dim==='forecast') _renderForecast(ct,allDeals,deals);
+    else if(dim==='framework') _renderFramework(ct,allDeals,deals);
+  }catch(e){
+    console.warn('[intel] render error for dim='+dim+':',e.message);
+    ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Dados parciais disponíveis — '+deals.length+' deals carregados.<br><span style="font-size:10px;opacity:.6">'+e.message+'</span></div>';
+  }
 }
 
 function _iBar(label,count,max,total,extraStyle){
@@ -5161,7 +5172,26 @@ function _iKpi(value,label,color){return '<div class="intel-kpi"><div class="int
 // ── GLOBAL ──
 function _renderGlobal(ct,AE,allDeals,deals){
   AE.calcGlobal(30).catch(function(e){console.warn('[intel] calcGlobal error:',e.message);return null;}).then(function(g){
-    if(!g){ct.innerHTML='<div class="intel-empty">Erro ao calcular analytics. Tente novamente.</div>';return;}
+    if(!g){
+      // Fallback: build minimal global from local deals — NEVER show error
+      var totalAging=deals.reduce(function(s,d){return s+(d._delta||d.delta||0);},0);
+      var avgAging=deals.length>0?Math.round(totalAging/deals.length*10)/10:0;
+      var atRisk=deals.filter(function(d){return (d._delta||d.delta||0)>10;}).length;
+      g={dimension:'global',period:30,overview:{totalDeals:allDeals.length,activeDeals:deals.length,totalValue:deals.reduce(function(s,d){return s+(d.elucyValor||d.revenueRaw||0);},0),operatorScore:0,dqi:0},operator:{scores:{overall:0,qualification:0,handoff:0,winRate:0,speed:0,dqi:0},pipeline:{activeDeals:deals.length,avgAging:avgAging,atRisk:atRisk},metrics:{total:0,fups:0,analyses:0,copies:0,dvl:0,dms:0,notes:0,enrichments:0,uniqueDeals:0},byDay:{}},byLine:{data:{}},byStage:{data:{}},byChannel:{data:{}},byTask:{data:{}}};
+      // Populate byLine/byStage/byChannel from local deals
+      deals.forEach(function(d){
+        if(window.enrichDealContext)window.enrichDealContext(d);
+        var line=d._revLine||d.linhaReceita||d.grupo_de_receita||'Outro';
+        var stage=d.etapa||d._etapa||d.fase||'Outro';
+        var ch=d.canal||d.utm_medium||'Outro';
+        if(!g.byLine.data[line])g.byLine.data[line]={total:0,active:0,won:0,lost:0,winRate:0,avgAging:0,atRisk:0,totalValue:0,byStage:{}};
+        g.byLine.data[line].active++;g.byLine.data[line].total++;g.byLine.data[line].totalValue+=(d.elucyValor||d.revenueRaw||0);
+        if(!g.byStage.data[stage])g.byStage.data[stage]={count:0,avgAging:0,totalValue:0,atRisk:0,byLine:{},byTier:{},order:99};
+        g.byStage.data[stage].count++;g.byStage.data[stage].totalValue+=(d.elucyValor||d.revenueRaw||0);
+        if(!g.byChannel.data[ch])g.byChannel.data[ch]={total:0,active:0,won:0,lost:0,winRate:0,avgAging:0,totalValue:0};
+        g.byChannel.data[ch].active++;g.byChannel.data[ch].total++;
+      });
+    }
     var o=g.operator;var total=deals.length;
     var buyCount=deals.filter(function(d){return d._signal==='BUY';}).length;
     var stallCount=deals.filter(function(d){return d._signal==='STALL';}).length;
@@ -5275,7 +5305,12 @@ function _renderGlobal(ct,AE,allDeals,deals){
 
 // ── OPERATOR ──
 function _renderOperator(ct,AE){
-  AE.calcByOperator(30).then(function(o){
+  AE.calcByOperator(30).catch(function(e){console.warn('[intel] calcByOperator error:',e.message);return null;}).then(function(o){
+    if(!o||!o.scores){
+      var deals=Object.values(window._COCKPIT_DEAL_MAP||{}).filter(function(d){var s=(d.statusDeal||'').toLowerCase();return s!=='perdido'&&s!=='ganho';});
+      var totalAging=deals.reduce(function(s,d){return s+(d._delta||d.delta||0);},0);
+      o={scores:{overall:0,qualification:0,handoff:0,winRate:0,speed:0,dqi:0},pipeline:{activeDeals:deals.length,avgAging:deals.length?Math.round(totalAging/deals.length*10)/10:0,atRisk:deals.filter(function(d){return(d._delta||d.delta||0)>10;}).length},metrics:{total:0,fups:0,analyses:0,copies:0,dvl:0,dms:0,notes:0,enrichments:0,uniqueDeals:0},period:30,byDay:{}};
+    }
     var html='';
     // Score
     html+=renderSection(1,'Score do Operador',
@@ -5323,8 +5358,8 @@ function _renderOperator(ct,AE){
 
 // ── LINE ──
 function _renderLine(ct,AE){
-  var data=AE.calcByLine().data;
-  var speed=AE.calcSpeed().data;
+  var data=(AE.calcByLine()||{data:{}}).data||{};
+  var speed=((function(){try{return AE.calcSpeed();}catch(e){return{data:{}};}})()).data||{};
   // funil_marketing é geração de demanda (time de mkt) — fora do escopo SDR
   var keys=Object.keys(data).filter(function(k){return k!=='funil_marketing';}).sort(function(a,b){return data[b].active-data[a].active;});
   var total=keys.reduce(function(s,k){return s+data[k].active;},0);
@@ -5345,7 +5380,8 @@ function _renderLine(ct,AE){
     }).join('')+'</tbody></table>');
 
   // DQI by line (async)
-  AE.calcDQI(30).then(function(dqi){
+  AE.calcDQI(30).catch(function(e){console.warn('[intel] calcDQI error:',e.message);return{data:{}};}).then(function(dqi){
+    if(!dqi||!dqi.data) dqi={data:{}};
     var dqiData=dqi.data;
     var dqiKeys=Object.keys(dqiData).sort(function(a,b){return dqiData[b].avgDQI-dqiData[a].avgDQI;});
     if(dqiKeys.length){
