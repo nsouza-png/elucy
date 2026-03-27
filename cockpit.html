@@ -1423,6 +1423,7 @@ let cur=null;
 function setScreen(n,el){
   document.querySelectorAll('#ct > .screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
+  var ct=document.getElementById('ct'); if(ct) ct.scrollTop=0;
   const screenMap={home:'screen-home',pipeline:'screen-pipeline',tasks:'screen-tasks',reports:'screen-reports',prevendas:'screen-prevendas',intelligence:'screen-intelligence',playbooks:'screen-playbooks',dm:'screen-dm'};
   const target=document.getElementById(screenMap[n]||'screen-home');
   if(target) target.classList.add('on');
