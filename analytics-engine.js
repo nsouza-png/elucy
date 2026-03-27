@@ -9,7 +9,7 @@
 'use strict';
 
 // Dependencies from cockpit-engine
-var _sb = function(){ return window._sb ? window._sb() : null; };
+var _sb = function(){ return window.getSB ? window.getSB() : null; };
 var _opId = function(){ return window.getOperatorId ? window.getOperatorId() : null; };
 var _map = function(){ return window._COCKPIT_DEAL_MAP || {}; };
 var _deals = function(){ return Object.values(_map()); };

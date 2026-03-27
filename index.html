@@ -5030,7 +5030,8 @@ function _iKpi(value,label,color){return '<div class="intel-kpi"><div class="int
 
 // ── GLOBAL ──
 function _renderGlobal(ct,AE,allDeals,deals){
-  AE.calcGlobal(30).then(function(g){
+  AE.calcGlobal(30).catch(function(e){console.warn('[intel] calcGlobal error:',e.message);return null;}).then(function(g){
+    if(!g){ct.innerHTML='<div class="intel-empty">Erro ao calcular analytics. Tente novamente.</div>';return;}
     var o=g.operator;var total=deals.length;
     var buyCount=deals.filter(function(d){return d._signal==='BUY';}).length;
     var stallCount=deals.filter(function(d){return d._signal==='STALL';}).length;
@@ -5798,6 +5799,5 @@ function initSlackAlerts(){
 <script src="cockpit-engine.js"></script>
 <script src="analytics-engine.js"></script>
 <script src="reports-v4-engine.js"></script>
-<script src="playbooks-engine.js"></script>
 </body>
 </html>
