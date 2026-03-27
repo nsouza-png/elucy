@@ -1449,14 +1449,38 @@ function renderPlaybooks(){
   var deals=Object.values(map).filter(function(d){var s=(d.statusDeal||'').toLowerCase();return s!=='perdido'&&s!=='ganho';});
 
   var PLAYBOOKS=[
-    {id:'challenger',title:'Challenger Sale',persona:'Titan',desc:'Ensinar, Personalizar, Assumir Controle. Para decisores de empresas >1MM.',icon:'⚡',color:'#f59e0b'},
-    {id:'spiced',title:'SPICED Framework',persona:'Builder',desc:'Situation, Pain, Impact, Critical Event, Decision. Para builders pragmaticos.',icon:'🎯',color:'#22c55e'},
-    {id:'spin',title:'SPIN Selling',persona:'Executor',desc:'Situation, Problem, Implication, Need-Payoff + Champion Selling.',icon:'🔄',color:'#3b82f6'},
-    {id:'social_dm',title:'Social DM Playbook',persona:'Todos',desc:'Pipeline de DM com cadencia 5-touch. CQL generator + WhatsApp deep link.',icon:'💬',color:'#8b5cf6'},
-    {id:'iron_dome',title:'Iron Dome',persona:'Todos',desc:'Reativacao inteligente de deals estagnados >10 dias. Protocolo de resgate.',icon:'🛡️',color:'#ef4444'},
-    {id:'downsell',title:'Downsell Honesto',persona:'Todos',desc:'Quando o deal nao cabe no produto. Redirecionar sem perder confianca.',icon:'↘️',color:'#6b7280'},
-    {id:'hot_handoff',title:'Hot Handoff',persona:'Todos',desc:'Transferencia quente para o Closer. Briefing + contexto completo.',icon:'🤝',color:'#10b981'},
-    {id:'nota_crm',title:'Nota CRM',persona:'Todos',desc:'Gerar nota estruturada zero-alucinacao para registro no HubSpot.',icon:'📝',color:'#06b6d4'}
+    {id:'challenger',title:'Challenger Sale',persona:'Titan',desc:'Ensinar, Personalizar, Assumir Controle. Para decisores de empresas >1MM.',icon:'⚡',color:'#f59e0b',
+      steps:['1. Warmer — Conectar com insight do setor','2. Reframe — Desafiar a visao atual do lead','3. Rational Drowning — Dados que provam o custo da inacao','4. Emotional Impact — Conectar com a dor pessoal','5. New Way — Apresentar a solucao como unico caminho','6. Solution — Mapear produto ao problema reframed'],
+      when:'Empresas >1MM faturamento, decisores C-level/diretoria, deals de alta complexidade.',
+      rules:'NUNCA usar SPICED com Titan. Sempre desafiar, nunca concordar passivamente. Black Box Protocol ativo.'},
+    {id:'spiced',title:'SPICED Framework',persona:'Builder',desc:'Situation, Pain, Impact, Critical Event, Decision. Para builders pragmaticos.',icon:'🎯',color:'#22c55e',
+      steps:['S — Situation: Contexto atual da empresa','P — Pain: Dor principal que motiva a busca','I — Impact: Impacto quantificado da dor','C — Critical Event: Evento que gera urgencia','E — Event Timeline: Cronograma do evento critico','D — Decision Process: Como decidem e quem decide'],
+      when:'Builders pragmaticos, empresas em fase de estruturacao, decisores operacionais.',
+      rules:'Framework padrao para Builder. Mapear todos os 6 campos antes de propor solucao.'},
+    {id:'spin',title:'SPIN Selling',persona:'Executor',desc:'Situation, Problem, Implication, Need-Payoff + Champion Selling.',icon:'🔄',color:'#3b82f6',
+      steps:['S — Situation Questions: Entender contexto atual','P — Problem Questions: Identificar problemas explicitos','I — Implication Questions: Amplificar consequencias do problema','N — Need-Payoff Questions: Lead verbaliza o valor da solucao','Champion Mapping: Identificar aliado interno','Champion Arming: Equipar champion com argumentos'],
+      when:'Executor persona, deals com multiplos stakeholders, ciclos longos.',
+      rules:'Combinar SPIN com Champion Selling. Identificar champion antes de propor reuniao.'},
+    {id:'social_dm',title:'Social DM Playbook',persona:'Todos',desc:'Pipeline de DM com cadencia 5-touch. CQL generator + WhatsApp deep link.',icon:'💬',color:'#8b5cf6',
+      steps:['Touch 1 — Follow + Story reaction (aquecimento)','Touch 2 — DM leve com contexto pessoal','Touch 3 — Conteudo de valor (case/insight)','Touch 4 — Pergunta direta sobre dor','Touch 5 — CTA para conversa (WhatsApp/call)'],
+      when:'Leads com Instagram ativo, prospeccao social, reengajamento via DM.',
+      rules:'Conta founder (Tallis/Nardon/Alfredo) define tom. NUNCA mencionar G4 ou produto na DM. Tom pessoal.'},
+    {id:'iron_dome',title:'Iron Dome',persona:'Todos',desc:'Reativacao inteligente de deals estagnados >10 dias. Protocolo de resgate.',icon:'🛡️',color:'#ef4444',
+      steps:['1. Diagnostico — Identificar causa do stall (>10d sem acao)','2. Re-engage — Mensagem de resgate com novo angulo','3. Urgency Injection — Criar senso de urgencia real','4. Escalation — Se nao responder, escalar canal (DM founder/call)','5. Decision — Reativar, downsell ou arquivar'],
+      when:'Deals estagnados >10 dias, sem resposta a FUPs, aging critico.',
+      rules:'Iron Dome so ativa automaticamente. Respeitar protocolo de escalacao.'},
+    {id:'downsell',title:'Downsell Honesto',persona:'Todos',desc:'Quando o deal nao cabe no produto. Redirecionar sem perder confianca.',icon:'↘️',color:'#6b7280',
+      steps:['1. Reconhecer — Admitir que o produto atual nao e o fit ideal','2. Mapear alternativa — Identificar produto menor que resolve parcialmente','3. Apresentar — Oferecer alternativa como solucao intermediaria','4. Preservar — Manter relacionamento para upsell futuro'],
+      when:'Tier 2 (<1MM) tentando comprar Imersao Presencial. Deal com mismatch claro.',
+      rules:'Tier 2 BLOQUEADO de Imersoes Presenciais. Downsell honesto > perda total.'},
+    {id:'hot_handoff',title:'Hot Handoff',persona:'Todos',desc:'Transferencia quente para o Closer. Briefing + contexto completo.',icon:'🤝',color:'#10b981',
+      steps:['1. Briefing — Montar contexto completo (SPICED/Challenger/SPIN preenchido)','2. Warm Intro — Apresentar lead ao Closer com contexto','3. Handoff Doc — Documento com historico, dor, urgencia, stakeholders','4. Follow-up — Confirmar que Closer recebeu e vai acionar'],
+      when:'Deal qualificado (SAL->OPP), agenda confirmada, pronto para closer.',
+      rules:'NUNCA fazer handoff frio. Briefing obrigatorio. SDR acompanha 48h pos-handoff.'},
+    {id:'nota_crm',title:'Nota CRM',persona:'Todos',desc:'Gerar nota estruturada zero-alucinacao para registro no HubSpot.',icon:'📝',color:'#06b6d4',
+      steps:['1. Capturar — Registrar fatos da interacao (data, canal, participantes)','2. Estruturar — Usar template padrao (contexto, dor, proximo passo)','3. Validar — Zero alucinacao: so registrar o que foi dito','4. Publicar — Inserir no HubSpot com timestamp'],
+      when:'Apos qualquer interacao relevante com lead (call, DM, email, reuniao).',
+      rules:'ZERO alucinacao. Nao inferir sentimentos ou intencoes nao declaradas. Fatos apenas.'}
   ];
 
   // Count deals by persona
@@ -1468,23 +1492,112 @@ function renderPlaybooks(){
     else if(p==='Executor') executorCount++;
   });
 
+  // Store playbooks data for detail view
+  window._PLAYBOOKS_DATA=PLAYBOOKS;
+  window._PLAYBOOKS_DEALS=deals;
+
   var html='<div style="padding:16px">';
+  html+='<div id="pb-list">';
   html+='<div style="font-size:18px;font-weight:800;margin-bottom:4px">Playbooks</div>';
   html+='<div style="font-size:12px;color:var(--text2);margin-bottom:16px">Frameworks de venda por persona — '+deals.length+' deals ativos ('+titanCount+' Titan, '+builderCount+' Builder, '+executorCount+' Executor)</div>';
 
   html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">';
   PLAYBOOKS.forEach(function(pb){
-    html+='<div style="background:var(--bg-card,#1a1a2e);border:1px solid var(--border,#333);border-radius:10px;padding:14px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor=\''+pb.color+'\'" onmouseout="this.style.borderColor=\'var(--border,#333)\'">';
+    var count=0;
+    if(pb.persona==='Titan') count=titanCount;
+    else if(pb.persona==='Builder') count=builderCount;
+    else if(pb.persona==='Executor') count=executorCount;
+    else count=deals.length;
+    html+='<div onclick="openPlaybook(\''+pb.id+'\')" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor=\''+pb.color+'\';this.style.background=\'var(--bg4)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.background=\'var(--bg3)\'">';
     html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
     html+='<span style="font-size:22px">'+pb.icon+'</span>';
-    html+='<div><div style="font-size:14px;font-weight:700;color:var(--text)">'+pb.title+'</div>';
-    html+='<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:'+pb.color+'22;color:'+pb.color+'">'+pb.persona+'</span></div></div>';
+    html+='<div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--text)">'+pb.title+'</div>';
+    html+='<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:'+pb.color+'22;color:'+pb.color+'">'+pb.persona+'</span></div>';
+    html+='<span style="font-size:12px;color:var(--text2);font-weight:600">'+count+' deals</span></div>';
     html+='<div style="font-size:12px;color:var(--text2);line-height:1.4">'+pb.desc+'</div>';
     html+='</div>';
   });
   html+='</div></div>';
 
+  html+='<div id="pb-detail" style="display:none"></div>';
+  html+='</div>';
+
   el.innerHTML=html;
+}
+
+function openPlaybook(id){
+  var pb=null;
+  var pbs=window._PLAYBOOKS_DATA||[];
+  for(var i=0;i<pbs.length;i++){if(pbs[i].id===id){pb=pbs[i];break;}}
+  if(!pb) return;
+
+  var deals=window._PLAYBOOKS_DEALS||[];
+  var matched=[];
+  if(pb.persona==='Todos') matched=deals;
+  else matched=deals.filter(function(d){return d._persona===pb.persona;});
+
+  document.getElementById('pb-list').style.display='none';
+  var det=document.getElementById('pb-detail');
+  det.style.display='block';
+
+  var h='<div style="margin-bottom:14px">';
+  h+='<button onclick="closePlaybook()" class="btn bs btn-sm" style="margin-bottom:12px">← Voltar</button>';
+  h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">';
+  h+='<span style="font-size:28px">'+pb.icon+'</span>';
+  h+='<div><div style="font-size:20px;font-weight:800;color:var(--text)">'+pb.title+'</div>';
+  h+='<span style="font-size:11px;padding:2px 8px;border-radius:4px;background:'+pb.color+'22;color:'+pb.color+';font-weight:600">'+pb.persona+'</span></div></div>';
+  h+='<div style="font-size:13px;color:var(--text2);margin-top:6px;line-height:1.5">'+pb.desc+'</div></div>';
+
+  // Steps
+  h+='<div class="card" style="border-left:3px solid '+pb.color+'">';
+  h+='<div class="sec-t" style="margin-bottom:10px">Etapas do Framework</div>';
+  pb.steps.forEach(function(s){
+    h+='<div style="font-size:12px;color:var(--text);padding:6px 0;border-bottom:1px solid var(--border);line-height:1.5">'+s+'</div>';
+  });
+  h+='</div>';
+
+  // When to use
+  h+='<div class="card">';
+  h+='<div class="sec-t" style="margin-bottom:6px">Quando Usar</div>';
+  h+='<div style="font-size:12px;color:var(--text2);line-height:1.5">'+pb.when+'</div>';
+  h+='</div>';
+
+  // Rules
+  h+='<div class="card" style="border-left:3px solid var(--yellow)">';
+  h+='<div class="sec-t" style="margin-bottom:6px;color:var(--yellow)">Regras Criticas</div>';
+  h+='<div style="font-size:12px;color:var(--text);line-height:1.5">'+pb.rules+'</div>';
+  h+='</div>';
+
+  // Matching deals
+  h+='<div class="card">';
+  h+='<div class="sec-t" style="margin-bottom:10px">Deals Aplicaveis <span style="font-size:12px;color:var(--text2);font-weight:400">('+matched.length+')</span></div>';
+  if(matched.length===0){
+    h+='<div style="font-size:12px;color:var(--text2)">Nenhum deal ativo com persona '+pb.persona+'.</div>';
+  } else {
+    var shown=matched.slice(0,10);
+    shown.forEach(function(d){
+      var name=d.nome||d.nomeNegocio||'—';
+      var fase=d.fase||'—';
+      var aging=d.delta||0;
+      var agColor=aging>15?'var(--red)':aging>7?'var(--yellow)':'var(--green)';
+      h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="selectDeal(\''+d.deal_id+'\')">';
+      h+='<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+name+'</div>';
+      h+='<div style="font-size:10px;color:var(--text2)">'+fase+' — '+(d.linhaReceita||'—')+'</div></div>';
+      h+='<span style="font-size:11px;font-weight:600;color:'+agColor+'">'+aging+'d</span>';
+      h+='</div>';
+    });
+    if(matched.length>10){
+      h+='<div style="font-size:11px;color:var(--text2);margin-top:8px;text-align:center">+ '+(matched.length-10)+' deals nao exibidos</div>';
+    }
+  }
+  h+='</div>';
+
+  det.innerHTML=h;
+}
+
+function closePlaybook(){
+  document.getElementById('pb-list').style.display='';
+  document.getElementById('pb-detail').style.display='none';
 }
 
 // V3: Task filter handler

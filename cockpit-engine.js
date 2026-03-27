@@ -2237,7 +2237,7 @@ window.showCockpit = function(user){
     initOperatorContext().then(function(){
       initRealtimeListeners();
       setTimeout(updateGamificationUI,1500);
-      setTimeout(function(){ renderHome(); },2000);
+      setTimeout(function(){ var sh=document.getElementById('screen-home'); if(sh&&sh.classList.contains('on')) renderHome(); },2000);
     });
   }
 };
@@ -2485,7 +2485,7 @@ if(window._currentUser){
   initOperatorContext().then(function(){
     setTimeout(initRealtimeListeners,500);
     setTimeout(updateGamificationUI,2000);
-    setTimeout(renderHome,2500);
+    setTimeout(function(){ var sh=document.getElementById('screen-home'); if(sh&&sh.classList.contains('on')) renderHome(); },2500);
     // Load cadence enrollments after operator context is ready
     setTimeout(function(){
       if(window.loadCadenceEnrollments) loadCadenceEnrollments().then(function(){ loadCadenceSteps(); });
