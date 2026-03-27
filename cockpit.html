@@ -1438,7 +1438,52 @@ function setScreen(n,el){
   if(n==='intelligence') renderIntelligence();
   if(n==='reports') loadReportsScreen();
   if(n==='prevendas' && window.ReportsV4) window.ReportsV4.renderReportsV4('screen-reports-v4');
-  if(n==='playbooks' && window.renderPlaybooks) window.renderPlaybooks();
+  if(n==='playbooks') renderPlaybooks();
+}
+
+function renderPlaybooks(){
+  var el=document.getElementById('pb-root');
+  if(!el) return;
+  var map=window._COCKPIT_DEAL_MAP||{};
+  var deals=Object.values(map).filter(function(d){var s=(d.statusDeal||'').toLowerCase();return s!=='perdido'&&s!=='ganho';});
+
+  var PLAYBOOKS=[
+    {id:'challenger',title:'Challenger Sale',persona:'Titan',desc:'Ensinar, Personalizar, Assumir Controle. Para decisores de empresas >1MM.',icon:'⚡',color:'#f59e0b'},
+    {id:'spiced',title:'SPICED Framework',persona:'Builder',desc:'Situation, Pain, Impact, Critical Event, Decision. Para builders pragmaticos.',icon:'🎯',color:'#22c55e'},
+    {id:'spin',title:'SPIN Selling',persona:'Executor',desc:'Situation, Problem, Implication, Need-Payoff + Champion Selling.',icon:'🔄',color:'#3b82f6'},
+    {id:'social_dm',title:'Social DM Playbook',persona:'Todos',desc:'Pipeline de DM com cadencia 5-touch. CQL generator + WhatsApp deep link.',icon:'💬',color:'#8b5cf6'},
+    {id:'iron_dome',title:'Iron Dome',persona:'Todos',desc:'Reativacao inteligente de deals estagnados >10 dias. Protocolo de resgate.',icon:'🛡️',color:'#ef4444'},
+    {id:'downsell',title:'Downsell Honesto',persona:'Todos',desc:'Quando o deal nao cabe no produto. Redirecionar sem perder confianca.',icon:'↘️',color:'#6b7280'},
+    {id:'hot_handoff',title:'Hot Handoff',persona:'Todos',desc:'Transferencia quente para o Closer. Briefing + contexto completo.',icon:'🤝',color:'#10b981'},
+    {id:'nota_crm',title:'Nota CRM',persona:'Todos',desc:'Gerar nota estruturada zero-alucinacao para registro no HubSpot.',icon:'📝',color:'#06b6d4'}
+  ];
+
+  // Count deals by persona
+  var titanCount=0,builderCount=0,executorCount=0;
+  deals.forEach(function(d){
+    var p=d._persona||'';
+    if(p==='Titan') titanCount++;
+    else if(p==='Builder') builderCount++;
+    else if(p==='Executor') executorCount++;
+  });
+
+  var html='<div style="padding:16px">';
+  html+='<div style="font-size:18px;font-weight:800;margin-bottom:4px">Playbooks</div>';
+  html+='<div style="font-size:12px;color:var(--text2);margin-bottom:16px">Frameworks de venda por persona — '+deals.length+' deals ativos ('+titanCount+' Titan, '+builderCount+' Builder, '+executorCount+' Executor)</div>';
+
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">';
+  PLAYBOOKS.forEach(function(pb){
+    html+='<div style="background:var(--bg-card,#1a1a2e);border:1px solid var(--border,#333);border-radius:10px;padding:14px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor=\''+pb.color+'\'" onmouseout="this.style.borderColor=\'var(--border,#333)\'">';
+    html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
+    html+='<span style="font-size:22px">'+pb.icon+'</span>';
+    html+='<div><div style="font-size:14px;font-weight:700;color:var(--text)">'+pb.title+'</div>';
+    html+='<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:'+pb.color+'22;color:'+pb.color+'">'+pb.persona+'</span></div></div>';
+    html+='<div style="font-size:12px;color:var(--text2);line-height:1.4">'+pb.desc+'</div>';
+    html+='</div>';
+  });
+  html+='</div></div>';
+
+  el.innerHTML=html;
 }
 
 // V3: Task filter handler
