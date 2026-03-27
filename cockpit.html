@@ -1539,6 +1539,7 @@ function openPlaybook(id){
   document.getElementById('pb-list').style.display='none';
   var det=document.getElementById('pb-detail');
   det.style.display='block';
+  var ct=document.getElementById('ct'); if(ct) ct.scrollTop=0;
 
   var h='<div style="margin-bottom:14px">';
   h+='<button onclick="closePlaybook()" class="btn bs btn-sm" style="margin-bottom:12px">← Voltar</button>';
@@ -1598,6 +1599,7 @@ function openPlaybook(id){
 function closePlaybook(){
   document.getElementById('pb-list').style.display='';
   document.getElementById('pb-detail').style.display='none';
+  var ct=document.getElementById('ct'); if(ct) ct.scrollTop=0;
 }
 
 // V3: Task filter handler
