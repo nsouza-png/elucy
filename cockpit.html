@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ELUCY — Sales Engagement</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2304080f'/><text x='50' y='66' font-size='36' font-weight='900' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='2'>EC</text><rect x='28' y='72' width='44' height='14' rx='4' fill='%230a84ff'/><text x='50' y='82' font-size='9' font-weight='800' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>BY G4</text></svg>">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2304080f'/><text x='50' y='66' font-size='36' font-weight='900' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='2'>EC</text><rect x='28' y='72' width='44' height='14' rx='4' fill='%230a84ff'/><text x='50' y='82' font-size='9' font-weight='800' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>BY G4</text></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2304080f'/><text x='50' y='62' font-size='28' font-weight='900' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>elucy</text><rect x='28' y='72' width='44' height='14' rx='4' fill='%230a84ff'/><text x='50' y='82' font-size='9' font-weight='800' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>BY G4</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2304080f'/><text x='50' y='62' font-size='28' font-weight='900' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>elucy</text><rect x='28' y='72' width='44' height='14' rx='4' fill='%230a84ff'/><text x='50' y='82' font-size='9' font-weight='800' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>BY G4</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase JS SDK — carrega sincrono (necessário antes do DOMContentLoaded para auth) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -3421,41 +3421,66 @@ const MCP_MAP = {
 
 function buildDealContext(dealData){
   const t = dealData._timeline || {};
-  return `DEAL CONTEXT:
-- deal_id: ${dealData.deal_id||''}
-- contact_name: ${dealData.contact_name||dealData.nome||''}
-- cargo: ${dealData.cargo||''}
-- empresa/email: ${dealData.emailLead||dealData.email_lead||dealData.empresa||''}
-- faixa_faturamento: ${dealData.faixa_de_faturamento||''}
-- faixa_funcionarios: ${dealData.faixa_de_funcionarios||dealData.faixaFunc||''}
-- perfil: ${dealData.perfil||''}
-- etapa_pipeline: ${dealData.etapa||dealData.etapa_atual_no_pipeline||''}
-- fase_processo: ${dealData.fase||dealData.fase_atual_no_processo||''}
-- tier: ${dealData.tier||dealData.tier_da_oportunidade||''}
-- delta_t: ${dealData.delta||dealData._delta||0} dias
-- canal: ${dealData.canal||''}
-- linha_receita: ${dealData.linhaReceita||dealData.linha_de_receita_vigente||''}
-- grupo_receita: ${dealData.grupo_de_receita||''}
-- utm_medium: ${dealData.utm_medium||''}
-- proprietario: ${dealData.proprietario_name||''}
-- qualificador: ${dealData.qualificador_name||''}
-- canal_marketing: ${dealData.canal_de_marketing||''}
-- revenue: ${dealData.revenueRaw||dealData.revenue||0}
-- status_deal: ${dealData.statusDeal||dealData.status_do_deal||''}
-- motivo_lost: ${dealData.motivoLost||dealData.motivo_lost||''}
-- created_at_crm: ${dealData.createdAtCrm||dealData.created_at_crm||''}
-- p_segmento: ${dealData.p_segmento||''}
-- p_cluster_rfm: ${dealData.p_cluster_rfm||''}
-- p_primeiro_produto: ${dealData.p_primeiro_produto||''}
-- p_ultimo_produto: ${dealData.p_ultimo_produto||''}
-- p_pa_cliente: ${dealData.p_pa_cliente||'false'}
-- p_negociacoes_ganhas: ${dealData.p_negociacoes_ganhas||0}
-- p_receita_total: ${dealData.p_receita_total||0}
+  const d = dealData;
+  // Build context with ALL available deal properties
+  let ctx = `DEAL CONTEXT:
+- deal_id: ${d.deal_id||''}
+- contact_name: ${d.contact_name||d.nome||''}
+- cargo: ${d.cargo||''}
+- email: ${d.emailLead||d.email_lead||''}
+- telefone: ${d.telefone||d.p_telefone||''}
+- faixa_faturamento: ${d.faixa_de_faturamento||''}
+- faixa_funcionarios: ${d.faixa_de_funcionarios||d.faixaFunc||''}
+- perfil: ${d.perfil||''}
+- etapa_pipeline: ${d.etapa||d.etapa_atual_no_pipeline||''}
+- fase_processo: ${d.fase||d.fase_atual_no_processo||''}
+- fase_anterior: ${d.faseAnterior||d.fase_anterior_no_processo||''}
+- tier: ${d.tier||d.tier_da_oportunidade||''}
+- delta_t: ${d.delta||d._delta||0} dias
+- canal: ${d.canal||''}
+- linha_receita: ${d.linhaReceita||d.linha_de_receita_vigente||''}
+- grupo_receita: ${d.grupo_de_receita||''}
+- utm_medium: ${d.utm_medium||''}
+- utm_source: ${d.utm_source||''}
+- proprietario: ${d.proprietario_name||''}
+- qualificador: ${d.qualificador_name||''}
+- canal_marketing: ${d.canal_de_marketing||''}
+- origem_deal: ${d.origem_do_deal||''}
+- tipo_conversao: ${d.tipo_de_conversao||''}
+- revenue: ${d.revenueRaw||d.revenue||0}
+- valor_oportunidade: ${d.valor_da_oportunidade||0}
+- status_deal: ${d.statusDeal||d.status_do_deal||''}
+- motivo_lost: ${d.motivoLost||d.motivo_lost||''}
+- created_at_crm: ${d.createdAtCrm||d.created_at_crm||''}`;
+  // Persons Overview — histórico completo do contact
+  const hasPerson = (d.p_primeiro_produto||d.p_receita_total>0||d.p_telefone||d.p_segmento);
+  if(hasPerson) ctx += `
+HISTÓRICO DO CONTATO (persons_overview):
+- segmento: ${d.p_segmento||'NAO_INFORMADO'}
+- cluster_rfm: ${d.p_cluster_rfm||'NAO_INFORMADO'}
+- primeiro_produto: ${d.p_primeiro_produto||'NAO_INFORMADO'}
+- ultimo_produto: ${d.p_ultimo_produto||'NAO_INFORMADO'}
+- produtos_comprados: ${d.p_produtos_comprados||'NAO_INFORMADO'}
+- negociacoes_ganhas: ${d.p_negociacoes_ganhas||0}
+- receita_total: R$${d.p_receita_total||0}
+- pa_cliente: ${d.p_pa_cliente||'false'}
+- comprou_scale: ${d.p_comprou_scale||'false'}
+- comprou_club: ${d.p_comprou_club||'false'}
+- data_primeira_compra: ${d.p_data_primeira_compra||'NAO_INFORMADO'}
+- data_ultima_compra: ${d.p_data_ultima_compra||'NAO_INFORMADO'}`;
+  else ctx += `
+HISTÓRICO DO CONTATO: Sem dados no persons_overview (lead novo ou sem match).`;
+  // Timeline Intelligence
+  ctx += `
 TIMELINE INTELLIGENCE:
 - age_days: ${t.ageDays||0} | velocity: ${t.velocity||0} etapas/dia (${t.velocityLabel||'?'})
 - sla: ${t.slaLabel||'?'} (${t.daysToSLA||0}d) | timing_score: ${t.timingScore||0}/100
 - prob_ajustada: ${t.adjustedProbability?Math.round(t.adjustedProbability*100)+'%':'?'} | action: ${t.actionLabel||'?'}
 - estimated_close: ${t.estimatedCloseDate||'?'}`;
+  // Signal & Forecast if available
+  if(d._signalScore) ctx += `\nSIGNAL SCORE: ${d._signalScore.total||0} (pos:${d._signalScore.positive||0} neg:${d._signalScore.negative||0})`;
+  if(d._forecastV6) ctx += `\nFORECAST: confidence=${Math.round((d._forecastV6.confidence||0)*100)}% score=${Math.round((d._forecastV6.score||0)*100)}%`;
+  return ctx;
 }
 
 const REQUEST_PROMPTS = {
