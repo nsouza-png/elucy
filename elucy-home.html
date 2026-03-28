@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ELUCY — Revenue Intelligence</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2304080f'/><text x='50' y='66' font-size='36' font-weight='900' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='2'>EC</text><rect x='28' y='72' width='44' height='14' rx='4' fill='%230a84ff'/><text x='50' y='82' font-size='9' font-weight='800' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>BY G4</text></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2304080f'/><text x='50' y='62' font-size='28' font-weight='900' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>elucy</text><rect x='28' y='72' width='44' height='14' rx='4' fill='%230a84ff'/><text x='50' y='82' font-size='9' font-weight='800' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>BY G4</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -177,7 +177,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
   <!-- TOPBAR -->
   <header class="topbar">
     <div class="logo">
-      <div class="logo-mark">EC</div>
       <span class="logo-text">Elucy</span>
       <span class="logo-badge">BY G4</span>
     </div>
@@ -206,12 +205,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
 
   <!-- LIVE METRICS -->
   <section class="metrics reveal">
-    <div class="metrics-label">Pipeline em Tempo Real</div>
+    <div class="metrics-label" id="metrics-title">Pipeline Comercial — Todos os SDRs — Mar/2026</div>
     <div class="metrics-grid">
       <div class="metric">
         <div class="metric-val blue" id="m-deals">&#8212;</div>
         <div class="metric-label">Deals Ativos</div>
         <div class="metric-sub" id="m-deals-sub">carregando...</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val white" id="m-sdrs">&#8212;</div>
+        <div class="metric-label">SDRs Ativos</div>
+        <div class="metric-sub" id="m-sdrs-sub">qualificadores no funil</div>
       </div>
       <div class="metric">
         <div class="metric-val green" id="m-pipeline">&#8212;</div>
@@ -339,7 +343,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
 <script>
 (function(){
   var s = document.createElement('script');
-  s.src = 'cockpit-data.js';
+  s.src = 'cockpit-data.js?v=' + Date.now();
   s.onload = function(){ populateMetrics(); };
   s.onerror = function(){ setFallback(); };
   document.head.appendChild(s);
@@ -352,11 +356,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
     var g = function(row, name){ var i = COLS[name]; return i != null ? (row[i] || '') : ''; };
 
     document.getElementById('m-deals').textContent = deals.length;
-    document.getElementById('m-deals-sub').textContent = 'pipeline ' + (window.COCKPIT_OPERATOR || 'ativo');
+    var sdrs = {};
+    deals.forEach(function(d){ var q = g(d,'qualificador_name'); if(q) sdrs[q] = true; });
+    var sdrCount = Object.keys(sdrs).length;
+    document.getElementById('m-deals-sub').textContent = sdrCount + ' qualificadores ativos';
+
+    document.getElementById('m-sdrs').textContent = sdrCount;
+    document.getElementById('m-sdrs-sub').textContent = 'operando em marco/2026';
 
     var totalVal = 0;
     deals.forEach(function(d){ totalVal += parseFloat(g(d, 'valor_da_oportunidade')) || 0; });
-    document.getElementById('m-pipeline').textContent = totalVal > 1000 ? 'R$' + (totalVal/1000).toFixed(0) + 'k' : 'R$' + totalVal.toFixed(0);
+    if(totalVal >= 1000000) document.getElementById('m-pipeline').textContent = 'R$' + (totalVal/1000000).toFixed(1) + 'M';
+    else if(totalVal > 1000) document.getElementById('m-pipeline').textContent = 'R$' + (totalVal/1000).toFixed(0) + 'k';
+    else document.getElementById('m-pipeline').textContent = 'R$' + totalVal.toFixed(0);
 
     var conectados = deals.filter(function(d){ return g(d,'etapa_atual_no_pipeline') === 'Conectados'; }).length;
     document.getElementById('m-conectados').textContent = conectados;
@@ -372,7 +384,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
     document.getElementById('m-risco-sub').textContent = risco > 0 ? 'deals com aging > 4 dias' : 'pipeline saudavel';
 
     if(window.COCKPIT_UPDATED_AT){
-      document.querySelector('.metrics-label').textContent = 'Pipeline em Tempo Real \u2014 atualizado ' + window.COCKPIT_UPDATED_AT;
+      document.getElementById('metrics-title').textContent = 'Pipeline Comercial \u2014 Todos os SDRs \u2014 atualizado ' + window.COCKPIT_UPDATED_AT;
     }
   }
 
