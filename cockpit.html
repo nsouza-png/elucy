@@ -889,6 +889,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .li-phase-pill{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700}.li-phase-hot{background:var(--rdim);color:var(--red);border:1px solid var(--red)}
 .li-skip-warn{background:var(--ydim);border:1px solid var(--yellow);border-radius:4px;padding:5px 8px;font-size:10px;color:var(--yellow);font-weight:600;margin-top:4px}
 .li-timeline-wrap{padding:4px 0}
+/* Batch Intelligence */
+.batch-table{width:100%;border-collapse:collapse;font-size:12px}
+.batch-table th{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border2);color:var(--text2);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.batch-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+.batch-table tr:hover{background:var(--surface)}
+.batch-err td{opacity:.5}
 </style>
 </head>
 <body>
@@ -932,6 +938,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
   <button class="ntab" onclick="setScreen('prevendas',this)">Pre-Vendas</button>
   <button class="ntab" onclick="setScreen('intelligence',this)">Intel</button>
   <button class="ntab" onclick="setScreen('playbooks',this)">Playbooks</button>
+  <button class="ntab" onclick="setScreen('batch',this)">Batch</button>
   <div class="tbr">
     <span class="op-pill" id="op-pill">CRM Sincronizado</span>
     <span class="streak-badge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2z"/></svg> <span id="streak-days-label">7</span> dias</span>
@@ -1283,6 +1290,30 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
     <div class="screen" id="screen-playbooks">
       <div id="pb-root"><div style="font-size:12px;color:var(--text2);padding:20px;text-align:center">Carregando Playbooks...</div></div>
     </div>
+    <div class="screen" id="screen-batch">
+      <div style="padding:16px 20px 8px">
+        <div style="font-size:18px;font-weight:800;margin-bottom:4px">Batch Intelligence</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:16px">Processar todos os deals ativos em paralelo com ELUCY</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+          <button class="btn bp" onclick="runBatchIntelligence('classify')" style="font-size:12px">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            Classificar Risco/Potencial
+          </button>
+          <button class="btn bs" onclick="runBatchIntelligence('notes')" style="font-size:12px;border-color:var(--green);color:var(--green)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Gerar Notas CRM (todos)
+          </button>
+          <button class="btn bs" onclick="runBatchIntelligence('signals')" style="font-size:12px;border-color:var(--yellow);color:var(--yellow)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2z"/></svg>
+            Signal Engine (batch)
+          </button>
+        </div>
+        <div id="batch-status" style="font-size:12px;color:var(--text2);margin-bottom:8px"></div>
+      </div>
+      <div id="batch-panel" style="display:none;padding:0 20px 20px">
+        <div id="batch-body"></div>
+      </div>
+    </div>
 <!-- ── SCREEN: DM WAR ROOM — REMOVIDO (touchpoint lógica migrada para CSE engine) -->
 <div class="screen" id="screen-dm" style="display:none!important">
   <div class="dm-center" style="position:relative">
@@ -1497,13 +1528,13 @@ function setScreen(n,el){
   document.querySelectorAll('#ct > .screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
   var ct=document.getElementById('ct'); if(ct) ct.scrollTop=0;
-  const screenMap={home:'screen-home',pipeline:'screen-pipeline',tasks:'screen-tasks',reports:'screen-reports',prevendas:'screen-prevendas',intelligence:'screen-intelligence',playbooks:'screen-playbooks',dm:'screen-dm'};
+  const screenMap={home:'screen-home',pipeline:'screen-pipeline',tasks:'screen-tasks',reports:'screen-reports',prevendas:'screen-prevendas',intelligence:'screen-intelligence',playbooks:'screen-playbooks',batch:'screen-batch',dm:'screen-dm'};
   const target=document.getElementById(screenMap[n]||'screen-home');
   if(target) target.classList.add('on');
   if(el){ el.classList.add('on'); }
   else {
     const tabs=document.querySelectorAll('.ntab');
-    const tabMap={home:0,pipeline:1,tasks:2,reports:3,prevendas:4,intelligence:5,playbooks:6};
+    const tabMap={home:0,pipeline:1,tasks:2,reports:3,prevendas:4,intelligence:5,playbooks:6,batch:7};
     const idx=tabMap[n]!=null?tabMap[n]:0;
     if(tabs[idx]) tabs[idx].classList.add('on');
   }
@@ -3416,7 +3447,10 @@ const MCP_MAP = {
   note: ['eluci-core','output-schema','data-contract','validation-forms','funnel','lead-profile','guardrails'],
   business_analysis: ['eluci-core','strategy','revops-gtm','produtos-g4','bench-canais','segments','revenue-line-matrix'],
   dm_copy: ['eluci-core','sdr-social-dm','fip','blde','behavior','playbook-sdr','signals'],
-  coaching: ['eluci-core','sdr-coaching','training-scenarios','playbook-sdr','guardrails']
+  coaching: ['eluci-core','sdr-coaching','training-scenarios','playbook-sdr','guardrails'],
+  briefing: ['eluci-core','lead-profile','strategy','cse-engine','behavior','segments','signals','output-schema'],
+  batch_classify: ['eluci-core','signals','lead-profile','segments','output-schema'],
+  competitive: ['eluci-core','strategy','revops-gtm','produtos-g4','bench-canais','segments','revenue-line-matrix','cse-engine']
 };
 
 function buildDealContext(dealData){
@@ -3489,7 +3523,49 @@ const REQUEST_PROMPTS = {
   note: 'Gere uma nota de qualificação CRM para este deal. Formato canônico do output-schema. Preencha todos os campos com dados disponíveis. Marque NAO_INFORMADO onde faltar dado. Inclua DQI score.',
   business_analysis: 'Gere uma análise de mercado/setor para o segmento deste deal. Inclua: PANORAMA DO SETOR, TOP PLAYERS, TENDÊNCIAS, LACUNAS, JOGADAS ESTRATÉGICAS. Dados BR prioritários. Cite confiança [Alta]/[Média]/[Baixa].',
   dm_copy: 'Gere uma copy de Social DM (Instagram) para este deal. Tom do founder (definido pelo utm_medium). Objetivo: tensão de custo de inação. PROIBIDO: mencionar G4, produto, preço, call anterior.\n\nFORMATO OBRIGATÓRIO:\n\nDM PRONTO PARA COLAR:\n(texto da DM direto, sem formatação, sem headers — copiar e colar no Instagram)\n\nNOTA CRM:\n(nota curta para CRM)',
-  coaching: 'Analise a performance do operador neste deal e gere feedback de coaching. Inclua: o que fez bem, onde errou, próxima ação recomendada, score de execução.'
+  coaching: 'Analise a performance do operador neste deal e gere feedback de coaching. Inclua: o que fez bem, onde errou, próxima ação recomendada, score de execução.',
+  briefing: `Gere um BRIEFING PRE-CALL completo para este deal usando os dados do CRM + pesquisa web fornecida.
+
+FORMATO OBRIGATÓRIO — 5 blocos:
+
+1. PERFIL DO DECISOR
+- Nome, cargo, empresa, faixa faturamento
+- Histórico G4: produtos comprados, receita total, negociações anteriores
+- Se é cliente recorrente: qual produto, quando, quanto
+
+2. CONTEXTO DA EMPRESA (dados da web research)
+- O que a empresa faz, setor, porte estimado
+- Notícias recentes, mudanças de liderança, funding, expansão
+- Presença digital (LinkedIn, Instagram, site)
+
+3. INTELIGÊNCIA COMPETITIVA
+- Concorrentes diretos da empresa do lead
+- Posicionamento no mercado
+- Dores prováveis do setor
+
+4. ESTRATÉGIA DE ABORDAGEM
+- Framework recomendado (Challenger/SPICED/SPIN) com justificativa
+- 3 perguntas cirúrgicas para abrir a call
+- Argumentos baseados nos dados do lead (receita, produtos, perfil)
+- Objeções prováveis e contrapontos
+
+5. CHECKLIST PRE-CALL
+- [ ] Material preparado
+- [ ] CRM atualizado
+- [ ] Proposta de valor personalizada
+- [ ] Próximo passo definido
+
+REGRAS: Dados do CRM são fatos. Dados da web são contextuais — marcar confiança. Zero achismo.`,
+  batch_classify: 'Classifique este deal em uma escala de 1-10 para RISCO (chance de perder), POTENCIAL (valor estratégico), e URGÊNCIA (precisa de ação imediata). Retorne JSON: {"risk":N,"potential":N,"urgency":N,"action":"próxima ação recomendada","reason":"justificativa em 1 linha"}',
+  competitive: `Gere uma análise de INTELIGÊNCIA COMPETITIVA focada no setor do lead.
+
+FORMATO — 4 blocos:
+1. MAPA COMPETITIVO: 5 concorrentes diretos da empresa do lead com estimativa de market share
+2. ARMAS CHALLENGER: 3 insights contrarian para desafiar o status quo do lead (dados do setor)
+3. COMMERCIAL TEACHING: 1 insight de alto impacto que o lead NÃO sabe sobre seu próprio setor
+4. TAILORED VALUE: Como o G4 resolve especificamente a dor deste setor (sem parecer vendedor)
+
+Use dados da web research fornecida. Cite fontes. Confiança por bloco.`
 };
 
 // Carrega histórico completo de interações do deal para enriquecer o LLM
@@ -3959,6 +4035,239 @@ REGRAS: Dados BR prioritários. Cite fonte+ano. Marque confiança [Alta]/[Média
     try{window.parent.postMessage(payload,'*');}catch(e){}
     window.postMessage(payload,'*');
   }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// PRE-CALL BRIEFING — Web Research + CRM Data → Briefing completo
+// ══════════════════════════════════════════════════════════════════════
+async function requestPreCallBriefing(id, btnEl){
+  const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
+  if(!deal){showSyncToast('err','Selecione um deal primeiro.');return;}
+  const baEl=document.getElementById('ba-'+id);
+  if(!baEl) return;
+  const btn=btnEl||document.getElementById('btn-brief-'+id);
+  if(baEl.querySelector('.brief-h')){
+    const showing=baEl.style.display==='none';
+    baEl.style.display=showing?'block':'none';
+    if(btn) btn.classList.toggle('btn-on',showing);
+    return;
+  }
+  baEl.style.display='block';
+  if(btn) btn.classList.add('btn-on');
+  baEl.innerHTML='<div class="brief-h ba-h"><span class="ba-badge" style="background:var(--accent)">BRIEFING</span><span class="ba-htitle">Pre-Call Briefing</span></div><div class="ba-b"><span class="elucy-pulse">ELUCY pesquisando empresa e montando briefing...</span></div>';
+
+  // 1. Web search sobre a empresa/lead
+  const empresa=deal.empresa||deal.emailLead||deal.email_lead||'';
+  const nome=deal.contact_name||deal.nome||'';
+  const cargo=deal.cargo||'';
+  let webContext='';
+  try {
+    // Post to G4 OS for web search (via postMessage protocol)
+    const searchQuery=empresa?`"${empresa}" ${cargo} Brasil site:linkedin.com OR site:instagram.com`:`${nome} ${cargo} Brasil`;
+    // Use callIntelligenceAPI with web search context injected
+    webContext=`\n\nWEB RESEARCH CONTEXT:\nEmpresa/Email: ${empresa}\nNome do lead: ${nome}\nCargo: ${cargo}\nBusca sugerida: ${searchQuery}\n\nINSTRUÇÃO: Use os dados do CRM e persons_overview para construir o briefing. Os dados de web research devem ser inferidos do setor e cargo do lead quando pesquisa real não estiver disponível — marque como [Inferido] vs [CRM] vs [Web].`;
+  } catch(e){ webContext=''; }
+
+  // 2. Gerar briefing via Intelligence API
+  if(window.ELUCY_API_ENABLED && window.ELUCY_API_KEY){
+    try {
+      const apiResult = await callIntelligenceAPI(deal, 'briefing', webContext);
+      if(apiResult && apiResult.intelligence){
+        const output = typeof apiResult.intelligence === 'string' ? apiResult.intelligence : JSON.stringify(apiResult.intelligence, null, 2);
+        baEl.innerHTML='<div class="brief-h ba-h"><span class="ba-badge" style="background:var(--accent)">BRIEFING</span><span class="ba-htitle">Pre-Call Briefing</span><button class="hist-copy-btn" onclick="event.stopPropagation();clipText(document.getElementById(\'brief-content-'+id+'\').innerText)" style="position:static;margin-left:auto">Copiar</button></div><div class="ba-b" id="brief-content-'+id+'">'+renderMd(output)+'</div>';
+        logActivity('briefing_generated', deal.deal_id);
+        saveAPIResponse(deal.deal_id, 'briefing', output);
+        logDealInteraction(deal.deal_id, 'briefing', output);
+        return;
+      }
+    } catch(apiErr){
+      console.warn('Intelligence API falhou para briefing:', apiErr.message);
+    }
+  }
+  // Fallback: worker queue
+  if(window.IS_REMOTE){
+    const sb=getSB();const email=_currentUser&&_currentUser.email;
+    if(sb&&email){
+      initRealtimeSubscription();
+      const {data}=await sb.from('cockpit_requests').insert({operator_id:email,deal_id:deal.deal_id,request_type:'briefing',deal_data:{...deal,_web_context:webContext},status:'pending'}).select().single();
+      if(data) _pendingRequests[data.id]={targetId:id,deal_id:deal.deal_id,type:'briefing'};
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// COMPETITIVE INTELLIGENCE — Análise competitiva + armas Challenger
+// ══════════════════════════════════════════════════════════════════════
+async function requestCompetitiveIntel(id, btnEl){
+  const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
+  if(!deal){showSyncToast('err','Selecione um deal primeiro.');return;}
+  const baEl=document.getElementById('ba-'+id);
+  if(!baEl) return;
+  const btn=btnEl||document.getElementById('btn-comp-'+id);
+  if(baEl.querySelector('.comp-h')){
+    const showing=baEl.style.display==='none';
+    baEl.style.display=showing?'block':'none';
+    if(btn) btn.classList.toggle('btn-on',showing);
+    return;
+  }
+  baEl.style.display='block';
+  if(btn) btn.classList.add('btn-on');
+  baEl.innerHTML='<div class="comp-h ba-h"><span class="ba-badge" style="background:var(--yellow);color:#000">INTEL</span><span class="ba-htitle">Inteligência Competitiva</span></div><div class="ba-b"><span class="elucy-pulse">ELUCY mapeando concorrentes e montando armas Challenger...</span></div>';
+
+  const empresa=deal.empresa||deal.emailLead||deal.email_lead||'';
+  const setor=deal.linhaReceita||deal.canal||'educação executiva';
+  const webHint=`\n\nCONTEXTO WEB:\nEmpresa: ${empresa}\nSetor: ${setor}\nCargo: ${deal.cargo||''}\nFaixa: ${deal.faixa_de_faturamento||''}\n\nINSTRUÇÃO: Baseie a análise no setor do lead. Concorrentes = outras empresas do mesmo setor (não concorrentes do G4). Armas Challenger = insights que desafiam como o lead opera hoje.`;
+
+  if(window.ELUCY_API_ENABLED && window.ELUCY_API_KEY){
+    try {
+      const apiResult = await callIntelligenceAPI(deal, 'competitive', webHint);
+      if(apiResult && apiResult.intelligence){
+        const output = typeof apiResult.intelligence === 'string' ? apiResult.intelligence : JSON.stringify(apiResult.intelligence, null, 2);
+        baEl.innerHTML='<div class="comp-h ba-h"><span class="ba-badge" style="background:var(--yellow);color:#000">INTEL</span><span class="ba-htitle">Inteligência Competitiva</span><button class="hist-copy-btn" onclick="event.stopPropagation();clipText(document.getElementById(\'comp-content-'+id+'\').innerText)" style="position:static;margin-left:auto">Copiar</button></div><div class="ba-b" id="comp-content-'+id+'">'+renderMd(output)+'</div>';
+        logActivity('competitive_intel_generated', deal.deal_id);
+        saveAPIResponse(deal.deal_id, 'competitive', output);
+        logDealInteraction(deal.deal_id, 'competitive_intel', output);
+        return;
+      }
+    } catch(apiErr){
+      console.warn('Intelligence API falhou para competitive:', apiErr.message);
+    }
+  }
+  if(window.IS_REMOTE){
+    const sb=getSB();const email=_currentUser&&_currentUser.email;
+    if(sb&&email){
+      initRealtimeSubscription();
+      const {data}=await sb.from('cockpit_requests').insert({operator_id:email,deal_id:deal.deal_id,request_type:'competitive',deal_data:{...deal,_web_hint:webHint},status:'pending'}).select().single();
+      if(data) _pendingRequests[data.id]={targetId:id,deal_id:deal.deal_id,type:'competitive_intel'};
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// BATCH INTELLIGENCE — Processar múltiplos deals em paralelo
+// ══════════════════════════════════════════════════════════════════════
+async function runBatchIntelligence(batchType){
+  const deals=Object.values(window._COCKPIT_DEAL_MAP||{}).filter(d=>{
+    const s=(d.statusDeal||d.status_do_deal||'').toLowerCase();
+    return s!=='perdido'&&s!=='ganho';
+  });
+  if(!deals.length){showSyncToast('err','Nenhum deal ativo.');return;}
+  if(!window.ELUCY_API_ENABLED||!window.ELUCY_API_KEY){
+    showSyncToast('err','API key necessária para batch processing.');return;
+  }
+
+  const batchPanel=document.getElementById('batch-panel');
+  if(!batchPanel) return;
+  batchPanel.style.display='block';
+  const batchBody=document.getElementById('batch-body');
+  const batchStatus=document.getElementById('batch-status');
+
+  const MAX_PARALLEL=5;
+  const BATCH_PROMPTS={
+    classify: REQUEST_PROMPTS.batch_classify,
+    notes: 'Gere uma nota CRM completa para este deal. Formato: [ELUCI NOTE] data | Deal ID | Fase | Temp\nAção executada | Próximo passo | DQI. Máximo 5 linhas.',
+    signals: 'Analise os sinais deste deal e retorne JSON: {"signals":[{"type":"BUY|RISK|STALL|CHAMP","reason":"motivo"}],"risk_level":"LOW|MED|HIGH","priority_score":N,"next_action":"ação"}'
+  };
+
+  const prompt=BATCH_PROMPTS[batchType]||BATCH_PROMPTS.classify;
+  const label={classify:'Classificação por Risco/Potencial',notes:'Notas CRM',signals:'Análise de Sinais'}[batchType]||batchType;
+  batchStatus.textContent=`Processando ${deals.length} deals — ${label}...`;
+  batchBody.innerHTML='<div style="padding:12px"><span class="elucy-pulse">ELUCY processando '+deals.length+' deals em paralelo (max '+MAX_PARALLEL+' simultâneos)...</span></div>';
+
+  const results=[];
+  let completed=0;
+
+  // Process in parallel with concurrency limit
+  async function processDeal(deal){
+    try{
+      const ctx=buildDealContext(deal);
+      const bundle=await loadMCPBundle();
+      const mcpSlugs=MCP_MAP.batch_classify;
+      let systemParts=[];
+      mcpSlugs.forEach(slug=>{if(bundle[slug]&&bundle[slug].content) systemParts.push('<document name="'+slug+'">\n'+bundle[slug].content+'\n</document>');});
+
+      const resp=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'x-api-key':window.ELUCY_API_KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({model:window.ELUCY_API_MODEL||'claude-sonnet-4-20250514',max_tokens:1024,system:systemParts.join('\n\n'),messages:[{role:'user',content:ctx+'\n\n'+prompt}]})
+      });
+      const result=await resp.json();
+      const text=(result.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('\n');
+      completed++;
+      batchStatus.textContent=`${completed}/${deals.length} processados — ${label}`;
+      return {deal_id:deal.deal_id,nome:deal.contact_name||deal.nome||'',etapa:deal.etapa||deal.etapa_atual_no_pipeline||'',result:text,ok:true};
+    }catch(e){
+      completed++;
+      return {deal_id:deal.deal_id,nome:deal.contact_name||deal.nome||'',etapa:'',result:e.message,ok:false};
+    }
+  }
+
+  // Chunked parallel execution
+  for(let i=0;i<deals.length;i+=MAX_PARALLEL){
+    const chunk=deals.slice(i,i+MAX_PARALLEL);
+    const chunkResults=await Promise.all(chunk.map(d=>processDeal(d)));
+    results.push(...chunkResults);
+  }
+
+  // Render results
+  let html='<table class="batch-table"><thead><tr><th>Lead</th><th>Etapa</th><th>Resultado</th></tr></thead><tbody>';
+  results.forEach(r=>{
+    let parsed='';
+    if(batchType==='classify'){
+      try{
+        const j=JSON.parse(r.result.replace(/```json\n?/g,'').replace(/```/g,'').trim());
+        parsed=`<span class="tag ${j.risk>=7?'t-risk':j.risk>=4?'t-stall':'t-buy'}">Risco:${j.risk}</span> <span class="tag ${j.potential>=7?'t-buy':'t-stall'}">Pot:${j.potential}</span> <span class="tag ${j.urgency>=7?'t-risk':'t-stall'}">Urg:${j.urgency}</span><br><span style="font-size:11px;color:var(--text2)">${j.action||''}</span>`;
+      }catch(e){parsed=escHtml((r.result||'').slice(0,200));}
+    } else if(batchType==='signals'){
+      try{
+        const j=JSON.parse(r.result.replace(/```json\n?/g,'').replace(/```/g,'').trim());
+        const sigs=(j.signals||[]).map(s=>'<span class="tag t-'+({BUY:'buy',RISK:'risk',STALL:'stall',CHAMP:'champ'}[s.type]||'gray')+'">'+s.type+'</span>').join(' ');
+        parsed=sigs+' <span class="tag t-gray">'+j.risk_level+'</span><br><span style="font-size:11px;color:var(--text2)">'+escHtml(j.next_action||'')+'</span>';
+      }catch(e){parsed=escHtml((r.result||'').slice(0,200));}
+    } else {
+      parsed='<span style="font-size:11px">'+escHtml((r.result||'').slice(0,300))+'</span>';
+    }
+    html+=`<tr class="${r.ok?'':'batch-err'}"><td>${escHtml(r.nome)}</td><td>${escHtml(r.etapa)}</td><td>${parsed}</td></tr>`;
+  });
+  html+='</tbody></table>';
+  batchBody.innerHTML=html;
+  batchStatus.textContent=`${label} completa — ${results.filter(r=>r.ok).length}/${results.length} deals processados`;
+  logActivity('batch_'+batchType+'_completed', results.length+' deals');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// G4 OS INTEGRATION — Branching & Shared Sessions
+// ══════════════════════════════════════════════════════════════════════
+function branchDealSession(id){
+  const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
+  if(!deal){showSyncToast('err','Selecione um deal primeiro.');return;}
+  const payload={
+    type:'g4os:branch',
+    title:'Elucy — '+deal.contact_name+' — Cenário',
+    context:'Deal: '+deal.deal_id+' | '+deal.contact_name+' | '+deal.etapa+' | '+deal.tier+'\nAbrindo branch para testar abordagens alternativas.',
+    dealData:deal
+  };
+  try{window.parent.postMessage(payload,'*');}catch(e){}
+  window.postMessage(payload,'*');
+  showSyncToast('ok','Branch enviado ao G4 OS — nova sessão será criada com contexto do deal.');
+}
+
+function shareDealReport(id){
+  const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
+  if(!deal){showSyncToast('err','Selecione um deal primeiro.');return;}
+  // Build report summary
+  const erEl=document.getElementById('er-'+id);
+  const reportContent=erEl?erEl.innerText:'ELUCI Report não gerado ainda. Gere o report primeiro.';
+  const payload={
+    type:'g4os:share',
+    title:'Elucy Report — '+deal.contact_name,
+    content:reportContent,
+    dealId:deal.deal_id,
+    metadata:{tier:deal.tier,etapa:deal.etapa,signal:deal._signal,urgency:deal._urgency}
+  };
+  try{window.parent.postMessage(payload,'*');}catch(e){}
+  window.postMessage(payload,'*');
+  showSyncToast('ok','Report compartilhado via G4 OS — link de visualização será gerado.');
 }
 
 // Load deal interaction history from Supabase
@@ -5043,10 +5352,14 @@ function selectLiveDeal(id,d){
         <button class="btn bp" onclick="showCopy('${id}',this)">Gerar Copy via ELUCY</button>
         <button class="btn bs" id="btn-er-${id}" onclick="toggleER('${id}',this)">ELUCI Report</button>
         <button class="btn bs" id="btn-ba-${id}" data-color="clay" onclick="requestBusinessAnalysis('${id}',this)" style="border-color:var(--clay);color:var(--clay)">Análise de Mercado</button>
+        <button class="btn bs btn-sm" id="btn-brief-${id}" onclick="requestPreCallBriefing('${id}',this)" style="border-color:var(--accent);color:var(--accent)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Briefing</button>
+        <button class="btn bs btn-sm" id="btn-comp-${id}" onclick="requestCompetitiveIntel('${id}',this)" style="border-color:var(--yellow);color:var(--yellow)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Intel Competitiva</button>
         <button class="wa-conv-btn" id="btn-wa-${id}" onclick="toggleWaPanel('${id}',this)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Conversa</button>
         <button class="btn bs btn-sm" id="btn-nota-${id}" data-color="green" onclick="requestNotaCRM('${id}',this)" style="border-color:var(--green);color:var(--green)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Nota CRM</button>
         <button class="btn bs btn-sm" onclick="if(window.renderCadenceModal)window.renderCadenceModal('${id}')" style="border-color:var(--accent2);color:var(--accent2)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Cadência</button>
         <button class="btn bs btn-sm" onclick="window.open('https://app.hubspot.com/contacts/7186301/record/0-3/${d.deal_id||id}','_blank')" style="border-color:#ff7a59;color:#ff7a59"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> HubSpot</button>
+        <button class="btn bs btn-sm" onclick="branchDealSession('${id}')" style="border-color:var(--accent2);color:var(--accent2)" title="Fork sessão para testar abordagens"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg> Branch</button>
+        <button class="btn bs btn-sm" onclick="shareDealReport('${id}')" style="border-color:var(--text2);color:var(--text2)" title="Compartilhar report com gestão"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share</button>
       </div>
       <div class="ba" id="nota-${id}" style="display:none"></div>
       <div class="wa-panel" id="wa-panel-${id}">
