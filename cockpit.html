@@ -7,8 +7,8 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2304080f'/><text x='50' y='66' font-size='36' font-weight='900' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='2'>EC</text><rect x='28' y='72' width='44' height='14' rx='4' fill='%230a84ff'/><text x='50' y='82' font-size='9' font-weight='800' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>BY G4</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2304080f'/><text x='50' y='66' font-size='36' font-weight='900' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='2'>EC</text><rect x='28' y='72' width='44' height='14' rx='4' fill='%230a84ff'/><text x='50' y='82' font-size='9' font-weight='800' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>BY G4</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<!-- Supabase JS SDK (defer — não bloqueia render) -->
-<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<!-- Supabase JS SDK — carrega sincrono (necessário antes do DOMContentLoaded para auth) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <!-- cockpit-data.js carregado após auth, apenas em ambiente local G4 OS -->
 <script>
 // Detecta se está rodando em GitHub Pages ou localmente
@@ -2250,15 +2250,18 @@ async function checkApproval(user){
     return;
   }
   // Verifica se está aprovado na tabela operators
-  const {data}=await sb.from('operators').select('approved,email').eq('email',user.email).maybeSingle();
+  const {data,error}=await sb.from('operators').select('approved,email').eq('email',user.email).maybeSingle();
+  if(error){ console.warn('[auth] operators query error:', error.message); }
   if(data&&data.approved){
     showCockpit(user);
+  } else if(data&&!data.approved){
+    // Operador existe mas nao esta aprovado — mostra tela de pending (NAO sobrescreve)
+    showPendingScreen(user.email);
   } else {
-    // Registra na fila (upsert) sem depender de RPC
+    // Operador NAO existe na tabela — insere como novo pendente
     const nome=(user.user_metadata&&user.user_metadata.full_name)||user.email.split('@')[0];
-    await sb.from('operators').upsert(
-      {email:user.email,name:nome,qualificador_name:nome,role:'sdr',approved:false},
-      {onConflict:'email',ignoreDuplicates:false}
+    await sb.from('operators').insert(
+      {email:user.email,name:nome,qualificador_name:nome,role:'sdr',approved:false}
     );
     showPendingScreen(user.email);
   }
