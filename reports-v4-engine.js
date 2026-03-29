@@ -678,7 +678,8 @@
     html += '</div>';
 
     // Enterprise data (V11)
-    var ent = window.AnalyticsEngine && window.AnalyticsEngine.calcEnterprise ? window.AnalyticsEngine.calcEnterprise() : null;
+    var _opEmail = function(){ return (window._currentUser && window._currentUser.email) || ''; };
+    var ent = window.AnalyticsEngine && window.AnalyticsEngine.calcEnterprise ? window.AnalyticsEngine.calcEnterprise(_opEmail()) : null;
 
     // KPI Summary Row
     html += '<div class="kpi-g" style="grid-template-columns:repeat(4,1fr);margin-bottom:8px">';
@@ -698,7 +699,7 @@
       var taColor = taScore>=70?'var(--green)':taScore>=50?'var(--yellow)':'var(--red)';
       html += '<div class="kpi"><div class="kpi-l">Trusted Advisor</div><div class="kpi-v" style="color:'+taColor+'">' + taScore + '%</div></div>';
       // Behavioral
-      var beh = window.calcBehavioralIntelligenceV26 ? window.calcBehavioralIntelligenceV26() : null;
+      var beh = window.calcBehavioralIntelligenceV26 ? window.calcBehavioralIntelligenceV26(_opEmail()) : null;
       var behPct = beh ? Math.round(beh.sdr_behavior_score*100) : 0;
       var behCol = behPct>=65?'var(--green)':behPct>=45?'var(--yellow)':'var(--red)';
       html += '<div class="kpi"><div class="kpi-l">Behavior Score</div><div class="kpi-v" style="color:'+behCol+'">' + behPct + '%</div></div>';
@@ -709,14 +710,14 @@
     }
     html += '</div>';
     // Strategic Alignment Row (L25)
-    var sa = window.calcStrategicAlignmentV25 ? window.calcStrategicAlignmentV25() : null;
+    var sa = window.calcStrategicAlignmentV25 ? window.calcStrategicAlignmentV25(null, _opEmail()) : null;
     if(sa){
       html += '<div class="kpi-g" style="grid-template-columns:repeat(5,1fr);margin-bottom:14px">';
       html += '<div class="kpi" style="border-color:rgba(48,209,88,.15)"><div class="kpi-l" style="color:var(--green)">Revenue Quality</div><div class="kpi-v" style="color:var(--green)">' + Math.round((sa.strategic_revenue_score||0)*100) + '%</div></div>';
       html += '<div class="kpi" style="border-color:rgba(48,209,88,.15)"><div class="kpi-l" style="color:var(--green)">Experience</div><div class="kpi-v" style="color:var(--green)">' + Math.round((sa.experience_score||0)*100) + '%</div></div>';
       html += '<div class="kpi"><div class="kpi-l">SAL 5M+ Rate</div><div class="kpi-v">' + Math.round((sa.sal_5m_rate||0)*100) + '%</div></div>';
       html += '<div class="kpi"><div class="kpi-l">MKT SAL Revenue</div><div class="kpi-v">' + _fmtBRL(sa.marketing_sal_revenue||0) + '</div></div>';
-      html += '<div class="kpi"><div class="kpi-l">Framework</div><div class="kpi-v">' + (sa.experience_quality.framework_coverage_pct||0) + '%</div></div>';
+      html += '<div class="kpi"><div class="kpi-l">Framework</div><div class="kpi-v">' + ((sa.experience_quality&&sa.experience_quality.framework_coverage_pct)||0) + '%</div></div>';
       html += '</div>';
     }
 
@@ -781,13 +782,13 @@
       { id: 'rv4-insight-channel', name: 'channel_forecast', data: channel.rows.slice(0, 5) }
     ];
 
-    blocks.forEach(async function (block) {
+    Promise.all(blocks.map(async function (block) {
       try {
         var insights = await requestInsight(block.name, block.data);
         var el = document.getElementById(block.id);
         if (el && insights) el.innerHTML = renderInsightBox(insights);
       } catch (e) { /* silent — block renders fine without insight */ }
-    });
+    })).catch(function(e){ console.warn('[ReportsV4] Insight batch error:', e); });
   }
 
   // ============================================================================

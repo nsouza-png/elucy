@@ -674,7 +674,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .slack-btn{position:relative;padding:5px 8px;border-radius:6px;font-size:13px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);transition:.15s;line-height:1;font-weight:600;display:inline-flex;align-items:center;gap:3px}
 .slack-btn:hover{border-color:#e01e5a;color:#e01e5a}
 .slack-btn .notif-dot{background:#e01e5a}
-.slack-count{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;border-radius:8px;background:#e01e5a;color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;display:none}
+.slack-count{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;border-radius:8px;background:#e01e5a;color:#fff;font-size:9px;font-weight:800;align-items:center;justify-content:center;padding:0 4px;display:none}
 .slack-count.show{display:flex}
 .slack-panel{position:absolute;top:50px;right:120px;width:400px;max-height:480px;overflow-y:auto;background:rgba(12,21,37,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border2);border-radius:14px;box-shadow:0 12px 48px rgba(0,0,0,.5);z-index:50;display:none}
 .slack-panel.show{display:block;animation:fadeIn .15s ease}
@@ -1643,6 +1643,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 </div>
 </div>
 <script>
+
+// Channel mapping constants (hoisted to top to avoid TDZ issues)
+const CHANNEL_LABELS={whatsapp:'WhatsApp',instagram:'Instagram',email:'Email',call:'Ligação',other:'Outro'};
+const TIPO_TO_CHANNEL={whatsapp_msg_lead:'whatsapp',whatsapp_msg_sdr:'whatsapp',instagram_msg_lead:'instagram',instagram_msg_sdr:'instagram',email_msg_lead:'email',email_msg_sdr:'email',call_note_lead:'call',call_note_sdr:'call',other_msg_lead:'other',other_msg_sdr:'other'};
+const ALL_MSG_TIPOS=['whatsapp_msg_lead','whatsapp_msg_sdr','instagram_msg_lead','instagram_msg_sdr','email_msg_lead','email_msg_sdr','call_note_lead','call_note_sdr','other_msg_lead','other_msg_sdr'];
 
 let cur=null;
 
@@ -5476,7 +5481,7 @@ function getActiveChannel(id){
   return window._convChannel[id]||'whatsapp';
 }
 
-const CHANNEL_LABELS={whatsapp:'WhatsApp',instagram:'Instagram',email:'Email',call:'Ligação',other:'Outro'};
+// CHANNEL_LABELS hoisted to top of script block
 const CHANNEL_TIPOS={
   whatsapp:{lead:'whatsapp_msg_lead',sdr:'whatsapp_msg_sdr',raw:'whatsapp_raw'},
   instagram:{lead:'instagram_msg_lead',sdr:'instagram_msg_sdr',raw:'instagram_raw'},
@@ -5730,9 +5735,7 @@ function updateConvBadge(id){
   }
 }
 
-// All message tipos across channels (excludes _raw)
-const ALL_MSG_TIPOS=['whatsapp_msg_lead','whatsapp_msg_sdr','instagram_msg_lead','instagram_msg_sdr','email_msg_lead','email_msg_sdr','call_note_lead','call_note_sdr','other_msg_lead','other_msg_sdr'];
-const TIPO_TO_CHANNEL={whatsapp_msg_lead:'whatsapp',whatsapp_msg_sdr:'whatsapp',instagram_msg_lead:'instagram',instagram_msg_sdr:'instagram',email_msg_lead:'email',email_msg_sdr:'email',call_note_lead:'call',call_note_sdr:'call',other_msg_lead:'other',other_msg_sdr:'other'};
+// ALL_MSG_TIPOS, TIPO_TO_CHANNEL, CHANNEL_LABELS hoisted to top of script block
 
 async function loadConversation(id){
   const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
@@ -7091,8 +7094,9 @@ function initSlackAlerts(){
   const email=_currentUser&&_currentUser.email;
   if(!email) return;
   loadSlackAlerts();
-  // Poll every 60s for new alerts
-  setInterval(()=>loadSlackAlerts(),60000);
+  // Poll every 60s for new alerts — guard against duplicate intervals
+  if(window._slackPollId) clearInterval(window._slackPollId);
+  window._slackPollId = setInterval(()=>loadSlackAlerts(),60000);
 }
 </script>
 <!-- ── TASK EXECUTION OVERLAY ────────────────────────────────────── -->

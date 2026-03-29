@@ -137,7 +137,7 @@ async function saveOperatorSettings(settings){
       fups:_operatorCtx.meta_mensal.fups, qualificacoes:_operatorCtx.meta_mensal.qualificacoes,
       handoffs:_operatorCtx.meta_mensal.handoffs, opp:_operatorCtx.meta_mensal.opp||15,
       updated_at:new Date().toISOString()
-    },{onConflict:'operator_email,period_key'}).then(function(){});
+    },{onConflict:'operator_email,period_key'}).then(function(){}).catch(function(e){console.warn('[supabase] upsert error:',e.message);});
   }
   await sb.from('operators').update(update).eq('email',email);
 }
@@ -1034,7 +1034,7 @@ window.texComplete = function(){
         elapsed_seconds: _texSeconds,
         dealName: t.deal.nome
       })
-    }).then(function(){});
+    }).then(function(){}).catch(function(e){console.warn('[supabase] upsert error:',e.message);});
   }
 
   // Log to deal_interactions if disposition set
@@ -1048,7 +1048,7 @@ window.texComplete = function(){
         disposition: _texDisposition,
         elapsed_seconds: _texSeconds
       })
-    }).then(function(){});
+    }).then(function(){}).catch(function(e){console.warn('[supabase] upsert error:',e.message);});
   }
 
   // V5: persist completion to deal_tasks
@@ -1275,7 +1275,7 @@ window.cadenceRemove = function(dealId){
   sb.from('elucy_cache').delete()
     .eq('deal_id','_cad_'+dealId)
     .eq('operator_email',opId)
-    .then(function(){});
+    .then(function(){}).catch(function(e){console.warn('[supabase] upsert error:',e.message);});
   if(window.showSyncToast) window.showSyncToast('ok','Cadência removida');
 };
 
@@ -2003,7 +2003,7 @@ function initRealtimeListeners(){
     try{ sb.removeChannel(window._realtimeChannel); }catch(e){}
     window._realtimeChannel=null;
   }
-  if(_rtChan) sb.removeChannel(_rtChan);
+  if(_rtChan){ try{ sb.removeChannel(_rtChan); }catch(e){} _rtChan=null; }
   _rtChan = sb.channel('engine-resp-'+opId)
     .on('postgres_changes',{
       event:'INSERT', schema:'public', table:'cockpit_responses',
@@ -2013,7 +2013,7 @@ function initRealtimeListeners(){
       _handleResponse(r);
     }).subscribe();
 
-  if(_ntChan) sb.removeChannel(_ntChan);
+  if(_ntChan){ try{ sb.removeChannel(_ntChan); }catch(e){} _ntChan=null; }
   _ntChan = sb.channel('engine-notif-'+opId)
     .on('postgres_changes',{
       event:'INSERT', schema:'public', table:'operator_notifications',
@@ -2025,7 +2025,8 @@ function initRealtimeListeners(){
     }).subscribe();
 }
 window.initRealtimeListeners = initRealtimeListeners;
-window.initRealtimeSubscription = function(){};
+// Legacy alias (deprecated — use initRealtimeListeners)
+window.initRealtimeSubscription = initRealtimeListeners;
 
 function _handleResponse(response){
   var dealId=response.deal_id;
@@ -2078,7 +2079,7 @@ async function _incrementEnrichmentCount(dealId){
     .eq('deal_id',dealId).eq('operator_email',opId).maybeSingle();
   var current=(result.data&&result.data.enrichment_count)||0;
   sb.from('deals').update({enrichment_count:current+1})
-    .eq('deal_id',dealId).eq('operator_email',opId).then(function(){});
+    .eq('deal_id',dealId).eq('operator_email',opId).then(function(){}).catch(function(e){console.warn('[supabase] upsert error:',e.message);});
 }
 
 function _updateBadge(){
@@ -2124,7 +2125,7 @@ function logActivity(type,dealId,meta){
   var opId=getOperatorId(); if(!opId) return;
   sb.from('activity_log').insert({
     operator_id:opId, activity_type:type, deal_id:dealId||null, metadata:meta||{}
-  }).then(function(){});
+  }).then(function(){}).catch(function(e){console.warn('[supabase] upsert error:',e.message);});
 }
 window.logActivity = logActivity;
 
@@ -2136,7 +2137,7 @@ async function saveInteraction(dealId,type,content,meta,parentId){
     content:content||'', metadata:meta||{}, parent_id:parentId||null
   }).select('id').single();
   sb.from('deals').update({last_interaction_at:_now()})
-    .eq('deal_id',dealId).eq('operator_email',getOperatorId()).then(function(){});
+    .eq('deal_id',dealId).eq('operator_email',getOperatorId()).then(function(){}).catch(function(e){console.warn('[supabase] upsert error:',e.message);});
   return result.data?result.data.id:null;
 }
 window.saveInteraction = saveInteraction;
@@ -2448,7 +2449,8 @@ async function updateTodayStats(){
   el=document.getElementById('meta-hand-bar'); if(el) el.style.width=Math.min(100,Math.round(stats.handoffs/meta.handoffs*100))+'%';
 }
 window.updateTodayStats = updateTodayStats;
-setInterval(function(){ if(getOperatorId()) updateTodayStats(); },60000);
+if(window._statsInterval) clearInterval(window._statsInterval);
+window._statsInterval = setInterval(function(){ if(getOperatorId()) updateTodayStats(); },60000);
 setTimeout(function(){ if(getOperatorId()) updateTodayStats(); },2000);
 
 // ==================================================================
@@ -3205,20 +3207,19 @@ async function syncDealRuntime(){
     rows.push(_dealToRuntime(id, d, email));
   });
 
-  // Upsert in chunks of 50
+  // Upsert in parallel chunks of 50
   var CHUNK = 50;
-  var synced = 0;
-  for(var i = 0; i < rows.length; i += CHUNK){
-    var chunk = rows.slice(i, i + CHUNK);
-    try {
-      var res = await sb.from('deal_runtime')
-        .upsert(chunk, { onConflict: 'deal_id,operator_email' });
-      if(res.error) console.warn('[runtime-sync] chunk error:', res.error.message);
-      else synced += chunk.length;
-    } catch(e){
-      console.warn('[runtime-sync] chunk exception:', e.message);
-    }
-  }
+  var chunks = [];
+  for(var i = 0; i < rows.length; i += CHUNK) chunks.push(rows.slice(i, i + CHUNK));
+  var results = await Promise.all(chunks.map(function(chunk){
+    return sb.from('deal_runtime')
+      .upsert(chunk, { onConflict: 'deal_id,operator_email' })
+      .then(function(res){
+        if(res.error){ console.warn('[runtime-sync] chunk error:', res.error.message); return 0; }
+        return chunk.length;
+      }).catch(function(e){ console.warn('[runtime-sync] chunk exception:', e.message); return 0; });
+  }));
+  var synced = results.reduce(function(s,n){return s+n;},0);
   console.log('[runtime-sync] ' + synced + '/' + rows.length + ' deals synced to deal_runtime');
   return synced;
 }
@@ -3233,22 +3234,23 @@ window.syncDealRuntime = syncDealRuntime;
 async function loadTaxonomy(){
   var sb = _sb(); if(!sb) return;
   try {
-    // Revenue Lines
-    var rl = await sb.from('taxonomy_revenue_lines').select('line_slug,line_label,base_metric,risk_after_days,line_weight').eq('is_active',true);
+    // Parallel load all taxonomy tables
+    var results = await Promise.all([
+      sb.from('taxonomy_revenue_lines').select('line_slug,line_label,base_metric,risk_after_days,line_weight').eq('is_active',true),
+      sb.from('kill_switches').select('switch_slug,is_enabled'),
+      sb.from('focus_modes').select('mode_slug,mode_label,icon,priority_task_types').eq('is_active',true)
+    ]);
+    var rl=results[0], ks=results[1], fm=results[2];
     if(rl.data && rl.data.length){
       rl.data.forEach(function(r){
         REVENUE_LINES[r.line_slug] = { label:r.line_label, base:r.base_metric, risk_after:r.risk_after_days, line_weight:r.line_weight };
       });
       console.log('[taxonomy] revenue_lines loaded: '+rl.data.length);
     }
-    // Kill Switches
-    var ks = await sb.from('kill_switches').select('switch_slug,is_enabled');
     if(ks.data && ks.data.length){
       ks.data.forEach(function(k){ KILL_SWITCHES[k.switch_slug] = k.is_enabled; });
       console.log('[taxonomy] kill_switches loaded: '+ks.data.length);
     }
-    // Focus Modes
-    var fm = await sb.from('focus_modes').select('mode_slug,mode_label,icon,priority_task_types').eq('is_active',true);
     if(fm.data && fm.data.length){
       fm.data.forEach(function(f){
         FOCUS_MODES[f.mode_slug] = { label:f.mode_label, icon:f.icon, priority:f.priority_task_types||[] };
@@ -6742,6 +6744,7 @@ function emitTelemetry(evt){
     created_at: new Date().toISOString()
   };
   var row = Object.assign(base, evt);
+  if(_telemetryQueue.length>500) _telemetryQueue.shift();
   _telemetryQueue.push(row);
   // Batch flush every 500ms to reduce writes
   if(!_telemetryFlushTimer){
