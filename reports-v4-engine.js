@@ -210,7 +210,7 @@
     var byLine = {};
 
     deals.forEach(function (d) {
-      var line = d._revLine || d.linha_de_receita_vigente || d.grupo_de_receita || 'Outro';
+      var line = d._revLine || (window.resolveRevenueLine ? window.resolveRevenueLine(d) : null) || 'nao_definido';
       if (!byLine[line]) byLine[line] = { total: 0, sal: 0, opp: 0, won: 0, lost: 0, value: 0, byStage: {} };
 
       var bl = byLine[line];
@@ -283,7 +283,7 @@
     var byLine = {};
 
     deals.forEach(function (d) {
-      var line = d._revLine || d.linha_de_receita_vigente || d.grupo_de_receita || 'Outro';
+      var line = d._revLine || (window.resolveRevenueLine ? window.resolveRevenueLine(d) : null) || 'nao_definido';
       if (!byLine[line]) byLine[line] = { dt_values: [], byQualif: {} };
 
       var dt = parseFloat(d.delta_t);
@@ -673,53 +673,19 @@
 
     // Header
     html += '<div style="margin-bottom:16px">';
-    html += '<div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:3px">Pre-Vendas Intelligence <span style="font-size:10px;font-weight:600;color:var(--accent2);letter-spacing:1px">V11 ENTERPRISE</span></div>';
-    html += '<div style="font-size:12px;color:var(--text2)">Dados do mes atual — atualizado via Supabase — 25 layers</div>';
+    html += '<div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:3px">Pre-Vendas Intelligence</div>';
+    html += '<div style="font-size:12px;color:var(--text2)">Dados do mes atual — atualizado via Supabase</div>';
     html += '</div>';
 
-    // Enterprise data (V11)
-    var _opEmail = function(){ return (window._currentUser && window._currentUser.email) || ''; };
-    var ent = window.AnalyticsEngine && window.AnalyticsEngine.calcEnterprise ? window.AnalyticsEngine.calcEnterprise(_opEmail()) : null;
-
     // KPI Summary Row
-    html += '<div class="kpi-g" style="grid-template-columns:repeat(4,1fr);margin-bottom:8px">';
+    html += '<div class="kpi-g" style="grid-template-columns:repeat(6,1fr);margin-bottom:14px">';
     html += '<div class="kpi"><div class="kpi-l">MQL</div><div class="kpi-v">' + _fmt(funnel.counts['MQL']) + '</div></div>';
     html += '<div class="kpi"><div class="kpi-l">SAL</div><div class="kpi-v">' + _fmt(funnel.counts['SAL']) + '</div></div>';
     html += '<div class="kpi"><div class="kpi-l">OPP</div><div class="kpi-v">' + _fmt(funnel.counts['Oportunidade']) + '</div></div>';
     html += '<div class="kpi"><div class="kpi-l">Won</div><div class="kpi-v">' + _fmt(funnel.counts['Ganho']) + '</div></div>';
+    html += '<div class="kpi"><div class="kpi-l">CR MQL→OPP</div><div class="kpi-v">' + _pct(funnel.counts['Oportunidade'], funnel.counts['MQL']) + '%</div></div>';
+    html += '<div class="kpi"><div class="kpi-l">Perdidos</div><div class="kpi-v" style="color:var(--red)">' + _fmt(funnel.total > 0 ? funnel.lost : 0) + '</div></div>';
     html += '</div>';
-
-    // Enterprise + Strategic KPI Row (V12)
-    html += '<div class="kpi-g" style="grid-template-columns:repeat(5,1fr);margin-bottom:14px">';
-    if(ent){
-      html += '<div class="kpi" style="border-color:rgba(212,149,106,.2)"><div class="kpi-l" style="color:#d4956a">5M+ Enterprise</div><div class="kpi-v" style="color:#d4956a">' + _fmt(ent.enterprise5m.count) + '</div></div>';
-      html += '<div class="kpi" style="border-color:rgba(212,149,106,.2)"><div class="kpi-l" style="color:#d4956a">Pipeline 5M+</div><div class="kpi-v" style="color:#d4956a">' + _fmtBRL(ent.enterprise5m.pipelineValue) + '</div></div>';
-      html += '<div class="kpi"><div class="kpi-l">EVS Medio</div><div class="kpi-v">' + (ent.avgEVS||0) + '/100</div></div>';
-      var taScore = ent.advisor ? Math.round(ent.advisor.score*100) : 0;
-      var taColor = taScore>=70?'var(--green)':taScore>=50?'var(--yellow)':'var(--red)';
-      html += '<div class="kpi"><div class="kpi-l">Trusted Advisor</div><div class="kpi-v" style="color:'+taColor+'">' + taScore + '%</div></div>';
-      // Behavioral
-      var beh = window.calcBehavioralIntelligenceV26 ? window.calcBehavioralIntelligenceV26(_opEmail()) : null;
-      var behPct = beh ? Math.round(beh.sdr_behavior_score*100) : 0;
-      var behCol = behPct>=65?'var(--green)':behPct>=45?'var(--yellow)':'var(--red)';
-      html += '<div class="kpi"><div class="kpi-l">Behavior Score</div><div class="kpi-v" style="color:'+behCol+'">' + behPct + '%</div></div>';
-    } else {
-      html += '<div class="kpi"><div class="kpi-l">CR MQL→OPP</div><div class="kpi-v">' + _pct(funnel.counts['Oportunidade'], funnel.counts['MQL']) + '%</div></div>';
-      html += '<div class="kpi"><div class="kpi-l">Perdidos</div><div class="kpi-v" style="color:var(--red)">' + _fmt(funnel.total > 0 ? funnel.lost : 0) + '</div></div>';
-      html += '<div class="kpi"></div><div class="kpi"></div><div class="kpi"></div>';
-    }
-    html += '</div>';
-    // Strategic Alignment Row (L25)
-    var sa = window.calcStrategicAlignmentV25 ? window.calcStrategicAlignmentV25(null, _opEmail()) : null;
-    if(sa){
-      html += '<div class="kpi-g" style="grid-template-columns:repeat(5,1fr);margin-bottom:14px">';
-      html += '<div class="kpi" style="border-color:rgba(48,209,88,.15)"><div class="kpi-l" style="color:var(--green)">Revenue Quality</div><div class="kpi-v" style="color:var(--green)">' + Math.round((sa.strategic_revenue_score||0)*100) + '%</div></div>';
-      html += '<div class="kpi" style="border-color:rgba(48,209,88,.15)"><div class="kpi-l" style="color:var(--green)">Experience</div><div class="kpi-v" style="color:var(--green)">' + Math.round((sa.experience_score||0)*100) + '%</div></div>';
-      html += '<div class="kpi"><div class="kpi-l">SAL 5M+ Rate</div><div class="kpi-v">' + Math.round((sa.sal_5m_rate||0)*100) + '%</div></div>';
-      html += '<div class="kpi"><div class="kpi-l">MKT SAL Revenue</div><div class="kpi-v">' + _fmtBRL(sa.marketing_sal_revenue||0) + '</div></div>';
-      html += '<div class="kpi"><div class="kpi-l">Framework</div><div class="kpi-v">' + ((sa.experience_quality&&sa.experience_quality.framework_coverage_pct)||0) + '%</div></div>';
-      html += '</div>';
-    }
 
     // Row 1: Funnel + Daily Volume (2 columns)
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">';
@@ -782,13 +748,13 @@
       { id: 'rv4-insight-channel', name: 'channel_forecast', data: channel.rows.slice(0, 5) }
     ];
 
-    Promise.all(blocks.map(async function (block) {
+    blocks.forEach(async function (block) {
       try {
         var insights = await requestInsight(block.name, block.data);
         var el = document.getElementById(block.id);
         if (el && insights) el.innerHTML = renderInsightBox(insights);
       } catch (e) { /* silent — block renders fine without insight */ }
-    })).catch(function(e){ console.warn('[ReportsV4] Insight batch error:', e); });
+    });
   }
 
   // ============================================================================

@@ -64,6 +64,8 @@ function _fmtOrigem(canalMkt, utm){
   return canalMkt||utm||'Direto';
 }
 
+window._resolveCanal = _fmtOrigem;
+
 // ==================================================================
 // LAYER 1 — OPERATOR CONTEXT
 // Define o contexto base da sessao. Toda tela usa como chave primaria.
@@ -137,7 +139,7 @@ async function saveOperatorSettings(settings){
       fups:_operatorCtx.meta_mensal.fups, qualificacoes:_operatorCtx.meta_mensal.qualificacoes,
       handoffs:_operatorCtx.meta_mensal.handoffs, opp:_operatorCtx.meta_mensal.opp||15,
       updated_at:new Date().toISOString()
-    },{onConflict:'operator_email,period_key'}).then(function(){}).catch(function(e){console.warn('[supabase] upsert error:',e.message);});
+    },{onConflict:'operator_email,period_key'}).then(function(){});
   }
   await sb.from('operators').update(update).eq('email',email);
 }
@@ -149,7 +151,7 @@ const FOCUS_MODES = {
   handoff:      { label:'Handoff',       priority:['handoff_prep','dvl_review','note_completion'], icon:'handshake' },
   reativacao:   { label:'Reativacao',    priority:['reativacao','no_show_recovery','follow_up'], icon:'refresh' },
   social_dm:    { label:'Social DM',     priority:['social_dm','follow_up','agendamento'], icon:'chat' },
-  imersao:      { label:'Imersao Focus', priority:['follow_up','handoff_prep','qualificacao'], icon:'trophy' }
+  alta_performance: { label:'Alta Performance', priority:['follow_up','handoff_prep','qualificacao'], icon:'trophy' }
 };
 window.FOCUS_MODES = FOCUS_MODES;
 
@@ -158,10 +160,10 @@ window.FOCUS_MODES = FOCUS_MODES;
 // LAYER 2 — TAXONOMY CORE
 // ==================================================================
 
-// Revenue Lines — grupos canônicos reais do G4
-// Fonte: production.diamond.funil_comercial.grupo_de_receita (76 linhas → 10 grupos)
+// Revenue Lines — grupos canônicos reais do G4 (ref: g4-revops-blueprint.md BLUEPRINT_001)
+// Fonte: production.diamond.funil_comercial.grupo_de_receita (10 grupos reais)
 var REVENUE_LINES = {
-  funil_marketing:  { label:'Funil de Marketing',        base:'qualified',   risk_after:3, line_weight:1.0  },
+  funil_marketing:  { label:'Funil de Marketing',        base:'qualified',   risk_after:3, line_weight:1.0, sdr_scope:false },
   turmas:           { label:'Turmas',                    base:'qualified',   risk_after:4, line_weight:1.0  },
   projetos_eventos: { label:'Projetos & Eventos',        base:'qualified',   risk_after:5, line_weight:0.9  },
   social_dm:        { label:'Social DM',                 base:'touchpoints', risk_after:1, line_weight:0.75 },
@@ -172,6 +174,7 @@ var REVENUE_LINES = {
   renovacao:        { label:'Renovação',                 base:'opportunity', risk_after:5, line_weight:0.85 },
   field_sales:      { label:'Field Sales',               base:'meetings',    risk_after:7, line_weight:0.9  },
   aquisicao:        { label:'Time de Vendas - Aquisição',base:'qualified',   risk_after:3, line_weight:1.0  },
+  g4_tools:         { label:'G4 Tools',                  base:'opportunity', risk_after:5, line_weight:0.7  },
   nao_definido:     { label:'Não Definido',              base:'leads',       risk_after:3, line_weight:0.6  }
 };
 window.REVENUE_LINES = REVENUE_LINES;
@@ -192,47 +195,72 @@ var KILL_SWITCHES = {
 window.KILL_SWITCHES = KILL_SWITCHES;
 
 // resolveRevenueLine — mapeia deal para grupo_de_receita canônico do G4
-// REGRA 1: se grupo_de_receita vier preenchido do Databricks → usar direto (fonte da verdade)
-// REGRA 2: fallback por linha_de_receita_vigente e utm_medium para casos sem grupo
+// HIERARQUIA: (1) grupo_de_receita → (2) linha_de_receita_vigente → (3) utm_medium (último recurso)
+// linha_de_receita_vigente é a propriedade-mãe que diz de onde o dinheiro vem
+// utm/canal_de_marketing só entra quando linha_de_receita_vigente está vazia
 function resolveRevenueLine(deal){
   var lr=(deal.linhaReceita||deal.linha_de_receita_vigente||'').toLowerCase().trim();
   var gr=(deal.grupo_de_receita||deal.grupoReceita||'').toLowerCase().trim();
   var utm=(deal.utm_medium||'').toLowerCase().trim();
 
   // REGRA 1 — grupo_de_receita direto do Databricks (fonte da verdade)
-  if(gr==='funil de marketing')          return 'funil_marketing';
-  if(gr==='turmas')                      return 'turmas';
-  if(gr==='projetos e eventos')          return 'projetos_eventos';
-  if(gr==='selfcheckout')                return 'selfcheckout';
-  if(gr==='expansão'||gr==='expansao')   return 'expansao';
-  if(gr==='renovação'||gr==='renovacao') return 'renovacao';
-  if(gr==='time de vendas - field sales') return 'field_sales';
-  if(gr==='time de vendas - aquisição'||gr==='time de vendas - aquisicao') return 'aquisicao';
-  if(gr==='não definido'||gr==='nao definido') return 'nao_definido';
-
-  // REGRA 2 — fallback por linha_de_receita_vigente (quando grupo vazio)
-  if(lr.includes('[im] social dm')||lr.includes('social dm - perfil k')) {
-    return lr.includes('perfil k') ? 'social_dm_k' : 'social_dm';
+  if(gr && gr!=='não definido' && gr!=='nao definido') {
+    if(gr==='funil de marketing')          return 'funil_marketing';
+    if(gr==='turmas')                      return 'turmas';
+    if(gr==='projetos e eventos')          return 'projetos_eventos';
+    if(gr==='selfcheckout')                return 'selfcheckout';
+    if(gr==='expansão'||gr==='expansao')   return 'expansao';
+    if(gr==='renovação'||gr==='renovacao') return 'renovacao';
+    if(gr==='time de vendas - field sales') return 'field_sales';
+    if(gr==='time de vendas - aquisição'||gr==='time de vendas - aquisicao') return 'aquisicao';
+    if(gr==='g4 tools')                    return 'g4_tools';
   }
-  if(utm==='tallis'||utm==='nardon'||utm==='alfredo') return 'social_dm';
-  if(lr.includes('[im] social'))  return 'social_dm';
-  if(lr.includes('reativ'))       return 'aquisicao'; // reativação = time de vendas
-  if(lr.includes('abandono')||lr.includes('[on] selfcheckout')||lr.includes('[on] outros')) return 'selfcheckout';
-  if(lr.includes('[fs]'))         return 'field_sales';
-  if(lr.includes('[skl]'))        return 'nao_definido';
-  if(lr.includes('[on]'))         return 'turmas'; // produtos online = turmas
-  if(lr.includes('[cm]'))         return 'funil_marketing';
-  if(lr.includes('farmer')||lr.includes('cs corporativo')) return 'expansao';
-  if(lr.includes('renovaç')||lr.includes('renovac')) return 'renovacao';
-  if(lr.includes('gestão e estratégia')||lr.includes('gestao e estrategia')) return 'turmas';
-  if(lr.includes('g4 traction')||lr.includes('g4 sales')||lr.includes('g4 frontier')||lr.includes('g4 scale')) return 'turmas';
-  if(lr.includes('g4 club')) return 'renovacao';
-  if(lr.includes('parceria')||lr.includes('patrocín')||lr.includes('indica')) return 'projetos_eventos';
-  if(lr.includes('scale experience')||lr.includes('g4 pelo brasil')||lr.includes('g4 alumni')||lr.includes('g4 valley')) return 'projetos_eventos';
 
-  // Fallback final — nao_definido
-  // funil_marketing NÃO é fallback — é um grupo real com leads vindos de campanhas pagas
-  // Se o grupo não veio preenchido do Databricks, não assumir que é Funil de Marketing
+  // REGRA 2 — linha_de_receita_vigente (propriedade-mãe: de onde o dinheiro vem)
+  if(lr) {
+    // Social DM
+    if(lr.includes('[im] social dm')||lr.includes('social dm - perfil k'))
+      return lr.includes('perfil k') ? 'social_dm_k' : 'social_dm';
+    if(lr.includes('[im] social'))  return 'social_dm';
+    // Reativação
+    if(lr.includes('reativ'))       return 'reativacao';
+    // Selfcheckout
+    if(lr.includes('abandono')||lr.includes('[on] selfcheckout')||lr.includes('[on] outros')||lr.includes('[skl] especialista'))
+      return 'selfcheckout';
+    // Field Sales
+    if(lr.includes('[fs]'))         return 'field_sales';
+    // Funil de Marketing (forms, chat, CRM)
+    if(lr.includes('[cm]')||lr.includes('form g4')||lr.includes('[im] form')||lr.includes('[im] chat')||lr.includes('[skl] crm')||lr.includes('[skl] social')||lr.includes('[skl] midia paga')||lr.includes('[skl] site')||lr.includes('iscas'))
+      return 'funil_marketing';
+    // Turmas (produtos online e imersões)
+    if(lr.includes('[on]') && !lr.includes('customer success'))  return 'turmas';
+    if(lr.includes('gestão e estratégia')||lr.includes('gestao e estrategia')) return 'turmas';
+    if(lr.includes('g4 traction')||lr.includes('g4 sales')||lr.includes('g4 frontier')||lr.includes('g4 scale')) return 'turmas';
+    if(lr.match(/^im-/)) return 'turmas'; // turmas especificas: IM-GE-xxx, IM-TRA-xxx
+    if(lr.includes('relançamento-tra')||lr.includes('relançamento-ge')||lr.includes('masterclass')) return 'turmas';
+    // Expansão
+    if(lr.includes('farmer')||lr.includes('cs corp')||lr.includes('[on] customer success')||lr.includes('[skl] expansão')||lr.includes('[skl] expansao')||lr.includes('[im] customer success'))
+      return 'expansao';
+    // Renovação
+    if(lr.includes('renovaç')||lr.includes('renovac')||lr.includes('g4 club')) return 'renovacao';
+    // G4 Tools
+    if(lr.includes('g4 tools')||lr.includes('finders fee')||lr.includes('g4 capital')||lr.includes('serviços')) return 'g4_tools';
+    // Projetos e Eventos
+    if(lr.includes('aniversário')||lr.includes('aniversario')||lr.includes('valley')||lr.includes('blackfriday')||lr.includes('black friday')||lr.includes('g4 pelo brasil')||lr.includes('frontier')||lr.includes('eventos'))
+      return 'projetos_eventos';
+    if(lr.includes('parceria')||lr.includes('patrocín')||lr.includes('indica')||lr.includes('scale experience')||lr.includes('g4 alumni'))
+      return 'projetos_eventos';
+    // SKL genérico (sem classificação mais específica)
+    if(lr.includes('[skl]'))        return 'nao_definido';
+  }
+
+  // REGRA 3 — utm_medium como último recurso (quando linha_de_receita_vigente vazia)
+  // Deals sem linha = leads de marketing sem produto associado, na maioria ficam nao_definido
+  if(utm && !lr) {
+    if(utm==='tallis'||utm==='nardon'||utm==='alfredo'||utm==='basaglia'||utm==='bernardinho'||utm==='vabo') return 'social_dm';
+    if(utm==='prospeccao-ativa'||utm==='time-vendas') return 'aquisicao';
+  }
+
   return 'nao_definido';
 }
 window.resolveRevenueLine = resolveRevenueLine;
@@ -256,7 +284,7 @@ function calcOpportunityValue(deal){
   var stage_prob=STAGE_PROB[etapa]||0.10;
   var persona_weight=tier==='diamond'||tier==='gold'?1.1:tier==='silver'?1.0:0.9;
   var revLine=deal._revLine||resolveRevenueLine(deal);
-  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.imersao;
+  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.nao_definido;
   var delta=deal.delta||deal._delta||0;
   var ra=lc.risk_after;
   var age_penalty=delta>ra*4?0.4:delta>ra*3?0.55:delta>ra*2?0.7:delta>ra?0.85:1.0;
@@ -271,7 +299,7 @@ window.calcOpportunityValue = calcOpportunityValue;
 
 function calcAgingRisk(deal){
   var revLine=deal._revLine||resolveRevenueLine(deal);
-  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.imersao;
+  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.nao_definido;
   var delta=deal.delta||deal._delta||0;
   var ra=lc.risk_after;
   return { revLine:revLine, risk_after:ra, delta:delta, isAtRisk:delta>ra,
@@ -318,7 +346,7 @@ function calcEfficiencyByChannel(allDeals){
     if(etapa!=='novo lead'&&etapa!=='dia 01') s.qualified++;
   });
   Object.keys(byCanal).forEach(function(k){ var s=byCanal[k];
-    var lc=REVENUE_LINES[s.line]||REVENUE_LINES.imersao;
+    var lc=REVENUE_LINES[s.line]||REVENUE_LINES.nao_definido;
     var base=s.deals;
     if(lc.base==='touchpoints') base=Math.max(s.touchpoints,1);
     else if(lc.base==='meetings') base=Math.max(s.meetings,1);
@@ -350,8 +378,6 @@ function enrichDealContext(deal){
   deal._framework = resolveFramework(deal.tier||deal._tier);
   // Timeline Intelligence — métricas temporais completas
   deal._timeline = calcTimelineIntelligence(deal);
-  // Enterprise Value (L23)
-  if(!deal._enterprise && typeof calcEnterpriseValueV23 === 'function') deal._enterprise = calcEnterpriseValueV23(deal);
   // Next best action
   deal._nextAction = deriveNextAction(deal);
   return deal;
@@ -390,11 +416,7 @@ var TASK_TYPES = {
   dvl_review:      { label:'DVL Review',       icon:'check',  color:'accent' },
   framework_gap_fill:{ label:'Framework Gap',  icon:'target', color:'yellow' },
   authority_confirmation:{ label:'Authority Check', icon:'user', color:'accent' },
-  pain_quantification:{ label:'Pain Quantify', icon:'alert',  color:'red' },
-  advisor_coaching:   { label:'Advisor Coach',  icon:'user',   color:'yellow' },
-  enterprise_review:  { label:'Enterprise 5M+', icon:'target', color:'green' },
-  trust_repair:       { label:'Trust Repair',   icon:'alert',  color:'red' },
-  expansion_review:   { label:'Expansion Opp',  icon:'target', color:'clay' }
+  pain_quantification:{ label:'Pain Quantify', icon:'alert',  color:'red' }
 };
 window.TASK_TYPES = TASK_TYPES;
 
@@ -408,6 +430,11 @@ function buildTaskQueue(filterType, filterRevLine){
     var d = map[id];
     if((d.statusDeal||'').toLowerCase()==='perdido'||(d.statusDeal||'').toLowerCase()==='ganho') return;
     enrichDealContext(d);
+
+    // Skip revenue lines out of SDR scope (e.g. funil_marketing = geracao de demanda)
+    var rlScope = d._revLine || resolveRevenueLine(d);
+    var rlCfg = REVENUE_LINES[rlScope];
+    if(rlCfg && rlCfg.sdr_scope === false) return;
 
     // Revenue line filter
     if(filterRevLine){
@@ -539,7 +566,10 @@ function renderTaskRunner(filterType){
     var rl = t.deal._revLine || resolveRevenueLine(t.deal);
     byRevLine[rl] = (byRevLine[rl]||0)+1;
   });
-  var rlKeys = Object.keys(byRevLine).sort(function(a,b){ return (byRevLine[b]||0)-(byRevLine[a]||0); });
+  var rlKeys = Object.keys(byRevLine).filter(function(k){
+    var cfg = REVENUE_LINES[k];
+    return !cfg || cfg.sdr_scope !== false; // Excluir linhas fora do escopo SDR
+  }).sort(function(a,b){ return (byRevLine[b]||0)-(byRevLine[a]||0); });
   if(rlKeys.length > 1){
     statsHtml += '<div class="task-rl-bar">';
     statsHtml += '<span class="task-rl-label">Linha:</span>';
@@ -759,24 +789,6 @@ function _texBuildDealCard(id, d){
     + '<div class="ic"><div class="ic-l">Valor G4</div><div class="ic-v" style="color:var(--green)">'+fmtBRL(d.revenueRaw)+'</div><div class="ic-s">Time de dados</div></div>'
     + '<div class="ic"><div class="ic-l">Valor ELUCY</div><div class="ic-v" style="color:var(--accent2)">'+fmtBRL(d.elucyValor)+'</div></div>'
     + '</div>'
-    // ── Strategic Profile (L23+L24+L27) ─────────────────────────────
-    + (function(){
-      var rq2 = d._revenueQuality || d._enterprise || {};
-      var t2 = d._trust || {};
-      var ex2 = d._expansion || {};
-      var rqScore = rq2.revenue_quality_score || rq2.enterprise_value_score || 0;
-      var rqPct = typeof rqScore === 'number' && rqScore <= 1 ? Math.round(rqScore*100) : rqScore;
-      var trPct = t2.trust_score ? Math.round(t2.trust_score*100) : (t2.trusted_advisor_score ? Math.round(t2.trusted_advisor_score*100) : 0);
-      var exPct = ex2.expansion_potential_score ? Math.round(ex2.expansion_potential_score*100) : 0;
-      var evPct = rq2.enterprise_value_score ? (typeof rq2.enterprise_value_score === 'number' && rq2.enterprise_value_score <= 1 ? Math.round(rq2.enterprise_value_score*100) : rq2.enterprise_value_score_100 || rq2.enterprise_value_score) : 0;
-      return '<div style="margin:8px 0"><div style="font-size:10px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Strategic Profile</div>'
-        + '<div class="info-grid">'
-        + '<div class="ic"><div class="ic-l">Revenue Quality</div><div class="ic-v" style="color:'+(rqPct>=80?'var(--green)':rqPct>=50?'var(--yellow)':'var(--red)')+'">'+rqPct+'%</div><div class="bar" style="height:4px;background:var(--bg4);border-radius:2px;margin-top:3px"><div style="width:'+rqPct+'%;height:100%;border-radius:2px;background:'+(rqPct>=80?'var(--green)':rqPct>=50?'var(--yellow)':'var(--red)')+'"></div></div></div>'
-        + '<div class="ic"><div class="ic-l">Trust Score</div><div class="ic-v" style="color:'+(trPct>=65?'var(--green)':trPct>=50?'var(--yellow)':'var(--red)')+'">'+trPct+'%</div><div class="bar" style="height:4px;background:var(--bg4);border-radius:2px;margin-top:3px"><div style="width:'+trPct+'%;height:100%;border-radius:2px;background:'+(trPct>=65?'var(--green)':trPct>=50?'var(--yellow)':'var(--red)')+'"></div></div></div>'
-        + '<div class="ic"><div class="ic-l">Expansion</div><div class="ic-v" style="color:'+(exPct>=60?'var(--green)':exPct>=30?'var(--yellow)':'var(--text2)')+'">'+exPct+'%</div><div class="bar" style="height:4px;background:var(--bg4);border-radius:2px;margin-top:3px"><div style="width:'+exPct+'%;height:100%;border-radius:2px;background:'+(exPct>=60?'var(--green)':exPct>=30?'var(--yellow)':'var(--gray3)')+'"></div></div></div>'
-        + '<div class="ic"><div class="ic-l">Enterprise Fit</div><div class="ic-v" style="color:'+(evPct>=75?'var(--green)':evPct>=50?'var(--yellow)':'var(--text2)')+'">'+evPct+'%</div><div class="bar" style="height:4px;background:var(--bg4);border-radius:2px;margin-top:3px"><div style="width:'+evPct+'%;height:100%;border-radius:2px;background:'+(evPct>=75?'var(--green)':evPct>=50?'var(--yellow)':'var(--gray3)')+'"></div></div></div>'
-        + '</div></div>';
-    })()
     + '<div class="row">'
     + '<button class="btn bp" onclick="showCopy(\''+id+'\',this)">Gerar Copy via ELUCY</button>'
     + '<button class="btn bs" id="btn-er-tex-'+id+'" onclick="toggleER(\''+id+'\',this)">ELUCI Report</button>'
@@ -1034,7 +1046,7 @@ window.texComplete = function(){
         elapsed_seconds: _texSeconds,
         dealName: t.deal.nome
       })
-    }).then(function(){}).catch(function(e){console.warn('[supabase] upsert error:',e.message);});
+    }).then(function(){});
   }
 
   // Log to deal_interactions if disposition set
@@ -1048,7 +1060,7 @@ window.texComplete = function(){
         disposition: _texDisposition,
         elapsed_seconds: _texSeconds
       })
-    }).then(function(){}).catch(function(e){console.warn('[supabase] upsert error:',e.message);});
+    }).then(function(){});
   }
 
   // V5: persist completion to deal_tasks
@@ -1275,7 +1287,7 @@ window.cadenceRemove = function(dealId){
   sb.from('elucy_cache').delete()
     .eq('deal_id','_cad_'+dealId)
     .eq('operator_email',opId)
-    .then(function(){}).catch(function(e){console.warn('[supabase] upsert error:',e.message);});
+    .then(function(){});
   if(window.showSyncToast) window.showSyncToast('ok','Cadência removida');
 };
 
@@ -1800,20 +1812,16 @@ async function renderHome(){
   var tasks = buildTaskQueue();
   var insights = analyzeProductUsage();
   var meta = _operatorCtx.meta_diaria;
+  var metaMensal = _operatorCtx.meta_mensal || {};
   var focusMode = FOCUS_MODES[_operatorCtx.focus_mode]||FOCUS_MODES.velocidade;
 
   // Deals em risco
   var atRisk = allDeals.filter(function(d){ return d._aging && d._aging.isAtRisk; });
-  // Social DM para agir
-  var dmTasks = tasks.filter(function(t){ return t.taskType==='social_dm'; });
-  // Handoffs pendentes
-  var handoffTasks = tasks.filter(function(t){ return t.taskType==='handoff_prep'; });
 
+  // Metas
   var fupPct = meta.fups>0 ? Math.min(100,Math.round((todayStats.fups||0)/meta.fups*100)) : 0;
   var qualPct = meta.qualificacoes>0 ? Math.min(100,Math.round((todayStats.qualificacoes||0)/meta.qualificacoes*100)) : 0;
   var handPct = meta.handoffs>0 ? Math.min(100,Math.round((todayStats.handoffs||0)/meta.handoffs*100)) : 0;
-  // OPP mensal — conta deals em fase oportunidade/negociacao no pipe atual
-  var metaMensal = _operatorCtx.meta_mensal || {};
   var oppTarget = metaMensal.opp || 15;
   var oppActual = allDeals.filter(function(d){
     var fase = (d._fase || d.fase || d.fase_atual_no_processo || '').toLowerCase();
@@ -1821,25 +1829,150 @@ async function renderHome(){
   }).length;
   var oppPct = oppTarget > 0 ? Math.min(100, Math.round(oppActual / oppTarget * 100)) : 0;
 
+  // Funnel real metrics para OKRs
+  var totalActive = allDeals.length;
+  var salDeals = allDeals.filter(function(d){ var f=(d._fase||d.fase||d.fase_atual_no_processo||'').toLowerCase(); return f==='sal'; }).length;
+  var conectados = allDeals.filter(function(d){ var f=(d._fase||d.fase||d.fase_atual_no_processo||'').toLowerCase(); return f==='conectado'; }).length;
+  var agendados = allDeals.filter(function(d){ var f=(d._fase||d.fase||d.fase_atual_no_processo||'').toLowerCase(); return f==='agendado'; }).length;
+  var oportunidades = allDeals.filter(function(d){ var f=(d._fase||d.fase||d.fase_atual_no_processo||'').toLowerCase(); return f==='oportunidade'||f.includes('negoc'); }).length;
+  var sdrScopeDeals = allDeals.filter(function(d){ var rl=REVENUE_LINES[d._revLine]; return !rl||rl.sdr_scope!==false; });
+  var avgAging = sdrScopeDeals.length ? Math.round(sdrScopeDeals.reduce(function(s,d){ return s+(d._aging?d._aging.days:0); },0)/sdrScopeDeals.length) : 0;
+  var highForecast = allDeals.filter(function(d){ return d._forecastV6&&d._forecastV6.score>=0.6; }).length;
+  var totalPipeValue = allDeals.reduce(function(s,d){ return s+(d._oppValue||0); },0);
+
+  // Conversion rates reais
+  var salToConectado = salDeals+conectados+agendados+oportunidades > 0 ? Math.round((conectados+agendados+oportunidades)/(salDeals+conectados+agendados+oportunidades)*100) : 0;
+  var conectadoToAgendado = conectados+agendados+oportunidades > 0 ? Math.round((agendados+oportunidades)/(conectados+agendados+oportunidades)*100) : 0;
+  var agendadoToOpp = agendados+oportunidades > 0 ? Math.round(oportunidades/(agendados+oportunidades)*100) : 0;
+
   var html = '';
 
-  // BLOCO 1 — Foco do dia
-  html += '<div class="home-block">'
-    + '<div class="home-block-title">Foco do Dia</div>'
-    + '<div class="home-focus-row">'
-    + '<div class="home-focus-mode"><span class="home-fm-icon">'+focusMode.icon+'</span> '+focusMode.label+'</div>'
-    + '<button class="home-fm-btn" onclick="window.cycleFocusMode()">Trocar Modo</button>'
+  // ================================================================
+  // SEÇÃO 1 — O QUE É O ELUCY (educação sobre o produto)
+  // ================================================================
+  html += '<div class="home-edu">'
+    + '<div class="home-edu-title">O que e o Elucy</div>'
+    + '<div class="home-edu-p">O Elucy e um <strong>sistema de decisao de receita</strong> que senta entre voce e o CRM. '
+    + 'Ele nao gera copy aleatorio — ele processa cada deal por um pipeline de <strong>25 camadas de inteligencia</strong>, '
+    + 'injeta o framework correto pela persona do lead (Challenger, SPICED ou SPIN), detecta sinais de risco em tempo real, '
+    + 'e entrega a <strong>proxima acao exata</strong> no tom certo do canal.</div>'
+    + '<div class="home-edu-p">Pense no Elucy como um <strong>copiloto de vendas que nunca esquece um deal</strong>. '
+    + 'Enquanto voce opera, ele roda 49 sinais canonicos em cada deal, calcula forecast com 7 componentes de confianca, '
+    + 'prioriza sua fila de tarefas por valor real, e bloqueia acoes que violam o processo via 7 kill switches automaticos.</div>'
+    + '<div class="home-edu-callout"><strong>Zero achismo.</strong> Cada numero que voce ve nesse cockpit vem de dados reais do Databricks, '
+    + 'processados por formulas deterministicas (nao IA generativa). O Elucy usa IA apenas para gerar copy e analisar contexto — '
+    + 'nunca para calcular metricas, forecast ou score.</div>'
+    + '</div>';
+
+  // ================================================================
+  // SEÇÃO 2 — COMO O ELUCY FUNCIONA (arquitetura simplificada)
+  // ================================================================
+  html += '<div class="home-edu">'
+    + '<div class="home-edu-title">Como funciona: 25 camadas em 9 fases</div>'
+    + '<div class="home-edu-p">Cada vez que voce abre um deal, o motor executa um <strong>grafo aciclico dirigido (DAG)</strong> '
+    + 'de 25 camadas em 9 fases sem ciclos. Cada camada e um gate logico que enriquece, valida ou bloqueia.</div>'
+    + '<div class="home-edu-grid">'
+    // Fase 1-2
+    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-blue">L1-L6</span> Contexto</div>'
+    + '<div class="home-edu-card-body">Carrega dados do operador, taxonomia de receita (10 grupos, 4 tiers), enriquece cada deal com linha de receita, aging, persona, framework e calcula o valor da oportunidade com 7 fatores.</div></div>'
+    // Fase 3
+    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-blue">L7-L9</span> Task Engine</div>'
+    + '<div class="home-edu-card-body">Monta a fila de tarefas por prioridade, classifica por tipo (FUP, DM, Handoff, Requalificacao, No-Show), aplica o focus mode ativo e sincroniza com Supabase em tempo real.</div></div>'
+    // Fase 4
+    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-green">L10-L12</span> Analytics</div>'
+    + '<div class="home-edu-card-body">Calcula performance do operador (Score V9 com 7 componentes), taxa de conversao por linha de receita, eficiencia por canal, snapshot diario automatico.</div></div>'
+    // Fase 5
+    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-green">L13-L15</span> Forecast V7</div>'
+    + '<div class="home-edu-card-body">Forecast com <strong>zero achismo</strong>: quantitativo (stage x aging x velocity x engagement) multiplicado por qualitativo (6 pesos) e framework score. Confianca calculada por 7 componentes independentes.</div></div>'
+    // Fase 6
+    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-yellow">L16-L17</span> Framework Intel</div>'
+    + '<div class="home-edu-card-body">Detecta gaps no framework (SPICED, Challenger, SPIN). Impede progressao do deal se faltar Critical Event, Impact sem KPI, ou Pain sem mapeamento dual (racional + emocional).</div></div>'
+    // Fase 7
+    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-yellow">L18</span> Signal Engine V8</div>'
+    + '<div class="home-edu-card-body">49 sinais canonicos em 6 categorias (behavioral, framework, pipeline, quality, forecast, revenue). Dedup V10 para evitar inflacao. Cada sinal tem peso, threshold e acao automatica.</div></div>'
+    // Fase 8
+    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-red">L19-L22</span> Quality Layers</div>'
+    + '<div class="home-edu-card-body">4 engines de qualidade: <strong>Data Quality</strong> (trust score), <strong>Transition Rules</strong> (readiness + hard blocks), <strong>Portfolio Priority</strong> (4 fatores), <strong>Attribution</strong> (72h window).</div></div>'
+    // Fase 9
+    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-red">L23-L25</span> Enterprise</div>'
+    + '<div class="home-edu-card-body">Qualificacao Enterprise para deals 5M+: Enterprise Value Score (EVS), Trusted Advisor Score (Equacao de Maister), Strategic Intelligence conectando Impact aos KPIs do G4.</div></div>'
     + '</div>'
-    + '<div class="home-meta-grid">'
-    + '<div class="home-meta"><div class="home-meta-label">FUPs</div><div class="home-meta-value">'+(todayStats.fups||0)+' / '+meta.fups+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(fupPct>=100?' done':'')+'" style="width:'+fupPct+'%"></div></div></div>'
-    + '<div class="home-meta"><div class="home-meta-label">Qualificacoes</div><div class="home-meta-value">'+(todayStats.qualificacoes||0)+' / '+meta.qualificacoes+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(qualPct>=100?' done':'')+'" style="width:'+qualPct+'%"></div></div></div>'
-    + '<div class="home-meta"><div class="home-meta-label">Handoffs</div><div class="home-meta-value">'+(todayStats.handoffs||0)+' / '+meta.handoffs+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(handPct>=100?' done':'')+'" style="width:'+handPct+'%"></div></div></div>'
-    + '<div class="home-meta"><div class="home-meta-label">OPP Mensal</div><div class="home-meta-value">'+oppActual+' / '+oppTarget+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(oppPct>=100?' done':'')+'" style="width:'+oppPct+'%"></div></div></div>'
+    + '</div>';
+
+  // ================================================================
+  // SEÇÃO 3 — OKRs G4 + DADOS REAIS DO FUNIL
+  // ================================================================
+  html += '<div class="home-edu">'
+    + '<div class="home-edu-title">OKRs + Performance Real do Funil</div>'
+    + '<div class="home-edu-p">Suas metas conectadas com os dados reais do seu pipeline. '
+    + 'O Elucy mede cada KR com dados do Databricks — nada e estimado.</div>';
+
+  // OKR 1 — Volume de Atividade
+  html += '<div class="home-block" style="margin:12px 0">'
+    + '<div class="home-block-title" style="color:var(--accent2)">OKR 1 — Manter volume de atividade diaria consistente</div>'
+    + '<div style="font-size:11px;color:var(--text2);margin-bottom:10px">O Elucy prioriza sua fila para que cada FUP, qualificacao e handoff atinja o alvo certo.</div>'
+    + '<div class="home-meta-grid" style="grid-template-columns:1fr 1fr">'
+    + _okrKR('KR 1.1','FUPs / dia',(todayStats.fups||0),meta.fups,fupPct,'Cada FUP e roteado pelo Signal Engine — o Elucy prioriza por urgencia real, nao por ordem de chegada.')
+    + _okrKR('KR 1.2','Qualificacoes / dia',(todayStats.qualificacoes||0),meta.qualificacoes,qualPct,'Qualificacao inclui analise SPICED/Challenger completa + DQI score. Nao e so marcar checkbox.')
+    + _okrKR('KR 1.3','Handoffs / dia',(todayStats.handoffs||0),meta.handoffs,handPct,'Handoff so e contado quando o deal passa pelo DVL Gate — validacao de dados minima antes de passar ao Closer.')
+    + _okrKR('KR 1.4','OPPs no mes',oppActual,oppTarget,oppPct,'Oportunidades em fase de negociacao ativa. O Forecast V7 mede a probabilidade real de cada uma.')
     + '</div></div>';
 
-  // BLOCO 2 — Tarefas criticas
+  // OKR 2 — Eficiencia do Funil
+  html += '<div class="home-block" style="margin:12px 0">'
+    + '<div class="home-block-title" style="color:var(--accent2)">OKR 2 — Maximizar conversao entre fases do funil</div>'
+    + '<div style="font-size:11px;color:var(--text2);margin-bottom:10px">O Elucy detecta onde voce perde deals entre fases e gera tasks especificas para corrigir cada gargalo.</div>'
+    + '<div class="home-edu-layers">'
+    + _okrFunnel('SAL',salDeals,'Leads aceitos pelo time de vendas. Elucy enriquece com persona + framework automatico.')
+    + _okrFunnelArrow(salToConectado)
+    + _okrFunnel('Conectado',conectados,'Primeiro contato efetivo. Signal Engine detecta engajamento e prioriza recontato.')
+    + _okrFunnelArrow(conectadoToAgendado)
+    + _okrFunnel('Agendado',agendados,'Reuniao marcada. Elucy gera briefing pre-call com contexto completo do deal.')
+    + _okrFunnelArrow(agendadoToOpp)
+    + _okrFunnel('Oportunidade',oportunidades,'Deal qualificado em negociacao. Forecast V7 calcula probabilidade real de fechamento.')
+    + '</div>'
+    + '<div class="home-edu-callout" style="margin-top:8px">'
+    + '<strong>Pipeline ativo:</strong> '+totalActive+' deals | '
+    + '<strong>Valor total:</strong> '+_fmtBRL(totalPipeValue)+' | '
+    + '<strong>Aging medio:</strong> '+avgAging+' dias | '
+    + '<strong>Forecast alto (>60%):</strong> '+highForecast+' deals'
+    + '</div></div>';
+
+  // OKR 3 — Qualidade de Dados
+  html += '<div class="home-block" style="margin:12px 0">'
+    + '<div class="home-block-title" style="color:var(--accent2)">OKR 3 — Manter qualidade de dados acima do threshold</div>'
+    + '<div style="font-size:11px;color:var(--text2);margin-bottom:10px">O Elucy calcula DQI (Data Quality Index) por deal e bloqueia transicoes quando os dados sao insuficientes.</div>'
+    + '<div class="home-meta-grid" style="grid-template-columns:1fr 1fr 1fr">'
+    + '<div class="home-meta"><div class="home-meta-label">Deals em Risco</div><div class="home-meta-value" style="color:var(--red)">'+atRisk.length+'</div>'
+    + '<div style="font-size:10px;color:var(--text2);margin-top:4px">Deals com aging acima do threshold da linha de receita. O Elucy gera tasks de reativacao automaticas.</div></div>'
+    + '<div class="home-meta"><div class="home-meta-label">Tarefas Pendentes</div><div class="home-meta-value" style="color:var(--yellow)">'+tasks.length+'</div>'
+    + '<div style="font-size:10px;color:var(--text2);margin-top:4px">Tarefas priorizadas pelo DAG — ordenadas por valor da oportunidade x urgencia x actionability.</div></div>'
+    + '<div class="home-meta"><div class="home-meta-label">Scope SDR</div><div class="home-meta-value" style="color:var(--green)">'+sdrScopeDeals.length+'</div>'
+    + '<div style="font-size:10px;color:var(--text2);margin-top:4px">Deals dentro do seu escopo operacional (exclui Funil de Marketing — escopo MKT, nao SDR).</div></div>'
+    + '</div></div>';
+
+  html += '</div>'; // fecha home-edu OKR
+
+  // ================================================================
+  // SEÇÃO 4 — SCORE V9 + TAREFAS (compacto)
+  // ================================================================
   html += '<div class="home-block">'
-    + '<div class="home-block-title">Tarefas Criticas <span class="home-count">'+Math.min(tasks.length,5)+'</span></div>';
+    + '<div class="home-block-title">Score V9 <span style="font-size:9px;color:var(--text2);font-weight:400">7 componentes</span></div>'
+    + '<div class="home-edu-p" style="margin-bottom:10px">Seu score e calculado por 7 metricas independentes, cada uma com peso real no resultado. '
+    + 'Nao e uma nota subjetiva — e a formula: <strong>(Qualif x 18%) + (Handoff x 25%) + (Win Rate x 25%) + (Velocidade x 10%) + (DQI x 10%) + (Forecast x 7%) + (Framework x 5%)</strong>.</div>'
+    + '<div class="home-perf-grid">'
+    + '<div class="home-perf-kpi"><div class="home-perf-v" id="home-score">--</div><div class="home-perf-l">Score V9</div></div>'
+    + '<div class="home-perf-kpi"><div class="home-perf-v" id="home-streak">--</div><div class="home-perf-l">Streak</div></div>'
+    + '<div class="home-perf-kpi"><div class="home-perf-v">'+allDeals.length+'</div><div class="home-perf-l">Ativos</div></div>'
+    + '<div class="home-perf-kpi"><div class="home-perf-v">'+atRisk.length+'</div><div class="home-perf-l">Em Risco</div></div>'
+    + '</div>'
+    + '<div id="home-score-breakdown" style="margin-top:8px"></div>'
+    + '</div>';
+
+  // Tarefas criticas (top 5)
+  html += '<div class="home-block">'
+    + '<div class="home-block-title">Proximas Acoes <span class="home-count">'+Math.min(tasks.length,5)+'</span></div>'
+    + '<div style="font-size:11px;color:var(--text2);margin-bottom:8px">Ordenadas pelo Portfolio Priority Engine: valor x urgencia x actionability x neglect.</div>';
   if(tasks.length){
     html += '<div class="home-tasks">';
     tasks.slice(0,5).forEach(function(t){
@@ -1857,91 +1990,52 @@ async function renderHome(){
   }
   html += '</div>';
 
-  // BLOCO 3 — Desempenho (V9 Score — 7 componentes)
-  html += '<div class="home-block">'
-    + '<div class="home-block-title">Meu Desempenho <span style="font-size:9px;color:var(--text2);font-weight:400">Score V9</span></div>'
-    + '<div class="home-perf-grid">'
-    + '<div class="home-perf-kpi"><div class="home-perf-v" id="home-score">--</div><div class="home-perf-l">Score V9</div></div>'
-    + '<div class="home-perf-kpi"><div class="home-perf-v" id="home-streak">--</div><div class="home-perf-l">Streak</div></div>'
-    + '<div class="home-perf-kpi"><div class="home-perf-v">'+allDeals.length+'</div><div class="home-perf-l">Ativos</div></div>'
-    + '<div class="home-perf-kpi"><div class="home-perf-v">'+atRisk.length+'</div><div class="home-perf-l">Em Risco</div></div>'
-    + '</div>'
-    + '<div id="home-score-breakdown" style="margin-top:8px"></div>'
-    + '</div>';
+  // ================================================================
+  // SEÇÃO 5 — KILL SWITCHES (educação)
+  // ================================================================
+  html += '<div class="home-edu">'
+    + '<div class="home-edu-title">Kill Switches — Protecao Automatica</div>'
+    + '<div class="home-edu-p">O Elucy tem <strong>7 bloqueios automaticos</strong> que impedem acoes que violam o processo. '
+    + 'Nao e burocracia — e protecao contra erros que custam deals.</div>'
+    + '<div class="home-edu-grid">'
+    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-red">hard</span> Black Box</div>'
+    + '<div class="home-edu-card-body">Nunca expor metodologia interna (SPICED/Challenger/SPIN) ao lead. A copy gerada pelo Elucy nunca menciona frameworks.</div></div>'
+    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-red">hard</span> Tier 2 Block</div>'
+    + '<div class="home-edu-card-body">Empresas abaixo de R$1MM de faturamento sao bloqueadas automaticamente de Imersoes Presenciais. Protege pricing e posicionamento.</div></div>'
+    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-yellow">gate</span> Framework Violation</div>'
+    + '<div class="home-edu-card-body">Bloqueia avancar deal para proposta sem mapear Pains (racional + emocional). Sem dor mapeada = sem proposta.</div></div>'
+    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-yellow">gate</span> Premature Close</div>'
+    + '<div class="home-edu-card-body">Bloqueia fechar deal sem Critical Event validado e Decision Committee mapeado. Protege win rate de falsos positivos.</div></div>'
+    + '</div></div>';
 
-  // BLOCO 4 — Inteligencia Elucy
-  html += '<div class="home-block">'
-    + '<div class="home-block-title">Inteligencia Elucy</div>';
+  // ================================================================
+  // SEÇÃO 6 — FRAMEWORKS POR PERSONA (educação)
+  // ================================================================
+  html += '<div class="home-edu">'
+    + '<div class="home-edu-title">Frameworks por Persona</div>'
+    + '<div class="home-edu-p">O Elucy detecta a persona do decisor e aplica automaticamente o framework correto. '
+    + 'Voce nao precisa escolher — o motor decide com base no perfil, porte e comportamento.</div>'
+    + '<div class="home-edu-grid" style="grid-template-columns:1fr 1fr 1fr">'
+    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-red">titan</span> Challenger</div>'
+    + '<div class="home-edu-card-body">Para lideres visionarios que querem ser desafiados. Abordagem confrontacional com insights provocativos. Tom prescritivo: "voce nao tem esse problema porque X — tem porque Y".</div></div>'
+    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-blue">builder</span> SPICED</div>'
+    + '<div class="home-edu-card-body">Para construtores orientados a processo. Qualificacao profunda: Situation, Pain (dual), Impact (KPI), Critical Event (Urgency Test), Decision (triade). Abordagem consultiva.</div></div>'
+    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-green">executor</span> SPIN</div>'
+    + '<div class="home-edu-card-body">Para pragmaticos focados em resultado. Perguntas de Situacao, Problema, Implicacao e Necessidade-Solucao. Eficiente e direto — menos teoria, mais acao.</div></div>'
+    + '</div></div>';
+
+  // ================================================================
+  // SEÇÃO 7 — Insights do pipeline (antigo bloco 4)
+  // ================================================================
   if(insights.length){
+    html += '<div class="home-block">'
+      + '<div class="home-block-title">Insights do Pipeline</div>';
     insights.slice(0,3).forEach(function(ins){
       var cls = ins.severity==='high'?'home-insight-bad':ins.severity==='warning'?'home-insight-warn':'home-insight-good';
       html += '<div class="home-insight '+cls+'"><div class="home-insight-msg">'+_escHtml(ins.message)+'</div>'
         + '<div class="home-insight-sug">'+_escHtml(ins.suggestion)+'</div></div>';
     });
-  } else {
-    html += '<div class="home-empty">Pipeline saudavel. Continue operando.</div>';
-  }
-  html += '</div>';
-
-  // BLOCO 5 — Strategic Signals (L23+L24+L25+L27)
-  var stratIntel = calcStrategicAlignmentV25();
-  var rq = stratIntel.revenue_quality;
-  var eq = stratIntel.experience_quality;
-  var advisorData = calcTrustedAdvisorV24(null, null);
-  var behavData = calcBehavioralIntelligenceV26(getOperatorId());
-  html += '<div class="home-block">'
-    + '<div class="home-block-title">Strategic Signals <span class="home-count">L23-27</span></div>'
-    + '<div class="home-strat-grid">'
-    + '<div class="home-strat-card"><div class="home-strat-label">SAL 5M+</div><div class="home-strat-value" style="color:var(--accent2)">'+rq.sal_5m_count+'</div><div class="home-strat-sub">de '+rq.total_deals+' deals</div></div>'
-    + '<div class="home-strat-card"><div class="home-strat-label">Pipeline 5M+</div><div class="home-strat-value" style="color:var(--green)">'+fmtBRL(rq.pipeline_5m_value)+'</div><div class="home-strat-sub">receita potencial</div></div>'
-    + '<div class="home-strat-card"><div class="home-strat-label">Trust Medio</div><div class="home-strat-value" style="color:'+(advisorData&&advisorData.trusted_advisor_score>=0.65?'var(--green)':advisorData&&advisorData.trusted_advisor_score>=0.50?'var(--yellow)':'var(--red)')+'">'+(advisorData?Math.round(advisorData.trusted_advisor_score*100)+'%':'—')+'</div><div class="home-strat-sub">'+(advisorData?advisorData.band:'—')+'</div></div>'
-    + '<div class="home-strat-card"><div class="home-strat-label">Behavior Score</div><div class="home-strat-value" style="color:'+(behavData.sdr_behavior_score>=0.65?'var(--green)':behavData.sdr_behavior_score>=0.45?'var(--yellow)':'var(--red)')+'">'+Math.round(behavData.sdr_behavior_score*100)+'%</div><div class="home-strat-sub">L26 Intel</div></div>'
-    + '</div>';
-  // 4 strategic cards: Revenue Quality, Trusted Advisor, Expansion, Strategic Revenue
-  html += '<div class="home-strat-grid" style="grid-template-columns:1fr 1fr 1fr 1fr">'
-    + '<div class="home-strat-card"><div class="home-strat-label">Revenue Quality</div><div class="home-strat-value" style="color:var(--accent2)">'+Math.round((stratIntel.strategic_revenue_score||0)*100)+'%</div></div>'
-    + '<div class="home-strat-card"><div class="home-strat-label">Experience</div><div class="home-strat-value" style="color:var(--green)">'+Math.round((stratIntel.experience_score||0)*100)+'%</div></div>'
-    + '<div class="home-strat-card"><div class="home-strat-label">Framework</div><div class="home-strat-value" style="color:'+(eq.framework_coverage_pct>=60?'var(--green)':eq.framework_coverage_pct>=30?'var(--yellow)':'var(--red)')+'">'+eq.framework_coverage_pct+'%</div></div>'
-    + '<div class="home-strat-card"><div class="home-strat-label">Handoff Ready</div><div class="home-strat-value" style="color:var(--green)">'+eq.handoff_ready_count+'</div></div>'
-    + '</div>'
-    + '<div style="display:flex;gap:10px">'
-    + '<div style="flex:1;font-size:11px;color:var(--text2)">Personas: <b style="color:var(--red)">'+rq.by_persona.titan+' Titan</b> · <b style="color:var(--accent2)">'+rq.by_persona.builder+' Builder</b> · <b style="color:var(--yellow)">'+rq.by_persona.executor+' Executor</b></div>'
-    + '<div style="font-size:11px">Iron Dome: <b style="color:'+(eq.iron_dome_count>0?'var(--red)':'var(--green)')+'">'+eq.iron_dome_count+'</b></div>'
-    + '</div></div>';
-
-  // BLOCO 6 — Trusted Advisor Score (L24)
-  if(advisorData){
-    var taScore = Math.round(advisorData.trusted_advisor_score*100);
-    var taColor = taScore>=70?'var(--green)':taScore>=50?'var(--yellow)':'var(--red)';
-    var bandLabels = {advisor:'Trusted Advisor',consultive:'Consultivo',transactional:'Transacional',fragile:'Fragil',exemplar:'Exemplar',trusted:'Trusted',developing:'Em Desenvolvimento',at_risk:'Em Risco'};
-    var bandLabel = bandLabels[advisorData.band]||advisorData.band;
-    var gapLabels = {credibility:'Credibilidade',availability:'Disponibilidade',intimacy:'Intimidade',selfishness:'Egoismo (reduzir)'};
-    var gapLabel = gapLabels[advisorData.biggest_gap]||advisorData.biggest_gap;
-    // SVG ring
-    var circumference = 2 * Math.PI * 26;
-    var dashOffset = circumference - (circumference * taScore / 100);
-    html += '<div class="home-block">'
-      + '<div class="home-block-title">Trusted Advisor Score <span class="home-count">L24</span>'+(advisorData.needs_coaching?'<span style="margin-left:8px;font-size:10px;color:var(--red);font-weight:600">Coaching necessario</span>':'')+'</div>'
-      + '<div class="home-advisor-gauge">'
-      + '<div class="home-advisor-ring"><svg width="64" height="64"><circle cx="32" cy="32" r="26" stroke="var(--bg4)" stroke-width="5" fill="none"/><circle cx="32" cy="32" r="26" stroke="'+taColor+'" stroke-width="5" fill="none" stroke-dasharray="'+circumference+'" stroke-dashoffset="'+dashOffset+'" stroke-linecap="round"/></svg><span class="home-advisor-ring-val" style="color:'+taColor+'">'+taScore+'</span></div>'
-      + '<div class="home-advisor-info"><div class="home-advisor-band" style="color:'+taColor+'">'+bandLabel+'</div><div class="home-advisor-gap">Maior gap: '+gapLabel+'</div></div>'
-      + '</div>'
-      + '<div class="home-advisor-bars">';
-    var bars = [
-      {label:'Credibilidade',val:advisorData.credibility_score,w:0.30,color:'var(--accent2)'},
-      {label:'Disponibilidade',val:advisorData.availability_score,w:0.20,color:'var(--green)'},
-      {label:'Intimidade',val:advisorData.intimacy_score,w:0.30,color:'var(--clay)'},
-      {label:'Anti-Egoismo',val:1-advisorData.selfishness_score,w:0.20,color:'var(--yellow)'}
-    ];
-    bars.forEach(function(b){
-      var pct = Math.round(b.val*100);
-      html += '<div class="home-advisor-bar">'
-        + '<div class="home-advisor-bar-label">'+b.label+' ('+Math.round(b.w*100)+'%)</div>'
-        + '<div class="home-advisor-bar-bg"><div class="home-advisor-bar-fill" style="width:'+pct+'%;background:'+b.color+'"></div></div>'
-        + '<div class="home-advisor-bar-val" style="color:'+b.color+'">'+pct+'%</div>'
-        + '</div>';
-    });
-    html += '</div></div>';
+    html += '</div>';
   }
 
   wrap.innerHTML = html;
@@ -1965,18 +2059,57 @@ async function renderHome(){
       {k:'forecast_conf',l:'Forecast',w:'7%'},
       {k:'framework_cov',l:'Framework',w:'5%'}
     ];
-    var html='<div style="display:flex;gap:3px;align-items:flex-end;height:36px">';
+    var h2='<div style="display:flex;gap:3px;align-items:flex-end;height:36px">';
     comps.forEach(function(c){
       var v=ops[c.k]||0;
       var col=v>=70?'var(--green)':v>=40?'var(--yellow)':'var(--red)';
-      html+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px" title="'+c.l+': '+v+'%">'
+      h2+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px" title="'+c.l+': '+v+'%">'
         +'<div style="width:100%;background:'+col+';opacity:.85;border-radius:2px 2px 0 0;height:'+Math.max(4,Math.round(v*0.28))+'px"></div>'
         +'<div style="font-size:8px;color:var(--text2);text-align:center;line-height:1.1">'+c.l+'</div>'
         +'</div>';
     });
-    html+='</div>';
-    bd.innerHTML=html;
+    h2+='</div>';
+    bd.innerHTML=h2;
   });
+}
+
+// Helper: OKR Key Result card
+function _okrKR(kr, label, actual, target, pct, desc){
+  var color = pct>=100?'var(--green)':pct>=60?'var(--yellow)':'var(--red)';
+  return '<div class="home-meta">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'
+    + '<div class="home-meta-label">'+kr+' — '+label+'</div>'
+    + '<div style="font-size:10px;font-weight:700;color:'+color+'">'+pct+'%</div>'
+    + '</div>'
+    + '<div class="home-meta-value">'+actual+' / '+target+'</div>'
+    + '<div class="meta-bar-bg"><div class="meta-bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'
+    + '<div style="font-size:10px;color:var(--text2);margin-top:5px;line-height:1.4">'+desc+'</div>'
+    + '</div>';
+}
+
+// Helper: Funnel stage row
+function _okrFunnel(label, count, desc){
+  var col = count>0?'var(--accent2)':'var(--text2)';
+  return '<div class="home-edu-layer">'
+    + '<div class="home-edu-layer-n" style="color:'+col+';font-size:16px;font-weight:800">'+count+'</div>'
+    + '<div class="home-edu-layer-name">'+label+'</div>'
+    + '<div class="home-edu-layer-desc">'+desc+'</div>'
+    + '</div>';
+}
+
+// Helper: Funnel conversion arrow
+function _okrFunnelArrow(pct){
+  var col = pct>=50?'var(--green)':pct>=25?'var(--yellow)':'var(--red)';
+  return '<div style="text-align:center;font-size:10px;color:'+col+';font-weight:700;padding:2px 0">'
+    + '&#8595; '+pct+'% conversao</div>';
+}
+
+// Helper: format BRL
+function _fmtBRL(v){
+  if(!v||v===0) return 'R$ 0';
+  if(v>=1000000) return 'R$ '+(v/1000000).toFixed(1)+'M';
+  if(v>=1000) return 'R$ '+(v/1000).toFixed(0)+'K';
+  return 'R$ '+v.toFixed(0);
 }
 window.renderHome = renderHome;
 
@@ -2003,7 +2136,7 @@ function initRealtimeListeners(){
     try{ sb.removeChannel(window._realtimeChannel); }catch(e){}
     window._realtimeChannel=null;
   }
-  if(_rtChan){ try{ sb.removeChannel(_rtChan); }catch(e){} _rtChan=null; }
+  if(_rtChan) sb.removeChannel(_rtChan);
   _rtChan = sb.channel('engine-resp-'+opId)
     .on('postgres_changes',{
       event:'INSERT', schema:'public', table:'cockpit_responses',
@@ -2013,7 +2146,7 @@ function initRealtimeListeners(){
       _handleResponse(r);
     }).subscribe();
 
-  if(_ntChan){ try{ sb.removeChannel(_ntChan); }catch(e){} _ntChan=null; }
+  if(_ntChan) sb.removeChannel(_ntChan);
   _ntChan = sb.channel('engine-notif-'+opId)
     .on('postgres_changes',{
       event:'INSERT', schema:'public', table:'operator_notifications',
@@ -2025,8 +2158,7 @@ function initRealtimeListeners(){
     }).subscribe();
 }
 window.initRealtimeListeners = initRealtimeListeners;
-// Legacy alias (deprecated — use initRealtimeListeners)
-window.initRealtimeSubscription = initRealtimeListeners;
+window.initRealtimeSubscription = function(){};
 
 function _handleResponse(response){
   var dealId=response.deal_id;
@@ -2079,7 +2211,7 @@ async function _incrementEnrichmentCount(dealId){
     .eq('deal_id',dealId).eq('operator_email',opId).maybeSingle();
   var current=(result.data&&result.data.enrichment_count)||0;
   sb.from('deals').update({enrichment_count:current+1})
-    .eq('deal_id',dealId).eq('operator_email',opId).then(function(){}).catch(function(e){console.warn('[supabase] upsert error:',e.message);});
+    .eq('deal_id',dealId).eq('operator_email',opId).then(function(){});
 }
 
 function _updateBadge(){
@@ -2125,7 +2257,7 @@ function logActivity(type,dealId,meta){
   var opId=getOperatorId(); if(!opId) return;
   sb.from('activity_log').insert({
     operator_id:opId, activity_type:type, deal_id:dealId||null, metadata:meta||{}
-  }).then(function(){}).catch(function(e){console.warn('[supabase] upsert error:',e.message);});
+  }).then(function(){});
 }
 window.logActivity = logActivity;
 
@@ -2137,7 +2269,7 @@ async function saveInteraction(dealId,type,content,meta,parentId){
     content:content||'', metadata:meta||{}, parent_id:parentId||null
   }).select('id').single();
   sb.from('deals').update({last_interaction_at:_now()})
-    .eq('deal_id',dealId).eq('operator_email',getOperatorId()).then(function(){}).catch(function(e){console.warn('[supabase] upsert error:',e.message);});
+    .eq('deal_id',dealId).eq('operator_email',getOperatorId()).then(function(){});
   return result.data?result.data.id:null;
 }
 window.saveInteraction = saveInteraction;
@@ -2283,21 +2415,6 @@ async function renderDMPipeline(){
         +'<span class="dm-pipe-card-platform">'+(l.platform||'IG')+'</span>'
         +(l.founder_persona?'<span class="dm-pipe-card-founder">'+l.founder_persona+'</span>':'')
         +'</div>'
-        +(function(){
-          // Trust breakdown for DM context
-          var dealMap=window._COCKPIT_DEAL_MAP||{};
-          var matched=null;
-          Object.values(dealMap).forEach(function(dd){
-            if(!matched && (dd.contactName||'').toLowerCase().includes((l.lead_name||'').toLowerCase().split(' ')[0]||'NOMATCH')) matched=dd;
-          });
-          if(!matched||!matched._trust) return '';
-          var tt=matched._trust;
-          return '<div style="font-size:9px;margin-top:3px;display:flex;gap:4px;flex-wrap:wrap">'
-            +'<span style="color:'+(tt.trust_score>=0.65?'var(--green)':'var(--red)')+'">Trust:'+Math.round(tt.trust_score*100)+'%</span>'
-            +'<span style="color:var(--clay)">Intim:'+Math.round(tt.intimacy_score*100)+'%</span>'
-            +'<span style="color:var(--yellow)">Ego:'+Math.round(tt.selfishness_score*100)+'%</span>'
-            +'</div>';
-        })()
         +'<div class="dm-pipe-card-actions">'
         +(s!=='converted'?'<button class="dm-pipe-advance" onclick="window._advanceDMLead(\''+l.id+'\',\''+s+'\')">Avancar</button>':'')
         +'<a class="dm-wa-link" href="https://wa.me/?text=" target="_blank" title="Abrir WhatsApp">WA</a>'
@@ -2449,8 +2566,7 @@ async function updateTodayStats(){
   el=document.getElementById('meta-hand-bar'); if(el) el.style.width=Math.min(100,Math.round(stats.handoffs/meta.handoffs*100))+'%';
 }
 window.updateTodayStats = updateTodayStats;
-if(window._statsInterval) clearInterval(window._statsInterval);
-window._statsInterval = setInterval(function(){ if(getOperatorId()) updateTodayStats(); },60000);
+setInterval(function(){ if(getOperatorId()) updateTodayStats(); },60000);
 setTimeout(function(){ if(getOperatorId()) updateTodayStats(); },2000);
 
 // ==================================================================
@@ -2484,7 +2600,7 @@ function calcTimelineIntelligence(deal){
   var fase=(deal.fase||deal.fase_atual_no_processo||deal._fase||'').toLowerCase();
   var status=(deal.statusDeal||deal.status_do_deal||'').toLowerCase();
   var revLine=deal._revLine||resolveRevenueLine(deal);
-  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.imersao;
+  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.nao_definido;
 
   // ── IDADE DO DEAL ──
   var ageDays=delta;
@@ -2974,72 +3090,6 @@ buildTaskQueue = function(filterType, filterRevLine){
 };
 window.buildTaskQueue = buildTaskQueue;
 
-// Inject enterprise tasks (5M+ review + advisor coaching)
-var _entBuildTaskQueue = buildTaskQueue;
-buildTaskQueue = function(filterType, filterRevLine){
-  var tasks = _entBuildTaskQueue(filterType, filterRevLine);
-  if(filterType && filterType!=='enterprise_review' && filterType!=='advisor_coaching') return tasks;
-  var map = window._COCKPIT_DEAL_MAP||{};
-  Object.values(map).forEach(function(d){
-    if(!d._enterprise || !d._enterprise.is_5m_plus) return;
-    var f=(d.fase||d.fase_atual_no_processo||'').toLowerCase();
-    if(f!=='sal' && f!=='conectado') return;
-    tasks.push({
-      id: (d.deal_id||d.nome)+'_ent_review',
-      deal: d,
-      taskType: 'enterprise_review',
-      label: 'Deal 5M+ (score '+d._enterprise.enterprise_value_score+') — priorizar qualificacao',
-      sortPriority: 1,
-      urgency: 90
-    });
-  });
-  // Advisor coaching: add one task if score < 0.6
-  var advisor = typeof calcTrustedAdvisorV24==='function' ? calcTrustedAdvisorV24(null,null) : null;
-  if(advisor && advisor.needs_coaching){
-    var gapLabels={credibility:'Credibilidade',availability:'Disponibilidade',intimacy:'Intimidade',selfishness:'Egoismo'};
-    tasks.push({
-      id: 'advisor_coaching_'+new Date().toISOString().slice(0,10),
-      deal: {nome:'Desenvolvimento Pessoal'},
-      taskType: 'advisor_coaching',
-      label: 'Trusted Advisor Score '+Math.round(advisor.trusted_advisor_score*100)+'% — melhorar '+(gapLabels[advisor.biggest_gap]||''),
-      sortPriority: 3,
-      urgency: 60
-    });
-  }
-  // Trust repair: per-deal trust < 0.50
-  Object.values(map).forEach(function(d){
-    var t = d._trust;
-    if(!t || t.trust_score >= 0.50) return;
-    tasks.push({
-      id: (d.deal_id||d.nome)+'_trust_repair',
-      deal: d,
-      taskType: 'trust_repair',
-      label: 'Trust Score '+Math.round(t.trust_score*100)+'% ('+t.trusted_advisor_band+') — aprofundar qualificacao',
-      sortPriority: 2,
-      urgency: 75
-    });
-  });
-  // Expansion review: high expansion potential
-  Object.values(map).forEach(function(d){
-    var ex = d._expansion;
-    if(!ex || ex.expansion_potential_score < 0.60) return;
-    tasks.push({
-      id: (d.deal_id||d.nome)+'_expansion_review',
-      deal: d,
-      taskType: 'expansion_review',
-      label: 'Expansion Potential '+Math.round(ex.expansion_potential_score*100)+'% — '+ex.repurchase_band,
-      sortPriority: 4,
-      urgency: 50
-    });
-  });
-  tasks.sort(function(a,b){
-    if(a.sortPriority !== b.sortPriority) return a.sortPriority - b.sortPriority;
-    return (b.urgency||0) - (a.urgency||0);
-  });
-  return tasks;
-};
-window.buildTaskQueue = buildTaskQueue;
-
 // Render cadence enrollment modal for a deal
 function renderCadenceModal(dealId){
   var deal=(window._COCKPIT_DEAL_MAP||{})[dealId];
@@ -3178,17 +3228,13 @@ function _dealToRuntime(id, d, email){
     last_touch_type: null,
     next_best_action: nba.type || null,
     nba_reason: nba.label || null,
-    enterprise_value_score: d._enterprise ? d._enterprise.enterprise_value_score : null,
-    is_5m_plus: d._enterprise ? d._enterprise.is_5m_plus : false,
-    enterprise_band: d._enterprise ? d._enterprise.band : null,
     runtime_payload: JSON.stringify({
       oppBreakdown: d._oppBreakdown || null,
       timeline: d._timeline || null,
       tier: d.tier || d._tier || null,
       contact_name: d.contact_name || d.nome || null,
       empresa: d.empresa || null,
-      statusDeal: d.statusDeal || null,
-      enterprise: d._enterprise || null
+      statusDeal: d.statusDeal || null
     })
   };
 }
@@ -3207,19 +3253,20 @@ async function syncDealRuntime(){
     rows.push(_dealToRuntime(id, d, email));
   });
 
-  // Upsert in parallel chunks of 50
+  // Upsert in chunks of 50
   var CHUNK = 50;
-  var chunks = [];
-  for(var i = 0; i < rows.length; i += CHUNK) chunks.push(rows.slice(i, i + CHUNK));
-  var results = await Promise.all(chunks.map(function(chunk){
-    return sb.from('deal_runtime')
-      .upsert(chunk, { onConflict: 'deal_id,operator_email' })
-      .then(function(res){
-        if(res.error){ console.warn('[runtime-sync] chunk error:', res.error.message); return 0; }
-        return chunk.length;
-      }).catch(function(e){ console.warn('[runtime-sync] chunk exception:', e.message); return 0; });
-  }));
-  var synced = results.reduce(function(s,n){return s+n;},0);
+  var synced = 0;
+  for(var i = 0; i < rows.length; i += CHUNK){
+    var chunk = rows.slice(i, i + CHUNK);
+    try {
+      var res = await sb.from('deal_runtime')
+        .upsert(chunk, { onConflict: 'deal_id,operator_email' });
+      if(res.error) console.warn('[runtime-sync] chunk error:', res.error.message);
+      else synced += chunk.length;
+    } catch(e){
+      console.warn('[runtime-sync] chunk exception:', e.message);
+    }
+  }
   console.log('[runtime-sync] ' + synced + '/' + rows.length + ' deals synced to deal_runtime');
   return synced;
 }
@@ -3234,23 +3281,22 @@ window.syncDealRuntime = syncDealRuntime;
 async function loadTaxonomy(){
   var sb = _sb(); if(!sb) return;
   try {
-    // Parallel load all taxonomy tables
-    var results = await Promise.all([
-      sb.from('taxonomy_revenue_lines').select('line_slug,line_label,base_metric,risk_after_days,line_weight').eq('is_active',true),
-      sb.from('kill_switches').select('switch_slug,is_enabled'),
-      sb.from('focus_modes').select('mode_slug,mode_label,icon,priority_task_types').eq('is_active',true)
-    ]);
-    var rl=results[0], ks=results[1], fm=results[2];
+    // Revenue Lines
+    var rl = await sb.from('taxonomy_revenue_lines').select('line_slug,line_label,base_metric,risk_after_days,line_weight').eq('is_active',true);
     if(rl.data && rl.data.length){
       rl.data.forEach(function(r){
         REVENUE_LINES[r.line_slug] = { label:r.line_label, base:r.base_metric, risk_after:r.risk_after_days, line_weight:r.line_weight };
       });
       console.log('[taxonomy] revenue_lines loaded: '+rl.data.length);
     }
+    // Kill Switches
+    var ks = await sb.from('kill_switches').select('switch_slug,is_enabled');
     if(ks.data && ks.data.length){
       ks.data.forEach(function(k){ KILL_SWITCHES[k.switch_slug] = k.is_enabled; });
       console.log('[taxonomy] kill_switches loaded: '+ks.data.length);
     }
+    // Focus Modes
+    var fm = await sb.from('focus_modes').select('mode_slug,mode_label,icon,priority_task_types').eq('is_active',true);
     if(fm.data && fm.data.length){
       fm.data.forEach(function(f){
         FOCUS_MODES[f.mode_slug] = { label:f.mode_label, icon:f.icon, priority:f.priority_task_types||[] };
@@ -3405,7 +3451,7 @@ function calcForecastV6(deal){
   var aging = deal._aging || calcAgingRisk(deal);
   var delta = deal._delta || deal.delta || 0;
   var revLine = deal._revLine || resolveRevenueLine(deal);
-  var lc = REVENUE_LINES[revLine] || REVENUE_LINES.imersao;
+  var lc = REVENUE_LINES[revLine] || REVENUE_LINES.nao_definido;
   var ra = lc.risk_after;
 
   // --- QUANTITATIVE BASELINE ---
@@ -3948,7 +3994,7 @@ async function calcOperatorPerformance(periodType, periodKey){
   runtimeDeals.forEach(function(r){
     if(!r.aging_days && r.aging_days !== 0) return;
     agingSum += r.aging_days; agingCount++;
-    var revLine = 'imersao'; // default
+    var revLine = 'nao_definido'; // default
     var riskAfter = (REVENUE_LINES[revLine] || {}).risk_after || 3;
     if(r.aging_days > riskAfter * 2) slaRisk++;
     if(!r.last_touch_at) inactive++;
@@ -4256,23 +4302,6 @@ async function syncOperatorEfficiency(periodType, periodKey){
       speed: { aging_avg:perf.aging_avg, touch_delay:perf.touch_delay_avg, sla_risk:perf.sla_risk_rate, inactive:perf.inactive_rate }
     }),
     pipeline_hygiene_score: perf.pipeline_hygiene_score,
-    // Trusted Advisor (L24)
-    trusted_advisor_score: (function(){
-      var ta = calcTrustedAdvisorV24(perf);
-      return ta ? ta.trusted_advisor_score : null;
-    })(),
-    advisor_band: (function(){
-      var ta = calcTrustedAdvisorV24(perf);
-      return ta ? ta.band : null;
-    })(),
-    advisor_json: (function(){
-      var ta = calcTrustedAdvisorV24(perf);
-      return ta ? JSON.stringify({
-        credibility:ta.credibility_score, availability:ta.availability_score,
-        intimacy:ta.intimacy_score, selfishness:ta.selfishness_score,
-        band:ta.band, gap:ta.biggest_gap, coaching:ta.needs_coaching
-      }) : null;
-    })(),
     scores_json: JSON.stringify({
       volume:perf.volume_score, conversion:perf.conversion_score, speed:perf.speed_score,
       discipline:perf.discipline_score, dqi:perf.dqi, forecast:perf.forecast_quality_score,
@@ -5681,20 +5710,6 @@ function detectSignals(deal){
   if(deal.leadGhosting)        add('lead_ghosting');
   if(deal.leadRescheduled)     add('lead_rescheduled');
 
-  // Telemetry: emit signal detection event
-  if(signals.length && typeof emitTelemetry === 'function'){
-    var sigTypes = signals.map(function(s){ return s.signal_type; });
-    emitTelemetry({
-      event_type: 'signal_detected',
-      deal_id: deal.dealId || deal.deal_id,
-      dag_phase: 3,
-      layer_processed: 18,
-      layer_name: 'Signal V8',
-      signal_detected: sigTypes,
-      metadata: { count: signals.length, pos: signals.filter(function(s){return s.pol>0}).length, neg: signals.filter(function(s){return s.pol<0}).length }
-    });
-  }
-
   return signals;
 }
 window.detectSignals = detectSignals;
@@ -6728,798 +6743,34 @@ window.syncAttributionRuntimeV22 = syncAttributionRuntimeV22;
 // Fase 7: Retrospectivo (L22)
 // ==================================================================
 
-// ==================================================================
-// TELEMETRY EMITTER — emite eventos para elucy_telemetry_events
-// Alimenta o Cockpit de Telemetria (telemetry.html) via Realtime
-// ==================================================================
-
-var _telemetryQueue = [];
-var _telemetryFlushTimer = null;
-
-function emitTelemetry(evt){
-  var sb = _sb(); if(!sb) return;
-  var base = {
-    operator_id: getOperatorId() || 'unknown',
-    role: (_operatorCtx.role || 'sdr'),
-    created_at: new Date().toISOString()
-  };
-  var row = Object.assign(base, evt);
-  if(_telemetryQueue.length>500) _telemetryQueue.shift();
-  _telemetryQueue.push(row);
-  // Batch flush every 500ms to reduce writes
-  if(!_telemetryFlushTimer){
-    _telemetryFlushTimer = setTimeout(function(){
-      _flushTelemetry();
-      _telemetryFlushTimer = null;
-    }, 500);
-  }
-}
-
-async function _flushTelemetry(){
-  var sb = _sb(); if(!sb || !_telemetryQueue.length) return;
-  var batch = _telemetryQueue.splice(0, 50);
-  try {
-    await sb.from('elucy_telemetry_events').insert(batch);
-  } catch(e){ console.warn('[Telemetry] flush error:', e); }
-}
-
-window.emitTelemetry = emitTelemetry;
-
-// Instrument a DAG phase step — emits telemetry + measures latency
-async function _dagStep(phase, layer, layerName, fn){
-  var t0 = Date.now();
-  emitTelemetry({ event_type:'dag_step', dag_phase:phase, layer_processed:layer, layer_name:layerName });
-  await fn();
-  var latency = Date.now() - t0;
-  emitTelemetry({ event_type:'dag_step', dag_phase:phase, layer_processed:layer, layer_name:layerName, latency_ms:latency, metadata:{status:'done'} });
-}
-
 async function runIntelligenceDAG(){
-  console.log('[DAG] Starting 27-Layer Intelligence DAG (12 phases)...');
+  console.log('[DAG] Starting 22-Layer Intelligence DAG...');
   var t0 = Date.now();
 
   try {
-    // Phase 1: Data Quality (L19) — depends on base data only
-    console.log('[DAG] Phase 1: L19 Data Quality...');
-    await _dagStep(1, 19, 'Data Quality', syncDataQualityRuntimeV19);
+    // Phase 2: Data Quality (L19) — depends on base data only
+    console.log('[DAG] Phase 2: L19 Data Quality...');
+    await syncDataQualityRuntimeV19();
 
-    // Phase 2: Forecast V7 (L13) — already computed at enrichDealContext, sync only
-    // (no dedicated sync — forecast runs inline during enrichment)
+    // Phase 4: Transition Rules (L20) — depends on L19
+    console.log('[DAG] Phase 4: L20 Transition Rules...');
+    await syncTransitionRuntimeV20();
 
-    // Phase 3: Transition Rules (L20) — depends on L19
-    console.log('[DAG] Phase 3: L20 Transition Rules...');
-    await _dagStep(3, 20, 'Transition Rules', syncTransitionRuntimeV20);
+    // Phase 5: Portfolio Prioritization (L21) — depends on L19, L20
+    console.log('[DAG] Phase 5: L21 Portfolio Prioritization...');
+    await syncPortfolioRuntimeV21();
 
-    // Phase 4: Portfolio Prioritization (L21) — depends on L19, L20
-    console.log('[DAG] Phase 4: L21 Portfolio Prioritization...');
-    await _dagStep(4, 21, 'Portfolio Priority', syncPortfolioRuntimeV21);
+    // Phase 7: Attribution (L22) — retrospective, batch
+    console.log('[DAG] Phase 7: L22 Attribution...');
+    await syncAttributionRuntimeV22();
 
-    // Phase 5: Revenue Quality (L23) — depends on enriched deals + framework
-    console.log('[DAG] Phase 5: L23 Revenue Quality...');
-    await _dagStep(5, 23, 'Revenue Quality', syncRevenueQualityRuntimeV23);
-
-    // Phase 6: Trust Engine (L24) — depends on L23 + framework
-    console.log('[DAG] Phase 6: L24 Trust Engine...');
-    await _dagStep(6, 24, 'Trust Engine', syncTrustRuntimeV24);
-
-    // Phase 7: Expansion Engine (L27) — depends on L23 + L24
-    console.log('[DAG] Phase 7: L27 Expansion Engine...');
-    await _dagStep(7, 27, 'Expansion LTV', syncExpansionRuntimeV27);
-
-    // Phase 8: Behavioral Intelligence (L26) — depends on L24 (trust)
-    console.log('[DAG] Phase 8: L26 Behavioral Intelligence...');
-    await _dagStep(8, 26, 'Behavioral Intel', syncBehavioralRuntimeV26);
-
-    // Phase 9: Attribution (L22) — retrospective, batch
-    console.log('[DAG] Phase 9: L22 Attribution...');
-    await _dagStep(9, 22, 'Attribution', syncAttributionRuntimeV22);
-
-    // Phase 10: Strategic Alignment (L25) — depends on L23+L24+L27
-    console.log('[DAG] Phase 10: L25 Strategic Alignment...');
-    await _dagStep(10, 25, 'Strategic Align', syncStrategicAlignmentV25);
-
-    var totalMs = Date.now() - t0;
-    console.log('[DAG] 27-Layer DAG completed in ' + totalMs + 'ms (10 phases)');
-    emitTelemetry({ event_type:'dag_complete', dag_phase:10, layer_processed:27, layer_name:'DAG Complete', latency_ms:totalMs });
+    console.log('[DAG] 22-Layer DAG completed in ' + (Date.now() - t0) + 'ms');
   } catch(err){
     console.error('[DAG] Error:', err);
-    emitTelemetry({ event_type:'dag_error', dag_phase:0, layer_processed:0, layer_name:'ERROR', metadata:{error:String(err)} });
   }
 }
 window.runIntelligenceDAG = runIntelligenceDAG;
 
-// ==================================================================
-// LAYER 23 — REVENUE QUALITY ENGINE (Strategic Expansion v2)
-// Score unico de qualidade economica e estrategica do deal
-// Subscores: ICP Fit, Enterprise Value, Decision Maturity, Revenue Quality
-// ==================================================================
-
-var ENTERPRISE_TIERS = {
-  'diamond': { revenue_proxy: 0.95, icp_boost: 1.0 },
-  'gold':    { revenue_proxy: 0.75, icp_boost: 0.85 },
-  'silver':  { revenue_proxy: 0.50, icp_boost: 0.60 },
-  'bronze':  { revenue_proxy: 0.25, icp_boost: 0.40 }
-};
-
-var HIGH_VALUE_CARGOS = ['ceo','fundador','socio','co-fundador','presidente','coo','cfo','vp','diretor','diretora','partner','managing','c-level'];
-var EXPANSION_PRODUCTS = ['imersao presencial','gestao empresarial','g4 scale','harvard','consulting'];
-
-// G4 priority lines for line_fit_score
-var LINE_PRIORITY = {
-  'imersao presencial':1.0,'gestao empresarial':0.95,'g4 scale':0.90,'harvard':0.90,
-  'consulting':0.85,'tank':0.80,'club':0.65,'legacy':0.50,'eventos':0.45
-};
-
-// ── L23 helpers ──────────────────────────────────────────────
-function _cargoScore(cargo){
-  cargo = (cargo||'').toLowerCase();
-  if(/fundador|socio|co-fundador|ceo|presidente|partner|owner/.test(cargo)) return 1.0;
-  if(/diretor|diretora|c-level|coo|cfo|cmo|cto|vp/.test(cargo)) return 0.80;
-  if(/gerente|head|coordenador/.test(cargo)) return 0.55;
-  return 0.30;
-}
-function _companySizeScore(deal){
-  var emp = (deal.faixa_de_funcionarios||'').toLowerCase();
-  if(/50|100|200|500|1000|grande/.test(emp)) return 1.0;
-  if(/26|30|40/.test(emp)) return 0.85;
-  if(/11|15|20|25/.test(emp)) return 0.65;
-  return 0.35;
-}
-function _revenueBandScore(deal){
-  var faixa = (deal.faixa_de_faturamento||'').toLowerCase();
-  if(faixa.includes('acima de 500')||faixa.includes('>500')||faixa.includes('500m')) return 1.0;
-  if(faixa.includes('100')||faixa.includes('200')||faixa.includes('300')||faixa.includes('400')) return 0.85;
-  if(faixa.includes('50')||faixa.includes('20')||faixa.includes('30')) return 0.75;
-  if(faixa.includes('10')||faixa.includes('5m')) return 0.45;
-  if(faixa.includes('1m')||faixa.includes('2m')||faixa.includes('3m')) return 0.45;
-  // fallback to tier
-  var tierData = ENTERPRISE_TIERS[(deal.tier||deal._tier||'').toLowerCase()];
-  return tierData ? tierData.revenue_proxy : 0.20;
-}
-function _lineFitScore(deal){
-  var linha = (deal.linhaReceita||deal.linha_de_receita_vigente||deal._revLine||'').toLowerCase();
-  var keys = Object.keys(LINE_PRIORITY);
-  for(var i=0;i<keys.length;i++){ if(linha.includes(keys[i])) return LINE_PRIORITY[keys[i]]; }
-  return 0.50;
-}
-
-function calcRevenueQualityV23(deal){
-  // A. ICP Fit Score
-  var cargo_s = _cargoScore(deal.cargo);
-  var company_s = _companySizeScore(deal);
-  var revenue_s = _revenueBandScore(deal);
-  var line_s = _lineFitScore(deal);
-  var icp_fit = cargo_s*0.30 + company_s*0.25 + revenue_s*0.25 + line_s*0.20;
-
-  // B. Enterprise Value Score — needs framework + forecast data
-  var fr = deal._frameworkRuntime || {};
-  var fc = deal._forecastV6 || deal._forecastV7 || {};
-  var dq = deal._dataQuality || {};
-  var fcValue = fc.forecast_value || deal._oppValue || deal.elucyValor || deal.revenueRaw || 0;
-  var normFcValue = Math.min(1, fcValue / 500000); // 500k = max normalization
-  var authority = fr.authority_score || 0;
-  var urgency = fr.urgency_score || 0;
-  var meddic = fr.meddic_avg || 0;
-  var spiced = fr.spiced_avg || 0;
-  var coverage = fr.overall_coverage || fr.coverage || 0;
-  var dataTrust = dq.data_trust_score || 0.3;
-
-  var enterprise_value = normFcValue*0.30 + authority*0.20 + urgency*0.10 + meddic*0.15 + spiced*0.10 + coverage*0.05 + dataTrust*0.10;
-
-  // C. Decision Maturity Score
-  var fcConf = fc.confidence || fc.forecast_confidence || 0;
-  var decision_maturity = authority*0.35 + meddic*0.25 + spiced*0.15 + coverage*0.10 + fcConf*0.15;
-
-  // D. Revenue Quality Score final
-  var fcScoreAdj = fc.forecast_score_adjusted || fc.score || fc.forecast_score || 0;
-  var rq = icp_fit*0.30 + enterprise_value*0.30 + decision_maturity*0.20 + fcScoreAdj*0.10 + dataTrust*0.10;
-  rq = Math.max(0, Math.min(1, rq));
-
-  var band = rq >= 0.80 ? 'strategic' : rq >= 0.65 ? 'strong' : rq >= 0.50 ? 'medium' : 'weak';
-  var is5MPlus = revenue_s >= 0.70 && cargo_s >= 0.80;
-
-  return {
-    icp_fit_score: Math.round(icp_fit*10000)/10000,
-    enterprise_value_score: Math.round(enterprise_value*10000)/10000,
-    decision_maturity_score: Math.round(decision_maturity*10000)/10000,
-    revenue_quality_score: Math.round(rq*10000)/10000,
-    revenue_quality_band: band,
-    is_5m_plus: is5MPlus,
-    priority_boost: rq >= 0.80 ? 30 : rq >= 0.65 ? 15 : 0,
-    // Legacy compat fields for UI
-    enterprise_value_score_100: Math.round(enterprise_value*100),
-    company_revenue_score: Math.round(revenue_s*100),
-    founder_seniority_score: Math.round(cargo_s*100),
-    icp_fit_score_100: Math.round(icp_fit*100),
-    band: band,
-    explain_json: {
-      cargo_s:Math.round(cargo_s*100)/100, company_s:Math.round(company_s*100)/100,
-      revenue_s:Math.round(revenue_s*100)/100, line_s:Math.round(line_s*100)/100,
-      normFcValue:Math.round(normFcValue*100)/100, authority:Math.round(authority*100)/100,
-      urgency:Math.round(urgency*100)/100, meddic:Math.round(meddic*100)/100,
-      spiced:Math.round(spiced*100)/100, coverage:Math.round(coverage*100)/100,
-      dataTrust:Math.round(dataTrust*100)/100, fcScoreAdj:Math.round(fcScoreAdj*100)/100
-    }
-  };
-}
-// Legacy alias
-var calcEnterpriseValueV23 = calcRevenueQualityV23;
-window.calcRevenueQualityV23 = calcRevenueQualityV23;
-window.calcEnterpriseValueV23 = calcEnterpriseValueV23;
-
-async function syncRevenueQualityRuntimeV23(){
-  var sb = _sb(); if(!sb) return;
-  var email = getOperatorId(); if(!email) return;
-  var map = window._COCKPIT_DEAL_MAP || {};
-  var rows = [];
-  Object.keys(map).forEach(function(id){
-    var d = map[id];
-    if((d.statusDeal||'').toLowerCase()==='perdido'||(d.statusDeal||'').toLowerCase()==='ganho') return;
-    var rq = calcRevenueQualityV23(d);
-    d._enterprise = rq; // legacy compat
-    d._revenueQuality = rq;
-    rows.push({
-      deal_id: id,
-      operator_email: email,
-      icp_fit_score: rq.icp_fit_score,
-      enterprise_value_score: rq.enterprise_value_score,
-      decision_maturity_score: rq.decision_maturity_score,
-      revenue_quality_score: rq.revenue_quality_score,
-      revenue_quality_band: rq.revenue_quality_band,
-      explain_json: rq.explain_json,
-      updated_at: new Date().toISOString()
-    });
-  });
-  if(!rows.length) return;
-  var res = await sb.from('deal_revenue_quality_runtime').upsert(rows, {onConflict:'deal_id'});
-  if(res.error) console.warn('[L23] Revenue Quality sync error:', res.error.message);
-  else console.log('[L23] Revenue Quality synced: ' + rows.length + ' deals');
-}
-// Legacy alias
-var syncEnterpriseRuntimeV23 = syncRevenueQualityRuntimeV23;
-window.syncRevenueQualityRuntimeV23 = syncRevenueQualityRuntimeV23;
-window.syncEnterpriseRuntimeV23 = syncEnterpriseRuntimeV23;
-
-// ==================================================================
-// LAYER 24 — TRUSTED ADVISOR ENGINE (per-deal)
-// trust = (credibility*0.30) + (availability*0.20) + (intimacy*0.30) + ((1-selfishness)*0.20)
-// ==================================================================
-
-function calcTrustScoreV24(deal){
-  var fr = deal._frameworkRuntime || {};
-  var fc = deal._forecastV6 || deal._forecastV7 || {};
-  var sig = deal._signalRuntime || {};
-
-  // ── CREDIBILITY (0.30) ──
-  var noteQ = fr.note_quality_score || 0;
-  var spiced = fr.spiced_avg || 0;
-  var meddic = fr.meddic_avg || 0;
-  var coverage = fr.overall_coverage || fr.coverage || 0;
-  var authority = fr.authority_score || 0;
-  var fcConf = fc.confidence || fc.forecast_confidence || 0;
-  var credibility = noteQ*0.25 + spiced*0.20 + meddic*0.20 + coverage*0.15 + authority*0.10 + fcConf*0.10;
-
-  // ── AVAILABILITY (0.20) ──
-  var aging = deal._delta || deal.delta || 0;
-  var response_time_s = aging<=2 ? 1.0 : aging<=6 ? 0.8 : aging<=24 ? 0.6 : 0.3;
-  // followup_consistency: proxy from touchpoints in last 7d
-  var tpCount = deal.touchpointCount || 0;
-  var followup_s = Math.min(1, tpCount / 5);
-  // touchpoint_frequency: proxy from total touchpoints / 7
-  var touchFreq_s = Math.min(1, tpCount / 7);
-  var availability = response_time_s*0.40 + followup_s*0.35 + touchFreq_s*0.25;
-
-  // ── INTIMACY (0.30) — most critical ──
-  var pain_depth = spiced; // proxy: spiced_avg
-  // context_memory
-  var hasPrevCtx = (deal._interactions && deal._interactions.length > 1) ? 0.7 : 0.3;
-  var nextStep = fr.next_step_clarity || 0;
-  var context_memory = hasPrevCtx*0.50 + coverage*0.30 + nextStep*0.20;
-  // personalization
-  var personalization = noteQ*0.50 + coverage*0.30 + authority*0.20;
-  // emotional_signal_detection
-  var posScore = sig.positive_score || 0;
-  var negScore = sig.negative_score || 0;
-  var emotional = Math.max(0, Math.min(1, posScore - negScore + 0.5));
-  var intimacy = pain_depth*0.35 + context_memory*0.25 + personalization*0.25 + emotional*0.15;
-
-  // ── SELFISHNESS (0.20, negativo) ──
-  var pitch_ratio = 1 - coverage; // low coverage = high pitch
-  var generic_copy = 1 - noteQ; // low note quality = generic
-  var lowCtxAction = ((nextStep < 0.3 ? 1 : 0)*0.50 + (coverage < 0.4 ? 1 : 0)*0.50);
-  var selfishness = pitch_ratio*0.40 + generic_copy*0.30 + lowCtxAction*0.30;
-
-  // ── FINAL ──
-  var trust = credibility*0.30 + availability*0.20 + intimacy*0.30 + (1-selfishness)*0.20;
-  trust = Math.max(0, Math.min(1, trust));
-
-  var band = trust >= 0.80 ? 'advisor' : trust >= 0.65 ? 'consultive' : trust >= 0.50 ? 'transactional' : 'fragile';
-
-  return {
-    credibility_score: Math.round(credibility*10000)/10000,
-    availability_score: Math.round(availability*10000)/10000,
-    intimacy_score: Math.round(intimacy*10000)/10000,
-    selfishness_score: Math.round(selfishness*10000)/10000,
-    trust_score: Math.round(trust*10000)/10000,
-    trusted_advisor_band: band,
-    // Legacy compat
-    trusted_advisor_score: Math.round(trust*100)/100,
-    band: band,
-    needs_coaching: trust < 0.60,
-    biggest_gap: (function(){
-      var min=credibility, g='credibility';
-      if(availability<min){min=availability;g='availability';}
-      if(intimacy<min){min=intimacy;g='intimacy';}
-      if((1-selfishness)<min){g='selfishness';}
-      return g;
-    })(),
-    explain_json: {
-      noteQ:Math.round(noteQ*100)/100, spiced:Math.round(spiced*100)/100,
-      meddic:Math.round(meddic*100)/100, coverage:Math.round(coverage*100)/100,
-      authority:Math.round(authority*100)/100, aging:aging,
-      posScore:Math.round(posScore*100)/100, negScore:Math.round(negScore*100)/100
-    }
-  };
-}
-
-// Operator-level aggregation (legacy compat for old UI)
-function calcTrustedAdvisorV24(operatorData, deals){
-  deals = deals || Object.values(window._COCKPIT_DEAL_MAP||{}).filter(function(d){
-    return (d.statusDeal||'').toLowerCase()!=='perdido' && (d.statusDeal||'').toLowerCase()!=='ganho';
-  });
-  if(!deals.length) return null;
-  var sumC=0,sumA=0,sumI=0,sumS=0,sumT=0,n=0;
-  deals.forEach(function(d){
-    var t = d._trust || calcTrustScoreV24(d);
-    d._trust = t;
-    sumC+=t.credibility_score; sumA+=t.availability_score;
-    sumI+=t.intimacy_score; sumS+=t.selfishness_score;
-    sumT+=t.trust_score; n++;
-  });
-  var avgT = n ? sumT/n : 0;
-  var band = avgT >= 0.80 ? 'advisor' : avgT >= 0.65 ? 'consultive' : avgT >= 0.50 ? 'transactional' : 'fragile';
-  return {
-    trusted_advisor_score: Math.round(avgT*100)/100,
-    credibility_score: Math.round((n?sumC/n:0)*100)/100,
-    availability_score: Math.round((n?sumA/n:0)*100)/100,
-    intimacy_score: Math.round((n?sumI/n:0)*100)/100,
-    selfishness_score: Math.round((n?sumS/n:0)*100)/100,
-    band: band, needs_coaching: avgT < 0.60,
-    biggest_gap: (function(){
-      var c=n?sumC/n:0, a=n?sumA/n:0, i=n?sumI/n:0, s=n?sumS/n:0;
-      var min=c, g='credibility';
-      if(a<min){min=a;g='availability';}
-      if(i<min){min=i;g='intimacy';}
-      if((1-s)<min){g='selfishness';}
-      return g;
-    })()
-  };
-}
-window.calcTrustScoreV24 = calcTrustScoreV24;
-window.calcTrustedAdvisorV24 = calcTrustedAdvisorV24;
-
-async function syncTrustRuntimeV24(){
-  var sb = _sb(); if(!sb) return;
-  var email = getOperatorId(); if(!email) return;
-  var map = window._COCKPIT_DEAL_MAP || {};
-  var rows = [];
-  Object.keys(map).forEach(function(id){
-    var d = map[id];
-    if((d.statusDeal||'').toLowerCase()==='perdido'||(d.statusDeal||'').toLowerCase()==='ganho') return;
-    var t = calcTrustScoreV24(d);
-    d._trust = t;
-    rows.push({
-      deal_id: id, operator_email: email,
-      credibility_score: t.credibility_score, availability_score: t.availability_score,
-      intimacy_score: t.intimacy_score, selfishness_score: t.selfishness_score,
-      trust_score: t.trust_score, trusted_advisor_band: t.trusted_advisor_band,
-      explain_json: t.explain_json, updated_at: new Date().toISOString()
-    });
-  });
-  if(!rows.length) return;
-  var res = await sb.from('deal_trust_runtime').upsert(rows, {onConflict:'deal_id'});
-  if(res.error) console.warn('[L24] Trust sync error:', res.error.message);
-  else console.log('[L24] Trust runtime synced: ' + rows.length + ' deals');
-}
-window.syncTrustRuntimeV24 = syncTrustRuntimeV24;
-
-// ==================================================================
-// LAYER 25 — STRATEGIC ALIGNMENT ENGINE
-// Conecta cockpit -> KPIs estrategicos G4 (Revenue #5 + Experience #8)
-// ==================================================================
-
-function calcStrategicAlignmentV25(periodKey, operatorEmail){
-  var map = window._COCKPIT_DEAL_MAP || {};
-  var deals = Object.values(map).filter(function(d){
-    return (d.statusDeal||'').toLowerCase()!=='perdido' && (d.statusDeal||'').toLowerCase()!=='ganho';
-  });
-  if(operatorEmail) deals = deals.filter(function(d){ return (d.qualificador_name||d.operatorEmail||'') === operatorEmail; });
-
-  var salDeals = deals.filter(function(d){ return (d.fase||d.fase_atual_no_processo||'').toLowerCase()==='sal'; });
-  var sal5mCount = 0;
-
-  // A. SAL 5M+ Rate
-  salDeals.forEach(function(d){
-    var rq = d._revenueQuality || d._enterprise;
-    if(!rq) return;
-    var cargo = (d.cargo||'').toLowerCase();
-    var isFounder = /fundador|socio|co-fundador|ceo|presidente/.test(cargo);
-    if(rq.icp_fit_score >= 0.75 && isFounder) sal5mCount++;
-  });
-  var sal5mRate = salDeals.length ? sal5mCount / salDeals.length : 0;
-
-  // B. Pipeline 5M+ Value
-  var pipeline5mValue = 0;
-  deals.forEach(function(d){
-    var rq = d._revenueQuality || d._enterprise;
-    if(rq && rq.icp_fit_score >= 0.75){
-      var fc = d._forecastV6 || d._forecastV7 || {};
-      pipeline5mValue += (fc.forecast_value || d._oppValue || d.elucyValor || 0);
-    }
-  });
-
-  // C. Marketing Revenue SAL
-  var mktSalRevenue = 0;
-  deals.forEach(function(d){
-    var grupo = (d.grupo_de_receita||'').toLowerCase();
-    var fase = (d.fase||d.fase_atual_no_processo||'').toLowerCase();
-    if(grupo.includes('marketing') && fase === 'sal'){
-      var fc = d._forecastV6 || d._forecastV7 || {};
-      mktSalRevenue += (fc.forecast_value || d._oppValue || d.elucyValor || 0);
-    }
-  });
-
-  // D. Experience Score
-  var trustSum=0, trustN=0, contactRateSum=0, fcConfSum=0, fcConfN=0;
-  deals.forEach(function(d){
-    var t = d._trust;
-    if(t){ trustSum += t.trust_score; trustN++; }
-    contactRateSum += (d.touchpointCount || 0);
-    var fc = d._forecastV6 || d._forecastV7 || {};
-    if(fc.confidence){ fcConfSum += fc.confidence; fcConfN++; }
-  });
-  var trustAvg = trustN ? trustSum/trustN : 0;
-  var normContactRate = deals.length ? Math.min(1, contactRateSum / (deals.length * 10)) : 0;
-  var fcConfAvg = fcConfN ? fcConfSum/fcConfN : 0;
-  var handoffReady = deals.filter(function(d){ var f=(d.fase||'').toLowerCase(); return f==='oportunidade'; }).length;
-  var handoffQuality = deals.length ? Math.min(1, handoffReady / Math.max(deals.length * 0.1, 1)) : 0;
-  var cancelRisk = deals.filter(function(d){ return (d._delta||0) > 10; }).length;
-  var cancelProxy = deals.length ? cancelRisk / deals.length : 0;
-
-  var experience = trustAvg*0.35 + (1-normContactRate)*0.25 + fcConfAvg*0.15 + handoffQuality*0.15 + (1-cancelProxy)*0.10;
-  experience = Math.max(0, Math.min(1, experience));
-
-  // E. Strategic Revenue Score
-  var normPipeline5m = Math.min(1, pipeline5mValue / 5000000); // 5M max
-  var normMktSal = Math.min(1, mktSalRevenue / 2000000); // 2M max
-  var fcAccuracyProxy = fcConfAvg; // placeholder
-  var repurchaseProxy = 0; // will come from L27
-  deals.forEach(function(d){
-    if(d._expansion) repurchaseProxy += d._expansion.expansion_potential_score || 0;
-  });
-  repurchaseProxy = deals.length ? repurchaseProxy / deals.length : 0;
-
-  var strategicRevenue = sal5mRate*0.30 + normPipeline5m*0.25 + normMktSal*0.20 + fcAccuracyProxy*0.15 + repurchaseProxy*0.10;
-  strategicRevenue = Math.max(0, Math.min(1, strategicRevenue));
-
-  // Legacy compat: revenue_quality + experience_quality objects
-  var titanCount=0, builderCount=0, executorCount=0, fwCoveredCount=0;
-  var totalEntScore=0, totalExpScore=0;
-  deals.forEach(function(d){
-    var p=d._persona||''; if(p==='Titan')titanCount++; else if(p==='Builder')builderCount++; else if(p==='Executor')executorCount++;
-    if(d._frameworkRuntime && (d._frameworkRuntime.coverage||0) > 0.3) fwCoveredCount++;
-    var rq=d._revenueQuality||d._enterprise||{}; totalEntScore+=(rq.enterprise_value_score_100||rq.enterprise_value_score||0); totalExpScore+=(rq.expansion_potential_score||0);
-  });
-
-  return {
-    sal_5m_rate: Math.round(sal5mRate*10000)/10000,
-    pipeline_5m_value: Math.round(pipeline5mValue),
-    marketing_sal_revenue: Math.round(mktSalRevenue),
-    experience_score: Math.round(experience*10000)/10000,
-    strategic_revenue_score: Math.round(strategicRevenue*10000)/10000,
-    // Legacy compat
-    revenue_quality: {
-      sal_5m_count: sal5mCount, pipeline_5m_value: Math.round(pipeline5mValue),
-      avg_enterprise_score: deals.length ? Math.round(totalEntScore/deals.length) : 0,
-      avg_expansion_potential: deals.length ? Math.round(totalExpScore/deals.length*100)/100 : 0,
-      total_deals: deals.length,
-      by_persona: { titan:titanCount, builder:builderCount, executor:executorCount }
-    },
-    experience_quality: {
-      avg_touches_to_response: deals.length ? Math.round((contactRateSum/deals.length)*10)/10 : 0,
-      framework_coverage_pct: deals.length ? Math.round((fwCoveredCount/deals.length)*100) : 0,
-      iron_dome_count: cancelRisk,
-      handoff_ready_count: handoffReady
-    }
-  };
-}
-// Legacy aliases
-var calcStrategicIntelligenceV25 = calcStrategicAlignmentV25;
-window.calcStrategicAlignmentV25 = calcStrategicAlignmentV25;
-window.calcStrategicIntelligenceV25 = calcStrategicIntelligenceV25;
-
-async function syncStrategicAlignmentV25(){
-  var sb = _sb(); if(!sb) return;
-  var email = getOperatorId(); if(!email) return;
-  var sa = calcStrategicAlignmentV25(null, null);
-  var today = new Date().toISOString().slice(0,10);
-
-  var row = {
-    period_type: 'daily', period_key: today, operator_email: email,
-    sal_5m_rate: sa.sal_5m_rate, pipeline_5m_value: sa.pipeline_5m_value,
-    marketing_sal_revenue: sa.marketing_sal_revenue,
-    experience_score: sa.experience_score,
-    strategic_revenue_score: sa.strategic_revenue_score,
-    explain_json: { sal_5m_count: sa.revenue_quality.sal_5m_count, total_deals: sa.revenue_quality.total_deals },
-    generated_at: new Date().toISOString()
-  };
-
-  var res = await sb.from('strategic_alignment_snapshots').upsert([row], {onConflict:'period_type,period_key,operator_email'});
-  if(res.error) console.warn('[L25] Strategic Alignment sync error:', res.error.message);
-  else console.log('[L25] Strategic Alignment saved for ' + today);
-}
-// Legacy alias
-var syncStrategicSnapshotV25 = syncStrategicAlignmentV25;
-window.syncStrategicAlignmentV25 = syncStrategicAlignmentV25;
-window.syncStrategicSnapshotV25 = syncStrategicSnapshotV25;
-
-// ==================================================================
-// LAYER 26 — BEHAVIORAL INTELLIGENCE ENGINE
-// Mede comportamento do SDR como operador estrategico
-// ==================================================================
-
-function calcBehavioralIntelligenceV26(operatorEmail){
-  var map = window._COCKPIT_DEAL_MAP || {};
-  var deals = Object.values(map).filter(function(d){
-    return (d.statusDeal||'').toLowerCase()!=='perdido' && (d.statusDeal||'').toLowerCase()!=='ganho';
-  });
-
-  // Gather operator efficiency from window if available
-  var opEff = window._operatorEfficiency || {};
-  var discipline = opEff.discipline_score || opEff.speed_score || 0.5;
-  var speed = opEff.speed_score || 0.5;
-  var dqi = opEff.dqi || 0.5;
-  var fcQuality = opEff.forecast_quality_score || 0.5;
-
-  // A. Curiosity Score
-  var noteCreated = 0, fwGapFills = 0, analysisGen = 0, waPasted = 0;
-  deals.forEach(function(d){
-    if(d._interactions){
-      d._interactions.forEach(function(i){
-        if(i.interaction_type === 'note_crm') noteCreated++;
-        if(i.interaction_type === 'analysis') analysisGen++;
-        if(i.interaction_type === 'whatsapp_paste') waPasted++;
-        if(i.interaction_type === 'framework_fill') fwGapFills++;
-      });
-    }
-  });
-  var n = Math.max(deals.length, 1);
-  var noteRate = Math.min(1, noteCreated / n);
-  var fwGapRate = Math.min(1, fwGapFills / n);
-  var analysisRate = Math.min(1, analysisGen / n);
-  var waRate = Math.min(1, waPasted / n);
-  var curiosity = noteRate*0.30 + fwGapRate*0.25 + analysisRate*0.25 + waRate*0.20;
-
-  // B. Depth of Qualification
-  var covSum=0, noteQSum=0, covN=0;
-  deals.forEach(function(d){
-    var fr = d._frameworkRuntime || {};
-    covSum += (fr.overall_coverage || fr.coverage || 0);
-    noteQSum += (fr.note_quality_score || 0);
-    covN++;
-  });
-  var covAvg = covN ? covSum/covN : 0;
-  var noteQAvg = covN ? noteQSum/covN : 0;
-  var depthOfQual = covAvg*0.35 + noteQAvg*0.25 + dqi*0.20 + fcQuality*0.20;
-
-  // C. Trust Building
-  var trustSum = 0, trustN = 0;
-  deals.forEach(function(d){
-    var t = d._trust;
-    if(t){ trustSum += t.trust_score; trustN++; }
-  });
-  var trustBuilding = trustN ? trustSum/trustN : 0;
-
-  // D. Execution Consistency
-  var tasksCompleted = 0, tasksSkipped = 0, totalTasks = 0;
-  deals.forEach(function(d){
-    if(d._tasks){
-      d._tasks.forEach(function(tk){
-        totalTasks++;
-        if(tk.status === 'completed') tasksCompleted++;
-        if(tk.status === 'skipped') tasksSkipped++;
-      });
-    }
-  });
-  var onTimeRate = totalTasks ? tasksCompleted / totalTasks : 0.5;
-  var lowSkipRate = totalTasks ? 1 - (tasksSkipped / totalTasks) : 0.7;
-  var execConsistency = onTimeRate*0.40 + lowSkipRate*0.30 + speed*0.30;
-
-  // Final SDR Behavior Score
-  var behavior = discipline*0.20 + curiosity*0.20 + depthOfQual*0.25 + trustBuilding*0.25 + execConsistency*0.10;
-  behavior = Math.max(0, Math.min(1, behavior));
-
-  return {
-    curiosity_score: Math.round(curiosity*10000)/10000,
-    depth_of_qualification_score: Math.round(depthOfQual*10000)/10000,
-    trust_building_score: Math.round(trustBuilding*10000)/10000,
-    execution_consistency_score: Math.round(execConsistency*10000)/10000,
-    sdr_behavior_score: Math.round(behavior*10000)/10000,
-    explain_json: {
-      discipline:Math.round(discipline*100)/100, curiosity:Math.round(curiosity*100)/100,
-      depthOfQual:Math.round(depthOfQual*100)/100, trustBuilding:Math.round(trustBuilding*100)/100,
-      execConsistency:Math.round(execConsistency*100)/100, deals_count:deals.length
-    }
-  };
-}
-window.calcBehavioralIntelligenceV26 = calcBehavioralIntelligenceV26;
-
-async function syncBehavioralRuntimeV26(){
-  var sb = _sb(); if(!sb) return;
-  var email = getOperatorId(); if(!email) return;
-  var beh = calcBehavioralIntelligenceV26(email);
-  var row = {
-    operator_email: email,
-    curiosity_score: beh.curiosity_score,
-    depth_of_qualification_score: beh.depth_of_qualification_score,
-    trust_building_score: beh.trust_building_score,
-    execution_consistency_score: beh.execution_consistency_score,
-    sdr_behavior_score: beh.sdr_behavior_score,
-    explain_json: beh.explain_json,
-    updated_at: new Date().toISOString()
-  };
-  var res = await sb.from('operator_behavior_runtime').upsert([row], {onConflict:'operator_email'});
-  if(res.error) console.warn('[L26] Behavioral sync error:', res.error.message);
-  else console.log('[L26] Behavioral Intelligence synced for ' + email);
-}
-window.syncBehavioralRuntimeV26 = syncBehavioralRuntimeV26;
-
-// ==================================================================
-// LAYER 27 — EXPANSION & LIFETIME VALUE ENGINE
-// Detecta recompra, expansao e valor futuro
-// ==================================================================
-
-var LINE_ADJACENCY = {
-  'imersao presencial': ['club','consulting','eventos','g4 scale'],
-  'club': ['imersao presencial','eventos','gestao empresarial'],
-  'consulting': ['imersao presencial','g4 scale','harvard'],
-  'gestao empresarial': ['club','imersao presencial','tank'],
-  'g4 scale': ['consulting','harvard','imersao presencial'],
-  'harvard': ['consulting','g4 scale','imersao presencial'],
-  'tank': ['gestao empresarial','club','eventos'],
-  'eventos': ['club','imersao presencial','tank'],
-  'legacy': ['club','gestao empresarial']
-};
-
-function calcExpansionPotentialV27(deal){
-  // A. Purchase History Score — check if account has prior deals
-  var accountId = deal.account_id || deal.empresa_name || deal.empresa || '';
-  var allDeals = Object.values(window._COCKPIT_DEAL_MAP || {});
-  var priorWon = allDeals.filter(function(d){
-    return (d.account_id||d.empresa_name||d.empresa||'') === accountId &&
-           (d.statusDeal||'').toLowerCase() === 'ganho' &&
-           d.dealId !== deal.dealId;
-  });
-  var purchaseHistory = priorWon.length >= 2 ? 1.0 : priorWon.length === 1 ? 0.65 : 0.20;
-
-  // B. Line Adjacency Score — are there adjacent products to sell?
-  var currentLine = (deal.linhaReceita||deal.linha_de_receita_vigente||deal._revLine||'').toLowerCase();
-  var adjacentLines = LINE_ADJACENCY[currentLine] || [];
-  // Check which adjacent lines this account does NOT already have
-  var existingLines = {};
-  priorWon.forEach(function(d){
-    var l = (d.linhaReceita||d.linha_de_receita_vigente||d._revLine||'').toLowerCase();
-    if(l) existingLines[l] = true;
-  });
-  var unlockedAdj = adjacentLines.filter(function(l){ return !existingLines[l]; });
-  var lineAdjacency = adjacentLines.length ? unlockedAdj.length / adjacentLines.length : 0.30;
-
-  // C. Account Value Score
-  var totalHistorical = 0;
-  priorWon.forEach(function(d){ totalHistorical += (d.elucyValor || d.revenueRaw || d.revenue || 0); });
-  var BENCHMARK = 200000; // R$200k benchmark
-  var accountValue = Math.min(1, totalHistorical / BENCHMARK);
-
-  // D. Revenue Quality + Trust from this deal
-  var rq = deal._revenueQuality || deal._enterprise || {};
-  var revenueQ = rq.revenue_quality_score || 0;
-  var trust = deal._trust ? deal._trust.trust_score : 0;
-
-  // Final Expansion Potential
-  var expansion = purchaseHistory*0.35 + lineAdjacency*0.20 + accountValue*0.20 + revenueQ*0.15 + trust*0.10;
-  expansion = Math.max(0, Math.min(1, expansion));
-
-  var band = expansion >= 0.75 ? 'high_potential' : expansion >= 0.50 ? 'moderate' : expansion >= 0.30 ? 'low' : 'none';
-
-  return {
-    purchase_history_score: Math.round(purchaseHistory*10000)/10000,
-    line_adjacency_score: Math.round(lineAdjacency*10000)/10000,
-    account_value_score: Math.round(accountValue*10000)/10000,
-    expansion_potential_score: Math.round(expansion*10000)/10000,
-    repurchase_band: band,
-    explain_json: {
-      prior_deals: priorWon.length, current_line: currentLine,
-      adjacent_lines: adjacentLines.length, unlocked: unlockedAdj.length,
-      total_historical: totalHistorical
-    }
-  };
-}
-window.calcExpansionPotentialV27 = calcExpansionPotentialV27;
-
-async function syncExpansionRuntimeV27(){
-  var sb = _sb(); if(!sb) return;
-  var email = getOperatorId(); if(!email) return;
-  var map = window._COCKPIT_DEAL_MAP || {};
-  var rows = [];
-  Object.keys(map).forEach(function(id){
-    var d = map[id];
-    if((d.statusDeal||'').toLowerCase()==='perdido'||(d.statusDeal||'').toLowerCase()==='ganho') return;
-    var exp = calcExpansionPotentialV27(d);
-    d._expansion = exp;
-    rows.push({
-      deal_id: id, account_id: d.account_id || d.empresa_name || '',
-      operator_email: email,
-      purchase_history_score: exp.purchase_history_score,
-      line_adjacency_score: exp.line_adjacency_score,
-      account_value_score: exp.account_value_score,
-      expansion_potential_score: exp.expansion_potential_score,
-      repurchase_band: exp.repurchase_band,
-      explain_json: exp.explain_json,
-      updated_at: new Date().toISOString()
-    });
-  });
-  if(!rows.length) return;
-  var res = await sb.from('deal_expansion_runtime').upsert(rows, {onConflict:'deal_id'});
-  if(res.error) console.warn('[L27] Expansion sync error:', res.error.message);
-  else console.log('[L27] Expansion runtime synced: ' + rows.length + ' deals');
-}
-window.syncExpansionRuntimeV27 = syncExpansionRuntimeV27;
-
-// ==================================================================
-// TELEMETRY: Kill Switch listener via cockpit_responses
-// Detects governance alerts in responses and emits telemetry events
-// ==================================================================
-
-(function initTelemetryResponseListener(){
-  var sb = _sb(); if(!sb) return;
-  try {
-    sb.channel('telemetry-ks')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'cockpit_responses'
-      }, function(payload){
-        var row = payload.new || {};
-        var resp = row.response_text || row.response_json || '';
-        var respStr = typeof resp === 'string' ? resp : JSON.stringify(resp);
-        // Detect governance alerts / kill switch triggers
-        var ksPatterns = [
-          {re:/titan.*challenger|challenger.*only/i, slug:'titan_challenger_only'},
-          {re:/builder.*spiced|spiced.*only/i, slug:'builder_spiced'},
-          {re:/executor.*spin|spin.*champion/i, slug:'executor_spin'},
-          {re:/tier.?2.*block|bloqueio.*imers/i, slug:'tier2_block_imersao_presencial'},
-          {re:/mei.*downgrade|ceo.*mei/i, slug:'ceo_mei_downgrade_authority'},
-          {re:/dqi.*over.*revenue|dqi.*superior/i, slug:'dqi_over_revenue'},
-          {re:/black.?box|protocolo.*black/i, slug:'black_box_protocol'}
-        ];
-        ksPatterns.forEach(function(pat){
-          if(pat.re.test(respStr)){
-            emitTelemetry({
-              event_type: 'kill_switch',
-              deal_id: row.deal_id || null,
-              dag_phase: 0,
-              layer_processed: 0,
-              layer_name: 'BEG Governor',
-              kill_switch_triggered: pat.slug,
-              metadata: { request_id: row.request_id }
-            });
-          }
-        });
-      })
-      .subscribe();
-  } catch(e){ console.warn('[Telemetry] KS listener error:', e); }
-})();
-
-console.log('[cockpit-engine v12.0] 27-Layer Architecture loaded — L23 Revenue Quality + L24 Trust Engine + L25 Strategic Alignment + L26 Behavioral Intel + L27 Expansion LTV + Telemetry Emitter');
+console.log('[cockpit-engine v10.0] 22-Layer Architecture loaded — L19 Data Quality + L20 Transition Rules + L21 Portfolio Priority + L22 Attribution');
 
 })();
