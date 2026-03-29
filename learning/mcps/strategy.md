@@ -245,7 +245,7 @@ ATIVACAO_SPICED:
 
 ## Zonas de Ativacao Challenger Sale (Doc 8)
 
-### Green Zone (USAR Challenger)
+### OPERATING_ZONE_GREEN (USAR Challenger)
 
 ```
 CHALLENGER_GREEN_ZONE:
@@ -256,7 +256,7 @@ CHALLENGER_GREEN_ZONE:
   - Enterprise com multiplos stakeholders (precisa de insight disruptivo)
 ```
 
-### Red Zone (NUNCA usar Challenger)
+### OPERATING_ZONE_RED (NUNCA usar Challenger)
 
 ```
 CHALLENGER_RED_ZONE:

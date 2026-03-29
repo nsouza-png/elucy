@@ -228,7 +228,7 @@ var REVENUE_LINES = {
   turmas:           { label:'Turmas',                    base:'qualified',   risk_after:4, line_weight:1.0  },
   projetos_eventos: { label:'Projetos & Eventos',        base:'qualified',   risk_after:5, line_weight:0.9  },
   social_dm:        { label:'Social DM',                 base:'touchpoints', risk_after:1, line_weight:0.75 },
-  social_dm_k:      { label:'Social DM K',               base:'touchpoints', risk_after:1, line_weight:0.70 },
+  social_dm_segment_k:      { label:'Social DM K',               base:'touchpoints', risk_after:1, line_weight:0.70 },
   selfcheckout:     { label:'Self Checkout',             base:'leads',       risk_after:1, line_weight:0.5  },
   reativacao:       { label:'Reativação',                base:'leads',       risk_after:2, line_weight:0.6  },
   expansao:         { label:'Expansão (Farmer/CS Corp)', base:'opportunity', risk_after:7, line_weight:0.9  },
@@ -318,7 +318,7 @@ function resolveRevenueLine(deal){
   if(lr) {
     // Social DM
     if(lr.includes('[im] social dm')||lr.includes('social dm - perfil k'))
-      return lr.includes('perfil k') ? 'social_dm_k' : 'social_dm';
+      return lr.includes('perfil k') ? 'social_dm_segment_k' : 'social_dm';
     if(lr.includes('[im] social'))  return 'social_dm';
     // Reativação
     if(lr.includes('reativ'))       return 'reativacao';
