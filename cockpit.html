@@ -3411,6 +3411,18 @@ function saveOperator(){
   const metaHandoffs=parseInt(document.getElementById('op-meta-handoffs')?.value)||40;
   const metaOpp=parseInt(document.getElementById('op-meta-opp')?.value)||15;
   window.saveOperatorSettings({meta_mensal:{fups:metaFups,qualificacoes:metaQual,handoffs:metaHandoffs,opp:metaOpp}});
+  // Persist preferences to Supabase (cross-device sync)
+  const prefs = {
+    voice_mode: localStorage.getItem('elucy_voice_mode')||'standard',
+    challenger_tension: localStorage.getItem('elucy_challenger_tension')||'equilibrado',
+    auto_draft: localStorage.getItem('elucy_auto_draft')==='1',
+    auto_focus: localStorage.getItem('elucy_auto_focus')==='1',
+    alert_stall: localStorage.getItem('elucy_alert_stall')!=='0',
+    alert_signals: localStorage.getItem('elucy_alert_signals')!=='0',
+    alert_daily: localStorage.getItem('elucy_alert_daily')==='1',
+    slack_webhook: localStorage.getItem('elucy_slack_webhook')||''
+  };
+  if(window.saveOperatorSettings) window.saveOperatorSettings({preferences: prefs});
   // Limpa cache de nome se o email mudou (força novo lookup)
   const prev=localStorage.getItem('elucy_operator_email');
   if(prev!==email) localStorage.removeItem('elucy_qualificador_name');

@@ -143,6 +143,7 @@ const _operatorCtx = {
   permissions: { can_view_team:false, can_approve:false, is_leader:false },
   squad: '',
   performance_profile: null,
+  preferences: {},
   initialized: false
 };
 
@@ -159,7 +160,7 @@ async function initOperatorContext(){
   const email=getOperatorId(); if(!email) return;
   _operatorCtx.email=email;
   const {data}=await sb.from('operators')
-    .select('qualificador_name,role,meta_mensal,focus_mode,squad,approved')
+    .select('qualificador_name,role,meta_mensal,focus_mode,squad,approved,preferences')
     .eq('email',email).maybeSingle();
   if(data){
     _operatorCtx.qualificador_name=data.qualificador_name||email.split('@')[0];
@@ -170,6 +171,20 @@ async function initOperatorContext(){
     _operatorCtx.permissions.can_view_team=data.role==='leader'||data.role==='manager';
     _operatorCtx.permissions.can_approve=data.role==='leader'||data.role==='manager';
     _operatorCtx.permissions.is_leader=data.role==='leader';
+    if(data.preferences){
+      try{
+        const prefs=typeof data.preferences==='string'?JSON.parse(data.preferences):data.preferences;
+        if(prefs.voice_mode) localStorage.setItem('elucy_voice_mode', prefs.voice_mode);
+        if(prefs.challenger_tension) localStorage.setItem('elucy_challenger_tension', prefs.challenger_tension);
+        if(prefs.auto_draft!=null) localStorage.setItem('elucy_auto_draft', prefs.auto_draft?'1':'0');
+        if(prefs.auto_focus!=null) localStorage.setItem('elucy_auto_focus', prefs.auto_focus?'1':'0');
+        if(prefs.alert_stall!=null) localStorage.setItem('elucy_alert_stall', prefs.alert_stall?'1':'0');
+        if(prefs.alert_signals!=null) localStorage.setItem('elucy_alert_signals', prefs.alert_signals?'1':'0');
+        if(prefs.alert_daily!=null) localStorage.setItem('elucy_alert_daily', prefs.alert_daily?'1':'0');
+        if(prefs.slack_webhook) localStorage.setItem('elucy_slack_webhook', prefs.slack_webhook);
+        _operatorCtx.preferences = prefs;
+      }catch(e){}
+    }
   }
   _operatorCtx.meta_diaria.fups=Math.ceil(_operatorCtx.meta_mensal.fups/22);
   _operatorCtx.meta_diaria.qualificacoes=Math.ceil(_operatorCtx.meta_mensal.qualificacoes/22);
@@ -201,6 +216,12 @@ async function saveOperatorSettings(settings){
       handoffs:_operatorCtx.meta_mensal.handoffs, opp:_operatorCtx.meta_mensal.opp||15,
       updated_at:new Date().toISOString()
     },{onConflict:'operator_email,period_key'}).then(function(){});
+  }
+  if(settings.preferences){
+    const existing = _operatorCtx.preferences || {};
+    const merged = Object.assign({}, existing, settings.preferences);
+    _operatorCtx.preferences = merged;
+    update.preferences = JSON.stringify(merged);
   }
   await sb.from('operators').update(update).eq('email',email);
 }
