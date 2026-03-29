@@ -150,6 +150,46 @@ body{background:var(--bg);color:var(--white);font-family:var(--font);-webkit-fon
 .cap-num{font-size:28px;font-weight:900;color:var(--copper2);line-height:1;margin-bottom:6px}
 .cap-name{font-size:11px;color:var(--gray2);font-weight:500;line-height:1.4}
 
+/* ── DEEP DIVE SECTIONS ────────────────────────── */
+.deep{padding:100px 40px;max-width:1100px;margin:0 auto}
+.deep-intro{max-width:720px;margin-bottom:48px}
+.deep-intro h2{font-size:36px;font-weight:900;letter-spacing:-1px;line-height:1.15;margin-bottom:16px}
+.deep-intro h2 em{font-style:normal;color:var(--copper2)}
+.deep-intro p{font-size:15px;color:var(--gray2);line-height:1.7}
+.deep-intro p strong{color:var(--white);font-weight:600}
+.deep-callout{background:var(--copper-dim);border:1px solid rgba(212,149,106,.2);border-radius:var(--r2);padding:24px 28px;margin:32px 0;font-size:14px;color:var(--copper2);line-height:1.7}
+.deep-callout strong{color:var(--white);font-weight:700}
+.deep-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:32px 0}
+.deep-grid-3{grid-template-columns:1fr 1fr 1fr}
+.deep-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:24px;transition:all .2s var(--ease)}
+.deep-card:hover{border-color:var(--border2);transform:translateY(-3px);box-shadow:var(--shadow-sm)}
+.deep-card-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.deep-badge{display:inline-block;font-size:10px;font-weight:800;padding:4px 10px;border-radius:6px;letter-spacing:.5px;text-transform:uppercase}
+.deep-badge-blue{background:rgba(90,200,250,.1);color:var(--blue);border:1px solid rgba(90,200,250,.2)}
+.deep-badge-green{background:rgba(48,209,88,.1);color:var(--green);border:1px solid rgba(48,209,88,.2)}
+.deep-badge-yellow{background:rgba(255,214,10,.1);color:#ffd60a;border:1px solid rgba(255,214,10,.2)}
+.deep-badge-red{background:rgba(255,69,58,.1);color:var(--red);border:1px solid rgba(255,69,58,.2)}
+.deep-badge-copper{background:var(--copper-dim);color:var(--copper2);border:1px solid rgba(212,149,106,.2)}
+.deep-card-title{font-size:14px;font-weight:700;color:var(--white)}
+.deep-card-body{font-size:12px;color:var(--gray2);line-height:1.65}
+.deep-card-body strong{color:var(--gray1);font-weight:600}
+.deep-formula{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:20px 24px;margin:24px 0;font-family:'SF Mono',Menlo,monospace;font-size:12px;color:var(--copper2);line-height:1.8;letter-spacing:.02em}
+.deep-formula em{font-style:normal;color:var(--gray2);font-size:11px}
+.score-bars{display:flex;flex-direction:column;gap:10px;margin:24px 0}
+.score-bar{display:flex;align-items:center;gap:14px}
+.score-bar-label{font-size:12px;font-weight:600;color:var(--gray1);width:100px;text-align:right;flex-shrink:0}
+.score-bar-track{flex:1;height:24px;background:var(--bg4);border-radius:var(--r);overflow:hidden;position:relative}
+.score-bar-fill{height:100%;border-radius:var(--r);display:flex;align-items:center;padding-left:10px;transition:width 1.2s var(--spring)}
+.score-bar-val{font-size:11px;font-weight:800;color:#fff;white-space:nowrap}
+.funnel-flow{display:flex;flex-direction:column;gap:0;margin:32px 0;max-width:600px}
+.funnel-stage{display:flex;align-items:center;gap:16px;padding:14px 20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);transition:all .2s var(--ease)}
+.funnel-stage:hover{border-color:var(--border2);transform:translateX(4px)}
+.funnel-stage-name{font-size:14px;font-weight:700;color:var(--white);min-width:120px}
+.funnel-stage-desc{font-size:12px;color:var(--gray2);line-height:1.5}
+.funnel-arrow{text-align:center;font-size:11px;font-weight:700;color:var(--copper);padding:4px 0;letter-spacing:.5px}
+@media(max-width:1024px){.deep-grid{grid-template-columns:1fr}.deep-grid-3{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){.deep{padding-left:20px;padding-right:20px}.deep-intro h2{font-size:28px}.deep-grid-3{grid-template-columns:1fr}.funnel-stage{flex-direction:column;gap:8px;text-align:center}.funnel-stage-name{min-width:auto}}
+
 /* ── FOOTER CTA ──────────────────────────────── */
 .footer-cta{padding:120px 40px;text-align:center;position:relative;overflow:hidden}
 .footer-glow{position:absolute;bottom:-200px;left:50%;transform:translateX(-50%);width:1000px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(212,149,106,.08),transparent 60%);pointer-events:none}
@@ -213,7 +253,7 @@ body{background:var(--bg);color:var(--white);font-family:var(--font);-webkit-fon
   <div class="nav-links">
     <span class="nav-link" onclick="document.querySelector('.pillars').scrollIntoView({behavior:'smooth'})">Pilares</span>
     <span class="nav-link" onclick="document.querySelector('.engine').scrollIntoView({behavior:'smooth'})">Motor</span>
-    <span class="nav-link" onclick="document.querySelector('.infra').scrollIntoView({behavior:'smooth'})">Infra</span>
+    <span class="nav-link" onclick="document.querySelector('.deep').scrollIntoView({behavior:'smooth'})">Deep Dive</span>
     <span class="nav-link" onclick="document.querySelector('.stats').scrollIntoView({behavior:'smooth'})">Pipeline</span>
     <a class="btn-pill btn-white" href="cockpit.html">Abrir Cockpit &#8594;</a>
   </div>
@@ -253,6 +293,22 @@ body{background:var(--bg);color:var(--white);font-family:var(--font);-webkit-fon
       <div class="hero-card-label">Operadores Simultaneos</div>
       <div class="hero-card-desc">Edge Function com prompt caching. ~$0.01/request. API key segura no servidor. Rate limit por operador.</div>
     </div>
+  </div>
+</section>
+
+<!-- SECTION 1 — O QUE E O ELUCY -->
+<section class="deep reveal">
+  <div class="sec-label">
+    <span class="sec-label-bar"></span>
+    <span class="sec-label-text">O que e o Elucy</span>
+  </div>
+  <div class="deep-intro">
+    <h2>Um <em>sistema de decisao de receita</em> que senta entre o operador e o CRM</h2>
+    <p>O Elucy nao gera copy aleatorio &#8212; ele processa cada deal por um pipeline de <strong>25 camadas de inteligencia</strong>, injeta o framework correto pela persona do lead (Challenger, SPICED ou SPIN), detecta sinais de risco em tempo real e entrega a <strong>proxima acao exata</strong> no tom certo do canal.</p>
+    <p style="margin-top:12px">Pense no Elucy como um <strong>copiloto de vendas que nunca esquece um deal</strong>. Enquanto voce opera, ele roda 49 sinais canonicos em cada deal, calcula forecast com 7 componentes de confianca, prioriza sua fila de tarefas por valor real e bloqueia acoes que violam o processo via 7 kill switches automaticos.</p>
+  </div>
+  <div class="deep-callout">
+    <strong>Zero achismo.</strong> Cada numero que voce ve nesse sistema vem de dados reais do Databricks, processados por formulas deterministicas (nao IA generativa). O Elucy usa IA apenas para gerar copy e analisar contexto &#8212; nunca para calcular metricas, forecast ou score.
   </div>
 </section>
 
@@ -392,6 +448,144 @@ body{background:var(--bg);color:var(--white);font-family:var(--font);-webkit-fon
         <div class="viz-stat"><div class="viz-stat-v" style="color:var(--copper)">16</div><div class="viz-stat-l">Linhas Receita</div></div>
         <div class="viz-stat"><div class="viz-stat-v" style="color:var(--white)">3</div><div class="viz-stat-l">Frameworks</div></div>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 4 — SCORE V9 -->
+<section class="deep reveal">
+  <div class="sec-label">
+    <span class="sec-label-bar"></span>
+    <span class="sec-label-text">Score V9</span>
+  </div>
+  <div class="deep-intro">
+    <h2>Performance medida por <em>7 componentes independentes</em></h2>
+    <p>O score de cada operador nao e uma nota subjetiva &#8212; e uma formula deterministica com 7 metricas, cada uma com peso real no resultado. Nenhum componente depende de opiniao humana.</p>
+  </div>
+  <div class="deep-formula">
+    Score = (Qualif &#215; 18%) + (Handoff &#215; 25%) + (Win Rate &#215; 25%) + (Velocidade &#215; 10%) + (DQI &#215; 10%) + (Forecast &#215; 7%) + (Framework &#215; 5%)
+  </div>
+  <div class="score-bars">
+    <div class="score-bar"><div class="score-bar-label">Handoff</div><div class="score-bar-track"><div class="score-bar-fill" style="width:25%;background:linear-gradient(90deg,var(--copper),var(--copper2))"><span class="score-bar-val">25%</span></div></div></div>
+    <div class="score-bar"><div class="score-bar-label">Win Rate</div><div class="score-bar-track"><div class="score-bar-fill" style="width:25%;background:linear-gradient(90deg,var(--copper),var(--copper2))"><span class="score-bar-val">25%</span></div></div></div>
+    <div class="score-bar"><div class="score-bar-label">Qualificacoes</div><div class="score-bar-track"><div class="score-bar-fill" style="width:18%;background:linear-gradient(90deg,var(--blue),#7dd3fc)"><span class="score-bar-val">18%</span></div></div></div>
+    <div class="score-bar"><div class="score-bar-label">Velocidade</div><div class="score-bar-track"><div class="score-bar-fill" style="width:10%;background:linear-gradient(90deg,var(--green),#6ee7b7)"><span class="score-bar-val">10%</span></div></div></div>
+    <div class="score-bar"><div class="score-bar-label">DQI</div><div class="score-bar-track"><div class="score-bar-fill" style="width:10%;background:linear-gradient(90deg,var(--green),#6ee7b7)"><span class="score-bar-val">10%</span></div></div></div>
+    <div class="score-bar"><div class="score-bar-label">Forecast</div><div class="score-bar-track"><div class="score-bar-fill" style="width:7%;background:linear-gradient(90deg,#ffd60a,#fbbf24)"><span class="score-bar-val">7%</span></div></div></div>
+    <div class="score-bar"><div class="score-bar-label">Framework</div><div class="score-bar-track"><div class="score-bar-fill" style="width:5%;background:linear-gradient(90deg,#ffd60a,#fbbf24)"><span class="score-bar-val">5%</span></div></div></div>
+  </div>
+  <div class="deep-callout">
+    <strong>Forecast V7</strong> calcula confianca com 7 componentes proprios: framework_evidence (28%), source_density (18%), recency_reliability (16%), meeting_reliability (14%), signal_stability (10%), data_trust (10%), fw_confidence (4%). Cada componente e independente &#8212; nenhum depende de input humano.
+  </div>
+</section>
+
+<!-- SECTION 5 — KILL SWITCHES -->
+<section class="deep reveal">
+  <div class="sec-label">
+    <span class="sec-label-bar"></span>
+    <span class="sec-label-text">Kill Switches</span>
+  </div>
+  <div class="deep-intro">
+    <h2><em>7 bloqueios automaticos</em> que protegem o processo</h2>
+    <p>O Elucy tem kill switches que impedem acoes que violam o processo. Nao e burocracia &#8212; e protecao contra erros que custam deals e destroem win rate.</p>
+  </div>
+  <div class="deep-grid">
+    <div class="deep-card">
+      <div class="deep-card-head"><span class="deep-badge deep-badge-red">hard</span><span class="deep-card-title">Black Box Protocol</span></div>
+      <div class="deep-card-body">Nunca expor metodologia interna (SPICED/Challenger/SPIN) ao lead. A copy gerada pelo Elucy nunca menciona frameworks &#8212; separacao completa backstage/frontstage.</div>
+    </div>
+    <div class="deep-card">
+      <div class="deep-card-head"><span class="deep-badge deep-badge-red">hard</span><span class="deep-card-title">Tier 2 Block</span></div>
+      <div class="deep-card-body">Empresas abaixo de R$1MM de faturamento sao bloqueadas automaticamente de Imersoes Presenciais. Protege pricing e posicionamento do G4.</div>
+    </div>
+    <div class="deep-card">
+      <div class="deep-card-head"><span class="deep-badge deep-badge-yellow">gate</span><span class="deep-card-title">Framework Violation</span></div>
+      <div class="deep-card-body">Bloqueia avancar deal para proposta sem mapear Pains (racional + emocional). <strong>Sem dor mapeada = sem proposta.</strong></div>
+    </div>
+    <div class="deep-card">
+      <div class="deep-card-head"><span class="deep-badge deep-badge-yellow">gate</span><span class="deep-card-title">Premature Close</span></div>
+      <div class="deep-card-body">Bloqueia fechar deal sem Critical Event validado e Decision Committee mapeado. Protege win rate de falsos positivos.</div>
+    </div>
+    <div class="deep-card">
+      <div class="deep-card-head"><span class="deep-badge deep-badge-yellow">gate</span><span class="deep-card-title">MEI Authority Block</span></div>
+      <div class="deep-card-body">CEO de MEI recebe downgrade automatico de Authority Score. Impede que micro-porte infle metricas de qualificacao.</div>
+    </div>
+    <div class="deep-card">
+      <div class="deep-card-head"><span class="deep-badge deep-badge-blue">soft</span><span class="deep-card-title">Anti-Ansiedade</span></div>
+      <div class="deep-card-body">Bloqueia FUPs excessivos no mesmo deal em menos de 24h. Protege a relacao com o lead contra pressao improdutiva.</div>
+    </div>
+    <div class="deep-card">
+      <div class="deep-card-head"><span class="deep-badge deep-badge-blue">soft</span><span class="deep-card-title">DVL Gate</span></div>
+      <div class="deep-card-body">Validacao de dados minima obrigatoria antes de passar deal ao Closer. Handoff so e contado quando o deal passa por esse gate.</div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 6 — FRAMEWORKS POR PERSONA -->
+<section class="deep reveal">
+  <div class="sec-label">
+    <span class="sec-label-bar"></span>
+    <span class="sec-label-text">Frameworks por Persona</span>
+  </div>
+  <div class="deep-intro">
+    <h2>O motor detecta a persona e aplica o <em>framework correto</em></h2>
+    <p>Voce nao precisa escolher &#8212; o Elucy decide com base no perfil do decisor, porte da empresa e comportamento observado. Cada persona tem um framework exclusivo, tom de voz e conjunto de kill switches.</p>
+  </div>
+  <div class="deep-grid deep-grid-3">
+    <div class="deep-card">
+      <div class="deep-card-head"><span class="deep-badge deep-badge-red">titan</span><span class="deep-card-title">Challenger</span></div>
+      <div class="deep-card-body">Para lideres visionarios que querem ser desafiados. Abordagem confrontacional com insights provocativos. Tom prescritivo: <strong>"voce nao tem esse problema porque X &#8212; tem porque Y"</strong>. Reframe, Teach, Tailor, Take Control.</div>
+    </div>
+    <div class="deep-card">
+      <div class="deep-card-head"><span class="deep-badge deep-badge-blue">builder</span><span class="deep-card-title">SPICED</span></div>
+      <div class="deep-card-body">Para construtores orientados a processo. Qualificacao profunda: <strong>Situation, Pain (dual), Impact (KPI), Critical Event (Urgency Test), Decision (triade)</strong>. Abordagem consultiva e meticulosa.</div>
+    </div>
+    <div class="deep-card">
+      <div class="deep-card-head"><span class="deep-badge deep-badge-green">executor</span><span class="deep-card-title">SPIN</span></div>
+      <div class="deep-card-body">Para pragmaticos focados em resultado. Perguntas de <strong>Situacao, Problema, Implicacao e Necessidade-Solucao</strong>. Eficiente e direto &#8212; menos teoria, mais acao. Champion Selling integrado.</div>
+    </div>
+  </div>
+  <div class="deep-callout">
+    <strong>Qualitative Score V7:</strong> (SPICED avg &#215; 30%) + (MEDDIC avg &#215; 30%) + (coverage &#215; 15%) + (confidence &#215; 10%) + (next_step &#215; 10%) + (authority &#215; 5%) &#8212; clamped [0.20, 1.30]. O framework score multiplica diretamente o forecast de cada deal.
+  </div>
+</section>
+
+<!-- SECTION 7 — OKRs + FUNIL -->
+<section class="deep reveal">
+  <div class="sec-label">
+    <span class="sec-label-bar"></span>
+    <span class="sec-label-text">OKRs + Funil</span>
+  </div>
+  <div class="deep-intro">
+    <h2>Metas conectadas com <em>dados reais do pipeline</em></h2>
+    <p>O Elucy mede cada KR com dados do Databricks &#8212; nada e estimado. Tres OKRs governam a operacao: volume de atividade, eficiencia de conversao e qualidade de dados.</p>
+  </div>
+
+  <div class="deep-grid deep-grid-3">
+    <div class="deep-card">
+      <div class="deep-card-head"><span class="deep-badge deep-badge-copper">OKR 1</span><span class="deep-card-title">Volume de Atividade</span></div>
+      <div class="deep-card-body"><strong>KR 1.1</strong> FUPs/dia roteados pelo Signal Engine. <strong>KR 1.2</strong> Qualificacoes com analise SPICED/Challenger + DQI. <strong>KR 1.3</strong> Handoffs validados pelo DVL Gate. <strong>KR 1.4</strong> OPPs mensais em negociacao ativa.</div>
+    </div>
+    <div class="deep-card">
+      <div class="deep-card-head"><span class="deep-badge deep-badge-copper">OKR 2</span><span class="deep-card-title">Conversao do Funil</span></div>
+      <div class="deep-card-body">O Elucy detecta onde voce perde deals entre fases e gera tasks especificas para corrigir cada gargalo: <strong>SAL &#8594; Conectado &#8594; Agendado &#8594; Oportunidade</strong>. Cada transicao medida em tempo real.</div>
+    </div>
+    <div class="deep-card">
+      <div class="deep-card-head"><span class="deep-badge deep-badge-copper">OKR 3</span><span class="deep-card-title">Qualidade de Dados</span></div>
+      <div class="deep-card-body">DQI (Data Quality Index) por deal: <strong>completeness (30%) + consistency (30%) + recency (20%) + evidence (20%)</strong>. O Elucy bloqueia transicoes quando os dados sao insuficientes.</div>
+    </div>
+  </div>
+
+  <div style="margin-top:32px">
+    <div style="font-size:11px;font-weight:700;color:var(--copper);text-transform:uppercase;letter-spacing:2px;margin-bottom:20px">Funil de Conversao</div>
+    <div class="funnel-flow">
+      <div class="funnel-stage"><div class="funnel-stage-name">SAL</div><div class="funnel-stage-desc">Leads aceitos pelo time de vendas. Elucy enriquece com persona + framework automatico.</div></div>
+      <div class="funnel-arrow">&#8595; conversao medida em tempo real</div>
+      <div class="funnel-stage"><div class="funnel-stage-name">Conectado</div><div class="funnel-stage-desc">Primeiro contato efetivo. Signal Engine detecta engajamento e prioriza recontato.</div></div>
+      <div class="funnel-arrow">&#8595; conversao medida em tempo real</div>
+      <div class="funnel-stage"><div class="funnel-stage-name">Agendado</div><div class="funnel-stage-desc">Reuniao marcada. Elucy gera briefing pre-call com contexto completo do deal.</div></div>
+      <div class="funnel-arrow">&#8595; conversao medida em tempo real</div>
+      <div class="funnel-stage"><div class="funnel-stage-name">Oportunidade</div><div class="funnel-stage-desc">Deal qualificado em negociacao. Forecast V7 calcula probabilidade real de fechamento.</div></div>
     </div>
   </div>
 </section>

@@ -1812,16 +1812,20 @@ async function renderHome(){
   var tasks = buildTaskQueue();
   var insights = analyzeProductUsage();
   var meta = _operatorCtx.meta_diaria;
-  var metaMensal = _operatorCtx.meta_mensal || {};
   var focusMode = FOCUS_MODES[_operatorCtx.focus_mode]||FOCUS_MODES.velocidade;
 
   // Deals em risco
   var atRisk = allDeals.filter(function(d){ return d._aging && d._aging.isAtRisk; });
+  // Social DM para agir
+  var dmTasks = tasks.filter(function(t){ return t.taskType==='social_dm'; });
+  // Handoffs pendentes
+  var handoffTasks = tasks.filter(function(t){ return t.taskType==='handoff_prep'; });
 
-  // Metas
   var fupPct = meta.fups>0 ? Math.min(100,Math.round((todayStats.fups||0)/meta.fups*100)) : 0;
   var qualPct = meta.qualificacoes>0 ? Math.min(100,Math.round((todayStats.qualificacoes||0)/meta.qualificacoes*100)) : 0;
   var handPct = meta.handoffs>0 ? Math.min(100,Math.round((todayStats.handoffs||0)/meta.handoffs*100)) : 0;
+  // OPP mensal — conta deals em fase oportunidade/negociacao no pipe atual
+  var metaMensal = _operatorCtx.meta_mensal || {};
   var oppTarget = metaMensal.opp || 15;
   var oppActual = allDeals.filter(function(d){
     var fase = (d._fase || d.fase || d.fase_atual_no_processo || '').toLowerCase();
@@ -1829,150 +1833,25 @@ async function renderHome(){
   }).length;
   var oppPct = oppTarget > 0 ? Math.min(100, Math.round(oppActual / oppTarget * 100)) : 0;
 
-  // Funnel real metrics para OKRs
-  var totalActive = allDeals.length;
-  var salDeals = allDeals.filter(function(d){ var f=(d._fase||d.fase||d.fase_atual_no_processo||'').toLowerCase(); return f==='sal'; }).length;
-  var conectados = allDeals.filter(function(d){ var f=(d._fase||d.fase||d.fase_atual_no_processo||'').toLowerCase(); return f==='conectado'; }).length;
-  var agendados = allDeals.filter(function(d){ var f=(d._fase||d.fase||d.fase_atual_no_processo||'').toLowerCase(); return f==='agendado'; }).length;
-  var oportunidades = allDeals.filter(function(d){ var f=(d._fase||d.fase||d.fase_atual_no_processo||'').toLowerCase(); return f==='oportunidade'||f.includes('negoc'); }).length;
-  var sdrScopeDeals = allDeals.filter(function(d){ var rl=REVENUE_LINES[d._revLine]; return !rl||rl.sdr_scope!==false; });
-  var avgAging = sdrScopeDeals.length ? Math.round(sdrScopeDeals.reduce(function(s,d){ return s+(d._aging?d._aging.days:0); },0)/sdrScopeDeals.length) : 0;
-  var highForecast = allDeals.filter(function(d){ return d._forecastV6&&d._forecastV6.score>=0.6; }).length;
-  var totalPipeValue = allDeals.reduce(function(s,d){ return s+(d._oppValue||0); },0);
-
-  // Conversion rates reais
-  var salToConectado = salDeals+conectados+agendados+oportunidades > 0 ? Math.round((conectados+agendados+oportunidades)/(salDeals+conectados+agendados+oportunidades)*100) : 0;
-  var conectadoToAgendado = conectados+agendados+oportunidades > 0 ? Math.round((agendados+oportunidades)/(conectados+agendados+oportunidades)*100) : 0;
-  var agendadoToOpp = agendados+oportunidades > 0 ? Math.round(oportunidades/(agendados+oportunidades)*100) : 0;
-
   var html = '';
 
-  // ================================================================
-  // SEÇÃO 1 — O QUE É O ELUCY (educação sobre o produto)
-  // ================================================================
-  html += '<div class="home-edu">'
-    + '<div class="home-edu-title">O que e o Elucy</div>'
-    + '<div class="home-edu-p">O Elucy e um <strong>sistema de decisao de receita</strong> que senta entre voce e o CRM. '
-    + 'Ele nao gera copy aleatorio — ele processa cada deal por um pipeline de <strong>25 camadas de inteligencia</strong>, '
-    + 'injeta o framework correto pela persona do lead (Challenger, SPICED ou SPIN), detecta sinais de risco em tempo real, '
-    + 'e entrega a <strong>proxima acao exata</strong> no tom certo do canal.</div>'
-    + '<div class="home-edu-p">Pense no Elucy como um <strong>copiloto de vendas que nunca esquece um deal</strong>. '
-    + 'Enquanto voce opera, ele roda 49 sinais canonicos em cada deal, calcula forecast com 7 componentes de confianca, '
-    + 'prioriza sua fila de tarefas por valor real, e bloqueia acoes que violam o processo via 7 kill switches automaticos.</div>'
-    + '<div class="home-edu-callout"><strong>Zero achismo.</strong> Cada numero que voce ve nesse cockpit vem de dados reais do Databricks, '
-    + 'processados por formulas deterministicas (nao IA generativa). O Elucy usa IA apenas para gerar copy e analisar contexto — '
-    + 'nunca para calcular metricas, forecast ou score.</div>'
-    + '</div>';
-
-  // ================================================================
-  // SEÇÃO 2 — COMO O ELUCY FUNCIONA (arquitetura simplificada)
-  // ================================================================
-  html += '<div class="home-edu">'
-    + '<div class="home-edu-title">Como funciona: 25 camadas em 9 fases</div>'
-    + '<div class="home-edu-p">Cada vez que voce abre um deal, o motor executa um <strong>grafo aciclico dirigido (DAG)</strong> '
-    + 'de 25 camadas em 9 fases sem ciclos. Cada camada e um gate logico que enriquece, valida ou bloqueia.</div>'
-    + '<div class="home-edu-grid">'
-    // Fase 1-2
-    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-blue">L1-L6</span> Contexto</div>'
-    + '<div class="home-edu-card-body">Carrega dados do operador, taxonomia de receita (10 grupos, 4 tiers), enriquece cada deal com linha de receita, aging, persona, framework e calcula o valor da oportunidade com 7 fatores.</div></div>'
-    // Fase 3
-    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-blue">L7-L9</span> Task Engine</div>'
-    + '<div class="home-edu-card-body">Monta a fila de tarefas por prioridade, classifica por tipo (FUP, DM, Handoff, Requalificacao, No-Show), aplica o focus mode ativo e sincroniza com Supabase em tempo real.</div></div>'
-    // Fase 4
-    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-green">L10-L12</span> Analytics</div>'
-    + '<div class="home-edu-card-body">Calcula performance do operador (Score V9 com 7 componentes), taxa de conversao por linha de receita, eficiencia por canal, snapshot diario automatico.</div></div>'
-    // Fase 5
-    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-green">L13-L15</span> Forecast V7</div>'
-    + '<div class="home-edu-card-body">Forecast com <strong>zero achismo</strong>: quantitativo (stage x aging x velocity x engagement) multiplicado por qualitativo (6 pesos) e framework score. Confianca calculada por 7 componentes independentes.</div></div>'
-    // Fase 6
-    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-yellow">L16-L17</span> Framework Intel</div>'
-    + '<div class="home-edu-card-body">Detecta gaps no framework (SPICED, Challenger, SPIN). Impede progressao do deal se faltar Critical Event, Impact sem KPI, ou Pain sem mapeamento dual (racional + emocional).</div></div>'
-    // Fase 7
-    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-yellow">L18</span> Signal Engine V8</div>'
-    + '<div class="home-edu-card-body">49 sinais canonicos em 6 categorias (behavioral, framework, pipeline, quality, forecast, revenue). Dedup V10 para evitar inflacao. Cada sinal tem peso, threshold e acao automatica.</div></div>'
-    // Fase 8
-    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-red">L19-L22</span> Quality Layers</div>'
-    + '<div class="home-edu-card-body">4 engines de qualidade: <strong>Data Quality</strong> (trust score), <strong>Transition Rules</strong> (readiness + hard blocks), <strong>Portfolio Priority</strong> (4 fatores), <strong>Attribution</strong> (72h window).</div></div>'
-    // Fase 9
-    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-red">L23-L25</span> Enterprise</div>'
-    + '<div class="home-edu-card-body">Qualificacao Enterprise para deals 5M+: Enterprise Value Score (EVS), Trusted Advisor Score (Equacao de Maister), Strategic Intelligence conectando Impact aos KPIs do G4.</div></div>'
-    + '</div>'
-    + '</div>';
-
-  // ================================================================
-  // SEÇÃO 3 — OKRs G4 + DADOS REAIS DO FUNIL
-  // ================================================================
-  html += '<div class="home-edu">'
-    + '<div class="home-edu-title">OKRs + Performance Real do Funil</div>'
-    + '<div class="home-edu-p">Suas metas conectadas com os dados reais do seu pipeline. '
-    + 'O Elucy mede cada KR com dados do Databricks — nada e estimado.</div>';
-
-  // OKR 1 — Volume de Atividade
-  html += '<div class="home-block" style="margin:12px 0">'
-    + '<div class="home-block-title" style="color:var(--accent2)">OKR 1 — Manter volume de atividade diaria consistente</div>'
-    + '<div style="font-size:11px;color:var(--text2);margin-bottom:10px">O Elucy prioriza sua fila para que cada FUP, qualificacao e handoff atinja o alvo certo.</div>'
-    + '<div class="home-meta-grid" style="grid-template-columns:1fr 1fr">'
-    + _okrKR('KR 1.1','FUPs / dia',(todayStats.fups||0),meta.fups,fupPct,'Cada FUP e roteado pelo Signal Engine — o Elucy prioriza por urgencia real, nao por ordem de chegada.')
-    + _okrKR('KR 1.2','Qualificacoes / dia',(todayStats.qualificacoes||0),meta.qualificacoes,qualPct,'Qualificacao inclui analise SPICED/Challenger completa + DQI score. Nao e so marcar checkbox.')
-    + _okrKR('KR 1.3','Handoffs / dia',(todayStats.handoffs||0),meta.handoffs,handPct,'Handoff so e contado quando o deal passa pelo DVL Gate — validacao de dados minima antes de passar ao Closer.')
-    + _okrKR('KR 1.4','OPPs no mes',oppActual,oppTarget,oppPct,'Oportunidades em fase de negociacao ativa. O Forecast V7 mede a probabilidade real de cada uma.')
-    + '</div></div>';
-
-  // OKR 2 — Eficiencia do Funil
-  html += '<div class="home-block" style="margin:12px 0">'
-    + '<div class="home-block-title" style="color:var(--accent2)">OKR 2 — Maximizar conversao entre fases do funil</div>'
-    + '<div style="font-size:11px;color:var(--text2);margin-bottom:10px">O Elucy detecta onde voce perde deals entre fases e gera tasks especificas para corrigir cada gargalo.</div>'
-    + '<div class="home-edu-layers">'
-    + _okrFunnel('SAL',salDeals,'Leads aceitos pelo time de vendas. Elucy enriquece com persona + framework automatico.')
-    + _okrFunnelArrow(salToConectado)
-    + _okrFunnel('Conectado',conectados,'Primeiro contato efetivo. Signal Engine detecta engajamento e prioriza recontato.')
-    + _okrFunnelArrow(conectadoToAgendado)
-    + _okrFunnel('Agendado',agendados,'Reuniao marcada. Elucy gera briefing pre-call com contexto completo do deal.')
-    + _okrFunnelArrow(agendadoToOpp)
-    + _okrFunnel('Oportunidade',oportunidades,'Deal qualificado em negociacao. Forecast V7 calcula probabilidade real de fechamento.')
-    + '</div>'
-    + '<div class="home-edu-callout" style="margin-top:8px">'
-    + '<strong>Pipeline ativo:</strong> '+totalActive+' deals | '
-    + '<strong>Valor total:</strong> '+_fmtBRL(totalPipeValue)+' | '
-    + '<strong>Aging medio:</strong> '+avgAging+' dias | '
-    + '<strong>Forecast alto (>60%):</strong> '+highForecast+' deals'
-    + '</div></div>';
-
-  // OKR 3 — Qualidade de Dados
-  html += '<div class="home-block" style="margin:12px 0">'
-    + '<div class="home-block-title" style="color:var(--accent2)">OKR 3 — Manter qualidade de dados acima do threshold</div>'
-    + '<div style="font-size:11px;color:var(--text2);margin-bottom:10px">O Elucy calcula DQI (Data Quality Index) por deal e bloqueia transicoes quando os dados sao insuficientes.</div>'
-    + '<div class="home-meta-grid" style="grid-template-columns:1fr 1fr 1fr">'
-    + '<div class="home-meta"><div class="home-meta-label">Deals em Risco</div><div class="home-meta-value" style="color:var(--red)">'+atRisk.length+'</div>'
-    + '<div style="font-size:10px;color:var(--text2);margin-top:4px">Deals com aging acima do threshold da linha de receita. O Elucy gera tasks de reativacao automaticas.</div></div>'
-    + '<div class="home-meta"><div class="home-meta-label">Tarefas Pendentes</div><div class="home-meta-value" style="color:var(--yellow)">'+tasks.length+'</div>'
-    + '<div style="font-size:10px;color:var(--text2);margin-top:4px">Tarefas priorizadas pelo DAG — ordenadas por valor da oportunidade x urgencia x actionability.</div></div>'
-    + '<div class="home-meta"><div class="home-meta-label">Scope SDR</div><div class="home-meta-value" style="color:var(--green)">'+sdrScopeDeals.length+'</div>'
-    + '<div style="font-size:10px;color:var(--text2);margin-top:4px">Deals dentro do seu escopo operacional (exclui Funil de Marketing — escopo MKT, nao SDR).</div></div>'
-    + '</div></div>';
-
-  html += '</div>'; // fecha home-edu OKR
-
-  // ================================================================
-  // SEÇÃO 4 — SCORE V9 + TAREFAS (compacto)
-  // ================================================================
+  // BLOCO 1 — Foco do dia
   html += '<div class="home-block">'
-    + '<div class="home-block-title">Score V9 <span style="font-size:9px;color:var(--text2);font-weight:400">7 componentes</span></div>'
-    + '<div class="home-edu-p" style="margin-bottom:10px">Seu score e calculado por 7 metricas independentes, cada uma com peso real no resultado. '
-    + 'Nao e uma nota subjetiva — e a formula: <strong>(Qualif x 18%) + (Handoff x 25%) + (Win Rate x 25%) + (Velocidade x 10%) + (DQI x 10%) + (Forecast x 7%) + (Framework x 5%)</strong>.</div>'
-    + '<div class="home-perf-grid">'
-    + '<div class="home-perf-kpi"><div class="home-perf-v" id="home-score">--</div><div class="home-perf-l">Score V9</div></div>'
-    + '<div class="home-perf-kpi"><div class="home-perf-v" id="home-streak">--</div><div class="home-perf-l">Streak</div></div>'
-    + '<div class="home-perf-kpi"><div class="home-perf-v">'+allDeals.length+'</div><div class="home-perf-l">Ativos</div></div>'
-    + '<div class="home-perf-kpi"><div class="home-perf-v">'+atRisk.length+'</div><div class="home-perf-l">Em Risco</div></div>'
+    + '<div class="home-block-title">Foco do Dia</div>'
+    + '<div class="home-focus-row">'
+    + '<div class="home-focus-mode"><span class="home-fm-icon">'+focusMode.icon+'</span> '+focusMode.label+'</div>'
+    + '<button class="home-fm-btn" onclick="window.cycleFocusMode()">Trocar Modo</button>'
     + '</div>'
-    + '<div id="home-score-breakdown" style="margin-top:8px"></div>'
-    + '</div>';
+    + '<div class="home-meta-grid">'
+    + '<div class="home-meta"><div class="home-meta-label">FUPs</div><div class="home-meta-value">'+(todayStats.fups||0)+' / '+meta.fups+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(fupPct>=100?' done':'')+'" style="width:'+fupPct+'%"></div></div></div>'
+    + '<div class="home-meta"><div class="home-meta-label">Qualificacoes</div><div class="home-meta-value">'+(todayStats.qualificacoes||0)+' / '+meta.qualificacoes+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(qualPct>=100?' done':'')+'" style="width:'+qualPct+'%"></div></div></div>'
+    + '<div class="home-meta"><div class="home-meta-label">Handoffs</div><div class="home-meta-value">'+(todayStats.handoffs||0)+' / '+meta.handoffs+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(handPct>=100?' done':'')+'" style="width:'+handPct+'%"></div></div></div>'
+    + '<div class="home-meta"><div class="home-meta-label">OPP Mensal</div><div class="home-meta-value">'+oppActual+' / '+oppTarget+'</div><div class="meta-bar-bg"><div class="meta-bar-fill'+(oppPct>=100?' done':'')+'" style="width:'+oppPct+'%"></div></div></div>'
+    + '</div></div>';
 
-  // Tarefas criticas (top 5)
+  // BLOCO 2 — Tarefas criticas
   html += '<div class="home-block">'
-    + '<div class="home-block-title">Proximas Acoes <span class="home-count">'+Math.min(tasks.length,5)+'</span></div>'
-    + '<div style="font-size:11px;color:var(--text2);margin-bottom:8px">Ordenadas pelo Portfolio Priority Engine: valor x urgencia x actionability x neglect.</div>';
+    + '<div class="home-block-title">Tarefas Criticas <span class="home-count">'+Math.min(tasks.length,5)+'</span></div>';
   if(tasks.length){
     html += '<div class="home-tasks">';
     tasks.slice(0,5).forEach(function(t){
@@ -1990,46 +1869,22 @@ async function renderHome(){
   }
   html += '</div>';
 
-  // ================================================================
-  // SEÇÃO 5 — KILL SWITCHES (educação)
-  // ================================================================
-  html += '<div class="home-edu">'
-    + '<div class="home-edu-title">Kill Switches — Protecao Automatica</div>'
-    + '<div class="home-edu-p">O Elucy tem <strong>7 bloqueios automaticos</strong> que impedem acoes que violam o processo. '
-    + 'Nao e burocracia — e protecao contra erros que custam deals.</div>'
-    + '<div class="home-edu-grid">'
-    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-red">hard</span> Black Box</div>'
-    + '<div class="home-edu-card-body">Nunca expor metodologia interna (SPICED/Challenger/SPIN) ao lead. A copy gerada pelo Elucy nunca menciona frameworks.</div></div>'
-    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-red">hard</span> Tier 2 Block</div>'
-    + '<div class="home-edu-card-body">Empresas abaixo de R$1MM de faturamento sao bloqueadas automaticamente de Imersoes Presenciais. Protege pricing e posicionamento.</div></div>'
-    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-yellow">gate</span> Framework Violation</div>'
-    + '<div class="home-edu-card-body">Bloqueia avancar deal para proposta sem mapear Pains (racional + emocional). Sem dor mapeada = sem proposta.</div></div>'
-    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-yellow">gate</span> Premature Close</div>'
-    + '<div class="home-edu-card-body">Bloqueia fechar deal sem Critical Event validado e Decision Committee mapeado. Protege win rate de falsos positivos.</div></div>'
-    + '</div></div>';
+  // BLOCO 3 — Desempenho (V9 Score — 7 componentes)
+  html += '<div class="home-block">'
+    + '<div class="home-block-title">Meu Desempenho <span style="font-size:9px;color:var(--text2);font-weight:400">Score V9</span></div>'
+    + '<div class="home-perf-grid">'
+    + '<div class="home-perf-kpi"><div class="home-perf-v" id="home-score">--</div><div class="home-perf-l">Score V9</div></div>'
+    + '<div class="home-perf-kpi"><div class="home-perf-v" id="home-streak">--</div><div class="home-perf-l">Streak</div></div>'
+    + '<div class="home-perf-kpi"><div class="home-perf-v">'+allDeals.length+'</div><div class="home-perf-l">Ativos</div></div>'
+    + '<div class="home-perf-kpi"><div class="home-perf-v">'+atRisk.length+'</div><div class="home-perf-l">Em Risco</div></div>'
+    + '</div>'
+    + '<div id="home-score-breakdown" style="margin-top:8px"></div>'
+    + '</div>';
 
-  // ================================================================
-  // SEÇÃO 6 — FRAMEWORKS POR PERSONA (educação)
-  // ================================================================
-  html += '<div class="home-edu">'
-    + '<div class="home-edu-title">Frameworks por Persona</div>'
-    + '<div class="home-edu-p">O Elucy detecta a persona do decisor e aplica automaticamente o framework correto. '
-    + 'Voce nao precisa escolher — o motor decide com base no perfil, porte e comportamento.</div>'
-    + '<div class="home-edu-grid" style="grid-template-columns:1fr 1fr 1fr">'
-    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-red">titan</span> Challenger</div>'
-    + '<div class="home-edu-card-body">Para lideres visionarios que querem ser desafiados. Abordagem confrontacional com insights provocativos. Tom prescritivo: "voce nao tem esse problema porque X — tem porque Y".</div></div>'
-    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-blue">builder</span> SPICED</div>'
-    + '<div class="home-edu-card-body">Para construtores orientados a processo. Qualificacao profunda: Situation, Pain (dual), Impact (KPI), Critical Event (Urgency Test), Decision (triade). Abordagem consultiva.</div></div>'
-    + '<div class="home-edu-card"><div class="home-edu-card-title"><span class="home-edu-badge home-edu-badge-green">executor</span> SPIN</div>'
-    + '<div class="home-edu-card-body">Para pragmaticos focados em resultado. Perguntas de Situacao, Problema, Implicacao e Necessidade-Solucao. Eficiente e direto — menos teoria, mais acao.</div></div>'
-    + '</div></div>';
-
-  // ================================================================
-  // SEÇÃO 7 — Insights do pipeline (antigo bloco 4)
-  // ================================================================
+  // BLOCO 4 — Inteligencia
   if(insights.length){
     html += '<div class="home-block">'
-      + '<div class="home-block-title">Insights do Pipeline</div>';
+      + '<div class="home-block-title">Inteligencia</div>';
     insights.slice(0,3).forEach(function(ins){
       var cls = ins.severity==='high'?'home-insight-bad':ins.severity==='warning'?'home-insight-warn':'home-insight-good';
       html += '<div class="home-insight '+cls+'"><div class="home-insight-msg">'+_escHtml(ins.message)+'</div>'
@@ -2059,57 +1914,18 @@ async function renderHome(){
       {k:'forecast_conf',l:'Forecast',w:'7%'},
       {k:'framework_cov',l:'Framework',w:'5%'}
     ];
-    var h2='<div style="display:flex;gap:3px;align-items:flex-end;height:36px">';
+    var html='<div style="display:flex;gap:3px;align-items:flex-end;height:36px">';
     comps.forEach(function(c){
       var v=ops[c.k]||0;
       var col=v>=70?'var(--green)':v>=40?'var(--yellow)':'var(--red)';
-      h2+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px" title="'+c.l+': '+v+'%">'
+      html+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px" title="'+c.l+': '+v+'%">'
         +'<div style="width:100%;background:'+col+';opacity:.85;border-radius:2px 2px 0 0;height:'+Math.max(4,Math.round(v*0.28))+'px"></div>'
         +'<div style="font-size:8px;color:var(--text2);text-align:center;line-height:1.1">'+c.l+'</div>'
         +'</div>';
     });
-    h2+='</div>';
-    bd.innerHTML=h2;
+    html+='</div>';
+    bd.innerHTML=html;
   });
-}
-
-// Helper: OKR Key Result card
-function _okrKR(kr, label, actual, target, pct, desc){
-  var color = pct>=100?'var(--green)':pct>=60?'var(--yellow)':'var(--red)';
-  return '<div class="home-meta">'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'
-    + '<div class="home-meta-label">'+kr+' — '+label+'</div>'
-    + '<div style="font-size:10px;font-weight:700;color:'+color+'">'+pct+'%</div>'
-    + '</div>'
-    + '<div class="home-meta-value">'+actual+' / '+target+'</div>'
-    + '<div class="meta-bar-bg"><div class="meta-bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'
-    + '<div style="font-size:10px;color:var(--text2);margin-top:5px;line-height:1.4">'+desc+'</div>'
-    + '</div>';
-}
-
-// Helper: Funnel stage row
-function _okrFunnel(label, count, desc){
-  var col = count>0?'var(--accent2)':'var(--text2)';
-  return '<div class="home-edu-layer">'
-    + '<div class="home-edu-layer-n" style="color:'+col+';font-size:16px;font-weight:800">'+count+'</div>'
-    + '<div class="home-edu-layer-name">'+label+'</div>'
-    + '<div class="home-edu-layer-desc">'+desc+'</div>'
-    + '</div>';
-}
-
-// Helper: Funnel conversion arrow
-function _okrFunnelArrow(pct){
-  var col = pct>=50?'var(--green)':pct>=25?'var(--yellow)':'var(--red)';
-  return '<div style="text-align:center;font-size:10px;color:'+col+';font-weight:700;padding:2px 0">'
-    + '&#8595; '+pct+'% conversao</div>';
-}
-
-// Helper: format BRL
-function _fmtBRL(v){
-  if(!v||v===0) return 'R$ 0';
-  if(v>=1000000) return 'R$ '+(v/1000000).toFixed(1)+'M';
-  if(v>=1000) return 'R$ '+(v/1000).toFixed(0)+'K';
-  return 'R$ '+v.toFixed(0);
 }
 window.renderHome = renderHome;
 
