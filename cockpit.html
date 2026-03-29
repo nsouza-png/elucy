@@ -1395,6 +1395,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
         <span class="intel-dim" onclick="window._intelDim('forecast',this)" style="border-color:var(--accent2);color:var(--accent2)">Forecast</span>
         <span class="intel-dim" onclick="window._intelDim('framework',this)" style="border-color:var(--clay);color:var(--clay)">Framework</span>
         <span class="intel-dim" onclick="window._intelDim('performance',this)" style="border-color:var(--gold);color:var(--gold)">Performance V3</span>
+        <span class="intel-dim" onclick="window._intelDim('strategic',this)" style="border-color:var(--green);color:var(--green)">Strategic</span>
+        <span class="intel-dim" onclick="window._intelDim('trust',this)" style="border-color:var(--clay);color:var(--clay)">Trust</span>
+        <span class="intel-dim" onclick="window._intelDim('expansion',this)" style="border-color:var(--yellow);color:var(--yellow)">Expansion</span>
+        <span class="intel-dim" onclick="window._intelDim('enterprise',this)" style="border-color:var(--accent2);color:var(--accent2)">Enterprise</span>
       </div>
       <div id="intel-content">
         <div class="intel-empty">Carregue o pipeline para visualizar a análise de inteligência.</div>
@@ -6031,6 +6035,10 @@ function renderIntelligence(){
     else if(dim==='value') _renderValue(ct,AE);
     else if(dim==='forecast') _renderForecast(ct,allDeals,deals);
     else if(dim==='framework') _renderFramework(ct,allDeals,deals);
+    else if(dim==='strategic') _renderStrategicIntel(ct,deals);
+    else if(dim==='trust') _renderTrustIntel(ct,deals);
+    else if(dim==='expansion') _renderExpansionIntel(ct,deals);
+    else if(dim==='enterprise') _renderEnterpriseIntel(ct,deals);
   }catch(e){
     console.warn('[intel] render error for dim='+dim+':',e.message);
     ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Dados parciais disponíveis — '+deals.length+' deals carregados.<br><span style="font-size:10px;opacity:.6">'+e.message+'</span></div>';
@@ -6502,6 +6510,97 @@ function _renderFramework(ct,allDeals,deals){
     }).join('')+'</tbody></table>');
   ct.innerHTML=html;
   }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro no framework: '+e.message+'</div>'; }
+}
+
+// ── STRATEGIC INTELLIGENCE ──
+function _renderStrategicIntel(ct,deals){
+  var sa=window.calcStrategicAlignmentV25?window.calcStrategicAlignmentV25():null;
+  if(!sa){ct.innerHTML='<div class="intel-empty">Strategic Alignment Engine nao carregado.</div>';return;}
+  var html='';
+  html+=renderSection(1,'Revenue KPIs (G4 #5)',
+    '<div class="intel-kpi-row">'
+    +_iKpi(sa.revenue_quality.sal_5m_count,'SAL 5M+','var(--accent2)')
+    +_iKpi(sa.pipeline_5m_value,'Pipeline 5M+','var(--green)')
+    +_iKpi(Math.round(sa.marketing_sal_revenue),'MKT SAL Revenue','var(--blue)')
+    +_iKpi(Math.round((sa.strategic_revenue_score||0)*100)+'%','Strategic Revenue','var(--accent2)')
+    +'</div>');
+  html+=renderSection(2,'Experience KPIs (G4 #8)',
+    '<div class="intel-kpi-row">'
+    +_iKpi(Math.round((sa.experience_score||0)*100)+'%','Experience Score','var(--green)')
+    +_iKpi(sa.experience_quality.framework_coverage_pct+'%','Framework Coverage','var(--clay)')
+    +_iKpi(sa.experience_quality.handoff_ready_count,'Handoff Ready','var(--green)')
+    +_iKpi(sa.experience_quality.iron_dome_count,'Iron Dome','var(--red)')
+    +'</div>');
+  html+=renderSection(3,'Revenue Quality por Linha',
+    (function(){var byLine={};deals.forEach(function(d){var l=d._revLine||d.linhaReceita||d.linha_de_receita_vigente||'outros';if(!byLine[l])byLine[l]={count:0,rqSum:0};byLine[l].count++;var rq=d._revenueQuality||d._enterprise||{};byLine[l].rqSum+=(rq.revenue_quality_score||0);});var rows=Object.keys(byLine).sort(function(a,b){return byLine[b].count-byLine[a].count;});var max=Math.max.apply(null,rows.map(function(r){return byLine[r].count;}));return rows.map(function(r){var avg=byLine[r].count?Math.round(byLine[r].rqSum/byLine[r].count*100):0;return _iBar(r+' (RQ:'+avg+'%)',byLine[r].count,max,deals.length);}).join('');})());
+  ct.innerHTML=html;
+}
+
+// ── TRUST INTELLIGENCE ──
+function _renderTrustIntel(ct,deals){
+  var advisor=window.calcTrustedAdvisorV24?window.calcTrustedAdvisorV24(null,null):null;
+  if(!advisor){ct.innerHTML='<div class="intel-empty">Trust Engine nao carregado.</div>';return;}
+  var html='';
+  html+=renderSection(1,'Trust Overview',
+    '<div class="intel-kpi-row">'
+    +_iKpi(Math.round(advisor.credibility_score*100)+'%','Credibilidade','var(--accent2)')
+    +_iKpi(Math.round(advisor.availability_score*100)+'%','Disponibilidade','var(--green)')
+    +_iKpi(Math.round(advisor.intimacy_score*100)+'%','Intimidade','var(--clay)')
+    +_iKpi(Math.round(advisor.selfishness_score*100)+'%','Egoismo','var(--red)')
+    +'</div>');
+  // Trust per deal table
+  var trustDeals=deals.filter(function(d){return d._trust;}).sort(function(a,b){return (b._trust.trust_score||0)-(a._trust.trust_score||0);});
+  html+=renderSection(2,'Trusted Advisor Ranking por Deal',
+    '<table class="intel-table"><thead><tr><th>Deal</th><th>Trust</th><th>Band</th><th>Cred</th><th>Intim</th><th>Ego</th></tr></thead><tbody>'
+    +trustDeals.slice(0,20).map(function(d){var t=d._trust;var col=t.trust_score>=0.65?'var(--green)':t.trust_score>=0.50?'var(--yellow)':'var(--red)';return '<tr><td>'+_escHtml(d.nome||'—')+'</td><td style="color:'+col+';font-weight:700">'+Math.round(t.trust_score*100)+'%</td><td>'+t.trusted_advisor_band+'</td><td>'+Math.round(t.credibility_score*100)+'%</td><td>'+Math.round(t.intimacy_score*100)+'%</td><td style="color:var(--red)">'+Math.round(t.selfishness_score*100)+'%</td></tr>';}).join('')
+    +'</tbody></table>');
+  ct.innerHTML=html;
+}
+
+// ── EXPANSION INTELLIGENCE ──
+function _renderExpansionIntel(ct,deals){
+  var expDeals=deals.filter(function(d){return d._expansion;}).sort(function(a,b){return (b._expansion.expansion_potential_score||0)-(a._expansion.expansion_potential_score||0);});
+  if(!expDeals.length){ct.innerHTML='<div class="intel-empty">Nenhum deal com Expansion Engine calculado.</div>';return;}
+  var html='';
+  var highPot=expDeals.filter(function(d){return d._expansion.repurchase_band==='high_potential';}).length;
+  var moderate=expDeals.filter(function(d){return d._expansion.repurchase_band==='moderate';}).length;
+  html+=renderSection(1,'Expansion Overview',
+    '<div class="intel-kpi-row">'
+    +_iKpi(highPot,'High Potential','var(--green)')
+    +_iKpi(moderate,'Moderate','var(--yellow)')
+    +_iKpi(expDeals.length-highPot-moderate,'Low/None','var(--text2)')
+    +'</div>');
+  // Adjacency by line
+  html+=renderSection(2,'Potencial de Recompra por Deal',
+    '<table class="intel-table"><thead><tr><th>Deal</th><th>Expansion</th><th>Band</th><th>History</th><th>Adjacency</th><th>Account Val</th></tr></thead><tbody>'
+    +expDeals.slice(0,20).map(function(d){var ex=d._expansion;var col=ex.expansion_potential_score>=0.60?'var(--green)':ex.expansion_potential_score>=0.30?'var(--yellow)':'var(--text2)';return '<tr><td>'+_escHtml(d.nome||'—')+'</td><td style="color:'+col+';font-weight:700">'+Math.round(ex.expansion_potential_score*100)+'%</td><td>'+ex.repurchase_band+'</td><td>'+Math.round(ex.purchase_history_score*100)+'%</td><td>'+Math.round(ex.line_adjacency_score*100)+'%</td><td>'+Math.round(ex.account_value_score*100)+'%</td></tr>';}).join('')
+    +'</tbody></table>');
+  ct.innerHTML=html;
+}
+
+// ── ENTERPRISE INTELLIGENCE ──
+function _renderEnterpriseIntel(ct,deals){
+  var html='';
+  var entDeals=deals.filter(function(d){var rq=d._revenueQuality||d._enterprise||{};return rq.is_5m_plus;});
+  var founderDeals=deals.filter(function(d){var c=(d.cargo||'').toLowerCase();return /fundador|socio|co-fundador|ceo|presidente/.test(c);});
+  html+=renderSection(1,'Enterprise Overview',
+    '<div class="intel-kpi-row">'
+    +_iKpi(entDeals.length,'Deals 5M+','var(--accent2)')
+    +_iKpi(founderDeals.length,'Founder-Led','var(--green)')
+    +_iKpi(deals.length,'Total Pipeline','var(--text)')
+    +'</div>');
+  // Enterprise fit by line
+  var byLine={};deals.forEach(function(d){var l=d._revLine||d.linhaReceita||'outros';var rq=d._revenueQuality||d._enterprise||{};if(!byLine[l])byLine[l]={count:0,entSum:0};byLine[l].count++;byLine[l].entSum+=(rq.enterprise_value_score||0);});
+  var lines=Object.keys(byLine).sort(function(a,b){return byLine[b].entSum/byLine[b].count-byLine[a].entSum/byLine[a].count;});
+  html+=renderSection(2,'Enterprise Fit por Linha',
+    lines.map(function(l){var avg=byLine[l].count?Math.round(byLine[l].entSum/byLine[l].count*100):0;var max=100;return _iBar(l+' ('+byLine[l].count+' deals)',avg,max,100);}).join(''));
+  // Top strategic deals table
+  var strat=deals.slice().sort(function(a,b){var rqA=(a._revenueQuality||a._enterprise||{}).revenue_quality_score||0;var rqB=(b._revenueQuality||b._enterprise||{}).revenue_quality_score||0;return rqB-rqA;});
+  html+=renderSection(3,'Top Deals Estrategicos',
+    '<table class="intel-table"><thead><tr><th>Deal</th><th>RQ Score</th><th>Band</th><th>ICP Fit</th><th>Enterprise</th><th>Decision</th></tr></thead><tbody>'
+    +strat.slice(0,15).map(function(d){var rq=d._revenueQuality||d._enterprise||{};var score=rq.revenue_quality_score||0;var pct=typeof score==='number'&&score<=1?Math.round(score*100):score;var col=pct>=80?'var(--green)':pct>=50?'var(--yellow)':'var(--red)';return '<tr><td>'+_escHtml(d.nome||'—')+'</td><td style="color:'+col+';font-weight:700">'+pct+'%</td><td>'+(rq.revenue_quality_band||rq.band||'—')+'</td><td>'+Math.round((rq.icp_fit_score||0)*100)+'%</td><td>'+Math.round((rq.enterprise_value_score||0)*100)+'%</td><td>'+Math.round((rq.decision_maturity_score||0)*100)+'%</td></tr>';}).join('')
+    +'</tbody></table>');
+  ct.innerHTML=html;
 }
 
 function renderSection(num,title,content){

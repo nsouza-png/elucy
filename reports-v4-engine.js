@@ -688,8 +688,8 @@
     html += '<div class="kpi"><div class="kpi-l">Won</div><div class="kpi-v">' + _fmt(funnel.counts['Ganho']) + '</div></div>';
     html += '</div>';
 
-    // Enterprise KPI Row (V11)
-    html += '<div class="kpi-g" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">';
+    // Enterprise + Strategic KPI Row (V12)
+    html += '<div class="kpi-g" style="grid-template-columns:repeat(5,1fr);margin-bottom:14px">';
     if(ent){
       html += '<div class="kpi" style="border-color:rgba(212,149,106,.2)"><div class="kpi-l" style="color:#d4956a">5M+ Enterprise</div><div class="kpi-v" style="color:#d4956a">' + _fmt(ent.enterprise5m.count) + '</div></div>';
       html += '<div class="kpi" style="border-color:rgba(212,149,106,.2)"><div class="kpi-l" style="color:#d4956a">Pipeline 5M+</div><div class="kpi-v" style="color:#d4956a">' + _fmtBRL(ent.enterprise5m.pipelineValue) + '</div></div>';
@@ -697,12 +697,28 @@
       var taScore = ent.advisor ? Math.round(ent.advisor.score*100) : 0;
       var taColor = taScore>=70?'var(--green)':taScore>=50?'var(--yellow)':'var(--red)';
       html += '<div class="kpi"><div class="kpi-l">Trusted Advisor</div><div class="kpi-v" style="color:'+taColor+'">' + taScore + '%</div></div>';
+      // Behavioral
+      var beh = window.calcBehavioralIntelligenceV26 ? window.calcBehavioralIntelligenceV26() : null;
+      var behPct = beh ? Math.round(beh.sdr_behavior_score*100) : 0;
+      var behCol = behPct>=65?'var(--green)':behPct>=45?'var(--yellow)':'var(--red)';
+      html += '<div class="kpi"><div class="kpi-l">Behavior Score</div><div class="kpi-v" style="color:'+behCol+'">' + behPct + '%</div></div>';
     } else {
       html += '<div class="kpi"><div class="kpi-l">CR MQL→OPP</div><div class="kpi-v">' + _pct(funnel.counts['Oportunidade'], funnel.counts['MQL']) + '%</div></div>';
       html += '<div class="kpi"><div class="kpi-l">Perdidos</div><div class="kpi-v" style="color:var(--red)">' + _fmt(funnel.total > 0 ? funnel.lost : 0) + '</div></div>';
-      html += '<div class="kpi"></div><div class="kpi"></div>';
+      html += '<div class="kpi"></div><div class="kpi"></div><div class="kpi"></div>';
     }
     html += '</div>';
+    // Strategic Alignment Row (L25)
+    var sa = window.calcStrategicAlignmentV25 ? window.calcStrategicAlignmentV25() : null;
+    if(sa){
+      html += '<div class="kpi-g" style="grid-template-columns:repeat(5,1fr);margin-bottom:14px">';
+      html += '<div class="kpi" style="border-color:rgba(48,209,88,.15)"><div class="kpi-l" style="color:var(--green)">Revenue Quality</div><div class="kpi-v" style="color:var(--green)">' + Math.round((sa.strategic_revenue_score||0)*100) + '%</div></div>';
+      html += '<div class="kpi" style="border-color:rgba(48,209,88,.15)"><div class="kpi-l" style="color:var(--green)">Experience</div><div class="kpi-v" style="color:var(--green)">' + Math.round((sa.experience_score||0)*100) + '%</div></div>';
+      html += '<div class="kpi"><div class="kpi-l">SAL 5M+ Rate</div><div class="kpi-v">' + Math.round((sa.sal_5m_rate||0)*100) + '%</div></div>';
+      html += '<div class="kpi"><div class="kpi-l">MKT SAL Revenue</div><div class="kpi-v">' + _fmtBRL(sa.marketing_sal_revenue||0) + '</div></div>';
+      html += '<div class="kpi"><div class="kpi-l">Framework</div><div class="kpi-v">' + (sa.experience_quality.framework_coverage_pct||0) + '%</div></div>';
+      html += '</div>';
+    }
 
     // Row 1: Funnel + Daily Volume (2 columns)
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">';
