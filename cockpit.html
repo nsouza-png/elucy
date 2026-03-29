@@ -3643,8 +3643,57 @@ async function loadDealFullHistory(dealId){
 }
 
 async function callIntelligenceAPI(dealData, requestType, extraContext){
+  // Carrega histórico e contexto (necessário para ambos os caminhos)
+  const history = await loadDealFullHistory(dealData.deal_id);
+  const dealCtx = buildDealContext(dealData);
+  const prompt = REQUEST_PROMPTS[requestType] || REQUEST_PROMPTS.analyze;
+
+  // ── PATH 1: Edge Function (seguro, com prompt caching) ──
+  if(window.IS_REMOTE){
+    const sb = getSB();
+    if(sb){
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        if(session){
+          const edgeResp = await fetch(SUPABASE_URL+'/functions/v1/elucy-inference', {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Bearer '+session.access_token,
+              'apikey': SUPABASE_ANON,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              request_type: requestType,
+              deal_context: dealCtx,
+              history: history,
+              prompt: prompt,
+              extra_context: extraContext || '',
+              deal_id: dealData.deal_id || '',
+              model_override: window.ELUCY_API_MODEL || '',
+            })
+          });
+          if(edgeResp.ok){
+            const result = await edgeResp.json();
+            if(result.usage){
+              const cached = result.usage.cache_read_input_tokens || 0;
+              const total = (result.usage.input_tokens||0) + cached;
+              if(cached > 0) console.log('[Elucy] Prompt cache hit: '+Math.round(cached/total*100)+'% cached ('+cached+'/'+total+' tokens) — '+result.elapsed_ms+'ms');
+            }
+            return result;
+          }
+          // Edge function returned error — log and fall through to direct path
+          const errBody = await edgeResp.text().catch(()=>'');
+          console.warn('[Elucy] Edge function '+edgeResp.status+', fallback to direct API:', errBody.slice(0,200));
+        }
+      } catch(edgeErr) {
+        console.warn('[Elucy] Edge function unavailable, fallback to direct API:', edgeErr.message);
+      }
+    }
+  }
+
+  // ── PATH 2: Direct Claude API (fallback — local G4 OS or edge unavailable) ──
   const apiKey = window.ELUCY_API_KEY;
-  if(!apiKey) throw new Error('API key não configurada');
+  if(!apiKey) throw new Error('API key não configurada. Configure nas Settings ou ative a Edge Function.');
   const model = window.ELUCY_API_MODEL || 'claude-sonnet-4-20250514';
 
   const bundle = await loadMCPBundle();
@@ -3656,12 +3705,6 @@ async function callIntelligenceAPI(dealData, requestType, extraContext){
     }
   });
   const systemPrompt = systemParts.join('\n\n');
-
-  // Carrega histórico completo para enriquecer contexto
-  const history = await loadDealFullHistory(dealData.deal_id);
-
-  const dealCtx = buildDealContext(dealData);
-  const prompt = REQUEST_PROMPTS[requestType] || REQUEST_PROMPTS.analyze;
   const userMsg = dealCtx + history + '\n\n' + prompt + (extraContext ? '\n\nCONTEXTO EXTRA: '+extraContext : '');
 
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
