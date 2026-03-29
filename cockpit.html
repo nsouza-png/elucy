@@ -248,8 +248,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .task-aging-medium{background:var(--adim);color:var(--accent2)}
 .task-card-name{font-size:var(--fs-body-sm);font-weight:var(--fw-bold);margin-bottom:2px;line-height:var(--lh-tight)}
 .task-card-co{font-size:var(--fs-caption);color:var(--text2);margin-bottom:8px}
-.task-card-meta{display:flex;gap:8px;font-size:var(--fs-caption);color:var(--text2);margin-bottom:10px}
+.task-card-meta{display:flex;gap:8px;font-size:var(--fs-caption);color:var(--text2);margin-bottom:8px}
 .task-card-meta span{background:var(--bg4);padding:2px 6px;border-radius:3px}
+.task-card-nba{font-size:var(--fs-caption);color:var(--amber);font-weight:var(--fw-medium);margin-bottom:10px;line-height:var(--lh-tight)}
 .task-card-actions{display:flex;gap:6px}
 .task-btn{padding:5px 10px;border-radius:6px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.12s}
 .task-btn:hover{border-color:var(--accent);color:var(--accent2);background:var(--adim)}
@@ -5219,6 +5220,7 @@ function selectLiveDeal(id,d){
         <div class="bar"><div class="bf ${barClass}" style="width:${d.temp}%"></div></div>
         <div class="tg-sub">${tempSub}</div>
       </div>
+      ${(()=>{const fv=d._forecastV6||{};const score=fv.score!=null?Math.round(fv.score*100):null;const conf=(fv.confidence_level||fv.confidenceLevel||'').replace('_',' ');const risk=fv.risk_classification||fv.riskClassification||'';const scoreColor=score>=70?'var(--green)':score>=40?'var(--yellow)':'var(--red)';return score!=null?`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;margin-bottom:2px;border-top:1px solid var(--border)"><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;font-weight:700;white-space:nowrap">Forecast V7</span><span style="font-size:18px;font-weight:800;color:${scoreColor}">${score}%</span>${conf?`<span style="font-size:11px;color:var(--text2)">${conf}</span>`:''}${risk?`<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:var(--bg4);color:var(--text2)">${risk}</span>`:''}<div style="flex:1;height:3px;background:var(--bg4);border-radius:2px"><div style="width:${score}%;height:100%;background:${scoreColor};border-radius:2px"></div></div></div>`:''})()}
       <div class="ig-toggle" onclick="this.nextElementSibling.classList.toggle('collapsed');this.querySelector('.tgl-arrow').classList.toggle('up')">
         <span class="ig-toggle-label">Detalhes do Deal</span>
         <span class="tgl-arrow">▾</span>

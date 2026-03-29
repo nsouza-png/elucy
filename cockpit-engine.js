@@ -685,10 +685,11 @@ function renderTaskRunner(filterType, filterRevLine, filterFase, filterCiclo, fi
     else if(handoffReady >= 3){ recMode='handoff'; recLabel='Handoff'; recReason=handoffReady+' deals prontos para passagem ao Closer.'; recColor='var(--gold)'; }
     else if(dmPending >= 4){ recMode='social_dm'; recLabel='Social DM'; recReason=dmPending+' deals em canais digitais aguardando touchpoint.'; recColor='var(--clay)'; }
     else if(coldDeals >= 6){ recMode='reativacao'; recLabel='Reativação'; recReason=coldDeals+' deals frios (>7d) — reative antes de perder.'; recColor='var(--yellow)'; }
-    statsHtml += '<div class="task-rec-banner" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px">'
+    statsHtml += '<div class="task-rec-banner" onclick="window._activateRecMode(\''+recMode+'\')" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:.15s" onmouseenter="this.style.borderColor=\''+recColor.replace(/var\(([^)]+)\)/,'$1')+'\'" onmouseleave="this.style.borderColor=\'rgba(255,255,255,.08)\'">'
       + '<span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;font-weight:700;white-space:nowrap">Modo recomendado</span>'
       + '<span style="font-size:12px;font-weight:700;color:'+recColor+'">'+recLabel+'</span>'
       + '<span style="font-size:11px;color:var(--text2);flex:1">'+recReason+'</span>'
+      + '<span style="font-size:10px;color:var(--text2);white-space:nowrap;opacity:.6">Ativar →</span>'
       + '</div>';
   })();
 
@@ -722,6 +723,7 @@ function renderTaskRunner(filterType, filterRevLine, filterFase, filterCiclo, fi
       + (rlLabel?'<span>'+_escHtml(rlLabel)+'</span>':'')
       + '<span style="color:'+deltaColor+'">'+deltaVal+'d</span>'
       + '</div>'
+      + (t.label ? '<div class="task-card-nba">→ '+_escHtml(t.label)+'</div>' : '')
       + '<div class="task-card-actions">'
       + '<button class="task-btn" onclick="event.stopPropagation();window.taskQuickAction(\''+t.id+'\',\'fup\')">Gerar FUP</button>'
       + '<button class="task-btn" onclick="event.stopPropagation();window.taskQuickAction(\''+t.id+'\',\'analyze\')">Analisar</button>'
@@ -2027,6 +2029,16 @@ window.cycleFocusMode = function(){
   saveOperatorSettings({focus_mode:next}).then(function(){
     renderHome();
     if(window.showSyncToast) window.showSyncToast('ok','Modo: '+FOCUS_MODES[next].label);
+  });
+};
+
+window._activateRecMode = function(mode){
+  if(!mode || _operatorCtx.focus_mode === mode) return;
+  saveOperatorSettings({focus_mode: mode}).then(function(){
+    renderHome();
+    if(window.renderTaskRunner) window.renderTaskRunner();
+    var label = (FOCUS_MODES[mode]||{}).label || mode;
+    if(window.showSyncToast) window.showSyncToast('ok','Modo ativado: '+label);
   });
 };
 
@@ -5575,126 +5587,126 @@ function detectSignals(deal){
   var rl  = REVENUE_LINES[deal._revLine] || {};
   var ag  = deal._aging || 0;
 
-  function add(type, extras){
+  function add(type, extras, src){
     var def = SIGNAL_REGISTRY[type];
     if(!def) return;
-    signals.push(Object.assign({ signal_type: type, deal_id: deal.dealId || deal.deal_id, source:'engine' }, def, extras||{}));
+    signals.push(Object.assign({ signal_type: type, deal_id: deal.dealId || deal.deal_id, source: src||'engine' }, def, extras||{}));
   }
 
   // == PIPELINE ==
-  if(ag > 0 && rl.risk_after && ag > rl.risk_after)   add('aging_high');
-  if(ag > 7)                                            add('stage_stuck');
-  if(ag > 5 && !deal._lastTouch)                       add('no_touch_recent');
+  if(ag > 0 && rl.risk_after && ag > rl.risk_after)   add('aging_high', null, 'delta='+ag+'d (limite '+rl.risk_after+'d)');
+  if(ag > 7)                                            add('stage_stuck', null, 'delta='+ag+'d sem avanço de etapa');
+  if(ag > 5 && !deal._lastTouch)                       add('no_touch_recent', null, 'último_toque ausente + delta='+ag+'d');
 
   var tpCount = deal.touchpointCount || 0;
-  if(tpCount > 8 && ag > 3)                            add('too_many_touchpoints');
-  if(ag <= 2 && (deal._stageDelta||0) >= 1)            add('fast_progress');
-  if(deal.meetingStatus === 'scheduled' || deal.reuniao_agendada) add('meeting_scheduled');
+  if(tpCount > 8 && ag > 3)                            add('too_many_touchpoints', null, 'touchpoints='+tpCount+' delta='+ag+'d');
+  if(ag <= 2 && (deal._stageDelta||0) >= 1)            add('fast_progress', null, 'delta='+ag+'d avanco='+deal._stageDelta);
+  if(deal.meetingStatus === 'scheduled' || deal.reuniao_agendada) add('meeting_scheduled', null, 'meetingStatus=scheduled');
 
   // == FRAMEWORK ==
-  if(fr.spiced_pain >= 0.60)       add('pain_detected');
-  else if(fr.spiced_pain < 0.25)   add('pain_missing');
+  if(fr.spiced_pain >= 0.60)       add('pain_detected', null, 'spiced_pain='+Math.round((fr.spiced_pain||0)*100)+'%');
+  else if(fr.spiced_pain < 0.25)   add('pain_missing', null, 'spiced_pain='+Math.round((fr.spiced_pain||0)*100)+'% (abaixo de 25%)');
 
-  if(fr.spiced_impact >= 0.50)     add('impact_defined');
-  if(fr.spiced_critical_event >= 0.50) add('critical_event_defined');
-  else if(fr.spiced_critical_event < 0.20) add('no_critical_event');
+  if(fr.spiced_impact >= 0.50)     add('impact_defined', null, 'spiced_impact='+Math.round((fr.spiced_impact||0)*100)+'%');
+  if(fr.spiced_critical_event >= 0.50) add('critical_event_defined', null, 'spiced_critical_event='+Math.round((fr.spiced_critical_event||0)*100)+'%');
+  else if(fr.spiced_critical_event < 0.20) add('no_critical_event', null, 'spiced_critical_event='+Math.round((fr.spiced_critical_event||0)*100)+'%');
 
-  if(fr.meddic_economic >= 0.60)   add('economic_buyer_present');
-  else if(fr.authority_score < 0.30 || fr.meddic_economic < 0.25) add('authority_missing');
+  if(fr.meddic_economic >= 0.60)   add('economic_buyer_present', null, 'meddic_economic='+Math.round((fr.meddic_economic||0)*100)+'%');
+  else if(fr.authority_score < 0.30 || fr.meddic_economic < 0.25) add('authority_missing', null, 'authority_score='+Math.round((fr.authority_score||0)*100)+'% meddic_economic='+Math.round((fr.meddic_economic||0)*100)+'%');
 
-  if(fr.decision_process_known >= 0.50 || fr.meddic_process >= 0.50) add('decision_process_known');
-  if(fr.meddic_champion >= 0.55)   add('champion_detected');
-  else if(fr.meddic_champion < 0.25) add('champion_missing');
+  if(fr.decision_process_known >= 0.50 || fr.meddic_process >= 0.50) add('decision_process_known', null, 'meddic_process='+Math.round((fr.meddic_process||0)*100)+'%');
+  if(fr.meddic_champion >= 0.55)   add('champion_detected', null, 'meddic_champion='+Math.round((fr.meddic_champion||0)*100)+'%');
+  else if(fr.meddic_champion < 0.25) add('champion_missing', null, 'meddic_champion='+Math.round((fr.meddic_champion||0)*100)+'%');
 
-  if(fr.meddic_metrics >= 0.50)    add('metrics_defined');
+  if(fr.meddic_metrics >= 0.50)    add('metrics_defined', null, 'meddic_metrics='+Math.round((fr.meddic_metrics||0)*100)+'%');
 
-  if(fr.next_step_clarity >= 0.60) add('next_step_defined');
-  else if(fr.next_step_clarity < 0.25) add('no_next_step');
+  if(fr.next_step_clarity >= 0.60) add('next_step_defined', null, 'next_step_clarity='+Math.round((fr.next_step_clarity||0)*100)+'%');
+  else if(fr.next_step_clarity < 0.25) add('no_next_step', null, 'next_step_clarity='+Math.round((fr.next_step_clarity||0)*100)+'%');
 
   // == QUALITY ==
   var noteQ = fr.note_quality_score || 0;
-  if(noteQ >= 0.70)   add('note_good');
-  else if(noteQ > 0 && noteQ < 0.30) add('note_bad');
-  else if(noteQ === 0 && fr.extraction_count === 0) add('no_note');
+  if(noteQ >= 0.70)   add('note_good', null, 'note_quality_score='+Math.round(noteQ*100)+'%');
+  else if(noteQ > 0 && noteQ < 0.30) add('note_bad', null, 'note_quality_score='+Math.round(noteQ*100)+'%');
+  else if(noteQ === 0 && fr.extraction_count === 0) add('no_note', null, 'note_quality=0 extractions=0');
 
-  if(fr.meeting_quality_score >= 0.60)  add('meeting_logged');
-  else if(deal._hasMeeting && fr.meeting_quality_score < 0.20) add('meeting_missing');
+  if(fr.meeting_quality_score >= 0.60)  add('meeting_logged', null, 'meeting_quality='+Math.round((fr.meeting_quality_score||0)*100)+'%');
+  else if(deal._hasMeeting && fr.meeting_quality_score < 0.20) add('meeting_missing', null, 'meeting_quality='+Math.round((fr.meeting_quality_score||0)*100)+'% (abaixo de 20%)');
 
-  if(deal.noShowUnresolved) add('no_show_not_treated');
+  if(deal.noShowUnresolved) add('no_show_not_treated', null, 'noShowUnresolved=true');
 
   var contextFields = ['nome','empresa','cargo','telefone','email','grupo_de_receita','linha_de_receita_vigente'].filter(function(f){ return !!(deal[f]); }).length;
-  if(contextFields < 3) add('low_context');
+  if(contextFields < 3) add('low_context', null, 'campos_preenchidos='+contextFields+'/7');
 
   // == FORECAST ==
   var conf = fc.confidence || fr.confidence_score || 0;
-  if(conf >= 0.75)  add('forecast_high_confidence');
-  else if(conf < 0.30) add('forecast_low_confidence');
+  if(conf >= 0.75)  add('forecast_high_confidence', null, 'confidence='+Math.round(conf*100)+'%');
+  else if(conf < 0.30) add('forecast_low_confidence', null, 'confidence='+Math.round(conf*100)+'%');
 
   var qs = fr.qualitative_score || 1.0;
-  if(qs >= 0.85)  add('qualitative_strong');
-  else if(qs < 0.40) add('qualitative_weak');
+  if(qs >= 0.85)  add('qualitative_strong', null, 'qualitative_score='+Math.round(qs*100)+'%');
+  else if(qs < 0.40) add('qualitative_weak', null, 'qualitative_score='+Math.round(qs*100)+'%');
 
   var prevForecast = deal._forecastPrev || 0;
   var currForecast = fc.score || 0;
-  if(prevForecast > 0 && currForecast < prevForecast * 0.80) add('forecast_drop');
-  if(prevForecast > 0 && currForecast > prevForecast * 1.15) add('forecast_up');
+  if(prevForecast > 0 && currForecast < prevForecast * 0.80) add('forecast_drop', null, 'forecast_prev='+Math.round(prevForecast*100)+'% → '+Math.round(currForecast*100)+'%');
+  if(prevForecast > 0 && currForecast > prevForecast * 1.15) add('forecast_up', null, 'forecast_prev='+Math.round(prevForecast*100)+'% → '+Math.round(currForecast*100)+'%');
 
   // == REVENUE ==
   var oppVal = deal._oppValue || deal.opportunityValue || 0;
-  if(oppVal > 50000)           add('high_value_deal');
-  if(rl.line_weight >= 0.90)   add('high_priority_line');
-  else if(rl.line_weight <= 0.60) add('low_priority_line');
+  if(oppVal > 50000)           add('high_value_deal', null, '_oppValue='+oppVal);
+  if(rl.line_weight >= 0.90)   add('high_priority_line', null, 'linha='+deal._revLine+' weight='+rl.line_weight);
+  else if(rl.line_weight <= 0.60) add('low_priority_line', null, 'linha='+deal._revLine+' weight='+rl.line_weight);
 
   var tier = (deal.tier_da_oportunidade||deal.tier||'').toLowerCase();
-  if(tier === 'diamond')       add('strategic_account');
+  if(tier === 'diamond')       add('strategic_account', null, 'tier='+tier);
 
   // == BEHAVIORAL (baseado em meetingStatus e touchpoint patterns) ==
-  if((deal.meetingStatus||'') === 'no_show') add('lead_no_show');
-  if(deal.leadRequestedPrice)  add('lead_requested_price');
-  if(deal.leadGhosting)        add('lead_ghosting');
-  if(deal.leadRescheduled)     add('lead_rescheduled');
+  if((deal.meetingStatus||'') === 'no_show') add('lead_no_show', null, 'meetingStatus=no_show');
+  if(deal.leadRequestedPrice)  add('lead_requested_price', null, 'leadRequestedPrice=true');
+  if(deal.leadGhosting)        add('lead_ghosting', null, 'leadGhosting=true');
+  if(deal.leadRescheduled)     add('lead_rescheduled', null, 'leadRescheduled=true');
 
   // == SPIN AUDIT (Feature 1) ==
   var spinAudit = deal._spinAudit || {};
-  if(spinAudit.situation_ratio > 0.50) add('spin_situation_heavy');
-  if(spinAudit.implication_ratio >= 0.25) add('spin_implication_strong');
-  if(spinAudit.premature_solution) add('spin_premature_solution');
-  if(spinAudit.need_payoff_ratio >= 0.20) add('spin_need_payoff_hit');
+  if(spinAudit.situation_ratio > 0.50) add('spin_situation_heavy', null, 'situation_ratio='+Math.round((spinAudit.situation_ratio||0)*100)+'%');
+  if(spinAudit.implication_ratio >= 0.25) add('spin_implication_strong', null, 'implication_ratio='+Math.round((spinAudit.implication_ratio||0)*100)+'%');
+  if(spinAudit.premature_solution) add('spin_premature_solution', null, 'premature_solution=true');
+  if(spinAudit.need_payoff_ratio >= 0.20) add('spin_need_payoff_hit', null, 'need_payoff_ratio='+Math.round((spinAudit.need_payoff_ratio||0)*100)+'%');
 
   // == ADVANCE vs CONTINUATION (Feature 1) ==
   var advState = deal._advanceState || {};
-  if(advState.is_advance) add('advance_confirmed');
-  if(advState.is_continuation && !advState.is_advance) add('continuation_only');
-  if(advState.is_advance && (fr.authority_score||0) < 0.30) add('advance_without_decisor');
+  if(advState.is_advance) add('advance_confirmed', null, '_advanceState.is_advance=true');
+  if(advState.is_continuation && !advState.is_advance) add('continuation_only', null, '_advanceState.is_continuation=true');
+  if(advState.is_advance && (fr.authority_score||0) < 0.30) add('advance_without_decisor', null, 'authority_score='+Math.round((fr.authority_score||0)*100)+'%');
 
   // == OBJECTION CLASSIFICATION (Feature 1) ==
   var objections = deal._objections || [];
   objections.forEach(function(obj){
-    if(obj.type === 'price') add('objection_price');
-    if(obj.type === 'timing') add('objection_timing');
-    if(obj.type === 'authority') add('objection_authority');
-    if(obj.type === 'technical') add('objection_technical');
-    if(obj.resolved) add('objection_resolved');
-    else add('objection_unresolved');
+    if(obj.type === 'price') add('objection_price', null, 'objection.type=price');
+    if(obj.type === 'timing') add('objection_timing', null, 'objection.type=timing');
+    if(obj.type === 'authority') add('objection_authority', null, 'objection.type=authority');
+    if(obj.type === 'technical') add('objection_technical', null, 'objection.type=technical');
+    if(obj.resolved) add('objection_resolved', null, 'objection.resolved=true');
+    else add('objection_unresolved', null, 'objection.resolved=false');
   });
 
   // == RFV (Feature 2) ==
   var rfv = deal._rfvCluster || '';
-  if(rfv === 'champion') add('rfv_champion');
-  if(rfv === 'at_risk') add('rfv_at_risk');
-  if(rfv === 'hibernating') add('rfv_hibernating');
-  if(rfv === 'potential_loyal') add('rfv_potential_loyal');
+  if(rfv === 'champion') add('rfv_champion', null, '_rfvCluster=champion');
+  if(rfv === 'at_risk') add('rfv_at_risk', null, '_rfvCluster=at_risk');
+  if(rfv === 'hibernating') add('rfv_hibernating', null, '_rfvCluster=hibernating');
+  if(rfv === 'potential_loyal') add('rfv_potential_loyal', null, '_rfvCluster=potential_loyal');
 
   // == ENTERPRISE (Feature 3) ==
-  if(deal._enterpriseScore && deal._enterpriseScore.is_enterprise) add('enterprise_5m_detected');
-  if(deal._trustedAdvisor && deal._trustedAdvisor.score >= 0.70) add('trusted_advisor_high');
-  if(deal._trustedAdvisor && deal._trustedAdvisor.score < 0.35) add('trusted_advisor_low');
+  if(deal._enterpriseScore && deal._enterpriseScore.is_enterprise) add('enterprise_5m_detected', null, '_enterpriseScore.is_enterprise=true');
+  if(deal._trustedAdvisor && deal._trustedAdvisor.score >= 0.70) add('trusted_advisor_high', null, '_trustedAdvisor.score='+Math.round((deal._trustedAdvisor.score||0)*100)+'%');
+  if(deal._trustedAdvisor && deal._trustedAdvisor.score < 0.35) add('trusted_advisor_low', null, '_trustedAdvisor.score='+Math.round((deal._trustedAdvisor.score||0)*100)+'%');
 
   // == STRATEGIC (Feature 4) ==
   var chanConv = deal._channelConversion || 0;
-  if(chanConv >= 0.40) add('channel_high_convert');
-  else if(chanConv > 0 && chanConv < 0.10) add('channel_low_convert');
-  if(deal._gtmMisaligned) add('gtm_misalignment');
+  if(chanConv >= 0.40) add('channel_high_convert', null, '_channelConversion='+Math.round(chanConv*100)+'%');
+  else if(chanConv > 0 && chanConv < 0.10) add('channel_low_convert', null, '_channelConversion='+Math.round(chanConv*100)+'%');
+  if(deal._gtmMisaligned) add('gtm_misalignment', null, '_gtmMisaligned=true');
 
   return signals;
 }
@@ -5957,9 +5969,10 @@ function renderSignalPanel(dealId, containerId){
       if(!def) return;
       var c = def.pol > 0 ? 'var(--green)' : 'var(--red)';
       var pfx = def.pol > 0 ? '+' : '−';
-      html += '<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;">';
-      html += '<span style="color:'+c+';">'+pfx+' '+_escHtml(def.label)+'</span>';
-      html += '<span style="opacity:0.5;">'+def.w.toFixed(2)+'</span>';
+      var sigSrc = s.source && s.source !== 'engine' ? s.source : '';
+      html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;font-size:11px;padding:2px 0;">';
+      html += '<div><span style="color:'+c+';">'+pfx+' '+_escHtml(def.label)+'</span>'+(sigSrc?'<div style="font-size:9px;color:var(--text2);opacity:.6;margin-top:1px;">'+_escHtml(sigSrc)+'</div>':'')+'</div>';
+      html += '<span style="opacity:0.5;white-space:nowrap;padding-left:8px;">'+def.w.toFixed(2)+'</span>';
       html += '</div>';
     });
     html += '</div>';
