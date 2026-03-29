@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ELUCY — Revenue Intelligence</title>
+<title>ELUCY — Infraestrutura de Qualificacao Conversacional</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2304080f'/><text x='50' y='62' font-size='28' font-weight='900' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>elucy</text><rect x='28' y='72' width='44' height='14' rx='4' fill='%230a84ff'/><text x='50' y='82' font-size='9' font-weight='800' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>BY G4</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -135,6 +135,40 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
 .viz-stat-val{font-size:17px;font-weight:800;line-height:1}
 .viz-stat-lbl{font-size:9px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.5px}
 
+/* ── DEFINITION SECTION ─────────────────────────────────── */
+.definition{padding:0 var(--sp-6) var(--sp-10);max-width:1100px;margin:0 auto;width:100%;scroll-snap-align:start}
+.def-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);padding:var(--sp-7);-webkit-backdrop-filter:var(--blur-sm);backdrop-filter:var(--blur-sm)}
+.def-label{font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:2.5px;margin-bottom:var(--sp-3)}
+.def-title{font-size:24px;font-weight:800;line-height:1.25;margin-bottom:var(--sp-4);letter-spacing:-.3px}
+.def-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-5);margin-bottom:var(--sp-5)}
+.def-block{padding:var(--sp-4);background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:var(--r)}
+.def-block-label{font-size:9px;font-weight:800;color:var(--accent2);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:var(--sp-2)}
+.def-block p{font-size:13px;color:var(--text2);line-height:1.65}
+.def-block p strong{color:var(--text);font-weight:600}
+.def-not{display:flex;gap:var(--sp-4);flex-wrap:wrap}
+.def-not-item{display:flex;align-items:center;gap:var(--sp-2);font-size:12px;color:var(--text3);font-weight:500}
+.def-not-x{color:var(--red);font-weight:800;font-size:14px}
+
+/* ── INFRA SECTION ──────────────────────────────────────── */
+.infra{padding:0 var(--sp-6) var(--sp-10);max-width:1100px;margin:0 auto;width:100%;scroll-snap-align:start}
+.infra-label{text-align:center;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:2.5px;margin-bottom:var(--sp-5)}
+.infra-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-3)}
+.infra-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:var(--sp-4);text-align:center;transition:all var(--dur-normal) var(--ease-smooth);-webkit-backdrop-filter:var(--blur-sm);backdrop-filter:var(--blur-sm)}
+.infra-item:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.infra-icon{font-size:24px;margin-bottom:var(--sp-2)}
+.infra-name{font-size:12px;font-weight:700;color:var(--text);margin-bottom:var(--sp-1)}
+.infra-desc{font-size:10px;color:var(--text3);line-height:1.5}
+
+/* ── CAPABILITIES SECTION ──────────────────────────────── */
+.capabilities{padding:0 var(--sp-6) var(--sp-10);max-width:1100px;margin:0 auto;width:100%;scroll-snap-align:start}
+.cap-label{text-align:center;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:2.5px;margin-bottom:var(--sp-5)}
+.cap-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-3)}
+.cap-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:var(--sp-5);transition:all var(--dur-normal) var(--ease-smooth);-webkit-backdrop-filter:var(--blur-sm);backdrop-filter:var(--blur-sm)}
+.cap-item:hover{border-color:rgba(10,132,255,.18);transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.cap-num{font-size:28px;font-weight:900;color:var(--accent);line-height:1;margin-bottom:var(--sp-2)}
+.cap-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:var(--sp-1)}
+.cap-desc{font-size:11px;color:var(--text2);line-height:1.55}
+
 /* ── FOOTER ──────────────────────────────────────────────── */
 .footer{padding:var(--sp-5) var(--sp-6);border-top:1px solid var(--border);text-align:center;flex-shrink:0}
 .footer-text{font-size:11px;color:var(--text3);font-weight:500;letter-spacing:.02em}
@@ -152,6 +186,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
   .pillars-grid{grid-template-columns:1fr}
   .engine-card{flex-direction:column;padding:var(--sp-5)}
   .engine-right{width:100%}
+  .def-grid{grid-template-columns:1fr}
+  .infra-grid{grid-template-columns:repeat(2,1fr)}
+  .cap-grid{grid-template-columns:1fr}
 }
 @media(max-width:600px){
   .hero{padding:var(--sp-7) var(--sp-4) var(--sp-5)}
@@ -159,7 +196,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
   .hero-sub{font-size:15px}
   .metrics-grid{grid-template-columns:repeat(2,1fr)}
   .topbar{padding:0 var(--sp-4)}
-  .pillars,.metrics,.engine{padding-left:var(--sp-4);padding-right:var(--sp-4)}
+  .pillars,.metrics,.engine,.definition,.infra,.capabilities{padding-left:var(--sp-4);padding-right:var(--sp-4)}
+  .infra-grid{grid-template-columns:1fr 1fr}
 }
 </style>
 </head>
@@ -181,8 +219,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
       <span class="logo-badge">BY G4</span>
     </div>
     <div class="topbar-right">
+      <span class="top-link" onclick="document.querySelector('.definition').scrollIntoView({behavior:'smooth'})">O que e</span>
       <span class="top-link" onclick="document.querySelector('.pillars').scrollIntoView({behavior:'smooth'})">Pilares</span>
       <span class="top-link" onclick="document.querySelector('.engine').scrollIntoView({behavior:'smooth'})">Motor</span>
+      <span class="top-link" onclick="document.querySelector('.infra').scrollIntoView({behavior:'smooth'})">Infra</span>
       <a class="btn-cockpit" href="cockpit.html">Abrir Cockpit &#8594;</a>
     </div>
   </header>
@@ -193,13 +233,46 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
       <span class="dot"></span>
       Revenue Intelligence Engine &#8212; Ativo
     </div>
-    <h1>Inteligencia que transforma qualificacao em receita previsivel</h1>
+    <h1>Infraestrutura de qualificacao conversacional com inteligencia comercial</h1>
     <p class="hero-sub">
-      O Elucy e o motor de <strong>inteligencia conversacional</strong>, <strong>forecasting</strong> e <strong>revenue intelligence</strong> que opera dentro do pipeline do G4 Educacao &#8212; <em>decisao por dado, nao por feeling</em>.
+      O Elucy nao e um CRM, nao e um chatbot, nao e um dashboard. E a <strong>camada de inteligencia</strong> que senta entre o operador e o pipeline &#8212; processa cada deal por 22 camadas de decisao, governa 3 frameworks de venda e entrega a <strong>proxima acao exata</strong> no tom certo do canal.
     </p>
     <div class="hero-ctas">
       <a class="btn-primary" href="cockpit.html">Entrar no Cockpit</a>
       <a class="btn-secondary" href="#" onclick="event.preventDefault();document.querySelector('.engine').scrollIntoView({behavior:'smooth'})">Ver o Motor &#8594;</a>
+    </div>
+  </section>
+
+  <!-- DEFINITION — O que e o Elucy -->
+  <section class="definition reveal">
+    <div class="def-card">
+      <div class="def-label">Infraestrutura, nao ferramenta</div>
+      <div class="def-title">O Elucy e a camada de inteligencia que opera entre o operador e o CRM &#8212; governa cada interacao com o lead por frameworks de venda, sinais de comportamento e dados reais do pipeline.</div>
+      <div class="def-grid">
+        <div class="def-block">
+          <div class="def-block-label">O que faz</div>
+          <p>Processa cada deal por <strong>22 camadas de decisao</strong> em tempo real. Detecta <strong>49 sinais</strong> de comportamento e pipeline. Escolhe o framework correto pela persona do lead (Challenger, SPICED ou SPIN). Gera a <strong>proxima acao exata</strong> &#8212; copy calibrada, nota CRM, briefing pre-call &#8212; no tom certo do canal.</p>
+        </div>
+        <div class="def-block">
+          <div class="def-block-label">Como funciona</div>
+          <p>Motor de decisao com <strong>DAG de 7 fases</strong> sem ciclos. Cada deal passa por contexto, taxonomia, enriquecimento, task routing, forecast, framework intelligence e priorizacao. <strong>7 kill switches</strong> bloqueiam erros fatais antes que cheguem ao lead. Tudo baseado em dados reais do Databricks &#8212; zero alucinacao.</p>
+        </div>
+        <div class="def-block">
+          <div class="def-block-label">Para quem</div>
+          <p>Times comerciais B2B high-ticket: <strong>SDRs, Closers, CS, CX, Account Managers</strong>. Opera multi-role &#8212; cada persona ve o pipeline pela lente do seu framework e recebe acoes calibradas pro seu contexto operacional.</p>
+        </div>
+        <div class="def-block">
+          <div class="def-block-label">Por que infraestrutura</div>
+          <p>Ferramentas ajudam pessoas. <strong>Infraestrutura escala operacoes.</strong> O Elucy roda como Edge Function com prompt caching &#8212; suporta 200+ operadores simultaneos a ~$0.01/request. Cada interacao alimenta o modelo de forecast. Dados conversacionais viram sinais que viram previsao de receita.</p>
+        </div>
+      </div>
+      <div class="def-not">
+        <div class="def-not-item"><span class="def-not-x">&#10005;</span> Nao e um CRM</div>
+        <div class="def-not-item"><span class="def-not-x">&#10005;</span> Nao e um chatbot</div>
+        <div class="def-not-item"><span class="def-not-x">&#10005;</span> Nao e um dashboard</div>
+        <div class="def-not-item"><span class="def-not-x">&#10005;</span> Nao e assistente generico</div>
+        <div class="def-not-item"><span class="def-not-x">&#10005;</span> Nao gera conteudo sem dados</div>
+      </div>
     </div>
   </section>
 
@@ -252,7 +325,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
           <span class="pillar-tag blue">SPICED</span>
           <span class="pillar-tag blue">CHALLENGER</span>
           <span class="pillar-tag blue">SPIN</span>
-          <span class="pillar-tag blue">47 SINAIS</span>
+          <span class="pillar-tag blue">49 SINAIS</span>
         </div>
       </div>
       <div class="pillar">
@@ -291,7 +364,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
           <div class="engine-layer"><span class="layer-num">L5-L8</span><span class="layer-name">Analytics &amp; Cadencia</span><span class="layer-desc">KPIs, touchpoints, timeline</span></div>
           <div class="engine-layer"><span class="layer-num">L13</span><span class="layer-name">Forecast V7</span><span class="layer-desc">quant x qual x framework</span></div>
           <div class="engine-layer"><span class="layer-num">L16-17</span><span class="layer-name">Framework Intelligence</span><span class="layer-desc">SPICED, MEDDIC, gaps</span></div>
-          <div class="engine-layer"><span class="layer-num">L18</span><span class="layer-name">Signal Engine V8</span><span class="layer-desc">47 sinais canonicos</span></div>
+          <div class="engine-layer"><span class="layer-num">L18</span><span class="layer-name">Signal Engine V8</span><span class="layer-desc">49 sinais canonicos</span></div>
           <div class="engine-layer"><span class="layer-num">L19-22</span><span class="layer-name">Intelligence V10</span><span class="layer-desc">DQI, transition, portfolio, attribution</span></div>
         </div>
       </div>
@@ -312,7 +385,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
             </div>
           </div>
           <div class="viz-stats">
-            <div class="viz-stat"><div class="viz-stat-val" style="color:var(--accent2)">47</div><div class="viz-stat-lbl">Sinais</div></div>
+            <div class="viz-stat"><div class="viz-stat-val" style="color:var(--accent2)">49</div><div class="viz-stat-lbl">Sinais</div></div>
             <div class="viz-stat"><div class="viz-stat-val" style="color:var(--green)">7</div><div class="viz-stat-lbl">Kill Switches</div></div>
             <div class="viz-stat"><div class="viz-stat-val" style="color:var(--yellow)">16</div><div class="viz-stat-lbl">Linhas Receita</div></div>
             <div class="viz-stat"><div class="viz-stat-val" style="color:#fff">3</div><div class="viz-stat-lbl">Frameworks</div></div>
@@ -322,9 +395,93 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
     </div>
   </section>
 
+  <!-- INFRASTRUCTURE -->
+  <section class="infra reveal">
+    <div class="infra-label">Stack de Infraestrutura</div>
+    <div class="infra-grid">
+      <div class="infra-item">
+        <div class="infra-icon">&#9889;</div>
+        <div class="infra-name">Edge Functions</div>
+        <div class="infra-desc">Supabase Edge com prompt caching. API key segura no servidor. Rate limit por operador. ~$0.01/request.</div>
+      </div>
+      <div class="infra-item">
+        <div class="infra-icon">&#128202;</div>
+        <div class="infra-name">Databricks</div>
+        <div class="infra-desc">Data lake com funil_comercial (75 cols), persons_overview (54 cols), customer_360. Event-sourced, sync a cada 30min.</div>
+      </div>
+      <div class="infra-item">
+        <div class="infra-icon">&#129504;</div>
+        <div class="infra-name">43 MCPs</div>
+        <div class="infra-desc">Documentos semanticos que governam cada decisao. Injetados por intent &#8212; o motor carrega apenas os MCPs relevantes por request.</div>
+      </div>
+      <div class="infra-item">
+        <div class="infra-icon">&#128640;</div>
+        <div class="infra-name">DAG Engine</div>
+        <div class="infra-desc">22 camadas em 7 fases sem ciclos. Contexto, taxonomia, runtime, analytics, forecast, framework, intelligence.</div>
+      </div>
+      <div class="infra-item">
+        <div class="infra-icon">&#128274;</div>
+        <div class="infra-name">Kill Switches</div>
+        <div class="infra-desc">7 bloqueios automaticos que impedem erros fatais: tier mismatch, framework violation, premature close, anti-ansiedade.</div>
+      </div>
+      <div class="infra-item">
+        <div class="infra-icon">&#128200;</div>
+        <div class="infra-name">Forecast V7</div>
+        <div class="infra-desc">3 dimensoes (quantitativo x qualitativo x framework). Confianca em 7 componentes. Audit trail append-only.</div>
+      </div>
+      <div class="infra-item">
+        <div class="infra-icon">&#128161;</div>
+        <div class="infra-name">Signal Engine V8</div>
+        <div class="infra-desc">49 sinais canonicos em 6 categorias. Dedup V10 idempotente. Task routing automatico por sinal negativo.</div>
+      </div>
+      <div class="infra-item">
+        <div class="infra-icon">&#128220;</div>
+        <div class="infra-name">Black Box Protocol</div>
+        <div class="infra-desc">Separacao backstage/frontstage. Metodologia interna NUNCA vaza para o lead. Copy gerada sem expor framework.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CAPABILITIES -->
+  <section class="capabilities reveal">
+    <div class="cap-label">O que o Elucy entrega por deal</div>
+    <div class="cap-grid">
+      <div class="cap-item">
+        <div class="cap-num">49</div>
+        <div class="cap-name">Sinais detectados por deal</div>
+        <div class="cap-desc">Behavioral, framework, pipeline, quality, forecast e revenue. Cada sinal com peso fixo e roteamento automatico para filas de acao.</div>
+      </div>
+      <div class="cap-item">
+        <div class="cap-num">3</div>
+        <div class="cap-name">Frameworks de qualificacao</div>
+        <div class="cap-desc">Challenger para Titan, SPICED para Builder, SPIN + Champion para Executor. Governados por kill switches &#8212; framework errado = bloqueio.</div>
+      </div>
+      <div class="cap-item">
+        <div class="cap-num">22</div>
+        <div class="cap-name">Camadas de inteligencia</div>
+        <div class="cap-desc">De contexto do operador ate attribution engine. Cada deal processado por DAG de 7 fases sem ciclos em tempo real.</div>
+      </div>
+      <div class="cap-item">
+        <div class="cap-num">16</div>
+        <div class="cap-name">Linhas de receita mapeadas</div>
+        <div class="cap-desc">Cada produto do G4 com ticket base, aging de risco, peso estrategico e regras de transicao especificas.</div>
+      </div>
+      <div class="cap-item">
+        <div class="cap-num">7</div>
+        <div class="cap-name">Kill switches ativos</div>
+        <div class="cap-desc">Bloqueios automaticos: tier violation, premature close, framework mismatch, anti-ansiedade, regressao de estado, Black Box breach.</div>
+      </div>
+      <div class="cap-item">
+        <div class="cap-num">5</div>
+        <div class="cap-name">Roles operacionais</div>
+        <div class="cap-desc">SDR, Closer, CS, CX, Account Manager. Cada role ve o pipeline pela lente do seu contexto com acoes calibradas.</div>
+      </div>
+    </div>
+  </section>
+
   <!-- FOOTER -->
   <footer class="footer">
-    <p class="footer-text"><strong>ELUCY</strong> &#8212; Revenue Intelligence Engine &#183; <strong>G4 Educacao</strong> &#183; 2026</p>
+    <p class="footer-text"><strong>ELUCY</strong> &#8212; Infraestrutura de Qualificacao Conversacional &#183; <strong>G4 Educacao</strong> &#183; 2026</p>
   </footer>
 
 </div>
