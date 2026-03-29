@@ -15,8 +15,10 @@
 window.IS_REMOTE = location.hostname !== '' && !location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1') && location.protocol !== 'file:';
 
 // ── CLAUDE API CONFIG (Motor LLM do Elucy Webapp) ───────────────────
-// Key centralizada — montada em runtime para todos os operadores
-window.ELUCY_API_KEY = (function(){var p=['sk-ant-','api03-FW','oOcI23OY','XmgXLC3P','7zJskT48','_NbwSm5E','bcySJLex','BL4tyyNu','zffPrqci','Sn_NCY4n','PgYw9-pf','UYZ0ccJS','sdxA-ohA','SbAAA'];return p.join('');})();
+// API key REMOVIDA do frontend — chamadas via Edge Function (elucy-inference)
+// Supabase Secret ANTHROPIC_API_KEY é usada server-side, nunca exposta ao browser
+window.ELUCY_API_KEY = null; // deprecated — kept for backward compat checks
+window.ELUCY_INFERENCE_URL = 'https://tnbbsjvzwleeoqnxtafp.supabase.co/functions/v1/elucy-inference';
 window.ELUCY_API_MODEL = localStorage.getItem('elucy_api_model') || 'claude-sonnet-4-20250514';
 window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false';
 </script>
@@ -3601,49 +3603,42 @@ async function loadDealFullHistory(dealId){
 }
 
 async function callIntelligenceAPI(dealData, requestType, extraContext){
-  const apiKey = window.ELUCY_API_KEY;
-  if(!apiKey) throw new Error('API key não configurada');
-  const model = window.ELUCY_API_MODEL || 'claude-sonnet-4-20250514';
-
-  const bundle = await loadMCPBundle();
-  const mcpSlugs = MCP_MAP[requestType] || MCP_MAP.analyze;
-  let systemParts = [];
-  mcpSlugs.forEach(slug => {
-    if(bundle[slug] && bundle[slug].content){
-      systemParts.push('<document name="'+slug+'">\n'+bundle[slug].content+'\n</document>');
-    }
-  });
-  const systemPrompt = systemParts.join('\n\n');
+  // Route via Edge Function (API key segura server-side)
+  const sb = getSB();
+  const session = sb ? (await sb.auth.getSession()).data.session : null;
+  const jwt = session ? session.access_token : null;
 
   // Carrega histórico completo para enriquecer contexto
   const history = await loadDealFullHistory(dealData.deal_id);
-
   const dealCtx = buildDealContext(dealData);
   const prompt = REQUEST_PROMPTS[requestType] || REQUEST_PROMPTS.analyze;
   const userMsg = dealCtx + history + '\n\n' + prompt + (extraContext ? '\n\nCONTEXTO EXTRA: '+extraContext : '');
 
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+  const inferenceUrl = window.ELUCY_INFERENCE_URL || 'https://tnbbsjvzwleeoqnxtafp.supabase.co/functions/v1/elucy-inference';
+  const model = window.ELUCY_API_MODEL || 'claude-sonnet-4-20250514';
+
+  const headers = {
+    'content-type': 'application/json',
+    'apikey': SUPABASE_ANON
+  };
+  if(jwt) headers['Authorization'] = 'Bearer ' + jwt;
+
+  const resp = await fetch(inferenceUrl, {
     method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
+    headers: headers,
     body: JSON.stringify({
+      requestType: requestType,
+      userMessage: userMsg,
       model: model,
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userMsg }]
+      dealId: dealData.deal_id || null
     })
   });
   if(!resp.ok){
     const errBody = await resp.text().catch(()=>'');
-    throw new Error('Claude API ' + resp.status + ': ' + errBody.slice(0,200));
+    throw new Error('Elucy Inference ' + resp.status + ': ' + errBody.slice(0,200));
   }
   const result = await resp.json();
-  const text = (result.content || []).filter(c=>c.type==='text').map(c=>c.text).join('\n');
-  return { intelligence: text, model: result.model, usage: result.usage };
+  return { intelligence: result.text || result.intelligence || '', model: result.model || model, usage: result.usage || {} };
 }
 
 async function saveAPIResponse(dealId, requestType, output){
@@ -3678,7 +3673,7 @@ async function requestElucyAnalysis(deal_id, dealData, targetId){
     if(!sb||!email) return;
 
     // ── FAST PATH: Intelligence API ──
-    if(window.ELUCY_API_ENABLED && window.ELUCY_API_KEY){
+    if(window.ELUCY_API_ENABLED && window.IS_REMOTE){
       try {
         const apiResult = await callIntelligenceAPI(dealData, 'analyze', '');
         if(apiResult && apiResult.intelligence){
@@ -3783,7 +3778,7 @@ async function requestElucyCopy(deal_id, dealData, targetId, canal){
     if(!sb||!email) return;
 
     // ── FAST PATH: Intelligence API ──
-    if(window.ELUCY_API_ENABLED && window.ELUCY_API_KEY){
+    if(window.ELUCY_API_ENABLED && window.IS_REMOTE){
       try {
         const apiResult = await callIntelligenceAPI(dealData, 'copy', 'canal:'+(canal||'WhatsApp'));
         if(apiResult && apiResult.intelligence){
@@ -3957,7 +3952,7 @@ REGRAS: Dados BR prioritários. Cite fonte+ano. Marque confiança [Alta]/[Média
     if(!sb||!email) return;
 
     // ── FAST PATH: Intelligence API com MCPs de business_analysis ──
-    if(window.ELUCY_API_ENABLED && window.ELUCY_API_KEY){
+    if(window.ELUCY_API_ENABLED && window.IS_REMOTE){
       try {
         const apiResult = await callIntelligenceAPI(deal, 'business_analysis', prompt);
         if(apiResult && apiResult.intelligence){
@@ -4148,7 +4143,7 @@ async function requestNotaCRM(id,btnEl){
     if(!sb||!email) return;
 
     // ── FAST PATH: Intelligence API com MCPs de note ──
-    if(window.ELUCY_API_ENABLED && window.ELUCY_API_KEY){
+    if(window.ELUCY_API_ENABLED && window.IS_REMOTE){
       try {
         const apiResult = await callIntelligenceAPI(deal, 'note', '');
         if(apiResult && apiResult.intelligence){
@@ -4708,7 +4703,7 @@ async function requestConvEnrichment(id){
   if(panel) panel.classList.add('on');
   if(body) body.innerHTML='<div class="conv-enrich-loading">Extraindo sinais e atualizando SPICED...</div>';
   // Fast path via Intelligence API se disponível
-  if(window.ELUCY_API_ENABLED && window.ELUCY_API_KEY){
+  if(window.ELUCY_API_ENABLED && window.IS_REMOTE){
     try{
       const waChat=document.getElementById('wa-chat-'+id);
       const convText=waChat?waChat.innerText:'';
