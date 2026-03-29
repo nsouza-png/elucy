@@ -274,6 +274,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .task-card-meta{display:flex;gap:8px;font-size:var(--fs-caption);color:var(--text2);margin-bottom:8px}
 .task-card-meta span{background:var(--bg4);padding:2px 6px;border-radius:3px}
 .task-card-nba{font-size:var(--fs-caption);color:var(--amber);font-weight:var(--fw-medium);margin-bottom:10px;line-height:var(--lh-tight)}
+.tag-bowtie{font-weight:700;letter-spacing:.4px}
+.tag-bowtie-acq{border-color:rgba(14,165,233,.4);color:var(--blue2);background:rgba(14,165,233,.08)}
+.tag-bowtie-ret{border-color:rgba(139,92,246,.4);color:#a78bfa;background:rgba(139,92,246,.08)}
+.tag-bowtie-exp{border-color:rgba(16,185,129,.4);color:var(--green);background:rgba(16,185,129,.08)}
 .task-card-actions{display:flex;gap:6px}
 .task-btn{padding:5px 10px;border-radius:6px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.12s}
 .task-btn:hover{border-color:var(--accent);color:var(--accent2);background:var(--adim)}
@@ -1490,6 +1494,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
         <span class="intel-dim" onclick="window._intelDim('rfv',this)" style="border-color:#a78bfa;color:#a78bfa">RFV</span>
         <span class="intel-dim" onclick="window._intelDim('spin',this)" style="border-color:var(--yellow);color:var(--yellow)">SPIN Audit</span>
         <span class="intel-dim" onclick="window._intelDim('advisor',this)" style="border-color:var(--accent2);color:var(--accent2)">Trusted Advisor</span>
+        <span class="intel-dim" onclick="window._intelDim('bowtie',this)" style="border-color:#f97316;color:#f97316">⊞ Bowtie</span>
       </div>
       <div id="intel-content">
         <div class="intel-empty">Carregue o pipeline para visualizar a análise de inteligência.</div>
@@ -5652,6 +5657,8 @@ function selectLiveDeal(id,d){
             ${(d.fase||d.fase_atual_no_processo)?`<span class="tag t-acc">${d.fase||d.fase_atual_no_processo}</span>`:''}
             ${d._signal==='BUY'?'<span class="tag t-buy">BUY</span>':d._signal==='RISK'?'<span class="tag t-risk">RISK</span>':d._signal==='STALL'?'<span class="tag t-stall">STALL</span>':d._signal==='CHAMP'?'<span class="tag t-champ">CHAMP</span>':d._signal==='DOME'?'<span class="tag t-stall">IRON DOME</span>':''}
             ${(d._urgency||0)>=60?'<span class="tag t-risk">SLA RISCO</span>':''}
+            ${(()=>{const leg=d._bowtieLeg;if(!leg)return'';const cfg={ACQ:{cls:'tag-bowtie-acq',lbl:'ACQ'},RET:{cls:'tag-bowtie-ret',lbl:'RET'},EXP:{cls:'tag-bowtie-exp',lbl:'EXP'}};const c=cfg[leg]||{};return`<span class="tag tag-bowtie ${c.cls}" title="Bowtie: ${leg==='ACQ'?'Aquisição':leg==='RET'?'Retenção':'Expansão'}">${c.lbl}</span>`})()}
+            ${(()=>{const fc=d._frameworkCompliance;if(fc==null)return'';const col=fc>=70?'var(--green)':fc>=45?'var(--amber2)':'var(--red)';return`<span class="tag" style="border-color:${col};color:${col}" title="Framework Compliance">${fc}% FW</span>`})()}
           </div>
         </div>
       </div>
@@ -5660,7 +5667,26 @@ function selectLiveDeal(id,d){
         <div class="bar"><div class="bf ${barClass}" style="width:${d.temp}%"></div></div>
         <div class="tg-sub">${tempSub}</div>
       </div>
-      ${(()=>{const fv=d._forecastV6||{};const score=fv.score!=null?Math.round(fv.score*100):null;const conf=(fv.confidence_level||fv.confidenceLevel||'').replace('_',' ');const risk=fv.risk_classification||fv.riskClassification||'';const scoreColor=score>=70?'var(--green)':score>=40?'var(--yellow)':'var(--red)';return score!=null?`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;margin-bottom:2px;border-top:1px solid var(--border)"><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;font-weight:700;white-space:nowrap">Forecast V7</span><span style="font-size:18px;font-weight:800;color:${scoreColor}">${score}%</span>${conf?`<span style="font-size:11px;color:var(--text2)">${conf}</span>`:''}${risk?`<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:var(--bg4);color:var(--text2)">${risk}</span>`:''}<div style="flex:1;height:3px;background:var(--bg4);border-radius:2px"><div style="width:${score}%;height:100%;background:${scoreColor};border-radius:2px"></div></div></div>`:''})()}
+      ${(()=>{
+        const fv=d._forecastV6||{};
+        const score=fv.score!=null?Math.round(fv.score*100):null;
+        const conf=(fv.confidence_level||fv.confidenceLevel||'').replace('_',' ');
+        const risk=fv.risk_classification||fv.riskClassification||'';
+        const scoreColor=score>=70?'var(--green)':score>=40?'var(--yellow)':'var(--red)';
+        if(score==null) return '';
+        const hasExplain = fv.explain_json || fv.explainJson;
+        return `<div style="border-top:1px solid var(--border);padding:8px 0 4px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            <span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;font-weight:700;white-space:nowrap">Forecast V7</span>
+            <span style="font-size:18px;font-weight:800;color:${scoreColor}">${score}%</span>
+            ${conf?`<span style="font-size:11px;color:var(--text2)">${conf}</span>`:''}
+            ${risk?`<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:var(--bg4);color:var(--text2)">${risk}</span>`:''}
+            <div style="flex:1;height:3px;background:var(--bg4);border-radius:2px"><div style="width:${score}%;height:100%;background:${scoreColor};border-radius:2px"></div></div>
+            ${hasExplain?`<button class="btn bs btn-sm" style="font-size:10px;padding:3px 8px;margin-left:4px" onclick="toggleForecastExplain('${id}',this)">Ver razões</button>`:''}
+          </div>
+          <div id="fc-explain-${id}" style="display:none"></div>
+        </div>`;
+      })()}
       <div class="ig-toggle" onclick="this.nextElementSibling.classList.toggle('collapsed');this.querySelector('.tgl-arrow').classList.toggle('up')">
         <span class="ig-toggle-label">Detalhes do Deal</span>
         <span class="tgl-arrow">▾</span>
@@ -5938,6 +5964,7 @@ function renderIntelligence(){
     else if(dim==='rfv') _renderRFV(ct,deals);
     else if(dim==='spin') _renderSpinAudit(ct,deals);
     else if(dim==='advisor') _renderTrustedAdvisor(ct,deals);
+    else if(dim==='bowtie') _renderBowtie(ct,deals);
   }catch(e){
     console.warn('[intel] render error for dim='+dim+':',e.message);
     ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Dados parciais disponíveis — '+deals.length+' deals carregados.<br><span style="font-size:10px;opacity:.6">'+e.message+'</span></div>';
@@ -6612,6 +6639,138 @@ function renderSection(num,title,content){
 function renderCard(title,content){
   return `<div class="intel-card"><div class="intel-title">${title}</div>${content}</div>`;
 }
+
+// ── RF·1: Bowtie Intelligence View ───────────────────────────────────
+function _renderBowtie(ct,deals){
+  // Enriquece bowtieLeg se ainda não feito
+  deals.forEach(function(d){if(!d._bowtieLeg&&window.calcBowtiegLeg) d._bowtieLeg=window.calcBowtiegLeg(d);});
+
+  var legs={ACQ:[],RET:[],EXP:[],null_leg:[]};
+  deals.forEach(function(d){
+    var l=d._bowtieLeg||null;
+    if(l==='ACQ') legs.ACQ.push(d);
+    else if(l==='RET') legs.RET.push(d);
+    else if(l==='EXP') legs.EXP.push(d);
+    else legs.null_leg.push(d);
+  });
+
+  var total=deals.length||1;
+  var acqPct=Math.round(legs.ACQ.length/total*100);
+  var retPct=Math.round(legs.RET.length/total*100);
+  var expPct=Math.round(legs.EXP.length/total*100);
+
+  // Valor por perna
+  function sumVal(arr){return arr.reduce(function(s,d){return s+(Number(d._oppValue||d.revenueRaw)||0);},0);}
+  var acqVal=sumVal(legs.ACQ), retVal=sumVal(legs.RET), expVal=sumVal(legs.EXP);
+
+  // Aging médio por perna
+  function avgAging(arr){return arr.length?Math.round(arr.reduce(function(s,d){return s+(d._delta||d.delta||0);},0)/arr.length*10)/10:0;}
+
+  var html='';
+
+  // Funil Bowtie visual
+  html+=renderSection(1,'Funil Bowtie — Aquisição → Retenção → Expansão',
+    `<div style="display:flex;gap:0;border-radius:10px;overflow:hidden;margin-top:6px;border:1px solid var(--border)">
+      <div style="flex:${Math.max(legs.ACQ.length,1)};background:rgba(14,165,233,.12);border-right:1px solid var(--border);padding:14px;text-align:center">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--blue2);margin-bottom:4px">ACQ</div>
+        <div style="font-size:24px;font-weight:900;color:var(--blue2)">${legs.ACQ.length}</div>
+        <div style="font-size:10px;color:var(--text2)">${acqPct}% · ${fmtBRL(acqVal)}</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:2px">Aging ~${avgAging(legs.ACQ)}d</div>
+      </div>
+      <div style="flex:${Math.max(legs.RET.length,1)};background:rgba(139,92,246,.10);border-right:1px solid var(--border);padding:14px;text-align:center">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#a78bfa;margin-bottom:4px">RET</div>
+        <div style="font-size:24px;font-weight:900;color:#a78bfa">${legs.RET.length}</div>
+        <div style="font-size:10px;color:var(--text2)">${retPct}% · ${fmtBRL(retVal)}</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:2px">Aging ~${avgAging(legs.RET)}d</div>
+      </div>
+      <div style="flex:${Math.max(legs.EXP.length,1)};background:rgba(16,185,129,.10);padding:14px;text-align:center">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--green);margin-bottom:4px">EXP</div>
+        <div style="font-size:24px;font-weight:900;color:var(--green)">${legs.EXP.length}</div>
+        <div style="font-size:10px;color:var(--text2)">${expPct}% · ${fmtBRL(expVal)}</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:2px">Aging ~${avgAging(legs.EXP)}d</div>
+      </div>
+    </div>
+    <div style="font-size:10px;color:var(--text2);margin-top:8px;padding:8px 10px;background:var(--bg3);border-radius:6px;border:1px solid var(--border)">
+      <b style="color:var(--text)">Diagnóstico:</b>
+      ${acqPct>75?' Pipeline concentrado em Aquisição — <span style="color:var(--amber2)">risco de fluxo de caixa sem base de renovação</span>.':''}
+      ${expPct>40?' Alta concentração em Expansão — <span style="color:var(--green)">modelo Bowtie saudável</span>.':''}
+      ${retPct<10&&total>10?' Base de Retenção frágil — <span style="color:var(--red)">churn potencial não monitorado</span>.':''}
+      ${(acqPct<=75&&expPct<=40&&(retPct>=10||total<=10))?' Distribuição balanceada — <span style="color:var(--green)">arquitetura de receita dentro do esperado</span>.':''}
+    </div>`
+  );
+
+  // Top deals por perna
+  var legConfig=[
+    {key:'ACQ',deals:legs.ACQ,color:'var(--blue2)',label:'Aquisição'},
+    {key:'RET',deals:legs.RET,color:'#a78bfa',label:'Retenção'},
+    {key:'EXP',deals:legs.EXP,color:'var(--green)',label:'Expansão'}
+  ];
+  var tableRows='';
+  legConfig.forEach(function(lc){
+    lc.deals.slice(0,6).forEach(function(d){
+      var fc=d._forecastV6&&d._forecastV6.score!=null?Math.round(d._forecastV6.score*100)+'%':'—';
+      tableRows+='<tr><td><span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;background:rgba(255,255,255,.06);color:'+lc.color+'">'+lc.key+'</span></td>';
+      tableRows+='<td style="font-weight:600">'+_escHtml(d.nome||'—')+'</td>';
+      tableRows+='<td>'+_escHtml(d.grupo_de_receita||d.linhaReceita||d._revLine||'—')+'</td>';
+      tableRows+='<td>'+_escHtml(d.etapa||d.etapa_atual_no_pipeline||'—')+'</td>';
+      tableRows+='<td>'+fc+'</td>';
+      tableRows+='<td>'+(d._delta||d.delta||0)+'d</td></tr>';
+    });
+  });
+
+  html+=renderSection(2,'Deals por Perna do Bowtie',
+    '<table class="intel-table"><thead><tr><th>Perna</th><th>Deal</th><th>Linha</th><th>Etapa</th><th>Forecast</th><th>Aging</th></tr></thead><tbody>'+tableRows+'</tbody></table>');
+
+  ct.innerHTML=html;
+}
+
+// ── RF·4: Forecast Explainability ────────────────────────────────────
+window.toggleForecastExplain=function(id,btn){
+  const el=document.getElementById('fc-explain-'+id);
+  if(!el) return;
+  if(el.style.display!=='none'){el.style.display='none';btn.textContent='Ver razões';return;}
+  const deal=(window._COCKPIT_DEAL_MAP||{})[id];
+  if(!deal){el.style.display='none';return;}
+  const fv=deal._forecastV6||{};
+  const ex=fv.explain_json||fv.explainJson;
+  if(!ex){el.innerHTML='<div style="font-size:11px;color:var(--text2);padding:8px">Audit trail não disponível para este deal.</div>';el.style.display='block';btn.textContent='Fechar';return;}
+
+  const q=ex.quantitative||{};
+  const ql=ex.qualitative||{};
+  const fw=ex.framework||{};
+  const sigs=ex.signals||{};
+
+  function pct(v){return v!=null?Math.round(v*100)+'%':'—';}
+  function bar(v,col){var w=Math.round(Math.min(1,Math.max(0,v||0))*100);col=col||'var(--accent)';return `<div style="height:3px;background:var(--bg4);border-radius:2px;margin-top:3px"><div style="width:${w}%;height:100%;background:${col};border-radius:2px"></div></div>`;}
+
+  var html=`<div style="font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:6px">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--amber);margin-bottom:10px">Forecast Explainability — Audit Trail</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      <div>
+        <div style="font-size:9px;font-weight:700;color:var(--blue2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Quantitativo</div>
+        ${[['Stage Prob',q.stage_prob],['Aging Factor',q.aging_factor],['Velocity',q.velocity_factor],['Engagement',q.engagement_factor]].map(function(p){return `<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--text2)">${p[0]}<span style="color:var(--text);font-weight:600">${pct(p[1])}</span></div>`;}).join('')}
+      </div>
+      <div>
+        <div style="font-size:9px;font-weight:700;color:var(--amber2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Qualitativo</div>
+        ${[['Show',ql.show_weight],['Note',ql.note_weight],['Authority',ql.authority_weight],['Urgency',ql.urgency_weight],['Behavior',ql.behavior_weight],['Next Step',ql.next_step_weight]].map(function(p){return `<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--text2)">${p[0]}<span style="color:var(--text);font-weight:600">${pct(p[1])}</span></div>`;}).join('')}
+      </div>
+      <div>
+        <div style="font-size:9px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Framework (V7)</div>
+        ${[['SPICED avg',fw.spiced_avg],['MEDDIC avg',fw.meddic_avg],['Coverage',fw.coverage],['QS Final',fw.qualitative_score]].map(function(p){return `<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--text2)">${p[0]}<span style="color:var(--text);font-weight:600">${p[1]!=null?pct(p[1]):'—'}</span></div>`;}).join('')}
+        ${ex.no_show_penalty?'<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--red)">No-Show Pen.<span style="font-weight:600">-'+pct(ex.no_show_penalty)+'</span></div>':''}
+      </div>
+    </div>
+    ${(sigs.positive||sigs.risk)?`<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--text2)">
+      ${sigs.positive?'<span style="color:var(--green)">▲ '+sigs.positive+' sinais positivos</span>  ':''}
+      ${sigs.risk?'<span style="color:var(--red)">▼ '+sigs.risk+' sinais de risco</span>':''}
+      ${ex.data_points!=null?'  <span style="color:var(--text3)">· '+ex.data_points+' data points</span>':''}
+    </div>`:''}
+  </div>`;
+
+  el.innerHTML=html;
+  el.style.display='block';
+  btn.textContent='Fechar razões';
+};
 
 function fmtEtapa(e){
   const map={'novo lead':'MQL','dia 01':'D1','dia 02':'D2','dia 03':'D3','dia 04':'D4','dia 05':'D5','dia 06':'D6','conectados':'Conectado','agendamento':'Agendamento','reagendamento':'Reagendamento','entrevista agendada':'Entrevista'};

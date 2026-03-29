@@ -240,6 +240,43 @@ var REVENUE_LINES = {
 };
 window.REVENUE_LINES = REVENUE_LINES;
 
+// ── BOWTIE LEG — mapeia grupo_de_receita → perna do Bowtie (RF·2) ─────
+var BOWTIE_MAP = {
+  // AQUISIÇÃO — novos clientes entrando pelo funil
+  aquisicao:        'ACQ',
+  turmas:           'ACQ',
+  projetos_eventos: 'ACQ',
+  social_dm:        'ACQ',
+  social_dm_k:      'ACQ',
+  selfcheckout:     'ACQ',
+  field_sales:      'ACQ',
+  funil_marketing:  'ACQ',
+  // RETENÇÃO — clientes existentes mantidos
+  renovacao:        'RET',
+  reativacao:       'RET',
+  // EXPANSÃO — clientes existentes crescendo
+  expansao:         'EXP',
+  g4_tools:         'EXP',
+  nao_definido:     null
+};
+window.BOWTIE_MAP = BOWTIE_MAP;
+
+function calcBowtiegLeg(deal){
+  var grupo = (deal.grupo_de_receita || deal.grupoReceita || deal._revLine || '').toLowerCase().replace(/[\s&]/g,'_').replace(/ã/g,'a').replace(/ç/g,'c').replace(/ê/g,'e');
+  // Normaliza variações comuns do Databricks
+  if(grupo.includes('expan')) return 'EXP';
+  if(grupo.includes('renov')) return 'RET';
+  if(grupo.includes('reativ')) return 'RET';
+  if(grupo.includes('turma')) return 'ACQ';
+  if(grupo.includes('social')) return 'ACQ';
+  if(grupo.includes('field')) return 'ACQ';
+  if(grupo.includes('aquisicao')||grupo.includes('aquisição')) return 'ACQ';
+  if(grupo.includes('selfcheck')) return 'ACQ';
+  if(grupo.includes('g4_tools')||grupo.includes('g4 tools')) return 'EXP';
+  return BOWTIE_MAP[grupo] || null;
+}
+window.calcBowtiegLeg = calcBowtiegLeg;
+
 var STAGE_PROB = {
   'entrevista agendada':0.55,'agendamento':0.45,'reagendamento':0.38,
   'conectados':0.20,'dia 01':0.12,'dia 02':0.10,'dia 03':0.08,
@@ -453,6 +490,19 @@ function enrichDealContext(deal){
   // Feature 4: Channel conversion + GTM alignment
   if(!deal._channelConversion) deal._channelConversion = resolveChannelConversion(deal);
   if(deal._channelConversion !== undefined) deal._gtmMisaligned = checkGTMMisalignment(deal);
+  // RF·2: Bowtie leg (ACQ / RET / EXP)
+  if(!deal._bowtieLeg) deal._bowtieLeg = calcBowtiegLeg(deal);
+  // RF·3: Framework compliance score (0-100) derivado do qualitativeScore calculado no L16
+  if(!deal._frameworkCompliance){
+    var fr = deal._frameworkRuntime || deal._forecastV6 && deal._forecastV6.explain_json && deal._forecastV6.explain_json.framework;
+    if(fr && typeof calcQualitativeScore === 'function'){
+      var qs = calcQualitativeScore(fr);
+      // Normaliza [0.20, 1.30] → [0, 100]: 1.0 = 100%, pontos acima = bônus
+      deal._frameworkCompliance = Math.min(100, Math.round(((qs - 0.20) / (1.10)) * 100));
+    } else {
+      deal._frameworkCompliance = null;
+    }
+  }
   return deal;
 }
 window.enrichDealContext = enrichDealContext;
@@ -4562,6 +4612,54 @@ async function calcPerformanceReportV3(periodType, periodKey){
     forecast_value: Math.round(fcValue)
   };
 
+  // ── BLOCK 8B: 3 E's — Effectiveness / Efficiency / Economy (RF·5) ──
+  // E1 — Effectiveness: % avanços reais vs continuações (stage transitions)
+  var realAdvances = 0, totalTransitions = 0;
+  deals.forEach(function(d){
+    if(d._advanceState){
+      totalTransitions++;
+      if(d._advanceState.state === 'advance') realAdvances++;
+    }
+  });
+  var e1_effectiveness = totalTransitions > 0 ? Math.round((realAdvances / totalTransitions) * 1000) / 1000 : null;
+
+  // E2 — Efficiency: tasks completadas / tempo médio por deal (activity_log)
+  var tasksCompleted = actData.filter(function(a){
+    return a.activity_type === 'task_completed' || a.activity_type === 'fup_sent' || a.activity_type === 'analysis_generated';
+  }).length;
+  var avgDealsPerDay = actData.length > 0 ? (Object.keys(dealsWorkedSet).length / Math.max(1, (new Date() - new Date(monthStart)) / (1000*60*60*24))) : 0;
+  var e2_efficiency = {
+    tasks_completed: tasksCompleted,
+    avg_deals_per_day: Math.round(avgDealsPerDay * 10) / 10,
+    tasks_per_deal: volume.deals_worked > 0 ? Math.round((tasksCompleted / volume.deals_worked) * 10) / 10 : 0
+  };
+
+  // E3 — Economy: custo estimado de IA (cockpit_requests × ~$0.01/req)
+  var aiRequestsCount = 0;
+  var COST_PER_REQ = 0.01; // USD — Edge Function com prompt caching ~$0.01
+  try {
+    var sb2 = window._supabaseClient || (window.getSB && window.getSB());
+    if(sb2){
+      var costRes = await sb2.from('cockpit_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('operator_email', email)
+        .gte('created_at', monthStart + 'T00:00:00');
+      if(costRes.count != null) aiRequestsCount = costRes.count;
+    }
+  } catch(e){}
+  var e3_economy = {
+    ai_requests: aiRequestsCount,
+    estimated_cost_usd: Math.round(aiRequestsCount * COST_PER_REQ * 100) / 100,
+    cost_per_deal: volume.deals_worked > 0 ? Math.round((aiRequestsCount * COST_PER_REQ / volume.deals_worked) * 1000) / 1000 : 0
+  };
+
+  var three_es = {
+    e1_effectiveness: e1_effectiveness,
+    e1_label: e1_effectiveness != null ? (e1_effectiveness >= 0.6 ? 'Saudável' : e1_effectiveness >= 0.35 ? 'Atenção' : 'Crítico') : '—',
+    e2_efficiency: e2_efficiency,
+    e3_economy: e3_economy
+  };
+
   // ── SCORES ──
   meta.actual_sal = funnel.sal;
   meta.actual_opp = funnel.opp;
@@ -4608,7 +4706,8 @@ async function calcPerformanceReportV3(periodType, periodKey){
       revenue: Math.round(revenueScore * 100),
       final: finalScore
     },
-    band: band
+    band: band,
+    three_es: three_es
   };
 
   // ── PERSIST ──
@@ -5071,6 +5170,49 @@ async function renderPerformanceReportV3(report, containerId){
       html += '</tr>';
     });
     html += '</tbody></table></div></section>';
+  }
+
+  // ── BLOCO 12: 3 E's — Fábrica de Receita ──
+  var tes = report.three_es;
+  if(tes){
+    html += '<section class="card" style="margin-top:14px">';
+    html += '<div class="sec-t" style="display:flex;align-items:center;gap:8px">3 E\'s do Operador <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;background:rgba(245,158,11,.1);color:var(--amber2);border:1px solid rgba(245,158,11,.2);text-transform:uppercase;letter-spacing:.5px">Fábrica de Receita</span></div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px">';
+
+    // E1 — Effectiveness
+    var e1pct = tes.e1_effectiveness != null ? Math.round(tes.e1_effectiveness * 100) : null;
+    var e1col = e1pct == null ? 'var(--text2)' : e1pct >= 60 ? 'var(--green)' : e1pct >= 35 ? 'var(--amber2)' : 'var(--red)';
+    html += '<div style="padding:14px;border:1px solid var(--border);border-radius:10px;border-top:3px solid '+e1col+';background:var(--bg3)">';
+    html += '<div style="font-size:22px;font-weight:900;color:'+e1col+'">'+(e1pct != null ? e1pct+'%' : '—')+'</div>';
+    html += '<div style="font-size:11px;font-weight:700;margin-top:2px">Effectiveness</div>';
+    html += '<div style="font-size:10px;color:var(--text2);margin-top:4px;line-height:1.5">Avanços reais vs continuações<br><span style="color:'+e1col+'">'+_escHtml(tes.e1_label)+'</span></div>';
+    if(e1pct != null) html += '<div style="margin-top:8px"><div class="bar"><div class="bf" style="width:'+e1pct+'%;background:'+e1col+'"></div></div></div>';
+    html += '</div>';
+
+    // E2 — Efficiency
+    var e2 = tes.e2_efficiency;
+    html += '<div style="padding:14px;border:1px solid var(--border);border-radius:10px;border-top:3px solid var(--blue2);background:var(--bg3)">';
+    html += '<div style="font-size:22px;font-weight:900;color:var(--blue2)">'+(e2.tasks_per_deal||0)+'<span style="font-size:11px;font-weight:500;color:var(--text2)"> tasks/deal</span></div>';
+    html += '<div style="font-size:11px;font-weight:700;margin-top:2px">Efficiency</div>';
+    html += '<div style="font-size:10px;color:var(--text2);margin-top:6px;line-height:1.8">';
+    html += '<div class="tg-row"><span class="t-label">Tasks concluídas</span><span class="tgv">'+(e2.tasks_completed||0)+'</span></div>';
+    html += '<div class="tg-row"><span class="t-label">Deals/dia</span><span class="tgv">'+(e2.avg_deals_per_day||0)+'</span></div>';
+    html += '</div></div>';
+
+    // E3 — Economy
+    var e3 = tes.e3_economy;
+    var costColor = e3.estimated_cost_usd <= 5 ? 'var(--green)' : e3.estimated_cost_usd <= 20 ? 'var(--amber2)' : 'var(--red)';
+    html += '<div style="padding:14px;border:1px solid var(--border);border-radius:10px;border-top:3px solid '+costColor+';background:var(--bg3)">';
+    html += '<div style="font-size:22px;font-weight:900;color:'+costColor+'">$'+(e3.estimated_cost_usd||0).toFixed(2)+'</div>';
+    html += '<div style="font-size:11px;font-weight:700;margin-top:2px">Economy</div>';
+    html += '<div style="font-size:10px;color:var(--text2);margin-top:6px;line-height:1.8">';
+    html += '<div class="tg-row"><span class="t-label">Requests de IA</span><span class="tgv">'+(e3.ai_requests||0)+'</span></div>';
+    html += '<div class="tg-row"><span class="t-label">Custo/deal</span><span class="tgv">$'+(e3.cost_per_deal||0).toFixed(3)+'</span></div>';
+    html += '</div>';
+    html += '<div style="font-size:9px;color:var(--text3);margin-top:6px">~$0.01/req com prompt caching</div>';
+    html += '</div>';
+
+    html += '</div></section>';
   }
 
   el.innerHTML = html;
