@@ -2927,52 +2927,52 @@ function openSettings(section){
 #settings-panel{display:flex;width:700px;max-width:96vw;max-height:88vh;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.5)}
 #settings-nav{width:188px;min-width:188px;background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:0}
 #settings-nav-header{padding:16px 16px 10px;border-bottom:1px solid var(--border)}
-#settings-nav-title{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
-.snav-section{padding:6px 8px 2px;font-size:10px;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase;margin-top:4px}
-.snav-item{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:7px;margin:1px 6px;cursor:pointer;font-size:12px;font-weight:500;color:var(--text-2);transition:background .12s,color .12s;user-select:none}
+#settings-nav-title{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text2);text-transform:uppercase}
+.snav-section{padding:6px 8px 2px;font-size:10px;font-weight:700;letter-spacing:.07em;color:var(--text2);text-transform:uppercase;margin-top:4px}
+.snav-item{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:7px;margin:1px 6px;cursor:pointer;font-size:12px;font-weight:500;color:var(--text2);transition:background .12s,color .12s;user-select:none}
 .snav-item:hover{background:var(--surface-2,rgba(255,255,255,.06));color:var(--text)}
-.snav-item.active{background:var(--blue);color:#fff}
+.snav-item.active{background:var(--accent);color:#000}
 .snav-item svg{opacity:.7;flex-shrink:0}
 .snav-item.active svg{opacity:1}
 #settings-nav-status{margin-top:auto;padding:12px 10px;border-top:1px solid var(--border)}
 .op-status-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--border)}
 .op-status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;box-shadow:0 0 6px var(--green)}
 .op-status-name{font-size:11px;font-weight:600;color:var(--text);line-height:1.3}
-.op-status-role{font-size:9px;color:var(--muted)}
+.op-status-role{font-size:9px;color:var(--text2)}
 #settings-content{flex:1;overflow-y:auto;display:flex;flex-direction:column}
 #settings-content-header{padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 #settings-content-title{font-size:14px;font-weight:700;color:var(--text)}
-#settings-content-subtitle{font-size:11px;color:var(--muted);margin-top:2px}
-.settings-save-btn{font-size:11px;font-weight:600;padding:6px 14px;border-radius:6px;background:var(--blue);color:#fff;border:none;cursor:pointer;transition:opacity .15s}
+#settings-content-subtitle{font-size:11px;color:var(--text2);margin-top:2px}
+.settings-save-btn{font-size:11px;font-weight:600;padding:6px 14px;border-radius:6px;background:var(--accent);color:#000;border:none;cursor:pointer;transition:opacity .15s}
 .settings-save-btn:hover{opacity:.85}
 #settings-body{padding:18px 20px;flex:1}
 .settings-panel{display:none}
 .settings-panel.active{display:block}
-.sg-label{font-size:10px;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;margin-top:18px}
+.sg-label{font-size:10px;font-weight:700;letter-spacing:.07em;color:var(--text2);text-transform:uppercase;margin-bottom:10px;margin-top:18px}
 .sg-label:first-child{margin-top:0}
 .sg-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:8px;background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--border);margin-bottom:6px}
 .sg-row-label{font-size:12px;font-weight:600;color:var(--text)}
-.sg-row-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.sg-row-sub{font-size:10px;color:var(--text2);margin-top:2px}
 .sg-toggle{position:relative;width:36px;height:20px;flex-shrink:0}
 .sg-toggle input{opacity:0;width:0;height:0;position:absolute}
 .sg-toggle-track{position:absolute;inset:0;background:var(--border);border-radius:10px;transition:background .2s;cursor:pointer}
-.sg-toggle input:checked+.sg-toggle-track{background:var(--blue)}
+.sg-toggle input:checked+.sg-toggle-track{background:var(--accent)}
 .sg-toggle-knob{position:absolute;top:3px;left:3px;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform .2s;pointer-events:none}
 .sg-toggle input:checked~.sg-toggle-knob{transform:translateX(16px)}
 .sg-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 10px;font-size:12px;color:var(--text);outline:none;transition:border-color .15s}
-.sg-input:focus{border-color:var(--blue)}
+.sg-input:focus{border-color:var(--accent)}
 .sg-select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 10px;font-size:12px;color:var(--text);outline:none;cursor:pointer}
-.sg-select:focus{border-color:var(--blue)}
-.sg-note{font-size:10px;color:var(--muted);margin-top:5px;line-height:1.5}
+.sg-select:focus{border-color:var(--accent)}
+.sg-note{font-size:10px;color:var(--text2);margin-top:5px;line-height:1.5}
 .sg-radio-group{display:flex;gap:6px;flex-wrap:wrap}
-.sg-radio-opt{flex:1;min-width:80px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer;text-align:center;transition:border-color .15s,background .15s;font-size:11px;font-weight:600;color:var(--text-2)}
-.sg-radio-opt:hover{border-color:var(--blue);color:var(--text)}
-.sg-radio-opt.active{border-color:var(--blue);background:rgba(59,130,246,.12);color:var(--blue)}
+.sg-radio-opt{flex:1;min-width:80px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer;text-align:center;transition:border-color .15s,background .15s;font-size:11px;font-weight:600;color:var(--text2)}
+.sg-radio-opt:hover{border-color:var(--accent);color:var(--text)}
+.sg-radio-opt.active{border-color:var(--accent);background:rgba(245,158,11,.12);color:var(--accent)}
 .sg-radio-opt .sg-opt-icon{font-size:16px;display:block;margin-bottom:4px}
 .sg-radio-opt .sg-opt-label{font-size:10px;font-weight:700;display:block}
-.sg-radio-opt .sg-opt-sub{font-size:9px;color:var(--muted);display:block;margin-top:2px;font-weight:400}
+.sg-radio-opt .sg-opt-sub{font-size:9px;color:var(--text2);display:block;margin-top:2px;font-weight:400}
 .sg-meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.sg-meta-item label{font-size:10px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px}
+.sg-meta-item label{font-size:10px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px}
 .sg-kill-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2,rgba(255,255,255,.03));margin-bottom:5px}
 .sg-kill-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 .sg-kill-dot.on{background:var(--red)}
@@ -2980,14 +2980,14 @@ function openSettings(section){
 .sg-kill-name{font-size:11px;font-weight:600;color:var(--text);flex:1}
 .sg-kill-badge{font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700}
 .sg-kill-badge.on{background:rgba(239,68,68,.15);color:var(--red)}
-.sg-kill-badge.off{background:var(--surface-2,rgba(255,255,255,.06));color:var(--muted)}
+.sg-kill-badge.off{background:var(--surface-2,rgba(255,255,255,.06));color:var(--text2)}
 .sg-conn-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2,rgba(255,255,255,.03));margin-bottom:6px}
 .sg-conn-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .sg-conn-label{font-size:12px;font-weight:600;color:var(--text)}
-.sg-conn-sub{font-size:10px;color:var(--muted)}
+.sg-conn-sub{font-size:10px;color:var(--text2)}
 .sg-conn-action{margin-left:auto}
 .sg-conn-btn{font-size:10px;font-weight:600;padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;transition:border-color .15s}
-.sg-conn-btn:hover{border-color:var(--blue);color:var(--blue)}
+.sg-conn-btn:hover{border-color:var(--accent);color:var(--accent)}
 .sg-conn-btn.connected{border-color:var(--green);color:var(--green)}
 .sg-dqi-bar{height:6px;border-radius:3px;background:var(--border);overflow:hidden;margin-top:6px}
 .sg-dqi-fill{height:100%;border-radius:3px;background:var(--green);transition:width .4s}
@@ -3053,16 +3053,16 @@ function openSettings(section){
         </div>
         <div class="sg-label">Metas Mensais</div>
         <div class="sg-meta-grid">
-          <div><label style="font-size:10px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">FUPs</label><input class="sg-input" id="op-meta-fups" type="number" min="1" value="${ctx.meta_mensal.fups||300}"></div>
-          <div><label style="font-size:10px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Qualificações</label><input class="sg-input" id="op-meta-qual" type="number" min="1" value="${ctx.meta_mensal.qualificacoes||100}"></div>
-          <div><label style="font-size:10px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Handoffs</label><input class="sg-input" id="op-meta-handoffs" type="number" min="1" value="${ctx.meta_mensal.handoffs||40}"></div>
-          <div><label style="font-size:10px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">OPP (Oportunidades)</label><input class="sg-input" id="op-meta-opp" type="number" min="1" value="${ctx.meta_mensal.opp||15}"></div>
+          <div><label style="font-size:10px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">FUPs</label><input class="sg-input" id="op-meta-fups" type="number" min="1" value="${ctx.meta_mensal.fups||300}"></div>
+          <div><label style="font-size:10px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">Qualificações</label><input class="sg-input" id="op-meta-qual" type="number" min="1" value="${ctx.meta_mensal.qualificacoes||100}"></div>
+          <div><label style="font-size:10px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">Handoffs</label><input class="sg-input" id="op-meta-handoffs" type="number" min="1" value="${ctx.meta_mensal.handoffs||40}"></div>
+          <div><label style="font-size:10px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">OPP (Oportunidades)</label><input class="sg-input" id="op-meta-opp" type="number" min="1" value="${ctx.meta_mensal.opp||15}"></div>
         </div>
         <div class="sg-note" style="margin-top:6px">OPP = deals que chegaram à fase Oportunidade ou Negociação. Histórico salvo por mês.</div>
 
         <div class="sg-label" style="margin-top:20px">Databricks</div>
         <div style="margin-bottom:8px">
-          <label style="font-size:10px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Token de acesso pessoal</label>
+          <label style="font-size:10px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">Token de acesso pessoal</label>
           <input class="sg-input" id="op-token-input" type="password" placeholder="${tokenMask||'dapi...'}" autocomplete="off" style="font-family:monospace">
         </div>
         ${savedToken
@@ -3095,7 +3095,7 @@ function openSettings(section){
         <div class="sg-note">Calibra o tom de toda copy gerada pelo ELUCI. Black Box Protocol permanece ativo independente do modo.</div>
 
         <div class="sg-label" style="margin-top:20px">Challenger Engine</div>
-        <div class="sg-label" style="font-size:9px;letter-spacing:.04em;color:var(--muted);text-transform:none;margin-top:-6px;margin-bottom:8px">Tensão aplicada nos copies Titan (Challenger Framework)</div>
+        <div class="sg-label" style="font-size:9px;letter-spacing:.04em;color:var(--text2);text-transform:none;margin-top:-6px;margin-bottom:8px">Tensão aplicada nos copies Titan (Challenger Framework)</div>
         <div class="sg-radio-group" id="tension-group">
           <div class="sg-radio-opt ${tension==='conservador'?'active':''}" onclick="selectTension('conservador',this)">
             <span class="sg-opt-label">Conservador</span>
@@ -3148,7 +3148,7 @@ function openSettings(section){
           </label>
         </div>
         <div>
-          <label style="font-size:10px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Modelo</label>
+          <label style="font-size:10px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">Modelo</label>
           <select class="sg-select" id="op-api-model">
             <option value="claude-sonnet-4-20250514" ${window.ELUCY_API_MODEL==='claude-sonnet-4-20250514'?'selected':''}>Claude Sonnet 4 — rápido (recomendado)</option>
             <option value="claude-opus-4-20250514" ${window.ELUCY_API_MODEL==='claude-opus-4-20250514'?'selected':''}>Claude Opus 4 — análise profunda</option>
