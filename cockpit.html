@@ -1670,31 +1670,86 @@ function renderPlaybooks(){
   window._PLAYBOOKS_DATA=PLAYBOOKS;
   window._PLAYBOOKS_DEALS=deals;
 
-  var html='<div style="padding:16px">';
-  html+='<div id="pb-list">';
-  html+='<div style="font-size:18px;font-weight:800;margin-bottom:4px">Playbooks</div>';
-  html+='<div style="font-size:12px;color:var(--text2);margin-bottom:16px">Frameworks de venda por persona — '+deals.length+' deals ativos ('+titanCount+' Titan, '+builderCount+' Builder, '+executorCount+' Executor)</div>';
+  var totalDeals=deals.length;
+  var covPct=totalDeals>0?Math.round(((titanCount+builderCount+executorCount)/totalDeals)*100):0;
 
-  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">';
-  PLAYBOOKS.forEach(function(pb){
-    var count=0;
-    if(pb.persona==='Titan') count=titanCount;
-    else if(pb.persona==='Builder') count=builderCount;
-    else if(pb.persona==='Executor') count=executorCount;
-    else count=deals.length;
-    html+='<div onclick="openPlaybook(\''+pb.id+'\')" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor=\''+pb.color+'\';this.style.background=\'var(--bg4)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.background=\'var(--bg3)\'">';
-    html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
-    html+='<span style="font-size:22px">'+pb.icon+'</span>';
-    html+='<div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--text)">'+pb.title+'</div>';
-    html+='<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:'+pb.color+'22;color:'+pb.color+'">'+pb.persona+'</span></div>';
-    html+='<span style="font-size:12px;color:var(--text2);font-weight:600">'+count+' deals</span></div>';
-    html+='<div style="font-size:12px;color:var(--text2);line-height:1.4">'+pb.desc+'</div>';
+  var html='<div class="pb-container">';
+  html+='<div id="pb-list">';
+
+  // Dashboard header
+  html+='<div class="pb-dash">';
+  html+='<div>';
+  html+='<div class="pb-dash-title">Playbooks</div>';
+  html+='<div style="font-size:11px;color:var(--text2);margin-top:2px">'+totalDeals+' deals ativos · frameworks por persona</div>';
+  html+='</div>';
+  html+='<div class="pb-dash-stats">';
+  html+='<div class="pb-dstat"><span class="pb-dstat-n" style="color:#f59e0b">'+titanCount+'</span><span class="pb-dstat-l">Titan</span></div>';
+  html+='<div class="pb-dstat"><span class="pb-dstat-n" style="color:#22c55e">'+builderCount+'</span><span class="pb-dstat-l">Builder</span></div>';
+  html+='<div class="pb-dstat"><span class="pb-dstat-n" style="color:#3b82f6">'+executorCount+'</span><span class="pb-dstat-l">Executor</span></div>';
+  html+='<div class="pb-coverage-ring"><span>'+covPct+'%</span></div>';
+  html+='</div>';
+  html+='</div>';
+
+  // Alerts
+  if(titanCount===0&&builderCount===0&&executorCount===0){
+    html+='<div class="pb-alert pb-alert-red">Nenhum deal com persona mapeada. Frameworks não podem ser aplicados sem persona definida.</div>';
+  } else if(covPct<50){
+    html+='<div class="pb-alert pb-alert-red">Cobertura de framework abaixo de 50% — '+covPct+'% dos deals tem persona mapeada. Risco de qualificacao incompleta.</div>';
+  } else {
+    html+='<div class="pb-alert pb-alert-green">'+covPct+'% dos deals com persona mapeada. Frameworks ativos e calibrados por contexto.</div>';
+  }
+
+  // Frameworks section
+  html+='<div class="pb-cat-header">Frameworks por Persona</div>';
+  html+='<div class="pb-cat-sub">Clique para ver etapas, regras criticas e deals aplicaveis</div>';
+  html+='<div class="pb-grid" style="margin-bottom:20px">';
+  var fwPbs=PLAYBOOKS.filter(function(p){return p.persona==='Titan'||p.persona==='Builder'||p.persona==='Executor';});
+  fwPbs.forEach(function(pb){
+    var count=pb.persona==='Titan'?titanCount:pb.persona==='Builder'?builderCount:executorCount;
+    var pct=totalDeals>0?Math.round((count/totalDeals)*100):0;
+    html+='<div class="pb-card" style="--pb-color:'+pb.color+'" onclick="openPlaybook(\''+pb.id+'\')">';
+    html+='<div class="pb-card-top">';
+    html+='<span class="pb-card-icon">'+pb.icon+'</span>';
+    html+='<div class="pb-card-info">';
+    html+='<div class="pb-card-title">'+pb.title+'</div>';
+    html+='<span class="pb-card-persona" style="background:'+pb.color+'22;color:'+pb.color+'">'+pb.persona+'</span>';
+    html+='</div>';
+    html+='<div class="pb-card-count"><span class="pb-card-n" style="color:'+pb.color+'">'+count+'</span><span class="pb-card-nl">deals</span></div>';
+    html+='</div>';
+    html+='<div class="pb-card-desc">'+pb.desc+'</div>';
+    html+='<div class="pb-card-cov">';
+    html+='<div class="pb-card-cov-bar"><div class="pb-card-cov-fill" style="width:'+pct+'%;background:'+pb.color+'"></div></div>';
+    html+='<span class="pb-card-cov-pct">'+pct+'% cobertura</span>';
+    html+='</div>';
+    html+='<div class="pb-card-steps">'+pb.steps.length+' etapas</div>';
     html+='</div>';
   });
-  html+='</div></div>';
-
-  html+='<div id="pb-detail" style="display:none"></div>';
   html+='</div>';
+
+  // Protocolo section
+  html+='<div class="pb-cat-header">Protocolos de Execucao</div>';
+  html+='<div class="pb-cat-sub">Ativos para todos os deals independente de persona</div>';
+  html+='<div class="pb-grid">';
+  var protoPbs=PLAYBOOKS.filter(function(p){return p.persona==='Todos';});
+  protoPbs.forEach(function(pb){
+    html+='<div class="pb-card" style="--pb-color:'+pb.color+'" onclick="openPlaybook(\''+pb.id+'\')">';
+    html+='<div class="pb-card-top">';
+    html+='<span class="pb-card-icon">'+pb.icon+'</span>';
+    html+='<div class="pb-card-info">';
+    html+='<div class="pb-card-title">'+pb.title+'</div>';
+    html+='<span class="pb-card-persona" style="background:'+pb.color+'22;color:'+pb.color+'">'+pb.persona+'</span>';
+    html+='</div>';
+    html+='<div class="pb-card-count"><span class="pb-card-n" style="color:'+pb.color+'">'+totalDeals+'</span><span class="pb-card-nl">deals</span></div>';
+    html+='</div>';
+    html+='<div class="pb-card-desc">'+pb.desc+'</div>';
+    html+='<div class="pb-card-steps">'+pb.steps.length+' etapas</div>';
+    html+='</div>';
+  });
+  html+='</div>';
+
+  html+='</div>'; // pb-list
+  html+='<div id="pb-detail" style="display:none"></div>';
+  html+='</div>'; // pb-container
 
   el.innerHTML=html;
 }
@@ -1715,37 +1770,46 @@ function openPlaybook(id){
   det.style.display='block';
   var ct=document.getElementById('ct'); if(ct) ct.scrollTop=0;
 
-  var h='<div style="margin-bottom:14px">';
-  h+='<button onclick="closePlaybook()" class="btn bs btn-sm" style="margin-bottom:12px">← Voltar</button>';
-  h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">';
-  h+='<span style="font-size:28px">'+pb.icon+'</span>';
-  h+='<div><div style="font-size:20px;font-weight:800;color:var(--text)">'+pb.title+'</div>';
-  h+='<span style="font-size:11px;padding:2px 8px;border-radius:4px;background:'+pb.color+'22;color:'+pb.color+';font-weight:600">'+pb.persona+'</span></div></div>';
-  h+='<div style="font-size:13px;color:var(--text2);margin-top:6px;line-height:1.5">'+pb.desc+'</div></div>';
+  var h='<div class="pb-det">';
+  // Back + header
+  h+='<button onclick="closePlaybook()" class="btn bs btn-sm" style="margin-bottom:10px">← Voltar</button>';
+  h+='<div class="pb-det-header" style="border-left:3px solid '+pb.color+'">';
+  h+='<span style="font-size:32px">'+pb.icon+'</span>';
+  h+='<div style="flex:1">';
+  h+='<div style="font-size:18px;font-weight:800;color:var(--text)">'+pb.title+'</div>';
+  h+='<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:'+pb.color+'22;color:'+pb.color+';font-weight:700">'+pb.persona+'</span>';
+  h+='<div style="font-size:12px;color:var(--text2);margin-top:4px;line-height:1.4">'+pb.desc+'</div>';
+  h+='</div>';
+  h+='</div>';
+
+  // Kill switch / rules alert
+  h+='<div class="pb-ks">⚠ REGRAS CRITICAS — '+pb.rules+'</div>';
 
   // Steps
-  h+='<div class="card" style="border-left:3px solid '+pb.color+'">';
-  h+='<div class="sec-t" style="margin-bottom:10px">Etapas do Framework</div>';
-  pb.steps.forEach(function(s){
-    h+='<div style="font-size:12px;color:var(--text);padding:6px 0;border-bottom:1px solid var(--border);line-height:1.5">'+s+'</div>';
+  h+='<div class="card" style="border-left:3px solid '+pb.color+';margin-bottom:10px">';
+  h+='<div class="sec-t" style="margin-bottom:8px">Etapas do Framework</div>';
+  pb.steps.forEach(function(s,i){
+    var parts=s.split('—');
+    var label=parts[0]?parts[0].trim():'';
+    var desc=parts.slice(1).join('—').trim();
+    h+='<div class="pb-step">';
+    h+='<div class="pb-step-num" style="background:'+pb.color+'22;color:'+pb.color+'">'+(i+1)+'</div>';
+    h+='<div class="pb-step-body">';
+    h+='<div class="pb-step-label">'+label+'</div>';
+    if(desc) h+='<div class="pb-step-desc">'+desc+'</div>';
+    h+='</div></div>';
   });
   h+='</div>';
 
   // When to use
-  h+='<div class="card">';
+  h+='<div class="card" style="margin-bottom:10px">';
   h+='<div class="sec-t" style="margin-bottom:6px">Quando Usar</div>';
-  h+='<div style="font-size:12px;color:var(--text2);line-height:1.5">'+pb.when+'</div>';
-  h+='</div>';
-
-  // Rules
-  h+='<div class="card" style="border-left:3px solid var(--yellow)">';
-  h+='<div class="sec-t" style="margin-bottom:6px;color:var(--yellow)">Regras Criticas</div>';
-  h+='<div style="font-size:12px;color:var(--text);line-height:1.5">'+pb.rules+'</div>';
+  h+='<div style="font-size:12px;color:var(--text2);line-height:1.6">'+pb.when+'</div>';
   h+='</div>';
 
   // Matching deals
   h+='<div class="card">';
-  h+='<div class="sec-t" style="margin-bottom:10px">Deals Aplicaveis <span style="font-size:12px;color:var(--text2);font-weight:400">('+matched.length+')</span></div>';
+  h+='<div class="sec-t" style="margin-bottom:10px">Deals Aplicaveis <span style="font-size:11px;color:var(--text2);font-weight:400">('+matched.length+')</span></div>';
   if(matched.length===0){
     h+='<div style="font-size:12px;color:var(--text2)">Nenhum deal ativo com persona '+pb.persona+'.</div>';
   } else {
@@ -1755,17 +1819,18 @@ function openPlaybook(id){
       var fase=d.fase||'—';
       var aging=d.delta||0;
       var agColor=aging>15?'var(--red)':aging>7?'var(--yellow)':'var(--green)';
-      h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="selectDeal(\''+d.deal_id+'\')">';
-      h+='<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+name+'</div>';
-      h+='<div style="font-size:10px;color:var(--text2)">'+fase+' — '+(d.linhaReceita||'—')+'</div></div>';
-      h+='<span style="font-size:11px;font-weight:600;color:'+agColor+'">'+aging+'d</span>';
+      h+='<div class="pb-deal-row" onclick="selectDeal(\''+d.deal_id+'\')">';
+      h+='<div class="pb-deal-info"><div class="pb-deal-name">'+name+'</div>';
+      h+='<div class="pb-deal-meta"><span>'+fase+'</span><span>·</span><span>'+(d.linhaReceita||'—')+'</span></div></div>';
+      h+='<span class="pb-deal-aging" style="color:'+agColor+'">'+aging+'d</span>';
       h+='</div>';
     });
     if(matched.length>10){
-      h+='<div style="font-size:11px;color:var(--text2);margin-top:8px;text-align:center">+ '+(matched.length-10)+' deals nao exibidos</div>';
+      h+='<div style="font-size:11px;color:var(--text2);margin-top:8px;text-align:center">+ '+(matched.length-10)+' deals</div>';
     }
   }
   h+='</div>';
+  h+='</div>'; // pb-det
 
   det.innerHTML=h;
 }
