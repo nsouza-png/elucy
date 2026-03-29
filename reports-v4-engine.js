@@ -749,11 +749,21 @@
     ];
 
     blocks.forEach(async function (block) {
+      var el = document.getElementById(block.id);
+      if (el) el.innerHTML = '<div style="margin-top:8px;padding:7px 10px;background:var(--bg4);border-radius:var(--r2);border-left:3px solid var(--border);opacity:.5;font-size:10px;color:var(--text2)">⏳ Carregando análise...</div>';
       try {
         var insights = await requestInsight(block.name, block.data);
-        var el = document.getElementById(block.id);
-        if (el && insights) el.innerHTML = renderInsightBox(insights);
-      } catch (e) { /* silent — block renders fine without insight */ }
+        el = document.getElementById(block.id);
+        if (!el) return;
+        if (insights && insights.length) {
+          el.innerHTML = renderInsightBox(insights);
+        } else {
+          el.innerHTML = '<div style="margin-top:8px;padding:6px 10px;background:var(--bg4);border-radius:var(--r2);border-left:3px solid var(--border);font-size:10px;color:var(--text2);opacity:.6">— Worker sem resposta. Tente novamente em instantes.</div>';
+        }
+      } catch (e) {
+        el = document.getElementById(block.id);
+        if (el) el.innerHTML = '<div style="margin-top:8px;padding:6px 10px;background:var(--rdim);border-radius:var(--r2);border-left:3px solid var(--red);font-size:10px;color:var(--red)">Falha ao carregar insight: ' + (e && e.message ? e.message : 'timeout') + '</div>';
+      }
     });
   }
 

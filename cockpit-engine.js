@@ -19,6 +19,18 @@ function _escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(
 function _today(){ return new Date().toISOString().slice(0,10); }
 function _now(){ return new Date().toISOString(); }
 
+// Sync error logger — centralizes Supabase op failures
+// Usage: catch(e){ _syncErr('syncDealRuntime', e); }
+// Inspect: window._elucySyncErrors (latest 50, newest first)
+var _syncErrLog = [];
+function _syncErr(op, err){
+  var entry = { op: op, msg: err && err.message ? err.message : String(err), ts: new Date().toISOString() };
+  _syncErrLog.unshift(entry);
+  if(_syncErrLog.length > 50) _syncErrLog.length = 50;
+  console.warn('[elucy:sync]', op, entry.msg);
+  window._elucySyncErrors = _syncErrLog;
+}
+
 // UX Writer — normaliza nomes canônicos para exibição visual
 // Remove prefixos técnicos [IM], [ON], [SKL], [EV] das linhas de receita
 function _fmtLinha(linha){
@@ -1099,7 +1111,7 @@ window._texConfirmSkip = function(reasonId){
         .eq('operator_email', opId)
         .eq('task_type', t.taskType)
         .in('task_status', ['pending','ready','in_progress'])
-        .then(function(res){ if(res.error) console.warn('[task-persist] skip error:', res.error.message); });
+        .then(function(res){ if(res.error){ _syncErr('task-persist', res.error); } });
     }
   }
   if(_texIdx < _texQueue.length - 1){
@@ -1169,7 +1181,7 @@ window.texComplete = function(){
       .eq('operator_email', opId)
       .eq('task_type', t.taskType)
       .in('task_status', ['pending','ready','in_progress'])
-      .then(function(res){ if(res.error) console.warn('[task-persist] complete error:', res.error.message); });
+      .then(function(res){ if(res.error){ _syncErr('task-persist', res.error); } });
   }
 
   // Advance cadence step if this task is from a cadence
@@ -1928,11 +1940,40 @@ async function renderHome(){
 
   var html = '';
 
+  // Auto focus mode: if enabled, silently activate recommended mode
+  (function(){
+    try{
+      if(localStorage.getItem('elucy_auto_focus')==='1'){
+        var recModeNow = (function(){
+          var deals=window._COCKPIT_DEALS||[];
+          var slaR=deals.filter(function(d){return d._urgency>=60;}).length;
+          var hot=deals.filter(function(d){return (d.temp||0)>=70;}).length;
+          var hOff=deals.filter(function(d){return (d._oppValue||0)>0&&(d.fase||'').toLowerCase().includes('opor');}).length;
+          var dm=deals.filter(function(d){return d.canal_de_marketing==='Social Media'&&!d._lastDMTouch;}).length;
+          var cold=deals.filter(function(d){return (d.delta||0)>7;}).length;
+          if(slaR>=3) return 'velocidade';
+          if(hot>=5) return 'alta_performance';
+          if(hOff>=3) return 'handoff';
+          if(dm>=4) return 'social_dm';
+          if(cold>=6) return 'reativacao';
+          return 'qualificacao';
+        })();
+        if(recModeNow && recModeNow !== _operatorCtx.focus_mode){
+          saveOperatorSettings({focus_mode: recModeNow});
+          _operatorCtx.focus_mode = recModeNow;
+        }
+      }
+    }catch(e){}
+  })();
+
+  var autoFocusOn = (function(){ try{ return localStorage.getItem('elucy_auto_focus')==='1'; }catch(e){ return false; } })();
+
   // BLOCO 1 — Foco do dia
   html += '<div class="home-block">'
     + '<div class="home-block-title">Foco do Dia</div>'
     + '<div class="home-focus-row">'
     + '<div class="home-focus-mode"><span class="home-fm-icon">'+focusMode.icon+'</span> '+focusMode.label+'</div>'
+    + '<button class="home-fm-btn home-fm-auto'+(autoFocusOn?' on':'')+'" onclick="window.toggleAutoFocus(this)" title="Modo Automático: ajusta o foco com base no pipeline a cada atualização">'+(autoFocusOn?'Auto ✓':'Auto')+'</button>'
     + '<button class="home-fm-btn" onclick="window.cycleFocusMode()">Trocar Modo</button>'
     + '</div>'
     + '<div class="home-meta-grid">'
@@ -2037,9 +2078,18 @@ window._activateRecMode = function(mode){
   saveOperatorSettings({focus_mode: mode}).then(function(){
     renderHome();
     if(window.renderTaskRunner) window.renderTaskRunner();
-    var label = (FOCUS_MODES[mode]||{}).label || mode;
-    if(window.showSyncToast) window.showSyncToast('ok','Modo ativado: '+label);
   });
+};
+
+window.toggleAutoFocus = function(btn){
+  try{
+    var isOn = localStorage.getItem('elucy_auto_focus') === '1';
+    var next = !isOn;
+    localStorage.setItem('elucy_auto_focus', next ? '1' : '0');
+    if(btn){ btn.textContent = next ? 'Auto ✓' : 'Auto'; btn.classList.toggle('on', next); }
+    // If activating, apply immediately
+    if(next) renderHome();
+  }catch(e){}
 };
 
 // ==================================================================
@@ -3180,11 +3230,9 @@ async function syncDealRuntime(){
     try {
       var res = await sb.from('deal_runtime')
         .upsert(chunk, { onConflict: 'deal_id,operator_email' });
-      if(res.error) console.warn('[runtime-sync] chunk error:', res.error.message);
+      if(res.error){ _syncErr('runtime-sync', res.error); }
       else synced += chunk.length;
-    } catch(e){
-      console.warn('[runtime-sync] chunk exception:', e.message);
-    }
+    } catch(e){ _syncErr('runtime-sync', e); }
   }
   console.log('[runtime-sync] ' + synced + '/' + rows.length + ' deals synced to deal_runtime');
   return synced;
@@ -3222,7 +3270,7 @@ async function loadTaxonomy(){
       });
       console.log('[taxonomy] focus_modes loaded: '+fm.data.length);
     }
-  } catch(e){ console.warn('[taxonomy] load error:', e.message); }
+  } catch(e){ _syncErr('taxonomy', e); }
 }
 window.loadTaxonomy = loadTaxonomy;
 
@@ -3248,7 +3296,7 @@ async function saveDMTouchpointV5(leadId, tpType, description, channel, framewor
     content_preview: (description||'').substring(0,200),
     copy_framework: framework || null
   });
-  if(res.error) console.warn('[dm-tp] insert error:', res.error.message);
+  if(res.error){ _syncErr('dm-tp', res.error); }
 }
 // Override global
 if(typeof saveDMTouchpoint === 'function') saveDMTouchpoint = saveDMTouchpointV5;
@@ -3351,7 +3399,7 @@ async function syncDailySnapshot(){
     formula_version:'v5.0', source:'cockpit_engine'
   };
   var res = await sb.from('analytics_snapshots').upsert(row, {onConflict:'snapshot_date,period_type,operator_email,revenue_line,stage,channel'});
-  if(res.error) console.warn('[snapshot] upsert error:', res.error.message);
+  if(res.error){ _syncErr('snapshot', res.error); }
   else console.log('[snapshot] daily snapshot synced for '+email);
 }
 window.syncDailySnapshot = syncDailySnapshot;
@@ -3737,9 +3785,9 @@ async function syncForecastRuntime(){
     var chunk = rows.slice(i, i + CHUNK);
     try {
       var res = await sb.from('forecast_runtime').upsert(chunk, { onConflict:'deal_id,operator_email' });
-      if(res.error) console.warn('[forecast-sync] chunk error:', res.error.message);
+      if(res.error){ _syncErr('forecast-sync-chunk', res.error); }
       else synced += chunk.length;
-    } catch(e){ console.warn('[forecast-sync] exception:', e.message); }
+    } catch(e){ _syncErr('forecast-sync', e); }
   }
 
   // Insert forecast_events (audit — no upsert, always append)
@@ -3748,7 +3796,7 @@ async function syncForecastRuntime(){
       var evChunk = events.slice(j, j + CHUNK);
       try {
         await sb.from('forecast_events').insert(evChunk);
-      } catch(e){ console.warn('[forecast-events] insert error:', e.message); }
+      } catch(e){ _syncErr('forecast-events', e); }
     }
   }
 
@@ -4231,7 +4279,7 @@ async function syncOperatorEfficiency(periodType, periodKey){
 
   var res = await sb.from('operator_efficiency')
     .upsert(row, { onConflict:'operator_email,period_type,period_key' });
-  if(res.error) console.warn('[performance-sync] error:', res.error.message);
+  if(res.error){ _syncErr('performance-sync', res.error); }
   else console.log('[performance-sync] ' + perf.operator_email + ' ' + perf.period_type + ':' + perf.period_key + ' synced (score: ' + perf.overall_score + ')');
   return perf;
 }
@@ -4533,7 +4581,7 @@ async function calcPerformanceReportV3(periodType, periodKey){
       revenue_score: revenueScore,
       final_score: finalScore / 100
     }, { onConflict: 'operator_email,period_type,period_key' });
-  } catch(e){ console.warn('[perf-v3] persist error:', e.message); }
+  } catch(e){ _syncErr('perf-v3', e); }
 
   // ── PERSIST LINE PERFORMANCE ──
   try {
@@ -4558,7 +4606,7 @@ async function calcPerformanceReportV3(periodType, periodKey){
       };
     });
     if(lineRows.length > 0) await sb.from('operator_line_performance').upsert(lineRows);
-  } catch(e){ console.warn('[perf-v3] line persist error:', e.message); }
+  } catch(e){ _syncErr('perf-v3', e); }
 
   console.log('[perf-v3] report generated — score: ' + finalScore + ' (' + band + ')');
   return report;
@@ -5010,7 +5058,7 @@ async function switchPerfPeriod(periodType){
     if(window.calcPerformanceReportV3){
       prevReport = await window.calcPerformanceReportV3(periodType, prevKey);
     }
-  } catch(e){ console.warn('[perf-v4] prev period error:', e.message); }
+  } catch(e){ _syncErr('perf-v4', e); }
   _perfViewState.prevReport = prevReport;
 
   if(report) renderPerformanceReportV3(report);
@@ -5042,7 +5090,7 @@ async function loadFrameworkRuntime(){
         .select('*')
         .in('deal_id', ids);
       if(res.data) allRows = allRows.concat(res.data);
-    } catch(e){ console.warn('[framework] load error:', e.message); }
+    } catch(e){ _syncErr('framework', e); }
   }
 
   // Attach to deal map
@@ -5215,7 +5263,7 @@ async function consolidateFrameworkRuntime(dealId){
 
   // Upsert
   var upsertRes = await sb.from('deal_framework_runtime').upsert(row, { onConflict: 'deal_id' });
-  if(upsertRes.error) console.warn('[framework] consolidation error:', upsertRes.error.message);
+  if(upsertRes.error){ _syncErr('framework', upsertRes.error); }
   else console.log('[framework] consolidated deal ' + dealId + ' | qs=' + row.qualitative_score + ' coverage=' + overall_coverage);
 
   // Event
@@ -5801,7 +5849,7 @@ async function persistSignals(dealId, signals, scoreData, operatorEmail){
   runtimeRow.explain_json = JSON.stringify(scoreData.explain_json||{});
 
   var rtRes = await sb.from('deal_signal_runtime').upsert(runtimeRow, { onConflict:'deal_id' });
-  if(rtRes.error) console.warn('[signals] runtime upsert error:', rtRes.error.message);
+  if(rtRes.error){ _syncErr('signals', rtRes.error); }
 
   // Insert individual signals (append-only)
   var rows = signals.map(function(s){
@@ -5822,7 +5870,7 @@ async function persistSignals(dealId, signals, scoreData, operatorEmail){
 
   if(rows.length){
     var insRes = await sb.from('deal_signals').insert(rows);
-    if(insRes.error) console.warn('[signals] insert error:', insRes.error.message);
+    if(insRes.error){ _syncErr('signals', insRes.error); }
   }
 }
 window.persistSignals = persistSignals;
@@ -5863,7 +5911,7 @@ async function runSignalEngine(persist){
     });
 
     if(persist){
-      persistSignals(id, signals, scoreData, email).catch(function(e){ console.warn('[signals] persist err', e); });
+      persistSignals(id, signals, scoreData, email).catch(function(e){ _syncErr('signals', e); });
     }
   });
 
@@ -6208,7 +6256,7 @@ async function syncDataQualityRuntimeV19(){
 
   if(rows.length){
     var res = await sb.from('deal_data_quality_runtime').upsert(rows, { onConflict: 'deal_id' });
-    if(res.error) console.warn('[L19] sync error:', res.error.message);
+    if(res.error){ _syncErr('L19', res.error); }
     else console.log('[L19] Data Quality synced for ' + rows.length + ' deals');
   }
   return rows;
@@ -6362,7 +6410,7 @@ async function syncTransitionRuntimeV20(){
 
   if(rows.length){
     var res = await sb.from('deal_transition_runtime').upsert(rows, { onConflict: 'deal_id' });
-    if(res.error) console.warn('[L20] sync error:', res.error.message);
+    if(res.error){ _syncErr('L20', res.error); }
     else console.log('[L20] Transition Rules synced for ' + rows.length + ' deals');
   }
   return rows;
@@ -6511,7 +6559,7 @@ async function syncPortfolioRuntimeV21(){
 
   if(rows.length){
     var res = await sb.from('deal_portfolio_runtime').upsert(rows, { onConflict: 'deal_id' });
-    if(res.error) console.warn('[L21] sync error:', res.error.message);
+    if(res.error){ _syncErr('L21', res.error); }
     else console.log('[L21] Portfolio Priority synced for ' + rows.length + ' deals | P1:' + rows.filter(function(r){return r.priority_band==='p1';}).length + ' P2:' + rows.filter(function(r){return r.priority_band==='p2';}).length);
   }
   return rows;
@@ -6724,7 +6772,7 @@ async function syncAttributionRuntimeV22(){
 
   if(summaries.length){
     var res = await sb.from('deal_attribution_runtime').upsert(summaries, { onConflict: 'deal_id' });
-    if(res.error) console.warn('[L22] sync error:', res.error.message);
+    if(res.error){ _syncErr('L22', res.error); }
     else console.log('[L22] Attribution synced for ' + summaries.length + ' deals');
   }
   return summaries;
@@ -7336,7 +7384,7 @@ async function syncEnterpriseRuntimeV23(){
 
   if(rows.length){
     var res = await sb.from('deal_enterprise_runtime').upsert(rows, { onConflict: 'deal_id' });
-    if(res.error) console.warn('[L23] sync error:', res.error.message);
+    if(res.error){ _syncErr('L23', res.error); }
     else console.log('[L23] Enterprise synced for ' + rows.length + ' deals');
   }
   return rows;
@@ -7375,7 +7423,7 @@ async function syncTrustedAdvisorRuntimeV24(){
 
   if(rows.length){
     var res = await sb.from('deal_trusted_advisor_runtime').upsert(rows, { onConflict: 'deal_id' });
-    if(res.error) console.warn('[L24] sync error:', res.error.message);
+    if(res.error){ _syncErr('L24', res.error); }
     else console.log('[L24] Trusted Advisor synced for ' + rows.length + ' deals');
   }
   return rows;
@@ -7423,7 +7471,7 @@ async function syncStrategicIntelligenceV25(){
   };
 
   var res = await sb.from('strategic_intelligence_runtime').upsert([row], { onConflict: 'operator_email' });
-  if(res.error) console.warn('[L25] sync error:', res.error.message);
+  if(res.error){ _syncErr('L25', res.error); }
   else console.log('[L25] Strategic Intelligence synced');
 
   // Store in window for UI access
@@ -7470,7 +7518,7 @@ async function syncSpinAuditRuntimeV26(){
 
   if(rows.length){
     var res = await sb.from('deal_spin_audit_runtime').upsert(rows, { onConflict: 'deal_id' });
-    if(res.error) console.warn('[L26] sync error:', res.error.message);
+    if(res.error){ _syncErr('L26', res.error); }
     else console.log('[L26] SPIN Audit synced for ' + rows.length + ' deals');
   }
   return rows;
@@ -7511,7 +7559,7 @@ async function syncRFVPortfolioRuntimeV27(){
 
   if(dealRows.length){
     var res = await sb.from('deal_rfv_runtime').upsert(dealRows, { onConflict: 'deal_id' });
-    if(res.error) console.warn('[L27] deal RFV sync error:', res.error.message);
+    if(res.error){ _syncErr('L27', res.error); }
   }
 
   // Portfolio summary
@@ -7530,7 +7578,7 @@ async function syncRFVPortfolioRuntimeV27(){
   };
 
   var res2 = await sb.from('rfv_portfolio_runtime').upsert([summaryRow], { onConflict: 'operator_email' });
-  if(res2.error) console.warn('[L27] portfolio sync error:', res2.error.message);
+  if(res2.error){ _syncErr('L27', res2.error); }
   else console.log('[L27] RFV Portfolio synced: ' + dealRows.length + ' deals, health=' + portfolio._summary.health_score);
 
   window._rfvPortfolio = portfolio;
