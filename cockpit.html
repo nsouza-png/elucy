@@ -2870,6 +2870,15 @@ async function callSyncDeals(){
   setInterval(requestRefresh,POLL_MS);
 })();
 
+// Cmd+, (Mac) / Ctrl+, (Win) → abrir Settings
+document.addEventListener('keydown',function(e){
+  if((e.metaKey||e.ctrlKey)&&e.key===','){
+    e.preventDefault();
+    if(document.getElementById('settings-modal')) closeSettings();
+    else openSettings();
+  }
+});
+
 // ── OPERADOR / CRM SYNC ──────────────────────────────────────────────
 
 const DB_ENDPOINT='https://dbc-8acefaf9-a170.cloud.databricks.com/api/2.0/sql/statements';
@@ -2889,95 +2898,453 @@ function applyOperator(email){
   document.getElementById('op-pill').classList.add('show');
 }
 
-function openSettings(){
+// ── OPERATOR SETTINGS — Cursor-inspired two-pane ─────────────────────
+function openSettings(section){
+  if(document.getElementById('settings-modal')) return;
   const saved=localStorage.getItem('elucy_operator_email')||'';
   const savedToken=localStorage.getItem('elucy_db_token')||'';
   const tokenMask=savedToken?'••••'+savedToken.slice(-8):'';
+  const ctx=window.getOperatorCtx();
+  const voiceMode=localStorage.getItem('elucy_voice_mode')||'standard';
+  const autoDraft=localStorage.getItem('elucy_auto_draft')==='1';
+  const tension=localStorage.getItem('elucy_challenger_tension')||'equilibrado';
+  const autoFocus=localStorage.getItem('elucy_auto_focus')==='1';
+  const dqi=ctx.data_quality_score!=null?Math.round(ctx.data_quality_score*100):null;
+  const activeSection=section||'perfil';
+
   const ov=document.createElement('div');
   ov.className='modal-ov';
   ov.id='settings-modal';
+  ov.style.cssText='align-items:center;justify-content:center';
+
   ov.innerHTML=`
-    <div class="modal" style="max-width:440px">
-      <div class="modal-t">Configurações</div>
+<style>
+#settings-panel{display:flex;width:700px;max-width:96vw;max-height:88vh;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.5)}
+#settings-nav{width:188px;min-width:188px;background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:0}
+#settings-nav-header{padding:16px 16px 10px;border-bottom:1px solid var(--border)}
+#settings-nav-title{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+.snav-section{padding:6px 8px 2px;font-size:10px;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase;margin-top:4px}
+.snav-item{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:7px;margin:1px 6px;cursor:pointer;font-size:12px;font-weight:500;color:var(--text-2);transition:background .12s,color .12s;user-select:none}
+.snav-item:hover{background:var(--surface-2,rgba(255,255,255,.06));color:var(--text)}
+.snav-item.active{background:var(--blue);color:#fff}
+.snav-item svg{opacity:.7;flex-shrink:0}
+.snav-item.active svg{opacity:1}
+#settings-nav-status{margin-top:auto;padding:12px 10px;border-top:1px solid var(--border)}
+.op-status-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--border)}
+.op-status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;box-shadow:0 0 6px var(--green)}
+.op-status-name{font-size:11px;font-weight:600;color:var(--text);line-height:1.3}
+.op-status-role{font-size:9px;color:var(--muted)}
+#settings-content{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+#settings-content-header{padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+#settings-content-title{font-size:14px;font-weight:700;color:var(--text)}
+#settings-content-subtitle{font-size:11px;color:var(--muted);margin-top:2px}
+.settings-save-btn{font-size:11px;font-weight:600;padding:6px 14px;border-radius:6px;background:var(--blue);color:#fff;border:none;cursor:pointer;transition:opacity .15s}
+.settings-save-btn:hover{opacity:.85}
+#settings-body{padding:18px 20px;flex:1}
+.settings-panel{display:none}
+.settings-panel.active{display:block}
+.sg-label{font-size:10px;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;margin-top:18px}
+.sg-label:first-child{margin-top:0}
+.sg-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:8px;background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--border);margin-bottom:6px}
+.sg-row-label{font-size:12px;font-weight:600;color:var(--text)}
+.sg-row-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.sg-toggle{position:relative;width:36px;height:20px;flex-shrink:0}
+.sg-toggle input{opacity:0;width:0;height:0;position:absolute}
+.sg-toggle-track{position:absolute;inset:0;background:var(--border);border-radius:10px;transition:background .2s;cursor:pointer}
+.sg-toggle input:checked+.sg-toggle-track{background:var(--blue)}
+.sg-toggle-knob{position:absolute;top:3px;left:3px;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform .2s;pointer-events:none}
+.sg-toggle input:checked~.sg-toggle-knob{transform:translateX(16px)}
+.sg-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 10px;font-size:12px;color:var(--text);outline:none;transition:border-color .15s}
+.sg-input:focus{border-color:var(--blue)}
+.sg-select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 10px;font-size:12px;color:var(--text);outline:none;cursor:pointer}
+.sg-select:focus{border-color:var(--blue)}
+.sg-note{font-size:10px;color:var(--muted);margin-top:5px;line-height:1.5}
+.sg-radio-group{display:flex;gap:6px;flex-wrap:wrap}
+.sg-radio-opt{flex:1;min-width:80px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer;text-align:center;transition:border-color .15s,background .15s;font-size:11px;font-weight:600;color:var(--text-2)}
+.sg-radio-opt:hover{border-color:var(--blue);color:var(--text)}
+.sg-radio-opt.active{border-color:var(--blue);background:rgba(59,130,246,.12);color:var(--blue)}
+.sg-radio-opt .sg-opt-icon{font-size:16px;display:block;margin-bottom:4px}
+.sg-radio-opt .sg-opt-label{font-size:10px;font-weight:700;display:block}
+.sg-radio-opt .sg-opt-sub{font-size:9px;color:var(--muted);display:block;margin-top:2px;font-weight:400}
+.sg-meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sg-meta-item label{font-size:10px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px}
+.sg-kill-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2,rgba(255,255,255,.03));margin-bottom:5px}
+.sg-kill-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sg-kill-dot.on{background:var(--red)}
+.sg-kill-dot.off{background:var(--border)}
+.sg-kill-name{font-size:11px;font-weight:600;color:var(--text);flex:1}
+.sg-kill-badge{font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700}
+.sg-kill-badge.on{background:rgba(239,68,68,.15);color:var(--red)}
+.sg-kill-badge.off{background:var(--surface-2,rgba(255,255,255,.06));color:var(--muted)}
+.sg-conn-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2,rgba(255,255,255,.03));margin-bottom:6px}
+.sg-conn-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sg-conn-label{font-size:12px;font-weight:600;color:var(--text)}
+.sg-conn-sub{font-size:10px;color:var(--muted)}
+.sg-conn-action{margin-left:auto}
+.sg-conn-btn{font-size:10px;font-weight:600;padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;transition:border-color .15s}
+.sg-conn-btn:hover{border-color:var(--blue);color:var(--blue)}
+.sg-conn-btn.connected{border-color:var(--green);color:var(--green)}
+.sg-dqi-bar{height:6px;border-radius:3px;background:var(--border);overflow:hidden;margin-top:6px}
+.sg-dqi-fill{height:100%;border-radius:3px;background:var(--green);transition:width .4s}
+@media(max-width:640px){#settings-panel{flex-direction:column;max-height:96vh}#settings-nav{width:100%;min-width:0;flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid var(--border)}#settings-nav-status{display:none}#settings-body{padding:14px}}
+</style>
+<div id="settings-panel">
+  <div id="settings-nav">
+    <div id="settings-nav-header">
+      <div id="settings-nav-title">Configurações</div>
+    </div>
+    <div class="snav-section">Identidade</div>
+    <div class="snav-item ${activeSection==='perfil'?'active':''}" onclick="switchSettingsSection('perfil',this)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      Perfil Biológico
+    </div>
+    <div class="snav-section">Copilot</div>
+    <div class="snav-item ${activeSection==='copilot'?'active':''}" onclick="switchSettingsSection('copilot',this)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      ELUCI Copilot
+    </div>
+    <div class="snav-section">Integrações</div>
+    <div class="snav-item ${activeSection==='conexoes'?'active':''}" onclick="switchSettingsSection('conexoes',this)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+      Conexões & Canais
+    </div>
+    <div class="snav-section">Governança</div>
+    <div class="snav-item ${activeSection==='governanca'?'active':''}" onclick="switchSettingsSection('governanca',this)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Governança & DQI
+    </div>
+    <div class="snav-item ${activeSection==='alertas'?'active':''}" onclick="switchSettingsSection('alertas',this)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      Alertas
+    </div>
+    <div id="settings-nav-status">
+      <div class="op-status-row">
+        <div class="op-status-dot"></div>
+        <div>
+          <div class="op-status-name">${(saved||'operador').split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,c=>c.toUpperCase()).split(' ')[0]}</div>
+          <div class="op-status-role">${ctx.role||'SDR'} · ${ctx.focus_mode||'—'}</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-      <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
-        <div class="modal-s" style="font-weight:600;margin-bottom:6px">Operador</div>
-        <div class="modal-f">
+  <div id="settings-content">
+    <div id="settings-content-header">
+      <div>
+        <div id="settings-content-title">Perfil Biológico</div>
+        <div id="settings-content-subtitle">Identidade, metas e calibração do operador</div>
+      </div>
+      <button class="settings-save-btn" onclick="saveOperator()">Salvar Ajustes</button>
+    </div>
+    <div id="settings-body">
+
+      <!-- PERFIL -->
+      <div class="settings-panel ${activeSection==='perfil'?'active':''}" id="sp-perfil">
+        <div class="sg-label">Identidade</div>
+        <div class="modal-f" style="margin-bottom:10px">
           <label class="modal-l">E-mail corporativo</label>
-          <input class="modal-i" id="op-email-input" type="email" placeholder="nome@g4educacao.com" value="${saved}" autocomplete="email" ${window.IS_REMOTE?'disabled style="opacity:0.6;cursor:not-allowed"':''}>
+          <input class="sg-input" id="op-email-input" type="email" placeholder="nome@g4educacao.com" value="${saved}" autocomplete="email" ${window.IS_REMOTE?'disabled style="opacity:0.5;cursor:not-allowed"':''}>
+          <div class="sg-note">${window.IS_REMOTE?'Definido via login — faça logout para trocar de conta.':'Filtro principal do funil_comercial. Nunca enviado a terceiros.'}</div>
         </div>
-        <div class="modal-note">${window.IS_REMOTE?'Definido automaticamente pelo login. Faça logout para trocar de conta.':'Usado como filtro no funil_comercial. Nunca enviado a terceiros.'}</div>
+        <div class="sg-label">Metas Mensais</div>
+        <div class="sg-meta-grid">
+          <div><label style="font-size:10px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">FUPs</label><input class="sg-input" id="op-meta-fups" type="number" min="1" value="${ctx.meta_mensal.fups||300}"></div>
+          <div><label style="font-size:10px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Qualificações</label><input class="sg-input" id="op-meta-qual" type="number" min="1" value="${ctx.meta_mensal.qualificacoes||100}"></div>
+          <div><label style="font-size:10px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Handoffs</label><input class="sg-input" id="op-meta-handoffs" type="number" min="1" value="${ctx.meta_mensal.handoffs||40}"></div>
+          <div><label style="font-size:10px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">OPP (Oportunidades)</label><input class="sg-input" id="op-meta-opp" type="number" min="1" value="${ctx.meta_mensal.opp||15}"></div>
+        </div>
+        <div class="sg-note" style="margin-top:6px">OPP = deals que chegaram à fase Oportunidade ou Negociação. Histórico salvo por mês.</div>
+
+        <div class="sg-label" style="margin-top:20px">Databricks</div>
+        <div style="margin-bottom:8px">
+          <label style="font-size:10px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Token de acesso pessoal</label>
+          <input class="sg-input" id="op-token-input" type="password" placeholder="${tokenMask||'dapi...'}" autocomplete="off" style="font-family:monospace">
+        </div>
+        ${savedToken
+          ?'<div style="font-size:10px;color:var(--green);display:flex;align-items:center;gap:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Token configurado</div>'
+          :'<div style="font-size:10px;color:var(--yellow)">⚠ Sem token — o modo local não funcionará.</div>'
+        }
+        <div class="sg-note">Settings → Developer → Access Tokens no Databricks. Armazenado apenas no seu browser.</div>
       </div>
 
-      <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
-        <div class="modal-s" style="font-weight:600;margin-bottom:6px">Metas Mensais</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div class="modal-f"><label class="modal-l">FUPs</label><input class="modal-i" id="op-meta-fups" type="number" min="1" value="${window.getOperatorCtx().meta_mensal.fups||300}" style="font-size:12px"></div>
-          <div class="modal-f"><label class="modal-l">Qualificações</label><input class="modal-i" id="op-meta-qual" type="number" min="1" value="${window.getOperatorCtx().meta_mensal.qualificacoes||100}" style="font-size:12px"></div>
-          <div class="modal-f"><label class="modal-l">Handoffs</label><input class="modal-i" id="op-meta-handoffs" type="number" min="1" value="${window.getOperatorCtx().meta_mensal.handoffs||40}" style="font-size:12px"></div>
-          <div class="modal-f"><label class="modal-l">OPP (Oportunidades)</label><input class="modal-i" id="op-meta-opp" type="number" min="1" value="${window.getOperatorCtx().meta_mensal.opp||15}" style="font-size:12px"></div>
+      <!-- COPILOT -->
+      <div class="settings-panel ${activeSection==='copilot'?'active':''}" id="sp-copilot">
+        <div class="sg-label">Voz do Copilot</div>
+        <div class="sg-radio-group" id="voice-mode-group">
+          <div class="sg-radio-opt ${voiceMode==='standard'?'active':''}" onclick="selectVoiceMode('standard',this)">
+            <span class="sg-opt-icon">🎯</span>
+            <span class="sg-opt-label">Standard G4</span>
+            <span class="sg-opt-sub">Direto, objetivo, institucional</span>
+          </div>
+          <div class="sg-radio-opt ${voiceMode==='cyborg'?'active':''}" onclick="selectVoiceMode('cyborg',this)">
+            <span class="sg-opt-icon">⚡</span>
+            <span class="sg-opt-label">Cyborg</span>
+            <span class="sg-opt-sub">Técnico, denso, orientado a dados</span>
+          </div>
+          <div class="sg-radio-opt ${voiceMode==='founder'?'active':''}" onclick="selectVoiceMode('founder',this)">
+            <span class="sg-opt-icon">🔥</span>
+            <span class="sg-opt-label">Founder Mode</span>
+            <span class="sg-opt-sub">Tom de fundador, informal, autoridade</span>
+          </div>
         </div>
-        <div class="modal-note">Metas mensais do operador. OPP = deals que chegaram à fase Oportunidade/Negociação. Salvo com histórico por mês.</div>
-      </div>
+        <div class="sg-note">Calibra o tom de toda copy gerada pelo ELUCI. Black Box Protocol permanece ativo independente do modo.</div>
 
-      <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
-        <div class="modal-s" style="font-weight:600;margin-bottom:6px">Databricks</div>
-        <div class="modal-f">
-          <label class="modal-l">Token de acesso</label>
-          <input class="modal-i" id="op-token-input" type="password" placeholder="${tokenMask||'dapi...'}" autocomplete="off" style="font-family:monospace;font-size:12px">
+        <div class="sg-label" style="margin-top:20px">Challenger Engine</div>
+        <div class="sg-label" style="font-size:9px;letter-spacing:.04em;color:var(--muted);text-transform:none;margin-top:-6px;margin-bottom:8px">Tensão aplicada nos copies Titan (Challenger Framework)</div>
+        <div class="sg-radio-group" id="tension-group">
+          <div class="sg-radio-opt ${tension==='conservador'?'active':''}" onclick="selectTension('conservador',this)">
+            <span class="sg-opt-label">Conservador</span>
+            <span class="sg-opt-sub">Reframe suave, baixo atrito</span>
+          </div>
+          <div class="sg-radio-opt ${tension==='equilibrado'?'active':''}" onclick="selectTension('equilibrado',this)">
+            <span class="sg-opt-label">Equilibrado</span>
+            <span class="sg-opt-sub">Padrão G4 — tensão calibrada</span>
+          </div>
+          <div class="sg-radio-opt ${tension==='agressivo'?'active':''}" onclick="selectTension('agressivo',this)">
+            <span class="sg-opt-label">Agressivo</span>
+            <span class="sg-opt-sub">Máxima tensão, reframe direto</span>
+          </div>
         </div>
-        <div class="modal-note">Token pessoal do Databricks (Settings → Developer → Access tokens). Armazenado apenas no seu navegador.</div>
-        ${savedToken?'<div style="font-size:10px;color:var(--green);margin-top:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Configurado</div>':'<div style="font-size:10px;color:var(--yellow);margin-top:4px">Sem token — o modo local não funcionará sem ele.</div>'}
-      </div>
 
-      <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
-        <div class="modal-s" style="font-weight:600;margin-bottom:6px">ELUCi Motor LLM</div>
-        <div style="font-size:10px;color:var(--green);margin-top:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Key centralizada — motor ativo para todos os operadores</div>
-        <div class="modal-f" style="margin-top:8px">
-          <label class="modal-l">Modelo</label>
-          <select class="modal-i" id="op-api-model" style="font-size:12px">
-            <option value="claude-sonnet-4-20250514" ${window.ELUCY_API_MODEL==='claude-sonnet-4-20250514'?'selected':''}>Claude Sonnet 4 (rápido)</option>
-            <option value="claude-opus-4-20250514" ${window.ELUCY_API_MODEL==='claude-opus-4-20250514'?'selected':''}>Claude Opus 4 (profundo)</option>
-            <option value="claude-haiku-4-5-20251001" ${window.ELUCY_API_MODEL==='claude-haiku-4-5-20251001'?'selected':''}>Claude Haiku 4.5 (econômico)</option>
-          </select>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
-          <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer">
-            <input type="checkbox" id="op-api-enabled" ${window.ELUCY_API_ENABLED?'checked':''}>
-            Motor LLM direto ativo
+        <div class="sg-label" style="margin-top:20px">Automações</div>
+        <div class="sg-row">
+          <div>
+            <div class="sg-row-label">Auto-Draft de Copy</div>
+            <div class="sg-row-sub">Gera rascunho automaticamente ao abrir um deal no painel DM</div>
+          </div>
+          <label class="sg-toggle" style="margin-left:16px">
+            <input type="checkbox" id="op-auto-draft" ${autoDraft?'checked':''}>
+            <div class="sg-toggle-track"></div>
+            <div class="sg-toggle-knob"></div>
           </label>
         </div>
-        <div class="modal-note">Claude API direta com todos os 40 MCPs do Elucy. Quando ativo, análises e copys são geradas em tempo real sem depender do G4 OS. Fallback automático para o Worker se falhar.</div>
+        <div class="sg-row">
+          <div>
+            <div class="sg-row-label">Auto Focus Mode</div>
+            <div class="sg-row-sub">Ativa automaticamente o modo recomendado ao carregar o cockpit</div>
+          </div>
+          <label class="sg-toggle" style="margin-left:16px">
+            <input type="checkbox" id="op-auto-focus" ${autoFocus?'checked':''}>
+            <div class="sg-toggle-track"></div>
+            <div class="sg-toggle-knob"></div>
+          </label>
+        </div>
+
+        <div class="sg-label" style="margin-top:20px">Motor LLM</div>
+        <div class="sg-row" style="margin-bottom:8px">
+          <div>
+            <div class="sg-row-label">Motor direto ativo</div>
+            <div class="sg-row-sub">Claude API com todos os MCPs. Fallback automático para o worker se falhar.</div>
+          </div>
+          <label class="sg-toggle" style="margin-left:16px">
+            <input type="checkbox" id="op-api-enabled" ${window.ELUCY_API_ENABLED?'checked':''}>
+            <div class="sg-toggle-track"></div>
+            <div class="sg-toggle-knob"></div>
+          </label>
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Modelo</label>
+          <select class="sg-select" id="op-api-model">
+            <option value="claude-sonnet-4-20250514" ${window.ELUCY_API_MODEL==='claude-sonnet-4-20250514'?'selected':''}>Claude Sonnet 4 — rápido (recomendado)</option>
+            <option value="claude-opus-4-20250514" ${window.ELUCY_API_MODEL==='claude-opus-4-20250514'?'selected':''}>Claude Opus 4 — análise profunda</option>
+            <option value="claude-haiku-4-5-20251001" ${window.ELUCY_API_MODEL==='claude-haiku-4-5-20251001'?'selected':''}>Claude Haiku 4.5 — econômico</option>
+          </select>
+        </div>
+        <div style="font-size:10px;color:var(--green);margin-top:6px;display:flex;align-items:center;gap:4px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Key centralizada — motor ativo para todos os operadores</div>
       </div>
 
-      <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
-        <div class="modal-s" style="font-weight:600;margin-bottom:6px">Integrações</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <a href="https://web.whatsapp.com" target="_blank" rel="noopener" class="btn bs btn-sm" style="text-decoration:none;display:flex;align-items:center;gap:4px">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-            WhatsApp Web
-          </a>
-          <a href="https://www.instagram.com/direct/inbox/" target="_blank" rel="noopener" class="btn bs btn-sm" style="text-decoration:none;display:flex;align-items:center;gap:4px">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E4405F" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="#E4405F" stroke="none"/></svg>
-            Instagram DM
-          </a>
+      <!-- CONEXOES -->
+      <div class="settings-panel ${activeSection==='conexoes'?'active':''}" id="sp-conexoes">
+        <div class="sg-label">CRM</div>
+        <div class="sg-conn-item">
+          <div class="sg-conn-icon" style="background:rgba(255,122,0,.12)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF7A00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
+          </div>
+          <div>
+            <div class="sg-conn-label">HubSpot</div>
+            <div class="sg-conn-sub">Pipeline sincronizado via Databricks</div>
+          </div>
+          <div class="sg-conn-action">
+            <button class="sg-conn-btn connected">Conectado</button>
+          </div>
+        </div>
+        <div class="sg-conn-item">
+          <div class="sg-conn-icon" style="background:rgba(91,91,240,.12)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B5BF0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+          </div>
+          <div>
+            <div class="sg-conn-label">Databricks</div>
+            <div class="sg-conn-sub">${savedToken?'Token configurado · Sync automático':'Sem token — configure no Perfil'}</div>
+          </div>
+          <div class="sg-conn-action">
+            <button class="sg-conn-btn ${savedToken?'connected':''}" onclick="switchSettingsSection('perfil',null)">${savedToken?'Configurado':'Configurar'}</button>
+          </div>
+        </div>
+
+        <div class="sg-label" style="margin-top:16px">Canais de Outreach</div>
+        <div class="sg-conn-item">
+          <div class="sg-conn-icon" style="background:rgba(37,211,102,.12)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          </div>
+          <div>
+            <div class="sg-conn-label">WhatsApp Web</div>
+            <div class="sg-conn-sub">Deep link para envio direto no painel DM</div>
+          </div>
+          <div class="sg-conn-action">
+            <a href="https://web.whatsapp.com" target="_blank" rel="noopener" class="sg-conn-btn" style="text-decoration:none">Abrir</a>
+          </div>
+        </div>
+        <div class="sg-conn-item">
+          <div class="sg-conn-icon" style="background:rgba(228,64,95,.12)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E4405F" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="#E4405F" stroke="none"/></svg>
+          </div>
+          <div>
+            <div class="sg-conn-label">Instagram DM</div>
+            <div class="sg-conn-sub">Social DM War Room — Founder Mode ativo</div>
+          </div>
+          <div class="sg-conn-action">
+            <a href="https://www.instagram.com/direct/inbox/" target="_blank" rel="noopener" class="sg-conn-btn" style="text-decoration:none">Abrir</a>
+          </div>
         </div>
       </div>
 
-      <div id="modal-sync-status"></div>
-      <div class="row" style="justify-content:flex-end;gap:8px">
-        <button class="btn bs btn-sm" onclick="closeSettings()">Cancelar</button>
-        <button class="btn bp btn-sm" onclick="saveOperator()">Salvar</button>
+      <!-- GOVERNANÇA -->
+      <div class="settings-panel ${activeSection==='governanca'?'active':''}" id="sp-governanca">
+        <div class="sg-label">Data Quality Index</div>
+        <div style="padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2,rgba(255,255,255,.03));margin-bottom:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="font-size:12px;font-weight:600;color:var(--text)">DQI Score do Operador</span>
+            <span style="font-size:18px;font-weight:800;color:${dqi!=null&&dqi>=70?'var(--green)':dqi!=null&&dqi>=45?'var(--yellow)':'var(--red)'}">${dqi!=null?dqi+'%':'—'}</span>
+          </div>
+          <div class="sg-dqi-bar"><div class="sg-dqi-fill" style="width:${dqi||0}%;background:${dqi!=null&&dqi>=70?'var(--green)':dqi!=null&&dqi>=45?'var(--amber)':'var(--red)'}"></div></div>
+          <div class="sg-note" style="margin-top:6px">DQI ≥ 70% = forecast confiável · 45–70% = atenção · &lt;45% = dados insuficientes</div>
+        </div>
+
+        <div class="sg-label" style="margin-top:16px">Kill Switches Ativos</div>
+        <div class="sg-note" style="margin-bottom:10px">Regras de governança que bloqueiam ações de risco no pipeline. Gerenciados centralmente.</div>
+        ${(()=>{
+          const ks=ctx.kill_switches||['no_next_step','premature_close','authority_missing','black_box_breach','spiced_lock_titan','framework_violation','pseudo_champion'];
+          const labels={'no_next_step':'Next Step Obrigatório','premature_close':'Premature Close Block','authority_missing':'Authority Missing Alert','black_box_breach':'Black Box Protocol','spiced_lock_titan':'SPICED Lock Titan','framework_violation':'Framework Violation Gate','pseudo_champion':'Pseudo-Champion Block'};
+          return ks.map(k=>`
+            <div class="sg-kill-row">
+              <div class="sg-kill-dot on"></div>
+              <div class="sg-kill-name">${labels[k]||k.replace(/_/g,' ')}</div>
+              <span class="sg-kill-badge on">ATIVO</span>
+            </div>`).join('');
+        })()}
+
+        <div class="sg-label" style="margin-top:20px">Governança de Framework</div>
+        <div class="sg-row">
+          <div>
+            <div class="sg-row-label">SPICED Lock para Titan</div>
+            <div class="sg-row-sub">Bloqueia uso de SPICED em deals com persona Titan (Challenger obrigatório)</div>
+          </div>
+          <label class="sg-toggle" style="margin-left:16px">
+            <input type="checkbox" id="op-spiced-lock" checked disabled>
+            <div class="sg-toggle-track" style="background:var(--blue)"></div>
+            <div class="sg-toggle-knob" style="transform:translateX(16px)"></div>
+          </label>
+        </div>
+        <div class="sg-note">Kill switches são configurados centralmente pelo RevOps. Contate o admin para alterações.</div>
       </div>
-    </div>`;
+
+      <!-- ALERTAS -->
+      <div class="settings-panel ${activeSection==='alertas'?'active':''}" id="sp-alertas">
+        <div class="sg-label">Notificações</div>
+        <div class="sg-row">
+          <div>
+            <div class="sg-row-label">Alertas de Deal em Stall</div>
+            <div class="sg-row-sub">Notifica quando um deal ficou sem interação por mais de 3 dias</div>
+          </div>
+          <label class="sg-toggle" style="margin-left:16px">
+            <input type="checkbox" id="op-alert-stall" ${localStorage.getItem('elucy_alert_stall')!=='0'?'checked':''}>
+            <div class="sg-toggle-track"></div>
+            <div class="sg-toggle-knob"></div>
+          </label>
+        </div>
+        <div class="sg-row">
+          <div>
+            <div class="sg-row-label">Alertas de Sinal Crítico</div>
+            <div class="sg-row-sub">Toast imediato quando signal de risco alto é detectado (authority_missing, pain_missing)</div>
+          </div>
+          <label class="sg-toggle" style="margin-left:16px">
+            <input type="checkbox" id="op-alert-signals" ${localStorage.getItem('elucy_alert_signals')!=='0'?'checked':''}>
+            <div class="sg-toggle-track"></div>
+            <div class="sg-toggle-knob"></div>
+          </label>
+        </div>
+        <div class="sg-row">
+          <div>
+            <div class="sg-row-label">Resumo Diário</div>
+            <div class="sg-row-sub">Notificação ao abrir o cockpit com resumo do dia anterior</div>
+          </div>
+          <label class="sg-toggle" style="margin-left:16px">
+            <input type="checkbox" id="op-alert-daily" ${localStorage.getItem('elucy_alert_daily')==='1'?'checked':''}>
+            <div class="sg-toggle-track"></div>
+            <div class="sg-toggle-knob"></div>
+          </label>
+        </div>
+
+        <div class="sg-label" style="margin-top:20px">Slack</div>
+        <div style="padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2,rgba(255,255,255,.03))">
+          <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px">Integração Slack</div>
+          <div class="sg-note">Notificações críticas via Slack em breve. Configure o webhook do canal do seu squad.</div>
+          <input class="sg-input" style="margin-top:8px" type="url" id="op-slack-webhook" placeholder="https://hooks.slack.com/..." value="${localStorage.getItem('elucy_slack_webhook')||''}">
+        </div>
+      </div>
+
+    </div><!-- /settings-body -->
+    <div id="modal-sync-status" style="padding:0 20px 4px"></div>
+  </div><!-- /settings-content -->
+</div><!-- /settings-panel -->`;
+
   ov.addEventListener('click',e=>{if(e.target===ov) closeSettings();});
   document.body.appendChild(ov);
-  setTimeout(()=>document.getElementById('op-email-input').focus(),80);
+  // Keyboard: Escape closes
+  ov._keyHandler=function(e){if(e.key==='Escape') closeSettings();};
+  document.addEventListener('keydown',ov._keyHandler);
 }
+
+window.switchSettingsSection=function(section, clickedEl){
+  // Update nav items
+  document.querySelectorAll('.snav-item').forEach(el=>el.classList.remove('active'));
+  if(clickedEl) clickedEl.classList.add('active');
+  else {
+    document.querySelectorAll('.snav-item').forEach(el=>{
+      if(el.getAttribute('onclick')&&el.getAttribute('onclick').includes("'"+section+"'")) el.classList.add('active');
+    });
+  }
+  // Update panels
+  document.querySelectorAll('.settings-panel').forEach(p=>p.classList.remove('active'));
+  const panel=document.getElementById('sp-'+section);
+  if(panel) panel.classList.add('active');
+  // Update header
+  const titles={perfil:['Perfil Biológico','Identidade, metas e calibração do operador'],copilot:['ELUCI Copilot','Voz, automações e motor de inteligência'],conexoes:['Conexões & Canais','CRM, Databricks e canais de outreach'],governanca:['Governança & DQI','Kill switches, DQI e regras de framework'],alertas:['Alertas','Notificações e integração Slack']};
+  const t=titles[section]||['Configurações',''];
+  const titleEl=document.getElementById('settings-content-title');
+  const subEl=document.getElementById('settings-content-subtitle');
+  if(titleEl) titleEl.textContent=t[0];
+  if(subEl) subEl.textContent=t[1];
+};
+
+window.selectVoiceMode=function(mode, el){
+  document.querySelectorAll('#voice-mode-group .sg-radio-opt').forEach(o=>o.classList.remove('active'));
+  if(el) el.classList.add('active');
+  localStorage.setItem('elucy_voice_mode',mode);
+};
+
+window.selectTension=function(level, el){
+  document.querySelectorAll('#tension-group .sg-radio-opt').forEach(o=>o.classList.remove('active'));
+  if(el) el.classList.add('active');
+  localStorage.setItem('elucy_challenger_tension',level);
+};
 
 function closeSettings(){
   const m=document.getElementById('settings-modal');
-  if(m) m.remove();
+  if(m){
+    if(m._keyHandler) document.removeEventListener('keydown',m._keyHandler);
+    m.remove();
+  }
 }
 
 function saveOperator(){
@@ -3005,6 +3372,20 @@ function saveOperator(){
     localStorage.setItem('elucy_api_enabled',enabled?'true':'false');
     window.ELUCY_API_ENABLED=enabled;
   }
+  // Salvar automações (Auto-Draft, Auto Focus)
+  const autoDraftInput=document.getElementById('op-auto-draft');
+  if(autoDraftInput) localStorage.setItem('elucy_auto_draft',autoDraftInput.checked?'1':'0');
+  const autoFocusInput=document.getElementById('op-auto-focus');
+  if(autoFocusInput) localStorage.setItem('elucy_auto_focus',autoFocusInput.checked?'1':'0');
+  // Salvar alertas
+  const alertStall=document.getElementById('op-alert-stall');
+  if(alertStall) localStorage.setItem('elucy_alert_stall',alertStall.checked?'1':'0');
+  const alertSignals=document.getElementById('op-alert-signals');
+  if(alertSignals) localStorage.setItem('elucy_alert_signals',alertSignals.checked?'1':'0');
+  const alertDaily=document.getElementById('op-alert-daily');
+  if(alertDaily) localStorage.setItem('elucy_alert_daily',alertDaily.checked?'1':'0');
+  const slackWebhook=document.getElementById('op-slack-webhook');
+  if(slackWebhook&&slackWebhook.value.trim()) localStorage.setItem('elucy_slack_webhook',slackWebhook.value.trim());
   // Salvar metas mensais
   const metaFups=parseInt(document.getElementById('op-meta-fups')?.value)||300;
   const metaQual=parseInt(document.getElementById('op-meta-qual')?.value)||100;
