@@ -2645,7 +2645,7 @@ function openSettings(){
           <input class="modal-i" id="op-api-key-input" type="password" placeholder="${window.ELUCY_API_KEY?'••••'+window.ELUCY_API_KEY.slice(-8):'sk-ant-...'}" autocomplete="off" style="font-family:monospace;font-size:12px">
         </div>
         <div class="modal-note">Chave da Anthropic API. Armazenada apenas no seu navegador (localStorage). Nunca enviada a terceiros.</div>
-        ${window.ELUCY_API_KEY?'<div style="font-size:10px;color:var(--green);margin-top:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> API key configurada</div>':'<div style="font-size:10px;color:var(--yellow);margin-top:4px">Sem API key — o motor LLM direto não funcionará. Use o Worker (G4 OS) como alternativa.</div>'}
+        ${window.ELUCY_API_KEY?'<div style="font-size:10px;color:var(--green);margin-top:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> API key local configurada (fallback)</div>':'<div style="font-size:10px;color:var(--text2);margin-top:4px">Opcional — o motor principal usa Edge Function segura (sem API key no browser).</div>'}
         <div class="modal-f" style="margin-top:8px">
           <label class="modal-l">Modelo</label>
           <select class="modal-i" id="op-api-model" style="font-size:12px">
@@ -3642,6 +3642,15 @@ async function loadDealFullHistory(dealId){
   }catch(e){console.warn('loadDealFullHistory error:',e);return '';}
 }
 
+// Helper: check if Intelligence API is available (Edge Function OR direct key)
+function canUseIntelligenceAPI(){
+  // Edge Function path: only needs IS_REMOTE + logged-in user (no API key needed in browser)
+  if(window.IS_REMOTE && typeof getSB === 'function' && getSB()) return true;
+  // Direct path: needs API key configured locally
+  if(window.ELUCY_API_ENABLED && window.ELUCY_API_KEY) return true;
+  return false;
+}
+
 async function callIntelligenceAPI(dealData, requestType, extraContext){
   // Carrega histórico e contexto (necessário para ambos os caminhos)
   const history = await loadDealFullHistory(dealData.deal_id);
@@ -3762,8 +3771,8 @@ async function requestElucyAnalysis(deal_id, dealData, targetId){
     const email=_currentUser&&_currentUser.email;
     if(!sb||!email) return;
 
-    // ── FAST PATH: Intelligence API ──
-    if(window.ELUCY_API_ENABLED && window.ELUCY_API_KEY){
+    // ── FAST PATH: Intelligence API (Edge Function ou direct) ──
+    if(canUseIntelligenceAPI()){
       try {
         const apiResult = await callIntelligenceAPI(dealData, 'analyze', '');
         if(apiResult && apiResult.intelligence){
@@ -3867,8 +3876,8 @@ async function requestElucyCopy(deal_id, dealData, targetId, canal){
     const email=_currentUser&&_currentUser.email;
     if(!sb||!email) return;
 
-    // ── FAST PATH: Intelligence API ──
-    if(window.ELUCY_API_ENABLED && window.ELUCY_API_KEY){
+    // ── FAST PATH: Intelligence API (Edge Function ou direct) ──
+    if(canUseIntelligenceAPI()){
       try {
         const apiResult = await callIntelligenceAPI(dealData, 'copy', 'canal:'+(canal||'WhatsApp'));
         if(apiResult && apiResult.intelligence){
@@ -4041,8 +4050,8 @@ REGRAS: Dados BR prioritários. Cite fonte+ano. Marque confiança [Alta]/[Média
     const email=_currentUser&&_currentUser.email;
     if(!sb||!email) return;
 
-    // ── FAST PATH: Intelligence API com MCPs de business_analysis ──
-    if(window.ELUCY_API_ENABLED && window.ELUCY_API_KEY){
+    // ── FAST PATH: Intelligence API (Edge Function ou direct) ──
+    if(canUseIntelligenceAPI()){
       try {
         const apiResult = await callIntelligenceAPI(deal, 'business_analysis', prompt);
         if(apiResult && apiResult.intelligence){
@@ -4111,8 +4120,8 @@ async function requestPreCallBriefing(id, btnEl){
     webContext=`\n\nWEB RESEARCH CONTEXT:\nEmpresa/Email: ${empresa}\nNome do lead: ${nome}\nCargo: ${cargo}\nBusca sugerida: ${searchQuery}\n\nINSTRUÇÃO: Use os dados do CRM e persons_overview para construir o briefing. Os dados de web research devem ser inferidos do setor e cargo do lead quando pesquisa real não estiver disponível — marque como [Inferido] vs [CRM] vs [Web].`;
   } catch(e){ webContext=''; }
 
-  // 2. Gerar briefing via Intelligence API
-  if(window.ELUCY_API_ENABLED && window.ELUCY_API_KEY){
+  // 2. Gerar briefing via Intelligence API (Edge Function ou direct)
+  if(canUseIntelligenceAPI()){
     try {
       const apiResult = await callIntelligenceAPI(deal, 'briefing', webContext);
       if(apiResult && apiResult.intelligence){
@@ -4161,7 +4170,7 @@ async function requestCompetitiveIntel(id, btnEl){
   const setor=deal.linhaReceita||deal.canal||'educação executiva';
   const webHint=`\n\nCONTEXTO WEB:\nEmpresa: ${empresa}\nSetor: ${setor}\nCargo: ${deal.cargo||''}\nFaixa: ${deal.faixa_de_faturamento||''}\n\nINSTRUÇÃO: Baseie a análise no setor do lead. Concorrentes = outras empresas do mesmo setor (não concorrentes do G4). Armas Challenger = insights que desafiam como o lead opera hoje.`;
 
-  if(window.ELUCY_API_ENABLED && window.ELUCY_API_KEY){
+  if(canUseIntelligenceAPI()){
     try {
       const apiResult = await callIntelligenceAPI(deal, 'competitive', webHint);
       if(apiResult && apiResult.intelligence){
@@ -4195,8 +4204,8 @@ async function runBatchIntelligence(batchType){
     return s!=='perdido'&&s!=='ganho';
   });
   if(!deals.length){showSyncToast('err','Nenhum deal ativo.');return;}
-  if(!window.ELUCY_API_ENABLED||!window.ELUCY_API_KEY){
-    showSyncToast('err','API key necessária para batch processing.');return;
+  if(!canUseIntelligenceAPI()){
+    showSyncToast('err','Intelligence API indisponível. Faça login ou configure API key.');return;
   }
 
   const batchPanel=document.getElementById('batch-panel');
@@ -4220,22 +4229,11 @@ async function runBatchIntelligence(batchType){
   const results=[];
   let completed=0;
 
-  // Process in parallel with concurrency limit
+  // Process in parallel with concurrency limit — uses Edge Function (secure, cached)
   async function processDeal(deal){
     try{
-      const ctx=buildDealContext(deal);
-      const bundle=await loadMCPBundle();
-      const mcpSlugs=MCP_MAP.batch_classify;
-      let systemParts=[];
-      mcpSlugs.forEach(slug=>{if(bundle[slug]&&bundle[slug].content) systemParts.push('<document name="'+slug+'">\n'+bundle[slug].content+'\n</document>');});
-
-      const resp=await fetch('https://api.anthropic.com/v1/messages',{
-        method:'POST',
-        headers:{'x-api-key':window.ELUCY_API_KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
-        body:JSON.stringify({model:window.ELUCY_API_MODEL||'claude-sonnet-4-20250514',max_tokens:1024,system:systemParts.join('\n\n'),messages:[{role:'user',content:ctx+'\n\n'+prompt}]})
-      });
-      const result=await resp.json();
-      const text=(result.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('\n');
+      const apiResult = await callIntelligenceAPI(deal, 'batch_classify', prompt);
+      const text = (apiResult && apiResult.intelligence) ? (typeof apiResult.intelligence === 'string' ? apiResult.intelligence : JSON.stringify(apiResult.intelligence)) : '';
       completed++;
       batchStatus.textContent=`${completed}/${deals.length} processados — ${label}`;
       return {deal_id:deal.deal_id,nome:deal.contact_name||deal.nome||'',etapa:deal.etapa||deal.etapa_atual_no_pipeline||'',result:text,ok:true};
@@ -4465,8 +4463,8 @@ async function requestNotaCRM(id,btnEl){
     const email=_currentUser&&_currentUser.email;
     if(!sb||!email) return;
 
-    // ── FAST PATH: Intelligence API com MCPs de note ──
-    if(window.ELUCY_API_ENABLED && window.ELUCY_API_KEY){
+    // ── FAST PATH: Intelligence API (Edge Function ou direct) ──
+    if(canUseIntelligenceAPI()){
       try {
         const apiResult = await callIntelligenceAPI(deal, 'note', '');
         if(apiResult && apiResult.intelligence){
@@ -5025,8 +5023,8 @@ async function requestConvEnrichment(id){
   const body=document.getElementById('conv-sig-body-'+id);
   if(panel) panel.classList.add('on');
   if(body) body.innerHTML='<div class="conv-enrich-loading">Extraindo sinais e atualizando SPICED...</div>';
-  // Fast path via Intelligence API se disponível
-  if(window.ELUCY_API_ENABLED && window.ELUCY_API_KEY){
+  // Fast path via Intelligence API (Edge Function ou direct)
+  if(canUseIntelligenceAPI()){
     try{
       const waChat=document.getElementById('wa-chat-'+id);
       const convText=waChat?waChat.innerText:'';
