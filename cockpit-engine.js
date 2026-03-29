@@ -700,6 +700,14 @@ function renderTaskRunner(filterType, filterRevLine, filterFase, filterCiclo, fi
     var agingLabel = t.aging && t.aging.isAtRisk ? '<span class="task-aging task-aging-'+t.aging.riskLevel+'">'+t.aging.riskLabel+'</span>' : '';
     var cadBadge = t.cadence ? '<span class="task-cad-badge" title="'+_escHtml(t.cadence.templateName)+'">⚡ '+_escHtml(t.cadence.templateName)+' ('+(t.cadence.stepIndex+1)+'/'+t.cadence.totalSteps+')</span>' : '';
     var dealRevLine = d._revLine || resolveRevenueLine(d);
+    var rlLabel = (function(){
+      var rl = d._revLine||'';
+      if(!rl||rl==='nao_definido'||rl==='Não Definido') return '';
+      var rlCfg = REVENUE_LINES[rl];
+      return rlCfg ? rlCfg.label : rl;
+    })();
+    var deltaVal = d.delta||0;
+    var deltaColor = deltaVal>=40?'var(--red)':deltaVal>=20?'var(--yellow)':'var(--text2)';
     return '<div class="task-card'+(t.cadence?' task-card-cad':'')+'" data-task-idx="'+idx+'" data-stage="'+_escHtml(dealStage)+'" data-revline="'+_escHtml(dealRevLine)+'" onclick="window.texOpen('+idx+')">'
       + '<div class="task-card-top">'
       + '<span class="task-type-badge task-c-'+cfg.color+'">'+cfg.label+'</span>'
@@ -708,11 +716,11 @@ function renderTaskRunner(filterType, filterRevLine, filterFase, filterCiclo, fi
       + agingLabel
       + '</div>'
       + '<div class="task-card-name">'+_escHtml(d.nome||d.emailLead||'Lead')+'</div>'
-      + '<div class="task-card-co">'+_escHtml(d.empresa||'')+' '+_escHtml(d.cargo?'- '+d.cargo:'')+'</div>'
+      + '<div class="task-card-co">'+_escHtml(d.empresa||'')+_escHtml(d.cargo?' · '+d.cargo:'')+'</div>'
       + '<div class="task-card-meta">'
       + '<span>'+_escHtml(d.etapa||d._etapa||'')+'</span>'
-      + '<span>'+_escHtml(d._revLine||'')+'</span>'
-      + '<span>D'+Math.min(d.delta||0,99)+'</span>'
+      + (rlLabel?'<span>'+_escHtml(rlLabel)+'</span>':'')
+      + '<span style="color:'+deltaColor+'">'+deltaVal+'d</span>'
       + '</div>'
       + '<div class="task-card-actions">'
       + '<button class="task-btn" onclick="event.stopPropagation();window.taskQuickAction(\''+t.id+'\',\'fup\')">Gerar FUP</button>'
