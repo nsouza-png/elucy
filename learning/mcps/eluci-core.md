@@ -5,7 +5,7 @@
 # Fonte: Doc 19 + Doc 20 + MCPs canonicos + ELUCI_CORE_000 v4.1
 # Hierarquia: Este documento e o UNICO que define quais documentos estao ativos em runtime
 
-## DOCUMENT REGISTRY — DOCUMENTOS ATIVOS (Runtime = 26)
+## DOCUMENT REGISTRY — DOCUMENTOS ATIVOS (Runtime = 27)
 
 Apenas documentos listados aqui podem ser executados.
 Documento nao listado = EXCLUIDO. Duplicate ID = manter versao mais alta.
@@ -38,6 +38,7 @@ ACTIVE_DOCUMENTS:
 - DOCUMENT_24: fip.md (Founder Interaction Protocol — tom Social DM, compression, empathy gate)
 - DOCUMENT_25: sla-engine.md (Commercial SLA Execution System — SAL, Selfbooking, No-Activity, Enterprise)
 - DOCUMENT_26: validation-forms.md (Dynamic Validation Layer — DVL, Deal Detector, Form Schemas, Gamification)
+- DOCUMENT_27: meddicc-framework.md (MEDDICC Enterprise Qualification Engine — 8 dimensoes, Kill Switches, EVS, Black Box)
 
 GARANTIA DO SISTEMA:
 - Nenhum modulo orfao executa
