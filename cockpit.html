@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ELUCY — Sales Engagement</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2304080f'/><text x='50' y='66' font-size='36' font-weight='900' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='2'>EC</text><rect x='28' y='72' width='44' height='14' rx='4' fill='%230a84ff'/><text x='50' y='82' font-size='9' font-weight='800' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>BY G4</text></svg>">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2304080f'/><text x='50' y='66' font-size='36' font-weight='900' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='2'>EC</text><rect x='28' y='72' width='44' height='14' rx='4' fill='%230a84ff'/><text x='50' y='82' font-size='9' font-weight='800' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>BY G4</text></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2304080f'/><text x='50' y='66' font-size='36' font-weight='900' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='2'>EC</text><rect x='28' y='72' width='44' height='14' rx='4' fill='%23f59e0b'/><text x='50' y='82' font-size='9' font-weight='800' text-anchor='middle' fill='%23000000' font-family='system-ui' letter-spacing='1'>BY G4</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2304080f'/><text x='50' y='66' font-size='36' font-weight='900' text-anchor='middle' fill='%23f59e0b' font-family='system-ui' letter-spacing='2'>EC</text><rect x='28' y='72' width='44' height='14' rx='4' fill='%23f59e0b'/><text x='50' y='82' font-size='9' font-weight='800' text-anchor='middle' fill='%23000000' font-family='system-ui' letter-spacing='1'>BY G4</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase JS SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -32,7 +32,7 @@ if(!window.IS_REMOTE){
 </script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#000000;--bg2:#0d0d0d;--bg3:#1c1c1e;--bg4:#2c2c2e;--border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.14);--accent:#0a84ff;--accent2:#5ac8fa;--adim:rgba(10,132,255,.10);--green:#30d158;--gdim:rgba(48,209,88,.10);--yellow:#ffd60a;--ydim:rgba(255,214,10,.10);--red:#ff453a;--rdim:rgba(255,69,58,.10);--blue:#64d2ff;--bdim:rgba(100,210,255,.10);--clay:#d4956a;--claydim:rgba(212,149,106,.10);--gold:#ffd60a;--golddim:rgba(255,214,10,.10);--text:#f5f5f7;--text2:#86868b;--r:12px;--r2:14px;--font-title:-apple-system,'SF Pro Display','Manrope',Inter,system-ui,sans-serif;--font-body:-apple-system,'SF Pro Text','Manrope',Inter,system-ui,sans-serif;--glass:rgba(255,255,255,.04);--glow:0 0 40px rgba(10,132,255,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.6);--shadow-sm:0 2px 8px rgba(0,0,0,.3);
+:root{--bg:#04080f;--bg2:#080e18;--bg3:#0d1520;--bg4:#131d2b;--bg5:#1a2535;--border:rgba(255,255,255,.05);--border2:rgba(255,255,255,.10);--border3:rgba(255,255,255,.16);--accent:#f59e0b;--accent2:#fbbf24;--accent3:#fcd34d;--adim:rgba(245,158,11,.08);--aglow:rgba(245,158,11,.15);--aborder:rgba(245,158,11,.18);--aborder2:rgba(245,158,11,.30);--green:#10b981;--gdim:rgba(16,185,129,.10);--yellow:#fcd34d;--ydim:rgba(252,211,77,.10);--red:#ef4444;--rdim:rgba(239,68,68,.10);--blue:#0ea5e9;--blue2:#38bdf8;--bdim:rgba(14,165,233,.10);--purple:#8b5cf6;--clay:#d4956a;--claydim:rgba(212,149,106,.10);--gold:#f59e0b;--golddim:rgba(245,158,11,.10);--text:#f0f4ff;--text2:#8899aa;--text3:#445566;--r:12px;--r2:14px;--font-title:-apple-system,'SF Pro Display','Manrope',Inter,system-ui,sans-serif;--font-body:-apple-system,'SF Pro Text','Manrope',Inter,system-ui,sans-serif;--glass:rgba(255,255,255,.04);--glow:0 0 40px rgba(245,158,11,.08);--glow2:0 0 60px rgba(245,158,11,.12);--shadow-lg:0 8px 32px rgba(0,0,0,.6);--shadow-sm:0 2px 8px rgba(0,0,0,.3);
 /* ── TYPOGRAPHY SYSTEM v1 (lockado) ────────────────────────────── */
 --fs-display:28px;--fs-h1:26px;--fs-h2:22px;--fs-h3:16px;--fs-body:13px;--fs-body-sm:12px;--fs-caption:11px;--fs-micro:9px;
 --fw-regular:400;--fw-medium:500;--fw-semibold:600;--fw-bold:700;--fw-xbold:800;--fw-black:900;
@@ -41,7 +41,7 @@ if(!window.IS_REMOTE){
 --pad-card:12px;--pad-card-lg:16px;--pad-section:14px;--pad-section-lg:18px;
 /* ── LINE HEIGHT SYSTEM v1 ──────────────────────────────────────── */
 --lh-tight:1.2;--lh-normal:1.4;--lh-body:1.6;}
-body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:var(--fs-body);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:var(--fs-body);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;background-image:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(245,158,11,.06) 0%,transparent 70%),radial-gradient(ellipse 40% 30% at 90% 90%,rgba(14,165,233,.04) 0%,transparent 60%)}
 /* ── TYPOGRAPHY CLASSES v1 ──────────────────────────────────────── */
 .t-display{font-size:var(--fs-display);font-weight:var(--fw-xbold);line-height:var(--lh-tight)}
 .t-h1{font-size:var(--fs-h1);font-weight:var(--fw-xbold);line-height:var(--lh-tight)}
@@ -52,56 +52,35 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .t-label{font-size:var(--fs-caption);font-weight:var(--fw-bold);text-transform:uppercase;letter-spacing:.8px;color:var(--text2);line-height:var(--lh-tight)}
 .t-micro{font-size:var(--fs-micro);font-weight:var(--fw-xbold);letter-spacing:1px;line-height:var(--lh-tight)}
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.10);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.18)}
-/* ── TOAST SYSTEM ──────────────────────────────────────────────── */
-#elucy-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:12px;box-shadow:var(--shadow-lg);z-index:9999;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;min-width:260px;max-width:420px}
-#elucy-toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
-/* ── SYNC STATUS DOT ──────────────────────────────────────────── */
-.sync-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:background .3s}
-.sync-dot-ok{background:var(--green)}
-.sync-dot-syncing{background:var(--yellow);animation:pulse-dot 1s infinite}
-.sync-dot-error{background:var(--red);animation:pulse-dot .6s infinite}
-@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}
-/* ── SKELETON LOADERS ─────────────────────────────────────────── */
-@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
-.sk{background:linear-gradient(90deg,var(--bg3) 25%,var(--bg4) 50%,var(--bg3) 75%);background-size:800px 100%;animation:shimmer 1.4s infinite;border-radius:6px}
-.sk-line{height:11px;margin-bottom:6px}.sk-line-sm{height:9px;width:60%}.sk-title{height:14px;width:70%;margin-bottom:8px}
-.sk-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;margin-bottom:6px}
-.sk-kpi{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:6px}
-.sk-kpi-val{height:20px;width:50%;border-radius:4px}
-.sk-task{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:12px;margin-bottom:6px;display:flex;flex-direction:column;gap:8px}
-/* ── HAMBURGER / MOBILE SIDEBAR ───────────────────────────────── */
-#sb-toggle{display:none;background:none;border:none;cursor:pointer;padding:6px;color:var(--text);flex-shrink:0}
-#sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
-/* ── TOPBAR ───────────────────────────────────────────────────── */
-#topbar{height:52px;background:rgba(13,13,13,.8);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0;z-index:10}
-.logo{display:flex;align-items:center;gap:8px;margin-right:12px}.logo-name{font-family:var(--font-title);font-size:var(--fs-h3);font-weight:var(--fw-xbold);color:#fff;text-transform:uppercase;letter-spacing:1.5px}.logo-badge{background:var(--accent);color:#fff;font-size:8px;font-weight:var(--fw-bold);padding:2px 6px;border-radius:4px;letter-spacing:1px;text-transform:uppercase;line-height:var(--lh-tight)}
+#topbar{height:52px;background:rgba(4,8,15,.85);-webkit-backdrop-filter:saturate(180%) blur(24px);backdrop-filter:saturate(180%) blur(24px);border-bottom:1px solid var(--aborder);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0;z-index:10}
+.logo{display:flex;align-items:center;gap:8px;margin-right:12px}.logo-name{font-family:var(--font-title);font-size:var(--fs-h3);font-weight:var(--fw-xbold);color:#fff;text-transform:uppercase;letter-spacing:1.5px}.logo-badge{background:var(--accent);color:#000;font-size:8px;font-weight:var(--fw-bold);padding:2px 6px;border-radius:4px;letter-spacing:1px;text-transform:uppercase;line-height:var(--lh-tight)}
 .ntab{padding:6px 14px;border-radius:20px;font-size:var(--fs-body-sm);color:var(--text2);cursor:pointer;transition:.2s;border:1px solid transparent;background:none;font-family:inherit;font-weight:var(--fw-medium)}.ntab:hover{color:var(--text);background:rgba(255,255,255,.06)}.ntab.on{color:#fff;background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.18);font-weight:var(--fw-semibold)}
 .tbr{margin-left:auto;display:flex;align-items:center;gap:10px}
 .chip{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:3px 12px 3px 5px;font-size:12px}.av{width:24px;height:24px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}.chip-name{font-weight:600;color:#fff}.chip-lvl{color:var(--text2);font-size:11px}
 .streak-badge{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--text2);font-weight:600;display:inline-flex;align-items:center;gap:4px}
 #main{display:flex;flex:1;overflow:hidden}
-#sb{width:292px;min-width:292px;background:rgba(13,13,13,.6);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+#sb{width:292px;min-width:292px;background:rgba(4,8,15,.7);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
 .sb-h{padding:12px 14px 8px;border-bottom:1px solid var(--border);flex-shrink:0}.sb-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}.sb-title{font-family:var(--font-title);font-size:var(--fs-caption);font-weight:var(--fw-bold);text-transform:uppercase;letter-spacing:1px}.sb-date{font-size:var(--fs-caption);color:var(--text2)}
 .sb-stats{display:flex;gap:5px}.sbs{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 7px;text-align:center}.sbs-n{font-family:var(--font-body);font-size:var(--fs-h3);font-weight:var(--fw-xbold)}.sbs-l{font-size:10px;color:var(--text2)}
 .sb-search{padding:8px 14px;border-bottom:1px solid var(--border);flex-shrink:0}.srch{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--text);outline:none;font-family:inherit}.srch::placeholder{color:var(--text2)}.srch:focus{border-color:var(--border2)}
 .deal-list{flex:1;overflow-y:auto;padding:8px}
-.di{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;margin-bottom:6px;cursor:pointer;transition:.2s;border-left:3px solid transparent}.di:hover{border-color:var(--border2);background:var(--bg4);transform:scale(1.01)}.di.on{border-color:var(--accent)!important;background:rgba(10,132,255,.08)}.di.sla{border-left-color:var(--red)}.di.dome{border-left-color:var(--yellow)}
+.di{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;margin-bottom:6px;cursor:pointer;transition:.2s;border-left:3px solid transparent}.di:hover{border-color:var(--border2);background:var(--bg4);transform:scale(1.01)}.di.on{border-color:var(--accent)!important;background:rgba(245,158,11,.08)}.di.sla{border-left-color:var(--red)}.di.dome{border-left-color:var(--yellow)}
 .di-name{font-size:var(--fs-body);font-weight:var(--fw-semibold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;color:#fff}.di-co{font-size:var(--fs-caption);color:var(--text2);margin-bottom:6px}.di-meta{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .tb{display:inline-flex;align-items:center;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700}.th{background:var(--gdim);color:var(--green);border:1px solid var(--green)}.tw{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}.tc{background:var(--rdim);color:var(--red);border:1px solid var(--red)}
-.fc{background:var(--bg4);border:1px solid var(--border);border-radius:4px;padding:2px 5px;font-size:10px;color:var(--text2)}.fc-fase{background:rgba(10,132,255,.08);border:1px solid rgba(10,132,255,.25);color:var(--accent2)}.fc-linha{background:rgba(48,209,88,.06);border:1px solid rgba(48,209,88,.18);color:var(--green);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle}.cc{font-size:10px;padding:2px 5px;border-radius:4px;font-weight:600}.cwa{background:rgba(37,211,102,.12);color:#25d366;border:1px solid #25d366}.cig{background:rgba(225,48,108,.12);color:#e1306c;border:1px solid #e1306c}.ccl{background:var(--bdim);color:var(--blue);border:1px solid var(--blue)}.di-day{font-size:10px;color:var(--text2);margin-left:auto}
+.fc{background:var(--bg4);border:1px solid var(--border);border-radius:4px;padding:2px 5px;font-size:10px;color:var(--text2)}.fc-fase{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);color:var(--accent2)}.fc-linha{background:rgba(48,209,88,.06);border:1px solid rgba(48,209,88,.18);color:var(--green);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle}.cc{font-size:10px;padding:2px 5px;border-radius:4px;font-weight:600}.cwa{background:rgba(37,211,102,.12);color:#25d366;border:1px solid #25d366}.cig{background:rgba(225,48,108,.12);color:#e1306c;border:1px solid #e1306c}.ccl{background:var(--bdim);color:var(--blue);border:1px solid var(--blue)}.di-day{font-size:10px;color:var(--text2);margin-left:auto}
 #ct{flex:1;overflow-y:auto;padding:18px 20px}.screen{display:none}.screen.on{display:block}
 .card{background:rgba(28,28,30,.8);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--r2);padding:18px;margin-bottom:14px}
 .sec-t{font-family:var(--font-body);font-size:var(--fs-body);font-weight:var(--fw-bold);color:#fff;letter-spacing:.2px}
 .btn{padding:8px 15px;border-radius:var(--r);font-size:var(--fs-body-sm);font-weight:var(--fw-semibold);cursor:pointer;border:none;transition:.2s;display:inline-flex;align-items:center;gap:5px;font-family:inherit;text-decoration:none}
-.bp{background:var(--accent);color:#fff;box-shadow:none}.bp:hover{background:#3395ff;box-shadow:0 2px 12px rgba(10,132,255,.3)}.bs{background:var(--bg3);color:var(--text);border:1px solid var(--border)}.bs:hover{border-color:var(--border2);background:var(--bg4)}.bsuc{background:var(--gdim);color:var(--green);border:1px solid var(--green)}.bsuc:hover{background:var(--green);color:#fff}.bwrn{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}.bwa{background:rgba(37,211,102,.15);color:#25d366;border:1px solid #25d366}.bwa:hover{background:#25d366;color:#fff}.big2{background:rgba(225,48,108,.15);color:#e1306c;border:1px solid #e1306c}.big2:hover{background:#e1306c;color:#fff}.btn-sm{padding:5px 9px;font-size:11px}
-.tag{padding:3px 7px;border-radius:4px;font-size:11px;font-weight:600;display:inline-block}.t-elite{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}.t-builder{background:var(--adim);color:var(--accent2);border:1px solid var(--accent)}.t-exec{background:var(--bdim);color:var(--blue);border:1px solid var(--blue)}.t-gray{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}.t-buy{background:var(--gdim);color:var(--green);border:1px solid var(--green)}.t-risk{background:var(--rdim);color:var(--red);border:1px solid var(--red)}.t-stall{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}.t-champ{background:rgba(139,133,255,.15);color:var(--accent2);border:1px solid var(--accent2)}.t-acc{background:rgba(10,132,255,.1);color:var(--accent2);border:1px solid rgba(10,132,255,.3)}
-.dch{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}.dca{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#0a84ff,#5ac8fa);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;flex-shrink:0}.dci{flex:1}.dcn{font-size:var(--fs-h3);font-weight:var(--fw-xbold);margin-bottom:1px;line-height:var(--lh-tight)}.dcs{font-size:var(--fs-body-sm);color:var(--text2);margin-bottom:7px}.tags-row{display:flex;gap:5px;flex-wrap:wrap}
+.bp{background:var(--accent);color:#fff;box-shadow:none}.bp:hover{background:#d97706;box-shadow:0 2px 12px rgba(245,158,11,.3)}.bs{background:var(--bg3);color:var(--text);border:1px solid var(--border)}.bs:hover{border-color:var(--border2);background:var(--bg4)}.bsuc{background:var(--gdim);color:var(--green);border:1px solid var(--green)}.bsuc:hover{background:var(--green);color:#fff}.bwrn{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}.bwa{background:rgba(37,211,102,.15);color:#25d366;border:1px solid #25d366}.bwa:hover{background:#25d366;color:#fff}.big2{background:rgba(225,48,108,.15);color:#e1306c;border:1px solid #e1306c}.big2:hover{background:#e1306c;color:#fff}.btn-sm{padding:5px 9px;font-size:11px}
+.tag{padding:3px 7px;border-radius:4px;font-size:11px;font-weight:600;display:inline-block}.t-elite{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}.t-builder{background:var(--adim);color:var(--accent2);border:1px solid var(--accent)}.t-exec{background:var(--bdim);color:var(--blue);border:1px solid var(--blue)}.t-gray{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}.t-buy{background:var(--gdim);color:var(--green);border:1px solid var(--green)}.t-risk{background:var(--rdim);color:var(--red);border:1px solid var(--red)}.t-stall{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}.t-champ{background:rgba(139,133,255,.15);color:var(--accent2);border:1px solid var(--accent2)}.t-acc{background:rgba(245,158,11,.1);color:var(--accent2);border:1px solid rgba(245,158,11,.3)}
+.dch{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}.dca{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#fcd34d);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;flex-shrink:0}.dci{flex:1}.dcn{font-size:var(--fs-h3);font-weight:var(--fw-xbold);margin-bottom:1px;line-height:var(--lh-tight)}.dcs{font-size:var(--fs-body-sm);color:var(--text2);margin-bottom:7px}.tags-row{display:flex;gap:5px;flex-wrap:wrap}
 .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}.ic{background:var(--glass);border:1px solid var(--border);border-radius:var(--r);padding:11px 12px;transition:.2s}.ic:hover{background:rgba(255,255,255,.04)}.ic-l{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;font-weight:var(--fw-bold)}.ic-v{font-size:var(--fs-body);font-weight:var(--fw-semibold)}.ic-s{font-size:var(--fs-caption);color:var(--text2);margin-top:2px}
 .tg{background:var(--glass);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:14px}.tg-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.tg-lbl{font-size:var(--fs-body-sm);color:var(--text2)}.tg-sub{font-size:var(--fs-caption);color:var(--text2);margin-top:5px}.tgv{font-family:var(--font-body);font-size:var(--fs-h1);font-weight:var(--fw-xbold)}.tgv-h{color:var(--green)}.tgv-w{color:var(--yellow)}.tgv-c{color:var(--red)}
 /* ── V9 Deal Card Hierarchy ─────────────────────────────────────────── */
 .deal-estado{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:12px;padding:0 2px}
 .estado-badge{display:inline-flex;align-items:center;padding:4px 9px;border-radius:20px;font-size:var(--fs-caption);font-weight:var(--fw-semibold);letter-spacing:.2px}
-.eb-etapa{background:var(--adim);border:1px solid rgba(10,132,255,.25);color:var(--accent2)}
+.eb-etapa{background:var(--adim);border:1px solid rgba(245,158,11,.25);color:var(--accent2)}
 .eb-fase{background:var(--glass);border:1px solid var(--border2);color:var(--text)}
 .eb-linha{background:var(--gdim);border:1px solid rgba(48,209,88,.2);color:var(--green);font-size:10px}
 .estado-arrow{color:var(--text2);font-size:14px;line-height:1}
@@ -120,7 +99,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .igt-lbl{font-size:var(--fs-caption);color:var(--text2);font-weight:var(--fw-medium)}
 .igt-arrow{font-size:14px;color:var(--text2);transition:.2s}
 .bar{background:var(--bg4);border-radius:4px;height:6px;overflow:hidden}.bf{height:100%;border-radius:4px}.bf-h{background:linear-gradient(90deg,#f59e0b,#22c55e)}.bf-w{background:linear-gradient(90deg,#ef4444,#f59e0b)}.bf-c{background:#ef4444}
-.recom{background:rgba(10,132,255,.06);border:1px solid rgba(10,132,255,.15);border-radius:var(--r);padding:13px 15px;margin-bottom:14px;box-shadow:0 0 16px rgba(10,132,255,.04)}.recom-l{font-size:10px;color:var(--accent2);font-weight:var(--fw-bold);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}.recom-t{font-size:var(--fs-body);line-height:var(--lh-body)}
+.recom{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);border-radius:var(--r);padding:13px 15px;margin-bottom:14px;box-shadow:0 0 16px rgba(245,158,11,.04)}.recom-l{font-size:10px;color:var(--accent2);font-weight:var(--fw-bold);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}.recom-t{font-size:var(--fs-body);line-height:var(--lh-body)}
 .alrt{padding:10px 13px;border-radius:var(--r);font-size:var(--fs-body-sm);margin-bottom:11px;line-height:var(--lh-normal)}.al-w{background:var(--ydim);border:1px solid var(--yellow);color:var(--yellow)}.al-d{background:var(--rdim);border:1px solid var(--red);color:var(--red)}.al-i{background:var(--adim);border:1px solid var(--accent);color:var(--accent2)}
 .row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:10px;margin-bottom:4px}
 .er{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:14px}.er-h{background:var(--bg4);padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}.er-badge{background:var(--accent);color:#fff;font-size:var(--fs-micro);font-weight:var(--fw-black);padding:3px 7px;border-radius:4px;letter-spacing:1.5px}.er-htitle{font-size:var(--fs-body);font-weight:var(--fw-bold)}.er-dqi{margin-left:auto;font-size:var(--fs-body-sm);font-weight:var(--fw-xbold);color:var(--accent2)}
@@ -133,10 +112,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .co{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:14px}.co-h{padding:11px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}.co-chan{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}.co-tabs{display:flex;gap:3px}.cotab{padding:5px 11px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:none;color:var(--text2);transition:.15s;font-family:inherit}.cotab:hover{color:var(--text);background:var(--bg3)}.cotab.on{color:var(--accent2);background:var(--adim)}.co-b{padding:14px}.co-txt{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px;font-size:13px;line-height:1.7;white-space:pre-wrap;min-height:90px;margin-bottom:11px;font-family:inherit}.co-note{font-size:11px;color:var(--text2);margin-left:auto}
 .ftabs{display:flex;gap:5px;margin-bottom:17px;flex-wrap:wrap}.ft{padding:6px 13px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg2);color:var(--text2);transition:.15s}.ft:hover{color:var(--text);border-color:var(--border2)}.ft.on{color:var(--accent2);background:var(--adim);border-color:var(--accent)}
 .kpi-g{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}.kpi{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:16px;transition:.15s}.kpi:hover{background:var(--bg4)}.kpi-l{font-size:var(--fs-caption);color:var(--text2);margin-bottom:8px;letter-spacing:.3px}.kpi-v{font-size:var(--fs-h2);font-weight:var(--fw-xbold);margin-bottom:3px}.kd{font-size:var(--fs-body-sm)}.kd-p{color:var(--green)}.kd-n{color:var(--red)}
-.kpi-loading{animation:shimmer 1.4s infinite;background:linear-gradient(90deg,var(--bg3) 25%,var(--bg4) 50%,var(--bg3) 75%);background-size:800px 100%}
 .ch{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:17px;margin-bottom:14px}.ch-t{font-size:12px;font-weight:700;margin-bottom:12px}.fr{display:flex;align-items:center;gap:8px;margin-bottom:7px}.fl{font-size:12px;color:var(--text2);width:130px;flex-shrink:0}.fb-bg{flex:1;background:var(--bg3);border-radius:4px;height:18px;overflow:hidden}.fb-f{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:flex-end;padding-right:6px;min-width:20px}.fb-v{font-size:10px;font-weight:700;color:#fff}.fp{font-size:11px;color:var(--text2);width:34px;text-align:right;flex-shrink:0}
 .tbl{width:100%;border-collapse:collapse;font-size:var(--fs-body-sm)}.tbl th{padding:7px 10px;text-align:left;color:var(--text2);font-weight:var(--fw-bold);border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.5px}.tbl td{padding:8px 10px;border-bottom:1px solid var(--border)}.tbl tr:hover td{background:var(--bg3)}.tbl tr:last-child td{border-bottom:none}.pg{color:var(--green);font-weight:700}.pm{color:var(--yellow);font-weight:700}.pl{color:var(--red);font-weight:700}
-#rp{width:205px;min-width:205px;background:rgba(13,13,13,.6);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-left:1px solid var(--border);padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+#rp{width:205px;min-width:205px;background:rgba(4,8,15,.7);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-left:1px solid var(--border);padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
 .rps{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:12px}.rps-t{font-family:var(--font-body);font-size:10px;font-weight:var(--fw-bold);color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
 .lvl-n{font-size:14px;font-weight:800;color:var(--accent2);text-align:center;margin-bottom:1px}.lvl-s{font-size:10px;color:var(--text2);text-align:center}.lvl-bar{background:var(--bg4);border-radius:4px;height:5px;margin:7px 0;overflow:hidden}.lvl-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--accent2))}.lvl-xp{font-size:10px;color:var(--text2);text-align:center}
 .score-big{font-family:var(--font-body);font-size:var(--fs-display);font-weight:var(--fw-xbold);color:var(--accent2);text-align:center;line-height:var(--lh-tight);margin:3px 0}.score-l{font-size:10px;color:var(--text2);text-align:center;font-family:var(--font-body)}.sk-n{font-family:var(--font-body);font-size:var(--fs-h2);font-weight:var(--fw-xbold);color:var(--gold);text-align:center;line-height:var(--lh-tight);margin:3px 0}.sk-l{font-size:10px;color:var(--text2);text-align:center}
@@ -180,7 +158,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .home-fm-icon{font-size:16px}
 .home-fm-btn{padding:4px 10px;border-radius:6px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.12s}
 .home-fm-btn:hover{border-color:var(--accent);color:var(--accent2)}
-.home-fm-auto.on{border-color:var(--green);color:var(--green);background:var(--gdim)}
 .home-meta-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .home-meta{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px}
 .home-meta-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;font-weight:var(--fw-bold)}
@@ -239,12 +216,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .ent-profile-item-val{font-size:14px;font-weight:700}
 .ent-profile-item-lbl{font-size:9px;color:var(--text2);margin-top:2px;text-transform:uppercase}
 /* V3: Task Runner */
-.tr-dim-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;padding:7px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px}
-.tr-dim-lbl{font-size:9px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;min-width:42px}
-.tr-smart-ks.on{background:rgba(239,68,68,.12);border-color:var(--red);color:var(--red)}
-.tr-smart-ent.on{background:rgba(245,158,11,.10);border-color:var(--amber);color:var(--amber2)}
-.tr-smart-gap.on{background:rgba(14,165,233,.10);border-color:var(--blue2);color:var(--blue2)}
-.tr-smart-hv.on{background:rgba(16,185,129,.10);border-color:var(--green);color:var(--green)}
 .task-empty{padding:40px;text-align:center;font-size:13px;color:var(--text2)}
 .task-stats{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 .task-stat-chip{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--bg3)}
@@ -271,13 +242,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .task-aging-medium{background:var(--adim);color:var(--accent2)}
 .task-card-name{font-size:var(--fs-body-sm);font-weight:var(--fw-bold);margin-bottom:2px;line-height:var(--lh-tight)}
 .task-card-co{font-size:var(--fs-caption);color:var(--text2);margin-bottom:8px}
-.task-card-meta{display:flex;gap:8px;font-size:var(--fs-caption);color:var(--text2);margin-bottom:8px}
+.task-card-meta{display:flex;gap:8px;font-size:var(--fs-caption);color:var(--text2);margin-bottom:10px}
 .task-card-meta span{background:var(--bg4);padding:2px 6px;border-radius:3px}
-.task-card-nba{font-size:var(--fs-caption);color:var(--amber);font-weight:var(--fw-medium);margin-bottom:10px;line-height:var(--lh-tight)}
-.tag-bowtie{font-weight:700;letter-spacing:.4px}
-.tag-bowtie-acq{border-color:rgba(14,165,233,.4);color:var(--blue2);background:rgba(14,165,233,.08)}
-.tag-bowtie-ret{border-color:rgba(139,92,246,.4);color:#a78bfa;background:rgba(139,92,246,.08)}
-.tag-bowtie-exp{border-color:rgba(16,185,129,.4);color:var(--green);background:rgba(16,185,129,.08)}
 .task-card-actions{display:flex;gap:6px}
 .task-btn{padding:5px 10px;border-radius:6px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.12s}
 .task-btn:hover{border-color:var(--accent);color:var(--accent2);background:var(--adim)}
@@ -336,7 +302,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .cad-step{display:flex;flex-direction:column;align-items:center;padding:4px 6px;border-radius:4px;background:var(--bg4);border:1px solid var(--border);min-width:36px;transition:.12s}
 .cad-step.done{background:var(--gdim);border-color:var(--green);opacity:.7}
 .cad-step.done .cad-step-icon::after{content:'✓';position:absolute;font-size:8px;color:var(--green);top:-2px;right:-4px}
-.cad-step.current{background:var(--adim);border-color:var(--accent);box-shadow:0 0 8px rgba(10,132,255,.3)}
+.cad-step.current{background:var(--adim);border-color:var(--accent);box-shadow:0 0 8px rgba(245,158,11,.3)}
 .cad-step-icon{font-size:14px;position:relative}
 .cad-step-day{font-size:8px;font-weight:700;color:var(--text2)}
 .cad-actions{display:flex;gap:6px}
@@ -461,7 +427,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 /* WhatsApp conversation panel */
 .wa-conv-btn{padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--green);color:var(--green);background:transparent;transition:.15s;display:inline-flex;align-items:center;gap:4px}
 .wa-conv-btn:hover{background:var(--gdim);color:#4ade80}
-.btn-on{background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important;box-shadow:0 2px 8px rgba(10,132,255,.25)}
+.btn-on{background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important;box-shadow:0 2px 8px rgba(245,158,11,.25)}
 .btn-on[data-color="clay"]{background:var(--clay)!important;border-color:var(--clay)!important}
 .btn-on[data-color="green"]{background:var(--green)!important;border-color:var(--green)!important}
 .wa-conv-btn.btn-on{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important;box-shadow:0 2px 8px rgba(74,222,128,.25)}
@@ -548,7 +514,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .pb-badge.risk-low{background:rgba(74,222,128,.15);color:var(--green)}
 .pb-badge.risk-med{background:rgba(250,204,21,.15);color:var(--yellow)}
 .pb-badge.risk-high{background:rgba(239,68,68,.15);color:var(--red)}
-.pb-badge.fw{background:rgba(10,132,255,.15);color:var(--accent)}
+.pb-badge.fw{background:rgba(245,158,11,.15);color:var(--accent)}
 .pb-badge.level{background:var(--bg3);color:var(--text2)}
 .pb-summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
 .pb-sum-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
@@ -874,7 +840,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .fv2-btn-sec{flex:1;background:none;border:1px solid var(--border);color:var(--text2);font-size:11px;padding:6px;border-radius:6px;cursor:pointer;font-family:inherit;transition:.12s}
 .fv2-btn-sec:hover{border-color:var(--red);color:var(--red)}
 .fv2-btn-pri{flex:1;background:var(--adim);border:1px solid var(--accent);color:var(--accent2);font-size:11px;padding:6px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:600;transition:.12s}
-.fv2-btn-pri:hover{background:rgba(10,132,255,.15)}
+.fv2-btn-pri:hover{background:rgba(245,158,11,.15)}
 .sort-row{display:flex;align-items:center;gap:4px}
 .sort-sel{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:4px 22px 4px 8px;font-size:10px;color:var(--text2);outline:none;cursor:pointer;font-family:inherit;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7a90'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center}
 .sort-sel:focus{border-color:var(--accent)}
@@ -1018,30 +984,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .batch-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
 .batch-table tr:hover{background:var(--surface)}
 .batch-err td{opacity:.5}
-/* ── MOBILE BREAKPOINT (768px) ────────────────────────────────── */
-@media(max-width:768px){
-  #sb-toggle{display:flex;align-items:center;justify-content:center}
-  #sb{position:fixed;top:0;left:0;height:100%;z-index:100;transform:translateX(-100%);transition:transform .25s cubic-bezier(.4,0,.2,1);width:280px!important;min-width:280px!important}
-  #sb.sb-open{transform:translateX(0)}
-  #sb-overlay.sb-open{display:block}
-  #ct{padding:12px}
-  #rp{display:none}
-  .info-grid{grid-template-columns:1fr!important}
-  .ntab{padding:5px 10px;font-size:11px}
-  .logo-name{font-size:13px;letter-spacing:1px}
-  .kpi-g{grid-template-columns:1fr 1fr!important}
-  .home-meta-grid{grid-template-columns:1fr 1fr!important}
-  #topbar{padding:0 12px;gap:8px}
-  .chip-lvl{display:none}
-  .streak-badge{display:none}
-  .tbr{gap:6px}
-}
-@media(max-width:480px){
-  .kpi-g{grid-template-columns:1fr!important}
-  .home-meta-grid{grid-template-columns:1fr!important}
-  .ntab{display:none}
-  #topbar .ntab.on{display:inline-flex}
-}
 </style>
 </head>
 <body>
@@ -1075,12 +1017,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
     <button class="auth-logout" onclick="supabaseSignOut()">Sair e trocar de conta</button>
   </div>
 </div>
-<div id="sb-overlay" onclick="window.toggleSidebar&&window.toggleSidebar(false)"></div>
-<div id="elucy-toast"></div>
 <div id="topbar">
-  <button id="sb-toggle" onclick="window.toggleSidebar&&window.toggleSidebar()" aria-label="Menu" title="Abrir pipeline">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-  </button>
   <span class="logo"><span class="logo-name">ELUCY</span><span class="logo-badge">BY G4</span></span>
   <span style="font-size:10px;color:var(--text2);margin-left:-2px;letter-spacing:.3px">Sales Engagement</span>
   <button class="ntab on" onclick="setScreen('home',this)">Home</button>
@@ -1091,7 +1028,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
   <button class="ntab" onclick="setScreen('intelligence',this)">Intel</button>
   <button class="ntab" onclick="setScreen('playbooks',this)">Playbooks</button>
   <div class="tbr">
-    <span id="sync-dot" class="sync-dot sync-dot-ok" title="Sincronizado"></span>
     <span class="op-pill" id="op-pill">CRM Sincronizado</span>
     <span class="streak-badge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2z"/></svg> <span id="streak-days-label">7</span> dias</span>
     <div class="chip">
@@ -1369,78 +1305,23 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
     <!-- V3: TASKS — FUP Task Runner -->
     <div class="screen" id="screen-tasks">
-      <!-- Header -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
         <div>
-          <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:2px">Task Runner</div>
-          <div style="font-size:11px;color:var(--text2)" id="tr-summary">Execute tarefas em serie por prioridade e focus mode</div>
+          <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:3px">Task Runner</div>
+          <div style="font-size:12px;color:var(--text2)">Execute tarefas em serie por prioridade e focus mode</div>
         </div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <span style="font-size:10px;color:var(--text2)">AÇÃO:</span>
-          <div class="task-filters" id="task-filters">
-            <span class="fchip on" data-tfilter="all" onclick="window._filterTasks(null,this)">Todas</span>
-            <span class="fchip" data-tfilter="follow_up" onclick="window._filterTasks('follow_up',this)">FUP</span>
-            <span class="fchip" data-tfilter="social_dm" onclick="window._filterTasks('social_dm',this)">DM</span>
-            <span class="fchip" data-tfilter="reativacao" onclick="window._filterTasks('reativacao',this)">Reativ.</span>
-            <span class="fchip" data-tfilter="handoff_prep" onclick="window._filterTasks('handoff_prep',this)">Handoff</span>
-            <span class="fchip" data-tfilter="no_show_recovery" onclick="window._filterTasks('no_show_recovery',this)">No-Show</span>
-            <span class="fchip" data-tfilter="cadence" onclick="window._filterTasks('cadence',this)">Cadência</span>
-          </div>
+        <div class="task-filters" id="task-filters">
+          <span class="fchip on" data-tfilter="all" onclick="window._filterTasks(null,this)">Todas</span>
+          <span class="fchip" data-tfilter="follow_up" onclick="window._filterTasks('follow_up',this)">FUP</span>
+          <span class="fchip" data-tfilter="social_dm" onclick="window._filterTasks('social_dm',this)">DM</span>
+          <span class="fchip" data-tfilter="reativacao" onclick="window._filterTasks('reativacao',this)">Reativ.</span>
+          <span class="fchip" data-tfilter="handoff_prep" onclick="window._filterTasks('handoff_prep',this)">Handoff</span>
+          <span class="fchip" data-tfilter="no_show_recovery" onclick="window._filterTasks('no_show_recovery',this)">No-Show</span>
+          <span class="fchip" data-tfilter="cadence" onclick="window._filterTasks('cadence',this)">Cadência</span>
         </div>
       </div>
-
-      <!-- DIM 1: Estágio de Conversão -->
-      <div class="tr-dim-row" id="tr-dim-fase">
-        <span class="tr-dim-lbl">FASE:</span>
-        <span class="fchip on" data-trfase="all" onclick="window._trSetFase(null,this)">Todas</span>
-        <span class="fchip" data-trfase="CQL" onclick="window._trSetFase('CQL',this)" style="border-color:rgba(139,92,246,.3)">
-          <span style="color:#8b5cf6">CQL</span> · Novos
-        </span>
-        <span class="fchip" data-trfase="SAL" onclick="window._trSetFase('SAL',this)" style="border-color:rgba(245,158,11,.3)">
-          <span style="color:var(--amber)">SAL</span> · Qualificados
-        </span>
-        <span class="fchip" data-trfase="SQL" onclick="window._trSetFase('SQL',this)" style="border-color:rgba(16,185,129,.3)">
-          <span style="color:var(--green)">SQL</span> · Fechamento
-        </span>
-        <span class="fchip" data-trfase="stall" onclick="window._trSetFase('stall',this)" style="border-color:rgba(239,68,68,.3)">
-          <span style="color:var(--red)">Stall</span> · Reativar
-        </span>
-      </div>
-
-      <!-- DIM 2: Ciclo D -->
-      <div class="tr-dim-row" id="tr-dim-ciclo">
-        <span class="tr-dim-lbl">CICLO:</span>
-        <span class="fchip on" data-trciclo="all" onclick="window._trSetCiclo(null,this)">Todos</span>
-        <span class="fchip" data-trciclo="d1" onclick="window._trSetCiclo('d1',this)">D1 · 0–10d <span style="font-size:9px;color:var(--text2)">Speed</span></span>
-        <span class="fchip" data-trciclo="d2" onclick="window._trSetCiclo('d2',this)">D2 · 10–20d <span style="font-size:9px;color:var(--text2)">SPICED</span></span>
-        <span class="fchip" data-trciclo="d3" onclick="window._trSetCiclo('d3',this)">D3 · 20–30d <span style="font-size:9px;color:var(--text2)">Reframe</span></span>
-        <span class="fchip" data-trciclo="d4" onclick="window._trSetCiclo('d4',this)">D4 · 30–40d <span style="font-size:9px;color:var(--text2)">Autoridade</span></span>
-        <span class="fchip" data-trciclo="d56" onclick="window._trSetCiclo('d56',this)" style="border-color:rgba(239,68,68,.3)">D5–D6 · 40d+ <span style="font-size:9px;color:var(--red)">Ultimato</span></span>
-      </div>
-
-      <!-- DIM 3: Smart View -->
-      <div class="tr-dim-row" id="tr-dim-smart">
-        <span class="tr-dim-lbl">VIEW:</span>
-        <span class="fchip on" data-trsmart="all" onclick="window._trSetSmart(null,this)">Padrão</span>
-        <span class="fchip tr-smart-ks" data-trsmart="kill_switch" onclick="window._trSetSmart('kill_switch',this)">
-          🚨 Kill Switch
-        </span>
-        <span class="fchip tr-smart-ent" data-trsmart="enterprise" onclick="window._trSetSmart('enterprise',this)">
-          💎 Enterprise · Titan
-        </span>
-        <span class="fchip tr-smart-gap" data-trsmart="framework_gap" onclick="window._trSetSmart('framework_gap',this)">
-          📉 Framework Gap
-        </span>
-        <span class="fchip tr-smart-hv" data-trsmart="high_value" onclick="window._trSetSmart('high_value',this)">
-          ⚡ Alta Urgência
-        </span>
-      </div>
-
-      <!-- Modo recomendado banner -->
-      <div id="tr-mode-banner" style="display:none;padding:8px 12px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);margin-bottom:10px;font-size:11px;color:var(--text2)"></div>
-
       <div id="task-runner-list">
-        <div id="task-skeleton" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div class="task-empty">Carregue o pipeline para ver as tarefas.</div>
       </div>
     </div>
     <div class="screen" id="screen-reports">
@@ -1494,7 +1375,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
         <span class="intel-dim" onclick="window._intelDim('rfv',this)" style="border-color:#a78bfa;color:#a78bfa">RFV</span>
         <span class="intel-dim" onclick="window._intelDim('spin',this)" style="border-color:var(--yellow);color:var(--yellow)">SPIN Audit</span>
         <span class="intel-dim" onclick="window._intelDim('advisor',this)" style="border-color:var(--accent2);color:var(--accent2)">Trusted Advisor</span>
-        <span class="intel-dim" onclick="window._intelDim('bowtie',this)" style="border-color:#f97316;color:#f97316">⊞ Bowtie</span>
       </div>
       <div id="intel-content">
         <div class="intel-empty">Carregue o pipeline para visualizar a análise de inteligência.</div>
@@ -1790,86 +1670,31 @@ function renderPlaybooks(){
   window._PLAYBOOKS_DATA=PLAYBOOKS;
   window._PLAYBOOKS_DEALS=deals;
 
-  var totalDeals=deals.length;
-  var covPct=totalDeals>0?Math.round(((titanCount+builderCount+executorCount)/totalDeals)*100):0;
-
-  var html='<div class="pb-container">';
+  var html='<div style="padding:16px">';
   html+='<div id="pb-list">';
+  html+='<div style="font-size:18px;font-weight:800;margin-bottom:4px">Playbooks</div>';
+  html+='<div style="font-size:12px;color:var(--text2);margin-bottom:16px">Frameworks de venda por persona — '+deals.length+' deals ativos ('+titanCount+' Titan, '+builderCount+' Builder, '+executorCount+' Executor)</div>';
 
-  // Dashboard header
-  html+='<div class="pb-dash">';
-  html+='<div>';
-  html+='<div class="pb-dash-title">Playbooks</div>';
-  html+='<div style="font-size:11px;color:var(--text2);margin-top:2px">'+totalDeals+' deals ativos · frameworks por persona</div>';
-  html+='</div>';
-  html+='<div class="pb-dash-stats">';
-  html+='<div class="pb-dstat"><span class="pb-dstat-n" style="color:#f59e0b">'+titanCount+'</span><span class="pb-dstat-l">Titan</span></div>';
-  html+='<div class="pb-dstat"><span class="pb-dstat-n" style="color:#22c55e">'+builderCount+'</span><span class="pb-dstat-l">Builder</span></div>';
-  html+='<div class="pb-dstat"><span class="pb-dstat-n" style="color:#3b82f6">'+executorCount+'</span><span class="pb-dstat-l">Executor</span></div>';
-  html+='<div class="pb-coverage-ring"><span>'+covPct+'%</span></div>';
-  html+='</div>';
-  html+='</div>';
-
-  // Alerts
-  if(titanCount===0&&builderCount===0&&executorCount===0){
-    html+='<div class="pb-alert pb-alert-red">Nenhum deal com persona mapeada. Frameworks não podem ser aplicados sem persona definida.</div>';
-  } else if(covPct<50){
-    html+='<div class="pb-alert pb-alert-red">Cobertura de framework abaixo de 50% — '+covPct+'% dos deals tem persona mapeada. Risco de qualificacao incompleta.</div>';
-  } else {
-    html+='<div class="pb-alert pb-alert-green">'+covPct+'% dos deals com persona mapeada. Frameworks ativos e calibrados por contexto.</div>';
-  }
-
-  // Frameworks section
-  html+='<div class="pb-cat-header">Frameworks por Persona</div>';
-  html+='<div class="pb-cat-sub">Clique para ver etapas, regras criticas e deals aplicaveis</div>';
-  html+='<div class="pb-grid" style="margin-bottom:20px">';
-  var fwPbs=PLAYBOOKS.filter(function(p){return p.persona==='Titan'||p.persona==='Builder'||p.persona==='Executor';});
-  fwPbs.forEach(function(pb){
-    var count=pb.persona==='Titan'?titanCount:pb.persona==='Builder'?builderCount:executorCount;
-    var pct=totalDeals>0?Math.round((count/totalDeals)*100):0;
-    html+='<div class="pb-card" style="--pb-color:'+pb.color+'" onclick="openPlaybook(\''+pb.id+'\')">';
-    html+='<div class="pb-card-top">';
-    html+='<span class="pb-card-icon">'+pb.icon+'</span>';
-    html+='<div class="pb-card-info">';
-    html+='<div class="pb-card-title">'+pb.title+'</div>';
-    html+='<span class="pb-card-persona" style="background:'+pb.color+'22;color:'+pb.color+'">'+pb.persona+'</span>';
-    html+='</div>';
-    html+='<div class="pb-card-count"><span class="pb-card-n" style="color:'+pb.color+'">'+count+'</span><span class="pb-card-nl">deals</span></div>';
-    html+='</div>';
-    html+='<div class="pb-card-desc">'+pb.desc+'</div>';
-    html+='<div class="pb-card-cov">';
-    html+='<div class="pb-card-cov-bar"><div class="pb-card-cov-fill" style="width:'+pct+'%;background:'+pb.color+'"></div></div>';
-    html+='<span class="pb-card-cov-pct">'+pct+'% cobertura</span>';
-    html+='</div>';
-    html+='<div class="pb-card-steps">'+pb.steps.length+' etapas</div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">';
+  PLAYBOOKS.forEach(function(pb){
+    var count=0;
+    if(pb.persona==='Titan') count=titanCount;
+    else if(pb.persona==='Builder') count=builderCount;
+    else if(pb.persona==='Executor') count=executorCount;
+    else count=deals.length;
+    html+='<div onclick="openPlaybook(\''+pb.id+'\')" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor=\''+pb.color+'\';this.style.background=\'var(--bg4)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.background=\'var(--bg3)\'">';
+    html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
+    html+='<span style="font-size:22px">'+pb.icon+'</span>';
+    html+='<div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--text)">'+pb.title+'</div>';
+    html+='<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:'+pb.color+'22;color:'+pb.color+'">'+pb.persona+'</span></div>';
+    html+='<span style="font-size:12px;color:var(--text2);font-weight:600">'+count+' deals</span></div>';
+    html+='<div style="font-size:12px;color:var(--text2);line-height:1.4">'+pb.desc+'</div>';
     html+='</div>';
   });
-  html+='</div>';
+  html+='</div></div>';
 
-  // Protocolo section
-  html+='<div class="pb-cat-header">Protocolos de Execucao</div>';
-  html+='<div class="pb-cat-sub">Ativos para todos os deals independente de persona</div>';
-  html+='<div class="pb-grid">';
-  var protoPbs=PLAYBOOKS.filter(function(p){return p.persona==='Todos';});
-  protoPbs.forEach(function(pb){
-    html+='<div class="pb-card" style="--pb-color:'+pb.color+'" onclick="openPlaybook(\''+pb.id+'\')">';
-    html+='<div class="pb-card-top">';
-    html+='<span class="pb-card-icon">'+pb.icon+'</span>';
-    html+='<div class="pb-card-info">';
-    html+='<div class="pb-card-title">'+pb.title+'</div>';
-    html+='<span class="pb-card-persona" style="background:'+pb.color+'22;color:'+pb.color+'">'+pb.persona+'</span>';
-    html+='</div>';
-    html+='<div class="pb-card-count"><span class="pb-card-n" style="color:'+pb.color+'">'+totalDeals+'</span><span class="pb-card-nl">deals</span></div>';
-    html+='</div>';
-    html+='<div class="pb-card-desc">'+pb.desc+'</div>';
-    html+='<div class="pb-card-steps">'+pb.steps.length+' etapas</div>';
-    html+='</div>';
-  });
-  html+='</div>';
-
-  html+='</div>'; // pb-list
   html+='<div id="pb-detail" style="display:none"></div>';
-  html+='</div>'; // pb-container
+  html+='</div>';
 
   el.innerHTML=html;
 }
@@ -1890,46 +1715,37 @@ function openPlaybook(id){
   det.style.display='block';
   var ct=document.getElementById('ct'); if(ct) ct.scrollTop=0;
 
-  var h='<div class="pb-det">';
-  // Back + header
-  h+='<button onclick="closePlaybook()" class="btn bs btn-sm" style="margin-bottom:10px">← Voltar</button>';
-  h+='<div class="pb-det-header" style="border-left:3px solid '+pb.color+'">';
-  h+='<span style="font-size:32px">'+pb.icon+'</span>';
-  h+='<div style="flex:1">';
-  h+='<div style="font-size:18px;font-weight:800;color:var(--text)">'+pb.title+'</div>';
-  h+='<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:'+pb.color+'22;color:'+pb.color+';font-weight:700">'+pb.persona+'</span>';
-  h+='<div style="font-size:12px;color:var(--text2);margin-top:4px;line-height:1.4">'+pb.desc+'</div>';
-  h+='</div>';
-  h+='</div>';
-
-  // Kill switch / rules alert
-  h+='<div class="pb-ks">⚠ REGRAS CRITICAS — '+pb.rules+'</div>';
+  var h='<div style="margin-bottom:14px">';
+  h+='<button onclick="closePlaybook()" class="btn bs btn-sm" style="margin-bottom:12px">← Voltar</button>';
+  h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">';
+  h+='<span style="font-size:28px">'+pb.icon+'</span>';
+  h+='<div><div style="font-size:20px;font-weight:800;color:var(--text)">'+pb.title+'</div>';
+  h+='<span style="font-size:11px;padding:2px 8px;border-radius:4px;background:'+pb.color+'22;color:'+pb.color+';font-weight:600">'+pb.persona+'</span></div></div>';
+  h+='<div style="font-size:13px;color:var(--text2);margin-top:6px;line-height:1.5">'+pb.desc+'</div></div>';
 
   // Steps
-  h+='<div class="card" style="border-left:3px solid '+pb.color+';margin-bottom:10px">';
-  h+='<div class="sec-t" style="margin-bottom:8px">Etapas do Framework</div>';
-  pb.steps.forEach(function(s,i){
-    var parts=s.split('—');
-    var label=parts[0]?parts[0].trim():'';
-    var desc=parts.slice(1).join('—').trim();
-    h+='<div class="pb-step">';
-    h+='<div class="pb-step-num" style="background:'+pb.color+'22;color:'+pb.color+'">'+(i+1)+'</div>';
-    h+='<div class="pb-step-body">';
-    h+='<div class="pb-step-label">'+label+'</div>';
-    if(desc) h+='<div class="pb-step-desc">'+desc+'</div>';
-    h+='</div></div>';
+  h+='<div class="card" style="border-left:3px solid '+pb.color+'">';
+  h+='<div class="sec-t" style="margin-bottom:10px">Etapas do Framework</div>';
+  pb.steps.forEach(function(s){
+    h+='<div style="font-size:12px;color:var(--text);padding:6px 0;border-bottom:1px solid var(--border);line-height:1.5">'+s+'</div>';
   });
   h+='</div>';
 
   // When to use
-  h+='<div class="card" style="margin-bottom:10px">';
+  h+='<div class="card">';
   h+='<div class="sec-t" style="margin-bottom:6px">Quando Usar</div>';
-  h+='<div style="font-size:12px;color:var(--text2);line-height:1.6">'+pb.when+'</div>';
+  h+='<div style="font-size:12px;color:var(--text2);line-height:1.5">'+pb.when+'</div>';
+  h+='</div>';
+
+  // Rules
+  h+='<div class="card" style="border-left:3px solid var(--yellow)">';
+  h+='<div class="sec-t" style="margin-bottom:6px;color:var(--yellow)">Regras Criticas</div>';
+  h+='<div style="font-size:12px;color:var(--text);line-height:1.5">'+pb.rules+'</div>';
   h+='</div>';
 
   // Matching deals
   h+='<div class="card">';
-  h+='<div class="sec-t" style="margin-bottom:10px">Deals Aplicaveis <span style="font-size:11px;color:var(--text2);font-weight:400">('+matched.length+')</span></div>';
+  h+='<div class="sec-t" style="margin-bottom:10px">Deals Aplicaveis <span style="font-size:12px;color:var(--text2);font-weight:400">('+matched.length+')</span></div>';
   if(matched.length===0){
     h+='<div style="font-size:12px;color:var(--text2)">Nenhum deal ativo com persona '+pb.persona+'.</div>';
   } else {
@@ -1939,18 +1755,17 @@ function openPlaybook(id){
       var fase=d.fase||'—';
       var aging=d.delta||0;
       var agColor=aging>15?'var(--red)':aging>7?'var(--yellow)':'var(--green)';
-      h+='<div class="pb-deal-row" onclick="selectDeal(\''+d.deal_id+'\')">';
-      h+='<div class="pb-deal-info"><div class="pb-deal-name">'+name+'</div>';
-      h+='<div class="pb-deal-meta"><span>'+fase+'</span><span>·</span><span>'+(d.linhaReceita||'—')+'</span></div></div>';
-      h+='<span class="pb-deal-aging" style="color:'+agColor+'">'+aging+'d</span>';
+      h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="selectDeal(\''+d.deal_id+'\')">';
+      h+='<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+name+'</div>';
+      h+='<div style="font-size:10px;color:var(--text2)">'+fase+' — '+(d.linhaReceita||'—')+'</div></div>';
+      h+='<span style="font-size:11px;font-weight:600;color:'+agColor+'">'+aging+'d</span>';
       h+='</div>';
     });
     if(matched.length>10){
-      h+='<div style="font-size:11px;color:var(--text2);margin-top:8px;text-align:center">+ '+(matched.length-10)+' deals</div>';
+      h+='<div style="font-size:11px;color:var(--text2);margin-top:8px;text-align:center">+ '+(matched.length-10)+' deals nao exibidos</div>';
     }
   }
   h+='</div>';
-  h+='</div>'; // pb-det
 
   det.innerHTML=h;
 }
@@ -1961,65 +1776,11 @@ function closePlaybook(){
   var ct=document.getElementById('ct'); if(ct) ct.scrollTop=0;
 }
 
-// V3: Task Runner — estado multidimensional
-window._trState = { tipo: null, fase: null, ciclo: null, smart: null };
-
-// Dim 0 — Tipo de ação (original)
+// V3: Task filter handler
 window._filterTasks = function(type, el){
   document.querySelectorAll('#task-filters .fchip').forEach(c=>c.classList.remove('on'));
   if(el) el.classList.add('on');
-  window._trState.tipo = type;
-  window._trApply();
-};
-
-// Dim 1 — Fase de conversão (CQL/SAL/SQL/stall)
-window._trSetFase = function(fase, el){
-  document.querySelectorAll('#tr-dim-fase .fchip').forEach(c=>c.classList.remove('on'));
-  if(el) el.classList.add('on');
-  window._trState.fase = fase;
-  window._trApply();
-};
-
-// Dim 2 — Ciclo D (d1/d2/d3/d4/d56)
-window._trSetCiclo = function(ciclo, el){
-  document.querySelectorAll('#tr-dim-ciclo .fchip').forEach(c=>c.classList.remove('on'));
-  if(el) el.classList.add('on');
-  window._trState.ciclo = ciclo;
-  window._trApply();
-};
-
-// Dim 3 — Smart View (kill_switch/enterprise/framework_gap/high_value)
-window._trSetSmart = function(smart, el){
-  document.querySelectorAll('#tr-dim-smart .fchip').forEach(c=>c.classList.remove('on'));
-  if(el) el.classList.add('on');
-  window._trState.smart = smart;
-  window._trApply();
-};
-
-// Aplica todos os filtros e atualiza o banner contextual
-window._trApply = function(){
-  var s = window._trState;
-  // Banner contextual por combinação
-  var banner = document.getElementById('tr-mode-banner');
-  if(banner){
-    var msgs = {
-      'd1_SAL': '⚡ D1+SAL — Speed to Lead ativo. Foco em abertura e quebra de inércia nas primeiras 24h.',
-      'd2_SAL': '🔍 D2+SAL — Janela de diagnóstico SPICED. Extrair dor, impacto e critical event antes de pedir agenda.',
-      'd3_SAL': '🎯 D3+SAL — Reframe Challenger. Lead esfriando — desafiar a visão atual com custo de inação.',
-      'd4_SAL': '📊 D4+SAL — Construção de autoridade. Enviar case/prova social antes do próximo CTA.',
-      'd56_SAL': '🚨 D5–D6+SAL — Ultimato. CTA imperativo: avançar, downsell ou arquivar. Sem exceção.',
-      'd56_stall': '🚨 D5–D6+Stall — Iron Dome ativo. Diagnóstico de causa do stall → reengajamento ou arquivamento.',
-      'enterprise': '💎 Enterprise View — Apenas leads Titan (faturamento >1MM). Modo Peer-to-Peer ativo.',
-      'kill_switch': '🚨 Kill Switch — Deals com violação detectada pelo BEG Governor. Correção obrigatória antes de avançar.',
-      'framework_gap': '📉 Framework Gap — Deals sem dor monetizada ou sem authority confirmado. Preencher antes de proposta.',
-      'high_value': '⚡ Alta Urgência — Deals com buy signals ou urgency detectada. Janela de 48h para ação.',
-    };
-    var key = (s.ciclo||'')+'_'+(s.fase||'');
-    var msg = msgs[key] || msgs[s.smart||''] || '';
-    if(msg){ banner.innerHTML = 'MODO ATIVO &nbsp;·&nbsp; '+msg; banner.style.display='block'; }
-    else { banner.style.display='none'; }
-  }
-  if(window.renderTaskRunner) window.renderTaskRunner(s.tipo, null, s.fase, s.ciclo, s.smart);
+  if(window.renderTaskRunner) window.renderTaskRunner(type);
 };
 
 function selectDeal(id){
@@ -2647,7 +2408,6 @@ async function loadDealsFromSupabase(email){
 
   // V5/V6 Engine Boot — roda apos deals carregados
   (async function(){
-    if(window._syncStatus) window._syncStatus('syncing');
     try {
       if(window.initOperatorContext) await window.initOperatorContext();
       if(window.loadTaxonomy) await window.loadTaxonomy();
@@ -2655,13 +2415,8 @@ async function loadDealsFromSupabase(email){
       if(window.syncForecastRuntime) await window.syncForecastRuntime();
       if(window.syncDailySnapshot) await window.syncDailySnapshot();
       if(window.syncOperatorEfficiency) await window.syncOperatorEfficiency();
-      if(window._syncStatus) window._syncStatus('ok');
       console.log('[boot] V7 engine layers initialized');
-    } catch(e){
-      console.warn('[boot] engine init error:', e.message);
-      if(window._syncStatus) window._syncStatus('error');
-      if(window._toast) window._toast('Erro ao inicializar motor', e.message, null, 'error');
-    }
+    } catch(e){ console.warn('[boot] engine init error:', e.message); }
   })();
 }
 
@@ -2875,15 +2630,6 @@ async function callSyncDeals(){
   setInterval(requestRefresh,POLL_MS);
 })();
 
-// Cmd+, (Mac) / Ctrl+, (Win) → abrir Settings
-document.addEventListener('keydown',function(e){
-  if((e.metaKey||e.ctrlKey)&&e.key===','){
-    e.preventDefault();
-    if(document.getElementById('settings-modal')) closeSettings();
-    else openSettings();
-  }
-});
-
 // ── OPERADOR / CRM SYNC ──────────────────────────────────────────────
 
 const DB_ENDPOINT='https://dbc-8acefaf9-a170.cloud.databricks.com/api/2.0/sql/statements';
@@ -2903,453 +2649,95 @@ function applyOperator(email){
   document.getElementById('op-pill').classList.add('show');
 }
 
-// ── OPERATOR SETTINGS — Cursor-inspired two-pane ─────────────────────
-function openSettings(section){
-  if(document.getElementById('settings-modal')) return;
+function openSettings(){
   const saved=localStorage.getItem('elucy_operator_email')||'';
   const savedToken=localStorage.getItem('elucy_db_token')||'';
   const tokenMask=savedToken?'••••'+savedToken.slice(-8):'';
-  const ctx=window.getOperatorCtx();
-  const voiceMode=localStorage.getItem('elucy_voice_mode')||'standard';
-  const autoDraft=localStorage.getItem('elucy_auto_draft')==='1';
-  const tension=localStorage.getItem('elucy_challenger_tension')||'equilibrado';
-  const autoFocus=localStorage.getItem('elucy_auto_focus')==='1';
-  const dqi=ctx.data_quality_score!=null?Math.round(ctx.data_quality_score*100):null;
-  const activeSection=section||'perfil';
-
   const ov=document.createElement('div');
   ov.className='modal-ov';
   ov.id='settings-modal';
-  ov.style.cssText='align-items:center;justify-content:center';
-
   ov.innerHTML=`
-<style>
-#settings-panel{display:flex;width:700px;max-width:96vw;max-height:88vh;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.5)}
-#settings-nav{width:188px;min-width:188px;background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:0}
-#settings-nav-header{padding:16px 16px 10px;border-bottom:1px solid var(--border)}
-#settings-nav-title{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
-.snav-section{padding:6px 8px 2px;font-size:10px;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase;margin-top:4px}
-.snav-item{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:7px;margin:1px 6px;cursor:pointer;font-size:12px;font-weight:500;color:var(--text-2);transition:background .12s,color .12s;user-select:none}
-.snav-item:hover{background:var(--surface-2,rgba(255,255,255,.06));color:var(--text)}
-.snav-item.active{background:var(--blue);color:#fff}
-.snav-item svg{opacity:.7;flex-shrink:0}
-.snav-item.active svg{opacity:1}
-#settings-nav-status{margin-top:auto;padding:12px 10px;border-top:1px solid var(--border)}
-.op-status-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--border)}
-.op-status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;box-shadow:0 0 6px var(--green)}
-.op-status-name{font-size:11px;font-weight:600;color:var(--text);line-height:1.3}
-.op-status-role{font-size:9px;color:var(--muted)}
-#settings-content{flex:1;overflow-y:auto;display:flex;flex-direction:column}
-#settings-content-header{padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-#settings-content-title{font-size:14px;font-weight:700;color:var(--text)}
-#settings-content-subtitle{font-size:11px;color:var(--muted);margin-top:2px}
-.settings-save-btn{font-size:11px;font-weight:600;padding:6px 14px;border-radius:6px;background:var(--blue);color:#fff;border:none;cursor:pointer;transition:opacity .15s}
-.settings-save-btn:hover{opacity:.85}
-#settings-body{padding:18px 20px;flex:1}
-.settings-panel{display:none}
-.settings-panel.active{display:block}
-.sg-label{font-size:10px;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;margin-top:18px}
-.sg-label:first-child{margin-top:0}
-.sg-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:8px;background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--border);margin-bottom:6px}
-.sg-row-label{font-size:12px;font-weight:600;color:var(--text)}
-.sg-row-sub{font-size:10px;color:var(--muted);margin-top:2px}
-.sg-toggle{position:relative;width:36px;height:20px;flex-shrink:0}
-.sg-toggle input{opacity:0;width:0;height:0;position:absolute}
-.sg-toggle-track{position:absolute;inset:0;background:var(--border);border-radius:10px;transition:background .2s;cursor:pointer}
-.sg-toggle input:checked+.sg-toggle-track{background:var(--blue)}
-.sg-toggle-knob{position:absolute;top:3px;left:3px;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform .2s;pointer-events:none}
-.sg-toggle input:checked~.sg-toggle-knob{transform:translateX(16px)}
-.sg-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 10px;font-size:12px;color:var(--text);outline:none;transition:border-color .15s}
-.sg-input:focus{border-color:var(--blue)}
-.sg-select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 10px;font-size:12px;color:var(--text);outline:none;cursor:pointer}
-.sg-select:focus{border-color:var(--blue)}
-.sg-note{font-size:10px;color:var(--muted);margin-top:5px;line-height:1.5}
-.sg-radio-group{display:flex;gap:6px;flex-wrap:wrap}
-.sg-radio-opt{flex:1;min-width:80px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer;text-align:center;transition:border-color .15s,background .15s;font-size:11px;font-weight:600;color:var(--text-2)}
-.sg-radio-opt:hover{border-color:var(--blue);color:var(--text)}
-.sg-radio-opt.active{border-color:var(--blue);background:rgba(59,130,246,.12);color:var(--blue)}
-.sg-radio-opt .sg-opt-icon{font-size:16px;display:block;margin-bottom:4px}
-.sg-radio-opt .sg-opt-label{font-size:10px;font-weight:700;display:block}
-.sg-radio-opt .sg-opt-sub{font-size:9px;color:var(--muted);display:block;margin-top:2px;font-weight:400}
-.sg-meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.sg-meta-item label{font-size:10px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px}
-.sg-kill-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2,rgba(255,255,255,.03));margin-bottom:5px}
-.sg-kill-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.sg-kill-dot.on{background:var(--red)}
-.sg-kill-dot.off{background:var(--border)}
-.sg-kill-name{font-size:11px;font-weight:600;color:var(--text);flex:1}
-.sg-kill-badge{font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700}
-.sg-kill-badge.on{background:rgba(239,68,68,.15);color:var(--red)}
-.sg-kill-badge.off{background:var(--surface-2,rgba(255,255,255,.06));color:var(--muted)}
-.sg-conn-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2,rgba(255,255,255,.03));margin-bottom:6px}
-.sg-conn-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.sg-conn-label{font-size:12px;font-weight:600;color:var(--text)}
-.sg-conn-sub{font-size:10px;color:var(--muted)}
-.sg-conn-action{margin-left:auto}
-.sg-conn-btn{font-size:10px;font-weight:600;padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;transition:border-color .15s}
-.sg-conn-btn:hover{border-color:var(--blue);color:var(--blue)}
-.sg-conn-btn.connected{border-color:var(--green);color:var(--green)}
-.sg-dqi-bar{height:6px;border-radius:3px;background:var(--border);overflow:hidden;margin-top:6px}
-.sg-dqi-fill{height:100%;border-radius:3px;background:var(--green);transition:width .4s}
-@media(max-width:640px){#settings-panel{flex-direction:column;max-height:96vh}#settings-nav{width:100%;min-width:0;flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid var(--border)}#settings-nav-status{display:none}#settings-body{padding:14px}}
-</style>
-<div id="settings-panel">
-  <div id="settings-nav">
-    <div id="settings-nav-header">
-      <div id="settings-nav-title">Configurações</div>
-    </div>
-    <div class="snav-section">Identidade</div>
-    <div class="snav-item ${activeSection==='perfil'?'active':''}" onclick="switchSettingsSection('perfil',this)">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-      Perfil Biológico
-    </div>
-    <div class="snav-section">Copilot</div>
-    <div class="snav-item ${activeSection==='copilot'?'active':''}" onclick="switchSettingsSection('copilot',this)">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-      ELUCI Copilot
-    </div>
-    <div class="snav-section">Integrações</div>
-    <div class="snav-item ${activeSection==='conexoes'?'active':''}" onclick="switchSettingsSection('conexoes',this)">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-      Conexões & Canais
-    </div>
-    <div class="snav-section">Governança</div>
-    <div class="snav-item ${activeSection==='governanca'?'active':''}" onclick="switchSettingsSection('governanca',this)">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      Governança & DQI
-    </div>
-    <div class="snav-item ${activeSection==='alertas'?'active':''}" onclick="switchSettingsSection('alertas',this)">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-      Alertas
-    </div>
-    <div id="settings-nav-status">
-      <div class="op-status-row">
-        <div class="op-status-dot"></div>
-        <div>
-          <div class="op-status-name">${(saved||'operador').split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,c=>c.toUpperCase()).split(' ')[0]}</div>
-          <div class="op-status-role">${ctx.role||'SDR'} · ${ctx.focus_mode||'—'}</div>
-        </div>
-      </div>
-    </div>
-  </div>
+    <div class="modal" style="max-width:440px">
+      <div class="modal-t">Configurações</div>
 
-  <div id="settings-content">
-    <div id="settings-content-header">
-      <div>
-        <div id="settings-content-title">Perfil Biológico</div>
-        <div id="settings-content-subtitle">Identidade, metas e calibração do operador</div>
-      </div>
-      <button class="settings-save-btn" onclick="saveOperator()">Salvar Ajustes</button>
-    </div>
-    <div id="settings-body">
-
-      <!-- PERFIL -->
-      <div class="settings-panel ${activeSection==='perfil'?'active':''}" id="sp-perfil">
-        <div class="sg-label">Identidade</div>
-        <div class="modal-f" style="margin-bottom:10px">
+      <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
+        <div class="modal-s" style="font-weight:600;margin-bottom:6px">Operador</div>
+        <div class="modal-f">
           <label class="modal-l">E-mail corporativo</label>
-          <input class="sg-input" id="op-email-input" type="email" placeholder="nome@g4educacao.com" value="${saved}" autocomplete="email" ${window.IS_REMOTE?'disabled style="opacity:0.5;cursor:not-allowed"':''}>
-          <div class="sg-note">${window.IS_REMOTE?'Definido via login — faça logout para trocar de conta.':'Filtro principal do funil_comercial. Nunca enviado a terceiros.'}</div>
+          <input class="modal-i" id="op-email-input" type="email" placeholder="nome@g4educacao.com" value="${saved}" autocomplete="email" ${window.IS_REMOTE?'disabled style="opacity:0.6;cursor:not-allowed"':''}>
         </div>
-        <div class="sg-label">Metas Mensais</div>
-        <div class="sg-meta-grid">
-          <div><label style="font-size:10px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">FUPs</label><input class="sg-input" id="op-meta-fups" type="number" min="1" value="${ctx.meta_mensal.fups||300}"></div>
-          <div><label style="font-size:10px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Qualificações</label><input class="sg-input" id="op-meta-qual" type="number" min="1" value="${ctx.meta_mensal.qualificacoes||100}"></div>
-          <div><label style="font-size:10px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Handoffs</label><input class="sg-input" id="op-meta-handoffs" type="number" min="1" value="${ctx.meta_mensal.handoffs||40}"></div>
-          <div><label style="font-size:10px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">OPP (Oportunidades)</label><input class="sg-input" id="op-meta-opp" type="number" min="1" value="${ctx.meta_mensal.opp||15}"></div>
-        </div>
-        <div class="sg-note" style="margin-top:6px">OPP = deals que chegaram à fase Oportunidade ou Negociação. Histórico salvo por mês.</div>
-
-        <div class="sg-label" style="margin-top:20px">Databricks</div>
-        <div style="margin-bottom:8px">
-          <label style="font-size:10px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Token de acesso pessoal</label>
-          <input class="sg-input" id="op-token-input" type="password" placeholder="${tokenMask||'dapi...'}" autocomplete="off" style="font-family:monospace">
-        </div>
-        ${savedToken
-          ?'<div style="font-size:10px;color:var(--green);display:flex;align-items:center;gap:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Token configurado</div>'
-          :'<div style="font-size:10px;color:var(--yellow)">⚠ Sem token — o modo local não funcionará.</div>'
-        }
-        <div class="sg-note">Settings → Developer → Access Tokens no Databricks. Armazenado apenas no seu browser.</div>
+        <div class="modal-note">${window.IS_REMOTE?'Definido automaticamente pelo login. Faça logout para trocar de conta.':'Usado como filtro no funil_comercial. Nunca enviado a terceiros.'}</div>
       </div>
 
-      <!-- COPILOT -->
-      <div class="settings-panel ${activeSection==='copilot'?'active':''}" id="sp-copilot">
-        <div class="sg-label">Voz do Copilot</div>
-        <div class="sg-radio-group" id="voice-mode-group">
-          <div class="sg-radio-opt ${voiceMode==='standard'?'active':''}" onclick="selectVoiceMode('standard',this)">
-            <span class="sg-opt-icon">🎯</span>
-            <span class="sg-opt-label">Standard G4</span>
-            <span class="sg-opt-sub">Direto, objetivo, institucional</span>
-          </div>
-          <div class="sg-radio-opt ${voiceMode==='cyborg'?'active':''}" onclick="selectVoiceMode('cyborg',this)">
-            <span class="sg-opt-icon">⚡</span>
-            <span class="sg-opt-label">Cyborg</span>
-            <span class="sg-opt-sub">Técnico, denso, orientado a dados</span>
-          </div>
-          <div class="sg-radio-opt ${voiceMode==='founder'?'active':''}" onclick="selectVoiceMode('founder',this)">
-            <span class="sg-opt-icon">🔥</span>
-            <span class="sg-opt-label">Founder Mode</span>
-            <span class="sg-opt-sub">Tom de fundador, informal, autoridade</span>
-          </div>
+      <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
+        <div class="modal-s" style="font-weight:600;margin-bottom:6px">Metas Mensais</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="modal-f"><label class="modal-l">FUPs</label><input class="modal-i" id="op-meta-fups" type="number" min="1" value="${window.getOperatorCtx().meta_mensal.fups||300}" style="font-size:12px"></div>
+          <div class="modal-f"><label class="modal-l">Qualificações</label><input class="modal-i" id="op-meta-qual" type="number" min="1" value="${window.getOperatorCtx().meta_mensal.qualificacoes||100}" style="font-size:12px"></div>
+          <div class="modal-f"><label class="modal-l">Handoffs</label><input class="modal-i" id="op-meta-handoffs" type="number" min="1" value="${window.getOperatorCtx().meta_mensal.handoffs||40}" style="font-size:12px"></div>
+          <div class="modal-f"><label class="modal-l">OPP (Oportunidades)</label><input class="modal-i" id="op-meta-opp" type="number" min="1" value="${window.getOperatorCtx().meta_mensal.opp||15}" style="font-size:12px"></div>
         </div>
-        <div class="sg-note">Calibra o tom de toda copy gerada pelo ELUCI. Black Box Protocol permanece ativo independente do modo.</div>
+        <div class="modal-note">Metas mensais do operador. OPP = deals que chegaram à fase Oportunidade/Negociação. Salvo com histórico por mês.</div>
+      </div>
 
-        <div class="sg-label" style="margin-top:20px">Challenger Engine</div>
-        <div class="sg-label" style="font-size:9px;letter-spacing:.04em;color:var(--muted);text-transform:none;margin-top:-6px;margin-bottom:8px">Tensão aplicada nos copies Titan (Challenger Framework)</div>
-        <div class="sg-radio-group" id="tension-group">
-          <div class="sg-radio-opt ${tension==='conservador'?'active':''}" onclick="selectTension('conservador',this)">
-            <span class="sg-opt-label">Conservador</span>
-            <span class="sg-opt-sub">Reframe suave, baixo atrito</span>
-          </div>
-          <div class="sg-radio-opt ${tension==='equilibrado'?'active':''}" onclick="selectTension('equilibrado',this)">
-            <span class="sg-opt-label">Equilibrado</span>
-            <span class="sg-opt-sub">Padrão G4 — tensão calibrada</span>
-          </div>
-          <div class="sg-radio-opt ${tension==='agressivo'?'active':''}" onclick="selectTension('agressivo',this)">
-            <span class="sg-opt-label">Agressivo</span>
-            <span class="sg-opt-sub">Máxima tensão, reframe direto</span>
-          </div>
+      <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
+        <div class="modal-s" style="font-weight:600;margin-bottom:6px">Databricks</div>
+        <div class="modal-f">
+          <label class="modal-l">Token de acesso</label>
+          <input class="modal-i" id="op-token-input" type="password" placeholder="${tokenMask||'dapi...'}" autocomplete="off" style="font-family:monospace;font-size:12px">
         </div>
+        <div class="modal-note">Token pessoal do Databricks (Settings → Developer → Access tokens). Armazenado apenas no seu navegador.</div>
+        ${savedToken?'<div style="font-size:10px;color:var(--green);margin-top:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Configurado</div>':'<div style="font-size:10px;color:var(--yellow);margin-top:4px">Sem token — o modo local não funcionará sem ele.</div>'}
+      </div>
 
-        <div class="sg-label" style="margin-top:20px">Automações</div>
-        <div class="sg-row">
-          <div>
-            <div class="sg-row-label">Auto-Draft de Copy</div>
-            <div class="sg-row-sub">Gera rascunho automaticamente ao abrir um deal no painel DM</div>
-          </div>
-          <label class="sg-toggle" style="margin-left:16px">
-            <input type="checkbox" id="op-auto-draft" ${autoDraft?'checked':''}>
-            <div class="sg-toggle-track"></div>
-            <div class="sg-toggle-knob"></div>
-          </label>
-        </div>
-        <div class="sg-row">
-          <div>
-            <div class="sg-row-label">Auto Focus Mode</div>
-            <div class="sg-row-sub">Ativa automaticamente o modo recomendado ao carregar o cockpit</div>
-          </div>
-          <label class="sg-toggle" style="margin-left:16px">
-            <input type="checkbox" id="op-auto-focus" ${autoFocus?'checked':''}>
-            <div class="sg-toggle-track"></div>
-            <div class="sg-toggle-knob"></div>
-          </label>
-        </div>
-
-        <div class="sg-label" style="margin-top:20px">Motor LLM</div>
-        <div class="sg-row" style="margin-bottom:8px">
-          <div>
-            <div class="sg-row-label">Motor direto ativo</div>
-            <div class="sg-row-sub">Claude API com todos os MCPs. Fallback automático para o worker se falhar.</div>
-          </div>
-          <label class="sg-toggle" style="margin-left:16px">
-            <input type="checkbox" id="op-api-enabled" ${window.ELUCY_API_ENABLED?'checked':''}>
-            <div class="sg-toggle-track"></div>
-            <div class="sg-toggle-knob"></div>
-          </label>
-        </div>
-        <div>
-          <label style="font-size:10px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px">Modelo</label>
-          <select class="sg-select" id="op-api-model">
-            <option value="claude-sonnet-4-20250514" ${window.ELUCY_API_MODEL==='claude-sonnet-4-20250514'?'selected':''}>Claude Sonnet 4 — rápido (recomendado)</option>
-            <option value="claude-opus-4-20250514" ${window.ELUCY_API_MODEL==='claude-opus-4-20250514'?'selected':''}>Claude Opus 4 — análise profunda</option>
-            <option value="claude-haiku-4-5-20251001" ${window.ELUCY_API_MODEL==='claude-haiku-4-5-20251001'?'selected':''}>Claude Haiku 4.5 — econômico</option>
+      <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
+        <div class="modal-s" style="font-weight:600;margin-bottom:6px">ELUCi Motor LLM</div>
+        <div style="font-size:10px;color:var(--green);margin-top:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Key centralizada — motor ativo para todos os operadores</div>
+        <div class="modal-f" style="margin-top:8px">
+          <label class="modal-l">Modelo</label>
+          <select class="modal-i" id="op-api-model" style="font-size:12px">
+            <option value="claude-sonnet-4-20250514" ${window.ELUCY_API_MODEL==='claude-sonnet-4-20250514'?'selected':''}>Claude Sonnet 4 (rápido)</option>
+            <option value="claude-opus-4-20250514" ${window.ELUCY_API_MODEL==='claude-opus-4-20250514'?'selected':''}>Claude Opus 4 (profundo)</option>
+            <option value="claude-haiku-4-5-20251001" ${window.ELUCY_API_MODEL==='claude-haiku-4-5-20251001'?'selected':''}>Claude Haiku 4.5 (econômico)</option>
           </select>
         </div>
-        <div style="font-size:10px;color:var(--green);margin-top:6px;display:flex;align-items:center;gap:4px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Key centralizada — motor ativo para todos os operadores</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+          <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer">
+            <input type="checkbox" id="op-api-enabled" ${window.ELUCY_API_ENABLED?'checked':''}>
+            Motor LLM direto ativo
+          </label>
+        </div>
+        <div class="modal-note">Claude API direta com todos os 40 MCPs do Elucy. Quando ativo, análises e copys são geradas em tempo real sem depender do G4 OS. Fallback automático para o Worker se falhar.</div>
       </div>
 
-      <!-- CONEXOES -->
-      <div class="settings-panel ${activeSection==='conexoes'?'active':''}" id="sp-conexoes">
-        <div class="sg-label">CRM</div>
-        <div class="sg-conn-item">
-          <div class="sg-conn-icon" style="background:rgba(255,122,0,.12)">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF7A00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
-          </div>
-          <div>
-            <div class="sg-conn-label">HubSpot</div>
-            <div class="sg-conn-sub">Pipeline sincronizado via Databricks</div>
-          </div>
-          <div class="sg-conn-action">
-            <button class="sg-conn-btn connected">Conectado</button>
-          </div>
-        </div>
-        <div class="sg-conn-item">
-          <div class="sg-conn-icon" style="background:rgba(91,91,240,.12)">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B5BF0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
-          </div>
-          <div>
-            <div class="sg-conn-label">Databricks</div>
-            <div class="sg-conn-sub">${savedToken?'Token configurado · Sync automático':'Sem token — configure no Perfil'}</div>
-          </div>
-          <div class="sg-conn-action">
-            <button class="sg-conn-btn ${savedToken?'connected':''}" onclick="switchSettingsSection('perfil',null)">${savedToken?'Configurado':'Configurar'}</button>
-          </div>
-        </div>
-
-        <div class="sg-label" style="margin-top:16px">Canais de Outreach</div>
-        <div class="sg-conn-item">
-          <div class="sg-conn-icon" style="background:rgba(37,211,102,.12)">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-          </div>
-          <div>
-            <div class="sg-conn-label">WhatsApp Web</div>
-            <div class="sg-conn-sub">Deep link para envio direto no painel DM</div>
-          </div>
-          <div class="sg-conn-action">
-            <a href="https://web.whatsapp.com" target="_blank" rel="noopener" class="sg-conn-btn" style="text-decoration:none">Abrir</a>
-          </div>
-        </div>
-        <div class="sg-conn-item">
-          <div class="sg-conn-icon" style="background:rgba(228,64,95,.12)">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E4405F" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="#E4405F" stroke="none"/></svg>
-          </div>
-          <div>
-            <div class="sg-conn-label">Instagram DM</div>
-            <div class="sg-conn-sub">Social DM War Room — Founder Mode ativo</div>
-          </div>
-          <div class="sg-conn-action">
-            <a href="https://www.instagram.com/direct/inbox/" target="_blank" rel="noopener" class="sg-conn-btn" style="text-decoration:none">Abrir</a>
-          </div>
+      <div style="border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px">
+        <div class="modal-s" style="font-weight:600;margin-bottom:6px">Integrações</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <a href="https://web.whatsapp.com" target="_blank" rel="noopener" class="btn bs btn-sm" style="text-decoration:none;display:flex;align-items:center;gap:4px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            WhatsApp Web
+          </a>
+          <a href="https://www.instagram.com/direct/inbox/" target="_blank" rel="noopener" class="btn bs btn-sm" style="text-decoration:none;display:flex;align-items:center;gap:4px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E4405F" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="#E4405F" stroke="none"/></svg>
+            Instagram DM
+          </a>
         </div>
       </div>
 
-      <!-- GOVERNANÇA -->
-      <div class="settings-panel ${activeSection==='governanca'?'active':''}" id="sp-governanca">
-        <div class="sg-label">Data Quality Index</div>
-        <div style="padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2,rgba(255,255,255,.03));margin-bottom:10px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <span style="font-size:12px;font-weight:600;color:var(--text)">DQI Score do Operador</span>
-            <span style="font-size:18px;font-weight:800;color:${dqi!=null&&dqi>=70?'var(--green)':dqi!=null&&dqi>=45?'var(--yellow)':'var(--red)'}">${dqi!=null?dqi+'%':'—'}</span>
-          </div>
-          <div class="sg-dqi-bar"><div class="sg-dqi-fill" style="width:${dqi||0}%;background:${dqi!=null&&dqi>=70?'var(--green)':dqi!=null&&dqi>=45?'var(--amber)':'var(--red)'}"></div></div>
-          <div class="sg-note" style="margin-top:6px">DQI ≥ 70% = forecast confiável · 45–70% = atenção · &lt;45% = dados insuficientes</div>
-        </div>
-
-        <div class="sg-label" style="margin-top:16px">Kill Switches Ativos</div>
-        <div class="sg-note" style="margin-bottom:10px">Regras de governança que bloqueiam ações de risco no pipeline. Gerenciados centralmente.</div>
-        ${(()=>{
-          const ks=ctx.kill_switches||['no_next_step','premature_close','authority_missing','black_box_breach','spiced_lock_titan','framework_violation','pseudo_champion'];
-          const labels={'no_next_step':'Next Step Obrigatório','premature_close':'Premature Close Block','authority_missing':'Authority Missing Alert','black_box_breach':'Black Box Protocol','spiced_lock_titan':'SPICED Lock Titan','framework_violation':'Framework Violation Gate','pseudo_champion':'Pseudo-Champion Block'};
-          return ks.map(k=>`
-            <div class="sg-kill-row">
-              <div class="sg-kill-dot on"></div>
-              <div class="sg-kill-name">${labels[k]||k.replace(/_/g,' ')}</div>
-              <span class="sg-kill-badge on">ATIVO</span>
-            </div>`).join('');
-        })()}
-
-        <div class="sg-label" style="margin-top:20px">Governança de Framework</div>
-        <div class="sg-row">
-          <div>
-            <div class="sg-row-label">SPICED Lock para Titan</div>
-            <div class="sg-row-sub">Bloqueia uso de SPICED em deals com persona Titan (Challenger obrigatório)</div>
-          </div>
-          <label class="sg-toggle" style="margin-left:16px">
-            <input type="checkbox" id="op-spiced-lock" checked disabled>
-            <div class="sg-toggle-track" style="background:var(--blue)"></div>
-            <div class="sg-toggle-knob" style="transform:translateX(16px)"></div>
-          </label>
-        </div>
-        <div class="sg-note">Kill switches são configurados centralmente pelo RevOps. Contate o admin para alterações.</div>
+      <div id="modal-sync-status"></div>
+      <div class="row" style="justify-content:flex-end;gap:8px">
+        <button class="btn bs btn-sm" onclick="closeSettings()">Cancelar</button>
+        <button class="btn bp btn-sm" onclick="saveOperator()">Salvar</button>
       </div>
-
-      <!-- ALERTAS -->
-      <div class="settings-panel ${activeSection==='alertas'?'active':''}" id="sp-alertas">
-        <div class="sg-label">Notificações</div>
-        <div class="sg-row">
-          <div>
-            <div class="sg-row-label">Alertas de Deal em Stall</div>
-            <div class="sg-row-sub">Notifica quando um deal ficou sem interação por mais de 3 dias</div>
-          </div>
-          <label class="sg-toggle" style="margin-left:16px">
-            <input type="checkbox" id="op-alert-stall" ${localStorage.getItem('elucy_alert_stall')!=='0'?'checked':''}>
-            <div class="sg-toggle-track"></div>
-            <div class="sg-toggle-knob"></div>
-          </label>
-        </div>
-        <div class="sg-row">
-          <div>
-            <div class="sg-row-label">Alertas de Sinal Crítico</div>
-            <div class="sg-row-sub">Toast imediato quando signal de risco alto é detectado (authority_missing, pain_missing)</div>
-          </div>
-          <label class="sg-toggle" style="margin-left:16px">
-            <input type="checkbox" id="op-alert-signals" ${localStorage.getItem('elucy_alert_signals')!=='0'?'checked':''}>
-            <div class="sg-toggle-track"></div>
-            <div class="sg-toggle-knob"></div>
-          </label>
-        </div>
-        <div class="sg-row">
-          <div>
-            <div class="sg-row-label">Resumo Diário</div>
-            <div class="sg-row-sub">Notificação ao abrir o cockpit com resumo do dia anterior</div>
-          </div>
-          <label class="sg-toggle" style="margin-left:16px">
-            <input type="checkbox" id="op-alert-daily" ${localStorage.getItem('elucy_alert_daily')==='1'?'checked':''}>
-            <div class="sg-toggle-track"></div>
-            <div class="sg-toggle-knob"></div>
-          </label>
-        </div>
-
-        <div class="sg-label" style="margin-top:20px">Slack</div>
-        <div style="padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2,rgba(255,255,255,.03))">
-          <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px">Integração Slack</div>
-          <div class="sg-note">Notificações críticas via Slack em breve. Configure o webhook do canal do seu squad.</div>
-          <input class="sg-input" style="margin-top:8px" type="url" id="op-slack-webhook" placeholder="https://hooks.slack.com/..." value="${localStorage.getItem('elucy_slack_webhook')||''}">
-        </div>
-      </div>
-
-    </div><!-- /settings-body -->
-    <div id="modal-sync-status" style="padding:0 20px 4px"></div>
-  </div><!-- /settings-content -->
-</div><!-- /settings-panel -->`;
-
+    </div>`;
   ov.addEventListener('click',e=>{if(e.target===ov) closeSettings();});
   document.body.appendChild(ov);
-  // Keyboard: Escape closes
-  ov._keyHandler=function(e){if(e.key==='Escape') closeSettings();};
-  document.addEventListener('keydown',ov._keyHandler);
+  setTimeout(()=>document.getElementById('op-email-input').focus(),80);
 }
-
-window.switchSettingsSection=function(section, clickedEl){
-  // Update nav items
-  document.querySelectorAll('.snav-item').forEach(el=>el.classList.remove('active'));
-  if(clickedEl) clickedEl.classList.add('active');
-  else {
-    document.querySelectorAll('.snav-item').forEach(el=>{
-      if(el.getAttribute('onclick')&&el.getAttribute('onclick').includes("'"+section+"'")) el.classList.add('active');
-    });
-  }
-  // Update panels
-  document.querySelectorAll('.settings-panel').forEach(p=>p.classList.remove('active'));
-  const panel=document.getElementById('sp-'+section);
-  if(panel) panel.classList.add('active');
-  // Update header
-  const titles={perfil:['Perfil Biológico','Identidade, metas e calibração do operador'],copilot:['ELUCI Copilot','Voz, automações e motor de inteligência'],conexoes:['Conexões & Canais','CRM, Databricks e canais de outreach'],governanca:['Governança & DQI','Kill switches, DQI e regras de framework'],alertas:['Alertas','Notificações e integração Slack']};
-  const t=titles[section]||['Configurações',''];
-  const titleEl=document.getElementById('settings-content-title');
-  const subEl=document.getElementById('settings-content-subtitle');
-  if(titleEl) titleEl.textContent=t[0];
-  if(subEl) subEl.textContent=t[1];
-};
-
-window.selectVoiceMode=function(mode, el){
-  document.querySelectorAll('#voice-mode-group .sg-radio-opt').forEach(o=>o.classList.remove('active'));
-  if(el) el.classList.add('active');
-  localStorage.setItem('elucy_voice_mode',mode);
-};
-
-window.selectTension=function(level, el){
-  document.querySelectorAll('#tension-group .sg-radio-opt').forEach(o=>o.classList.remove('active'));
-  if(el) el.classList.add('active');
-  localStorage.setItem('elucy_challenger_tension',level);
-};
 
 function closeSettings(){
   const m=document.getElementById('settings-modal');
-  if(m){
-    if(m._keyHandler) document.removeEventListener('keydown',m._keyHandler);
-    m.remove();
-  }
+  if(m) m.remove();
 }
 
 function saveOperator(){
@@ -3377,20 +2765,6 @@ function saveOperator(){
     localStorage.setItem('elucy_api_enabled',enabled?'true':'false');
     window.ELUCY_API_ENABLED=enabled;
   }
-  // Salvar automações (Auto-Draft, Auto Focus)
-  const autoDraftInput=document.getElementById('op-auto-draft');
-  if(autoDraftInput) localStorage.setItem('elucy_auto_draft',autoDraftInput.checked?'1':'0');
-  const autoFocusInput=document.getElementById('op-auto-focus');
-  if(autoFocusInput) localStorage.setItem('elucy_auto_focus',autoFocusInput.checked?'1':'0');
-  // Salvar alertas
-  const alertStall=document.getElementById('op-alert-stall');
-  if(alertStall) localStorage.setItem('elucy_alert_stall',alertStall.checked?'1':'0');
-  const alertSignals=document.getElementById('op-alert-signals');
-  if(alertSignals) localStorage.setItem('elucy_alert_signals',alertSignals.checked?'1':'0');
-  const alertDaily=document.getElementById('op-alert-daily');
-  if(alertDaily) localStorage.setItem('elucy_alert_daily',alertDaily.checked?'1':'0');
-  const slackWebhook=document.getElementById('op-slack-webhook');
-  if(slackWebhook&&slackWebhook.value.trim()) localStorage.setItem('elucy_slack_webhook',slackWebhook.value.trim());
   // Salvar metas mensais
   const metaFups=parseInt(document.getElementById('op-meta-fups')?.value)||300;
   const metaQual=parseInt(document.getElementById('op-meta-qual')?.value)||100;
@@ -5648,6 +5022,7 @@ function selectLiveDeal(id,d){
   dealCard.innerHTML=`
     <div class="card">
       <div class="dch">
+        <div class="dca">${(d.emailLead||d.nome)[0].toUpperCase()}</div>
         <div class="dci">
           <div class="dcn">${d.nome}</div>
           <div class="dcs">${d.cargo||'—'} · ${d.emailLead||d.empresa}</div>
@@ -5657,8 +5032,6 @@ function selectLiveDeal(id,d){
             ${(d.fase||d.fase_atual_no_processo)?`<span class="tag t-acc">${d.fase||d.fase_atual_no_processo}</span>`:''}
             ${d._signal==='BUY'?'<span class="tag t-buy">BUY</span>':d._signal==='RISK'?'<span class="tag t-risk">RISK</span>':d._signal==='STALL'?'<span class="tag t-stall">STALL</span>':d._signal==='CHAMP'?'<span class="tag t-champ">CHAMP</span>':d._signal==='DOME'?'<span class="tag t-stall">IRON DOME</span>':''}
             ${(d._urgency||0)>=60?'<span class="tag t-risk">SLA RISCO</span>':''}
-            ${(()=>{const leg=d._bowtieLeg;if(!leg)return'';const cfg={ACQ:{cls:'tag-bowtie-acq',lbl:'ACQ'},RET:{cls:'tag-bowtie-ret',lbl:'RET'},EXP:{cls:'tag-bowtie-exp',lbl:'EXP'}};const c=cfg[leg]||{};return`<span class="tag tag-bowtie ${c.cls}" title="Bowtie: ${leg==='ACQ'?'Aquisição':leg==='RET'?'Retenção':'Expansão'}">${c.lbl}</span>`})()}
-            ${(()=>{const fc=d._frameworkCompliance;if(fc==null)return'';const col=fc>=70?'var(--green)':fc>=45?'var(--amber2)':'var(--red)';return`<span class="tag" style="border-color:${col};color:${col}" title="Framework Compliance">${fc}% FW</span>`})()}
           </div>
         </div>
       </div>
@@ -5667,26 +5040,6 @@ function selectLiveDeal(id,d){
         <div class="bar"><div class="bf ${barClass}" style="width:${d.temp}%"></div></div>
         <div class="tg-sub">${tempSub}</div>
       </div>
-      ${(()=>{
-        const fv=d._forecastV6||{};
-        const score=fv.score!=null?Math.round(fv.score*100):null;
-        const conf=(fv.confidence_level||fv.confidenceLevel||'').replace('_',' ');
-        const risk=fv.risk_classification||fv.riskClassification||'';
-        const scoreColor=score>=70?'var(--green)':score>=40?'var(--yellow)':'var(--red)';
-        if(score==null) return '';
-        const hasExplain = fv.explain_json || fv.explainJson;
-        return `<div style="border-top:1px solid var(--border);padding:8px 0 4px">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-            <span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;font-weight:700;white-space:nowrap">Forecast V7</span>
-            <span style="font-size:18px;font-weight:800;color:${scoreColor}">${score}%</span>
-            ${conf?`<span style="font-size:11px;color:var(--text2)">${conf}</span>`:''}
-            ${risk?`<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:var(--bg4);color:var(--text2)">${risk}</span>`:''}
-            <div style="flex:1;height:3px;background:var(--bg4);border-radius:2px"><div style="width:${score}%;height:100%;background:${scoreColor};border-radius:2px"></div></div>
-            ${hasExplain?`<button class="btn bs btn-sm" style="font-size:10px;padding:3px 8px;margin-left:4px" onclick="toggleForecastExplain('${id}',this)">Ver razões</button>`:''}
-          </div>
-          <div id="fc-explain-${id}" style="display:none"></div>
-        </div>`;
-      })()}
       <div class="ig-toggle" onclick="this.nextElementSibling.classList.toggle('collapsed');this.querySelector('.tgl-arrow').classList.toggle('up')">
         <span class="ig-toggle-label">Detalhes do Deal</span>
         <span class="tgl-arrow">▾</span>
@@ -5964,7 +5317,6 @@ function renderIntelligence(){
     else if(dim==='rfv') _renderRFV(ct,deals);
     else if(dim==='spin') _renderSpinAudit(ct,deals);
     else if(dim==='advisor') _renderTrustedAdvisor(ct,deals);
-    else if(dim==='bowtie') _renderBowtie(ct,deals);
   }catch(e){
     console.warn('[intel] render error for dim='+dim+':',e.message);
     ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Dados parciais disponíveis — '+deals.length+' deals carregados.<br><span style="font-size:10px;opacity:.6">'+e.message+'</span></div>';
@@ -6314,7 +5666,7 @@ function _renderValue(ct,AE){
   html+=renderSection(3,'Valor por Etapa',
     stageKeys.map(function(k){
       var v=data.byStage[k];
-      return '<div class="intel-bar-row"><span class="intel-bar-label">'+fmtEtapa(k)+'</span><div class="intel-bar-bg"><div class="intel-bar-fill" style="width:'+Math.max(5,v.total/maxStageVal*100)+'%;background:linear-gradient(90deg,rgba(10,132,255,0.4),rgba(10,132,255,0.7))"><span class="intel-bar-v">'+fmtBRL(v.total)+'</span></div></div><span class="intel-bar-pct">'+v.count+' deals</span></div>';
+      return '<div class="intel-bar-row"><span class="intel-bar-label">'+fmtEtapa(k)+'</span><div class="intel-bar-bg"><div class="intel-bar-fill" style="width:'+Math.max(5,v.total/maxStageVal*100)+'%;background:linear-gradient(90deg,rgba(245,158,11,0.4),rgba(245,158,11,0.7))"><span class="intel-bar-v">'+fmtBRL(v.total)+'</span></div></div><span class="intel-bar-pct">'+v.count+' deals</span></div>';
     }).join(''));
 
   // By Tier
@@ -6421,7 +5773,7 @@ function _renderFramework(ct,allDeals,deals){
   var maxBk=Math.max.apply(null,Object.values(buckets).concat([1]));
   html+=renderSection(3,'Distribuição de Score Qualitativo',
     Object.keys(buckets).map(function(k){
-      var colors={'Excelente (≥80%)':'rgba(48,209,88,0.5)','Bom (60-79%)':'rgba(10,132,255,0.5)','Gap (40-59%)':'rgba(255,214,10,0.5)','Crítico (<40%)':'rgba(255,69,58,0.5)'};
+      var colors={'Excelente (≥80%)':'rgba(48,209,88,0.5)','Bom (60-79%)':'rgba(245,158,11,0.5)','Gap (40-59%)':'rgba(255,214,10,0.5)','Crítico (<40%)':'rgba(255,69,58,0.5)'};
       return _iBar(k,buckets[k],maxBk,withFw.length||1,'background:'+colors[k]);
     }).join(''));
   // Top deals por score qualitativo
@@ -6640,138 +5992,6 @@ function renderCard(title,content){
   return `<div class="intel-card"><div class="intel-title">${title}</div>${content}</div>`;
 }
 
-// ── RF·1: Bowtie Intelligence View ───────────────────────────────────
-function _renderBowtie(ct,deals){
-  // Enriquece bowtieLeg se ainda não feito
-  deals.forEach(function(d){if(!d._bowtieLeg&&window.calcBowtiegLeg) d._bowtieLeg=window.calcBowtiegLeg(d);});
-
-  var legs={ACQ:[],RET:[],EXP:[],null_leg:[]};
-  deals.forEach(function(d){
-    var l=d._bowtieLeg||null;
-    if(l==='ACQ') legs.ACQ.push(d);
-    else if(l==='RET') legs.RET.push(d);
-    else if(l==='EXP') legs.EXP.push(d);
-    else legs.null_leg.push(d);
-  });
-
-  var total=deals.length||1;
-  var acqPct=Math.round(legs.ACQ.length/total*100);
-  var retPct=Math.round(legs.RET.length/total*100);
-  var expPct=Math.round(legs.EXP.length/total*100);
-
-  // Valor por perna
-  function sumVal(arr){return arr.reduce(function(s,d){return s+(Number(d._oppValue||d.revenueRaw)||0);},0);}
-  var acqVal=sumVal(legs.ACQ), retVal=sumVal(legs.RET), expVal=sumVal(legs.EXP);
-
-  // Aging médio por perna
-  function avgAging(arr){return arr.length?Math.round(arr.reduce(function(s,d){return s+(d._delta||d.delta||0);},0)/arr.length*10)/10:0;}
-
-  var html='';
-
-  // Funil Bowtie visual
-  html+=renderSection(1,'Funil Bowtie — Aquisição → Retenção → Expansão',
-    `<div style="display:flex;gap:0;border-radius:10px;overflow:hidden;margin-top:6px;border:1px solid var(--border)">
-      <div style="flex:${Math.max(legs.ACQ.length,1)};background:rgba(14,165,233,.12);border-right:1px solid var(--border);padding:14px;text-align:center">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--blue2);margin-bottom:4px">ACQ</div>
-        <div style="font-size:24px;font-weight:900;color:var(--blue2)">${legs.ACQ.length}</div>
-        <div style="font-size:10px;color:var(--text2)">${acqPct}% · ${fmtBRL(acqVal)}</div>
-        <div style="font-size:9px;color:var(--text3);margin-top:2px">Aging ~${avgAging(legs.ACQ)}d</div>
-      </div>
-      <div style="flex:${Math.max(legs.RET.length,1)};background:rgba(139,92,246,.10);border-right:1px solid var(--border);padding:14px;text-align:center">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#a78bfa;margin-bottom:4px">RET</div>
-        <div style="font-size:24px;font-weight:900;color:#a78bfa">${legs.RET.length}</div>
-        <div style="font-size:10px;color:var(--text2)">${retPct}% · ${fmtBRL(retVal)}</div>
-        <div style="font-size:9px;color:var(--text3);margin-top:2px">Aging ~${avgAging(legs.RET)}d</div>
-      </div>
-      <div style="flex:${Math.max(legs.EXP.length,1)};background:rgba(16,185,129,.10);padding:14px;text-align:center">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--green);margin-bottom:4px">EXP</div>
-        <div style="font-size:24px;font-weight:900;color:var(--green)">${legs.EXP.length}</div>
-        <div style="font-size:10px;color:var(--text2)">${expPct}% · ${fmtBRL(expVal)}</div>
-        <div style="font-size:9px;color:var(--text3);margin-top:2px">Aging ~${avgAging(legs.EXP)}d</div>
-      </div>
-    </div>
-    <div style="font-size:10px;color:var(--text2);margin-top:8px;padding:8px 10px;background:var(--bg3);border-radius:6px;border:1px solid var(--border)">
-      <b style="color:var(--text)">Diagnóstico:</b>
-      ${acqPct>75?' Pipeline concentrado em Aquisição — <span style="color:var(--amber2)">risco de fluxo de caixa sem base de renovação</span>.':''}
-      ${expPct>40?' Alta concentração em Expansão — <span style="color:var(--green)">modelo Bowtie saudável</span>.':''}
-      ${retPct<10&&total>10?' Base de Retenção frágil — <span style="color:var(--red)">churn potencial não monitorado</span>.':''}
-      ${(acqPct<=75&&expPct<=40&&(retPct>=10||total<=10))?' Distribuição balanceada — <span style="color:var(--green)">arquitetura de receita dentro do esperado</span>.':''}
-    </div>`
-  );
-
-  // Top deals por perna
-  var legConfig=[
-    {key:'ACQ',deals:legs.ACQ,color:'var(--blue2)',label:'Aquisição'},
-    {key:'RET',deals:legs.RET,color:'#a78bfa',label:'Retenção'},
-    {key:'EXP',deals:legs.EXP,color:'var(--green)',label:'Expansão'}
-  ];
-  var tableRows='';
-  legConfig.forEach(function(lc){
-    lc.deals.slice(0,6).forEach(function(d){
-      var fc=d._forecastV6&&d._forecastV6.score!=null?Math.round(d._forecastV6.score*100)+'%':'—';
-      tableRows+='<tr><td><span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;background:rgba(255,255,255,.06);color:'+lc.color+'">'+lc.key+'</span></td>';
-      tableRows+='<td style="font-weight:600">'+_escHtml(d.nome||'—')+'</td>';
-      tableRows+='<td>'+_escHtml(d.grupo_de_receita||d.linhaReceita||d._revLine||'—')+'</td>';
-      tableRows+='<td>'+_escHtml(d.etapa||d.etapa_atual_no_pipeline||'—')+'</td>';
-      tableRows+='<td>'+fc+'</td>';
-      tableRows+='<td>'+(d._delta||d.delta||0)+'d</td></tr>';
-    });
-  });
-
-  html+=renderSection(2,'Deals por Perna do Bowtie',
-    '<table class="intel-table"><thead><tr><th>Perna</th><th>Deal</th><th>Linha</th><th>Etapa</th><th>Forecast</th><th>Aging</th></tr></thead><tbody>'+tableRows+'</tbody></table>');
-
-  ct.innerHTML=html;
-}
-
-// ── RF·4: Forecast Explainability ────────────────────────────────────
-window.toggleForecastExplain=function(id,btn){
-  const el=document.getElementById('fc-explain-'+id);
-  if(!el) return;
-  if(el.style.display!=='none'){el.style.display='none';btn.textContent='Ver razões';return;}
-  const deal=(window._COCKPIT_DEAL_MAP||{})[id];
-  if(!deal){el.style.display='none';return;}
-  const fv=deal._forecastV6||{};
-  const ex=fv.explain_json||fv.explainJson;
-  if(!ex){el.innerHTML='<div style="font-size:11px;color:var(--text2);padding:8px">Audit trail não disponível para este deal.</div>';el.style.display='block';btn.textContent='Fechar';return;}
-
-  const q=ex.quantitative||{};
-  const ql=ex.qualitative||{};
-  const fw=ex.framework||{};
-  const sigs=ex.signals||{};
-
-  function pct(v){return v!=null?Math.round(v*100)+'%':'—';}
-  function bar(v,col){var w=Math.round(Math.min(1,Math.max(0,v||0))*100);col=col||'var(--accent)';return `<div style="height:3px;background:var(--bg4);border-radius:2px;margin-top:3px"><div style="width:${w}%;height:100%;background:${col};border-radius:2px"></div></div>`;}
-
-  var html=`<div style="font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:6px">
-    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--amber);margin-bottom:10px">Forecast Explainability — Audit Trail</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-      <div>
-        <div style="font-size:9px;font-weight:700;color:var(--blue2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Quantitativo</div>
-        ${[['Stage Prob',q.stage_prob],['Aging Factor',q.aging_factor],['Velocity',q.velocity_factor],['Engagement',q.engagement_factor]].map(function(p){return `<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--text2)">${p[0]}<span style="color:var(--text);font-weight:600">${pct(p[1])}</span></div>`;}).join('')}
-      </div>
-      <div>
-        <div style="font-size:9px;font-weight:700;color:var(--amber2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Qualitativo</div>
-        ${[['Show',ql.show_weight],['Note',ql.note_weight],['Authority',ql.authority_weight],['Urgency',ql.urgency_weight],['Behavior',ql.behavior_weight],['Next Step',ql.next_step_weight]].map(function(p){return `<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--text2)">${p[0]}<span style="color:var(--text);font-weight:600">${pct(p[1])}</span></div>`;}).join('')}
-      </div>
-      <div>
-        <div style="font-size:9px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Framework (V7)</div>
-        ${[['SPICED avg',fw.spiced_avg],['MEDDIC avg',fw.meddic_avg],['Coverage',fw.coverage],['QS Final',fw.qualitative_score]].map(function(p){return `<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--text2)">${p[0]}<span style="color:var(--text);font-weight:600">${p[1]!=null?pct(p[1]):'—'}</span></div>`;}).join('')}
-        ${ex.no_show_penalty?'<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--red)">No-Show Pen.<span style="font-weight:600">-'+pct(ex.no_show_penalty)+'</span></div>':''}
-      </div>
-    </div>
-    ${(sigs.positive||sigs.risk)?`<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--text2)">
-      ${sigs.positive?'<span style="color:var(--green)">▲ '+sigs.positive+' sinais positivos</span>  ':''}
-      ${sigs.risk?'<span style="color:var(--red)">▼ '+sigs.risk+' sinais de risco</span>':''}
-      ${ex.data_points!=null?'  <span style="color:var(--text3)">· '+ex.data_points+' data points</span>':''}
-    </div>`:''}
-  </div>`;
-
-  el.innerHTML=html;
-  el.style.display='block';
-  btn.textContent='Fechar razões';
-};
-
 function fmtEtapa(e){
   const map={'novo lead':'MQL','dia 01':'D1','dia 02':'D2','dia 03':'D3','dia 04':'D4','dia 05':'D5','dia 06':'D6','conectados':'Conectado','agendamento':'Agendamento','reagendamento':'Reagendamento','entrevista agendada':'Entrevista'};
   return map[(e||'').toLowerCase()]||e;
@@ -6877,22 +6097,16 @@ function dmLoadDealInsights(d){
 window.dmLoadDealInsights=dmLoadDealInsights;
 
 function showSyncToast(type,msg){
-  // Update sync dot
-  if(window._syncStatus) window._syncStatus(type==='ok'?'ok':'error');
-  // Use new engine toast for errors; keep old style for ok toasts
-  if(type!=='ok' && window._toast){
-    window._toast(msg, null, null, 'error');
-    return;
-  }
   const old=document.getElementById('sync-toast');
   if(old) old.remove();
   const t=document.createElement('div');
   t.id='sync-toast';
   t.style.cssText='position:fixed;bottom:20px;right:20px;z-index:9999;padding:10px 15px;border-radius:8px;font-size:12px;font-weight:600;max-width:320px;line-height:1.5;animation:fadeIn .2s ease';
-  t.style.cssText+='background:rgba(34,197,94,.15);border:1px solid #22c55e;color:#22c55e';
+  if(type==='ok') t.style.cssText+='background:rgba(34,197,94,.15);border:1px solid #22c55e;color:#22c55e';
+  else t.style.cssText+='background:rgba(239,68,68,.15);border:1px solid #ef4444;color:#ef4444';
   t.textContent=msg;
   document.body.appendChild(t);
-  setTimeout(()=>t.remove(),4000);
+  setTimeout(()=>t.remove(),5000);
 }
 
 // ── SLACK ALERTS SYSTEM ──
@@ -7297,57 +6511,5 @@ window._obStart = _obStart;
 <script src="cockpit-engine.js"></script>
 <script src="analytics-engine.js"></script>
 <script src="reports-v4-engine.js"></script>
-<script>
-// ── MOBILE SIDEBAR TOGGLE ───────────────────────────────────────
-window.toggleSidebar = function(force){
-  var sb = document.getElementById('sb');
-  var overlay = document.getElementById('sb-overlay');
-  if(!sb) return;
-  var open = force !== undefined ? force : !sb.classList.contains('sb-open');
-  sb.classList.toggle('sb-open', open);
-  overlay.classList.toggle('sb-open', open);
-};
-// Close sidebar when a deal is selected on mobile
-var _origSelectLD = window.selectLiveDeal;
-window.selectLiveDeal = function(id, d){
-  if(window.innerWidth <= 768) window.toggleSidebar(false);
-  if(_origSelectLD) _origSelectLD(id, d);
-};
-
-// ── SKELETON HELPERS ────────────────────────────────────────────
-window._skDealList = function(n){
-  var html='';
-  for(var i=0;i<(n||4);i++){
-    html+='<div class="sk-card"><div class="sk sk-title"></div><div class="sk sk-line sk-line-sm"></div><div style="display:flex;gap:6px;margin-top:6px"><div class="sk" style="height:18px;width:40px;border-radius:4px"></div><div class="sk" style="height:18px;width:55px;border-radius:4px"></div></div></div>';
-  }
-  return html;
-};
-window._skTaskList = function(n){
-  var html='';
-  for(var i=0;i<(n||4);i++){
-    html+='<div class="sk-task"><div style="display:flex;gap:8px;align-items:center"><div class="sk" style="height:18px;width:60px;border-radius:4px"></div><div class="sk" style="height:18px;width:80px;border-radius:4px"></div></div><div class="sk sk-title"></div><div class="sk sk-line sk-line-sm"></div><div style="display:flex;gap:6px"><div class="sk" style="height:26px;width:70px;border-radius:6px"></div><div class="sk" style="height:26px;width:70px;border-radius:6px"></div></div></div>';
-  }
-  return html;
-};
-window._skKpiGrid = function(n){
-  var html='';
-  for(var i=0;i<(n||6);i++){
-    html+='<div class="sk-kpi"><div class="sk sk-line-sm" style="width:50%"></div><div class="sk sk-kpi-val"></div><div class="sk sk-line-sm" style="width:40%"></div></div>';
-  }
-  return html;
-};
-
-// Apply skeletons to initial states on load
-(function(){
-  var dl = document.querySelector('.deal-list');
-  if(dl) dl.innerHTML = window._skDealList(5);
-  var tsk = document.getElementById('task-skeleton');
-  if(tsk) tsk.innerHTML = window._skTaskList(4);
-  // KPI grid placeholder pulse (already has — values; add subtle skeleton class)
-  document.querySelectorAll('.kpi-v').forEach(function(v){
-    if(v.textContent.trim()==='—') v.parentElement.classList.add('kpi-loading');
-  });
-})();
-</script>
 </body>
 </html>
