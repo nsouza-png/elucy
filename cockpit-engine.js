@@ -64,6 +64,8 @@ function _fmtOrigem(canalMkt, utm){
   return canalMkt||utm||'Direto';
 }
 
+window._resolveCanal = _fmtOrigem;
+
 // ==================================================================
 // LAYER 1 — OPERATOR CONTEXT
 // Define o contexto base da sessao. Toda tela usa como chave primaria.
@@ -149,7 +151,7 @@ const FOCUS_MODES = {
   handoff:      { label:'Handoff',       priority:['handoff_prep','dvl_review','note_completion'], icon:'handshake' },
   reativacao:   { label:'Reativacao',    priority:['reativacao','no_show_recovery','follow_up'], icon:'refresh' },
   social_dm:    { label:'Social DM',     priority:['social_dm','follow_up','agendamento'], icon:'chat' },
-  imersao:      { label:'Imersao Focus', priority:['follow_up','handoff_prep','qualificacao'], icon:'trophy' }
+  alta_performance: { label:'Alta Performance', priority:['follow_up','handoff_prep','qualificacao'], icon:'trophy' }
 };
 window.FOCUS_MODES = FOCUS_MODES;
 
@@ -158,10 +160,10 @@ window.FOCUS_MODES = FOCUS_MODES;
 // LAYER 2 — TAXONOMY CORE
 // ==================================================================
 
-// Revenue Lines — grupos canônicos reais do G4
-// Fonte: production.diamond.funil_comercial.grupo_de_receita (76 linhas → 10 grupos)
+// Revenue Lines — grupos canônicos reais do G4 (ref: g4-revops-blueprint.md BLUEPRINT_001)
+// Fonte: production.diamond.funil_comercial.grupo_de_receita (10 grupos reais)
 var REVENUE_LINES = {
-  funil_marketing:  { label:'Funil de Marketing',        base:'qualified',   risk_after:3, line_weight:1.0  },
+  funil_marketing:  { label:'Funil de Marketing',        base:'qualified',   risk_after:3, line_weight:1.0, sdr_scope:false },
   turmas:           { label:'Turmas',                    base:'qualified',   risk_after:4, line_weight:1.0  },
   projetos_eventos: { label:'Projetos & Eventos',        base:'qualified',   risk_after:5, line_weight:0.9  },
   social_dm:        { label:'Social DM',                 base:'touchpoints', risk_after:1, line_weight:0.75 },
@@ -172,6 +174,7 @@ var REVENUE_LINES = {
   renovacao:        { label:'Renovação',                 base:'opportunity', risk_after:5, line_weight:0.85 },
   field_sales:      { label:'Field Sales',               base:'meetings',    risk_after:7, line_weight:0.9  },
   aquisicao:        { label:'Time de Vendas - Aquisição',base:'qualified',   risk_after:3, line_weight:1.0  },
+  g4_tools:         { label:'G4 Tools',                  base:'opportunity', risk_after:5, line_weight:0.7  },
   nao_definido:     { label:'Não Definido',              base:'leads',       risk_after:3, line_weight:0.6  }
 };
 window.REVENUE_LINES = REVENUE_LINES;
@@ -192,47 +195,72 @@ var KILL_SWITCHES = {
 window.KILL_SWITCHES = KILL_SWITCHES;
 
 // resolveRevenueLine — mapeia deal para grupo_de_receita canônico do G4
-// REGRA 1: se grupo_de_receita vier preenchido do Databricks → usar direto (fonte da verdade)
-// REGRA 2: fallback por linha_de_receita_vigente e utm_medium para casos sem grupo
+// HIERARQUIA: (1) grupo_de_receita → (2) linha_de_receita_vigente → (3) utm_medium (último recurso)
+// linha_de_receita_vigente é a propriedade-mãe que diz de onde o dinheiro vem
+// utm/canal_de_marketing só entra quando linha_de_receita_vigente está vazia
 function resolveRevenueLine(deal){
   var lr=(deal.linhaReceita||deal.linha_de_receita_vigente||'').toLowerCase().trim();
   var gr=(deal.grupo_de_receita||deal.grupoReceita||'').toLowerCase().trim();
   var utm=(deal.utm_medium||'').toLowerCase().trim();
 
   // REGRA 1 — grupo_de_receita direto do Databricks (fonte da verdade)
-  if(gr==='funil de marketing')          return 'funil_marketing';
-  if(gr==='turmas')                      return 'turmas';
-  if(gr==='projetos e eventos')          return 'projetos_eventos';
-  if(gr==='selfcheckout')                return 'selfcheckout';
-  if(gr==='expansão'||gr==='expansao')   return 'expansao';
-  if(gr==='renovação'||gr==='renovacao') return 'renovacao';
-  if(gr==='time de vendas - field sales') return 'field_sales';
-  if(gr==='time de vendas - aquisição'||gr==='time de vendas - aquisicao') return 'aquisicao';
-  if(gr==='não definido'||gr==='nao definido') return 'nao_definido';
-
-  // REGRA 2 — fallback por linha_de_receita_vigente (quando grupo vazio)
-  if(lr.includes('[im] social dm')||lr.includes('social dm - perfil k')) {
-    return lr.includes('perfil k') ? 'social_dm_k' : 'social_dm';
+  if(gr && gr!=='não definido' && gr!=='nao definido') {
+    if(gr==='funil de marketing')          return 'funil_marketing';
+    if(gr==='turmas')                      return 'turmas';
+    if(gr==='projetos e eventos')          return 'projetos_eventos';
+    if(gr==='selfcheckout')                return 'selfcheckout';
+    if(gr==='expansão'||gr==='expansao')   return 'expansao';
+    if(gr==='renovação'||gr==='renovacao') return 'renovacao';
+    if(gr==='time de vendas - field sales') return 'field_sales';
+    if(gr==='time de vendas - aquisição'||gr==='time de vendas - aquisicao') return 'aquisicao';
+    if(gr==='g4 tools')                    return 'g4_tools';
   }
-  if(utm==='tallis'||utm==='nardon'||utm==='alfredo') return 'social_dm';
-  if(lr.includes('[im] social'))  return 'social_dm';
-  if(lr.includes('reativ'))       return 'aquisicao'; // reativação = time de vendas
-  if(lr.includes('abandono')||lr.includes('[on] selfcheckout')||lr.includes('[on] outros')) return 'selfcheckout';
-  if(lr.includes('[fs]'))         return 'field_sales';
-  if(lr.includes('[skl]'))        return 'nao_definido';
-  if(lr.includes('[on]'))         return 'turmas'; // produtos online = turmas
-  if(lr.includes('[cm]'))         return 'funil_marketing';
-  if(lr.includes('farmer')||lr.includes('cs corporativo')) return 'expansao';
-  if(lr.includes('renovaç')||lr.includes('renovac')) return 'renovacao';
-  if(lr.includes('gestão e estratégia')||lr.includes('gestao e estrategia')) return 'turmas';
-  if(lr.includes('g4 traction')||lr.includes('g4 sales')||lr.includes('g4 frontier')||lr.includes('g4 scale')) return 'turmas';
-  if(lr.includes('g4 club')) return 'renovacao';
-  if(lr.includes('parceria')||lr.includes('patrocín')||lr.includes('indica')) return 'projetos_eventos';
-  if(lr.includes('scale experience')||lr.includes('g4 pelo brasil')||lr.includes('g4 alumni')||lr.includes('g4 valley')) return 'projetos_eventos';
 
-  // Fallback final — nao_definido
-  // funil_marketing NÃO é fallback — é um grupo real com leads vindos de campanhas pagas
-  // Se o grupo não veio preenchido do Databricks, não assumir que é Funil de Marketing
+  // REGRA 2 — linha_de_receita_vigente (propriedade-mãe: de onde o dinheiro vem)
+  if(lr) {
+    // Social DM
+    if(lr.includes('[im] social dm')||lr.includes('social dm - perfil k'))
+      return lr.includes('perfil k') ? 'social_dm_k' : 'social_dm';
+    if(lr.includes('[im] social'))  return 'social_dm';
+    // Reativação
+    if(lr.includes('reativ'))       return 'reativacao';
+    // Selfcheckout
+    if(lr.includes('abandono')||lr.includes('[on] selfcheckout')||lr.includes('[on] outros')||lr.includes('[skl] especialista'))
+      return 'selfcheckout';
+    // Field Sales
+    if(lr.includes('[fs]'))         return 'field_sales';
+    // Funil de Marketing (forms, chat, CRM)
+    if(lr.includes('[cm]')||lr.includes('form g4')||lr.includes('[im] form')||lr.includes('[im] chat')||lr.includes('[skl] crm')||lr.includes('[skl] social')||lr.includes('[skl] midia paga')||lr.includes('[skl] site')||lr.includes('iscas'))
+      return 'funil_marketing';
+    // Turmas (produtos online e imersões)
+    if(lr.includes('[on]') && !lr.includes('customer success'))  return 'turmas';
+    if(lr.includes('gestão e estratégia')||lr.includes('gestao e estrategia')) return 'turmas';
+    if(lr.includes('g4 traction')||lr.includes('g4 sales')||lr.includes('g4 frontier')||lr.includes('g4 scale')) return 'turmas';
+    if(lr.match(/^im-/)) return 'turmas'; // turmas especificas: IM-GE-xxx, IM-TRA-xxx
+    if(lr.includes('relançamento-tra')||lr.includes('relançamento-ge')||lr.includes('masterclass')) return 'turmas';
+    // Expansão
+    if(lr.includes('farmer')||lr.includes('cs corp')||lr.includes('[on] customer success')||lr.includes('[skl] expansão')||lr.includes('[skl] expansao')||lr.includes('[im] customer success'))
+      return 'expansao';
+    // Renovação
+    if(lr.includes('renovaç')||lr.includes('renovac')||lr.includes('g4 club')) return 'renovacao';
+    // G4 Tools
+    if(lr.includes('g4 tools')||lr.includes('finders fee')||lr.includes('g4 capital')||lr.includes('serviços')) return 'g4_tools';
+    // Projetos e Eventos
+    if(lr.includes('aniversário')||lr.includes('aniversario')||lr.includes('valley')||lr.includes('blackfriday')||lr.includes('black friday')||lr.includes('g4 pelo brasil')||lr.includes('frontier')||lr.includes('eventos'))
+      return 'projetos_eventos';
+    if(lr.includes('parceria')||lr.includes('patrocín')||lr.includes('indica')||lr.includes('scale experience')||lr.includes('g4 alumni'))
+      return 'projetos_eventos';
+    // SKL genérico (sem classificação mais específica)
+    if(lr.includes('[skl]'))        return 'nao_definido';
+  }
+
+  // REGRA 3 — utm_medium como último recurso (quando linha_de_receita_vigente vazia)
+  // Deals sem linha = leads de marketing sem produto associado, na maioria ficam nao_definido
+  if(utm && !lr) {
+    if(utm==='tallis'||utm==='nardon'||utm==='alfredo'||utm==='basaglia'||utm==='bernardinho'||utm==='vabo') return 'social_dm';
+    if(utm==='prospeccao-ativa'||utm==='time-vendas') return 'aquisicao';
+  }
+
   return 'nao_definido';
 }
 window.resolveRevenueLine = resolveRevenueLine;
@@ -256,7 +284,7 @@ function calcOpportunityValue(deal){
   var stage_prob=STAGE_PROB[etapa]||0.10;
   var persona_weight=tier==='diamond'||tier==='gold'?1.1:tier==='silver'?1.0:0.9;
   var revLine=deal._revLine||resolveRevenueLine(deal);
-  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.imersao;
+  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.nao_definido;
   var delta=deal.delta||deal._delta||0;
   var ra=lc.risk_after;
   var age_penalty=delta>ra*4?0.4:delta>ra*3?0.55:delta>ra*2?0.7:delta>ra?0.85:1.0;
@@ -271,7 +299,7 @@ window.calcOpportunityValue = calcOpportunityValue;
 
 function calcAgingRisk(deal){
   var revLine=deal._revLine||resolveRevenueLine(deal);
-  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.imersao;
+  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.nao_definido;
   var delta=deal.delta||deal._delta||0;
   var ra=lc.risk_after;
   return { revLine:revLine, risk_after:ra, delta:delta, isAtRisk:delta>ra,
@@ -318,7 +346,7 @@ function calcEfficiencyByChannel(allDeals){
     if(etapa!=='novo lead'&&etapa!=='dia 01') s.qualified++;
   });
   Object.keys(byCanal).forEach(function(k){ var s=byCanal[k];
-    var lc=REVENUE_LINES[s.line]||REVENUE_LINES.imersao;
+    var lc=REVENUE_LINES[s.line]||REVENUE_LINES.nao_definido;
     var base=s.deals;
     if(lc.base==='touchpoints') base=Math.max(s.touchpoints,1);
     else if(lc.base==='meetings') base=Math.max(s.meetings,1);
@@ -388,7 +416,15 @@ var TASK_TYPES = {
   dvl_review:      { label:'DVL Review',       icon:'check',  color:'accent' },
   framework_gap_fill:{ label:'Framework Gap',  icon:'target', color:'yellow' },
   authority_confirmation:{ label:'Authority Check', icon:'user', color:'accent' },
-  pain_quantification:{ label:'Pain Quantify', icon:'alert',  color:'red' }
+  pain_quantification:{ label:'Pain Quantify', icon:'alert',  color:'red' },
+  spin_rebalance:      { label:'SPIN Rebalance', icon:'target', color:'yellow' },
+  objection_resolve:   { label:'Objeção Aberta', icon:'alert',  color:'red' },
+  advance_stalled:     { label:'Avanço Travado', icon:'refresh',color:'yellow' },
+  rfv_nurture:         { label:'RFV Nurture',    icon:'msg',    color:'accent2' },
+  rfv_rescue:          { label:'RFV Resgate',    icon:'alert',  color:'red' },
+  enterprise_qualify:  { label:'Enterprise Qual', icon:'check',  color:'green' },
+  trusted_advisor_gap: { label:'Advisor Gap',    icon:'user',   color:'accent' },
+  strategic_review:    { label:'Strategic Review',icon:'target', color:'accent2' }
 };
 window.TASK_TYPES = TASK_TYPES;
 
@@ -402,6 +438,11 @@ function buildTaskQueue(filterType, filterRevLine){
     var d = map[id];
     if((d.statusDeal||'').toLowerCase()==='perdido'||(d.statusDeal||'').toLowerCase()==='ganho') return;
     enrichDealContext(d);
+
+    // Skip revenue lines out of SDR scope (e.g. funil_marketing = geracao de demanda)
+    var rlScope = d._revLine || resolveRevenueLine(d);
+    var rlCfg = REVENUE_LINES[rlScope];
+    if(rlCfg && rlCfg.sdr_scope === false) return;
 
     // Revenue line filter
     if(filterRevLine){
@@ -533,7 +574,10 @@ function renderTaskRunner(filterType){
     var rl = t.deal._revLine || resolveRevenueLine(t.deal);
     byRevLine[rl] = (byRevLine[rl]||0)+1;
   });
-  var rlKeys = Object.keys(byRevLine).sort(function(a,b){ return (byRevLine[b]||0)-(byRevLine[a]||0); });
+  var rlKeys = Object.keys(byRevLine).filter(function(k){
+    var cfg = REVENUE_LINES[k];
+    return !cfg || cfg.sdr_scope !== false; // Excluir linhas fora do escopo SDR
+  }).sort(function(a,b){ return (byRevLine[b]||0)-(byRevLine[a]||0); });
   if(rlKeys.length > 1){
     statsHtml += '<div class="task-rl-bar">';
     statsHtml += '<span class="task-rl-label">Linha:</span>';
@@ -1845,19 +1889,17 @@ async function renderHome(){
     + '<div id="home-score-breakdown" style="margin-top:8px"></div>'
     + '</div>';
 
-  // BLOCO 4 — Inteligencia Elucy
-  html += '<div class="home-block">'
-    + '<div class="home-block-title">Inteligencia Elucy</div>';
+  // BLOCO 4 — Inteligencia
   if(insights.length){
+    html += '<div class="home-block">'
+      + '<div class="home-block-title">Inteligencia</div>';
     insights.slice(0,3).forEach(function(ins){
       var cls = ins.severity==='high'?'home-insight-bad':ins.severity==='warning'?'home-insight-warn':'home-insight-good';
       html += '<div class="home-insight '+cls+'"><div class="home-insight-msg">'+_escHtml(ins.message)+'</div>'
         + '<div class="home-insight-sug">'+_escHtml(ins.suggestion)+'</div></div>';
     });
-  } else {
-    html += '<div class="home-empty">Pipeline saudavel. Continue operando.</div>';
+    html += '</div>';
   }
-  html += '</div>';
 
   wrap.innerHTML = html;
 
@@ -2382,7 +2424,7 @@ function calcTimelineIntelligence(deal){
   var fase=(deal.fase||deal.fase_atual_no_processo||deal._fase||'').toLowerCase();
   var status=(deal.statusDeal||deal.status_do_deal||'').toLowerCase();
   var revLine=deal._revLine||resolveRevenueLine(deal);
-  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.imersao;
+  var lc=REVENUE_LINES[revLine]||REVENUE_LINES.nao_definido;
 
   // ── IDADE DO DEAL ──
   var ageDays=delta;
@@ -3233,7 +3275,7 @@ function calcForecastV6(deal){
   var aging = deal._aging || calcAgingRisk(deal);
   var delta = deal._delta || deal.delta || 0;
   var revLine = deal._revLine || resolveRevenueLine(deal);
-  var lc = REVENUE_LINES[revLine] || REVENUE_LINES.imersao;
+  var lc = REVENUE_LINES[revLine] || REVENUE_LINES.nao_definido;
   var ra = lc.risk_after;
 
   // --- QUANTITATIVE BASELINE ---
@@ -3776,7 +3818,7 @@ async function calcOperatorPerformance(periodType, periodKey){
   runtimeDeals.forEach(function(r){
     if(!r.aging_days && r.aging_days !== 0) return;
     agingSum += r.aging_days; agingCount++;
-    var revLine = 'imersao'; // default
+    var revLine = 'nao_definido'; // default
     var riskAfter = (REVENUE_LINES[revLine] || {}).risk_after || 3;
     if(r.aging_days > riskAfter * 2) slaRisk++;
     if(!r.last_touch_at) inactive++;
@@ -5386,7 +5428,36 @@ var SIGNAL_REGISTRY = {
   low_ticket:             { cat:'revenue',    pol:-1, w:0.08, label:'Ticket baixo' },
   high_priority_line:     { cat:'revenue',    pol:+1, w:0.08, label:'Linha prioritária' },
   low_priority_line:      { cat:'revenue',    pol:-1, w:0.05, label:'Linha baixa prioridade' },
-  strategic_account:      { cat:'revenue',    pol:+1, w:0.15, label:'Conta estratégica' }
+  strategic_account:      { cat:'revenue',    pol:+1, w:0.15, label:'Conta estratégica' },
+  // SPIN Audit (Feature 1)
+  spin_situation_heavy:   { cat:'framework',  pol:-1, w:0.12, label:'Excesso perguntas Situação' },
+  spin_implication_strong:{ cat:'framework',  pol:+1, w:0.15, label:'Implicação bem construída' },
+  spin_premature_solution:{ cat:'framework',  pol:-1, w:0.18, label:'Solução prematura oferecida' },
+  spin_need_payoff_hit:   { cat:'framework',  pol:+1, w:0.12, label:'Necessidade-Solução atingida' },
+  // Advance vs Continuation (Feature 1)
+  advance_confirmed:      { cat:'pipeline',   pol:+1, w:0.20, label:'Avanço real confirmado' },
+  continuation_only:      { cat:'pipeline',   pol:-1, w:0.15, label:'Apenas continuação (sem compromisso)' },
+  advance_without_decisor:{ cat:'pipeline',   pol:-1, w:0.20, label:'Avanço sem decisor' },
+  // Objection Classification (Feature 1)
+  objection_price:        { cat:'behavioral', pol:-1, w:0.15, label:'Objeção de preço' },
+  objection_timing:       { cat:'behavioral', pol:-1, w:0.10, label:'Objeção de timing' },
+  objection_authority:    { cat:'behavioral', pol:-1, w:0.18, label:'Objeção de autoridade' },
+  objection_technical:    { cat:'behavioral', pol:-1, w:0.12, label:'Objeção técnica' },
+  objection_resolved:     { cat:'behavioral', pol:+1, w:0.15, label:'Objeção resolvida' },
+  objection_unresolved:   { cat:'behavioral', pol:-1, w:0.20, label:'Objeção em aberto' },
+  // RFV (Feature 2)
+  rfv_champion:           { cat:'revenue',    pol:+1, w:0.15, label:'Cliente campeão (RFV)' },
+  rfv_at_risk:            { cat:'revenue',    pol:-1, w:0.18, label:'Cliente em risco (RFV)' },
+  rfv_hibernating:        { cat:'revenue',    pol:-1, w:0.12, label:'Cliente hibernando (RFV)' },
+  rfv_potential_loyal:    { cat:'revenue',    pol:+1, w:0.10, label:'Potencial fiel (RFV)' },
+  // Enterprise (Feature 3)
+  enterprise_5m_detected: { cat:'revenue',    pol:+1, w:0.20, label:'Enterprise 5M+ detectado' },
+  trusted_advisor_high:   { cat:'quality',    pol:+1, w:0.15, label:'Trusted Advisor alto' },
+  trusted_advisor_low:    { cat:'quality',    pol:-1, w:0.15, label:'Trusted Advisor baixo' },
+  // Strategic (Feature 4)
+  channel_high_convert:   { cat:'forecast',   pol:+1, w:0.10, label:'Canal alta conversão' },
+  channel_low_convert:    { cat:'forecast',   pol:-1, w:0.08, label:'Canal baixa conversão' },
+  gtm_misalignment:       { cat:'quality',    pol:-1, w:0.12, label:'Desalinhamento GTM' }
 };
 window.SIGNAL_REGISTRY = SIGNAL_REGISTRY;
 
@@ -5402,7 +5473,15 @@ var SIGNAL_TASK_MAP = {
   lead_ghosting:         'reativacao',
   forecast_low_confidence: 'forecast_repair',
   no_note:               'note_quality',
-  no_touch_recent:       'fup'
+  no_touch_recent:       'fup',
+  spin_situation_heavy:  'spin_rebalance',
+  spin_premature_solution:'spin_rebalance',
+  continuation_only:     'advance_stalled',
+  objection_unresolved:  'objection_resolve',
+  rfv_at_risk:           'rfv_rescue',
+  rfv_hibernating:       'rfv_nurture',
+  trusted_advisor_low:   'trusted_advisor_gap',
+  gtm_misalignment:      'strategic_review'
 };
 
 // Detecta sinais de um deal com base em campos calculados do runtime

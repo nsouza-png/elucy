@@ -210,7 +210,7 @@
     var byLine = {};
 
     deals.forEach(function (d) {
-      var line = d._revLine || d.linha_de_receita_vigente || d.grupo_de_receita || 'Outro';
+      var line = d._revLine || (window.resolveRevenueLine ? window.resolveRevenueLine(d) : null) || 'nao_definido';
       if (!byLine[line]) byLine[line] = { total: 0, sal: 0, opp: 0, won: 0, lost: 0, value: 0, byStage: {} };
 
       var bl = byLine[line];
@@ -283,7 +283,7 @@
     var byLine = {};
 
     deals.forEach(function (d) {
-      var line = d._revLine || d.linha_de_receita_vigente || d.grupo_de_receita || 'Outro';
+      var line = d._revLine || (window.resolveRevenueLine ? window.resolveRevenueLine(d) : null) || 'nao_definido';
       if (!byLine[line]) byLine[line] = { dt_values: [], byQualif: {} };
 
       var dt = parseFloat(d.delta_t);

@@ -834,6 +834,28 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .li-phase-pill{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700}.li-phase-hot{background:var(--rdim);color:var(--red);border:1px solid var(--red)}
 .li-skip-warn{background:var(--ydim);border:1px solid var(--yellow);border-radius:4px;padding:5px 8px;font-size:10px;color:var(--yellow);font-weight:600;margin-top:4px}
 .li-timeline-wrap{padding:4px 0}
+
+/* ── ONBOARDING TOUR ─────────────────────────────────────── */
+.ob-overlay{position:fixed;inset:0;z-index:9998;pointer-events:none}
+.ob-spotlight{position:fixed;z-index:9999;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.55);pointer-events:none;transition:all .35s cubic-bezier(.4,0,.2,1)}
+.ob-tooltip{position:fixed;z-index:10000;background:var(--bg2,#1a1a2e);border:1.5px solid var(--accent,#6366f1);border-radius:14px;padding:22px 24px 18px;max-width:340px;min-width:260px;box-shadow:0 8px 32px rgba(0,0,0,.4);animation:ob-in .3s ease}
+@keyframes ob-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.ob-tooltip::before{content:'';position:absolute;width:14px;height:14px;background:var(--bg2,#1a1a2e);border:1.5px solid var(--accent,#6366f1);transform:rotate(45deg)}
+.ob-tooltip[data-pos="bottom"]::before{top:-8px;left:32px;border-right:none;border-bottom:none}
+.ob-tooltip[data-pos="top"]::before{bottom:-8px;left:32px;border-left:none;border-top:none}
+.ob-tooltip[data-pos="left"]::before{right:-8px;top:20px;border-left:none;border-top:none}
+.ob-tooltip[data-pos="right"]::before{left:-8px;top:20px;border-right:none;border-bottom:none}
+.ob-title{font-size:15px;font-weight:700;color:var(--text,#fff);margin-bottom:6px}
+.ob-desc{font-size:12.5px;color:var(--text2,#a1a1aa);line-height:1.5;margin-bottom:16px}
+.ob-footer{display:flex;align-items:center;justify-content:space-between}
+.ob-step{font-size:11px;color:var(--text3,#71717a)}
+.ob-next{padding:7px 18px;border-radius:8px;border:none;background:var(--accent,#6366f1);color:#fff;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s}
+.ob-next:hover{background:var(--accent2,#818cf8)}
+.ob-skip{font-size:11px;color:var(--text3,#71717a);cursor:pointer;text-decoration:underline;margin-right:12px}
+.ob-close{position:absolute;top:10px;right:12px;background:none;border:none;color:var(--text3,#71717a);font-size:16px;cursor:pointer;line-height:1}
+.ob-dots{display:flex;gap:5px;margin-right:auto;margin-left:4px}
+.ob-dot{width:6px;height:6px;border-radius:50%;background:var(--bg4,#333);transition:background .2s}
+.ob-dot.on{background:var(--accent,#6366f1)}
 </style>
 </head>
 <body>
@@ -1014,13 +1036,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
         <div class="fv2-group-body">
           <div class="fv2-chip-row">
             <span class="fchip on" data-filter="linha" data-val="todos" onclick="toggleFilter(this,'linha')">Todas</span>
-            <span class="fchip" data-filter="linha" data-val="imersao" onclick="toggleFilter(this,'linha')">Imersão</span>
-            <span class="fchip" data-filter="linha" data-val="club" onclick="toggleFilter(this,'linha')">Club</span>
-            <span class="fchip" data-filter="linha" data-val="consulting" onclick="toggleFilter(this,'linha')">Consulting</span>
-            <span class="fchip" data-filter="linha" data-val="field_sales" onclick="toggleFilter(this,'linha')">Field Sales</span>
+            <span class="fchip" data-filter="linha" data-val="turmas" onclick="toggleFilter(this,'linha')">Turmas</span>
+            <span class="fchip" data-filter="linha" data-val="projetos_eventos" onclick="toggleFilter(this,'linha')">Projetos & Eventos</span>
             <span class="fchip" data-filter="linha" data-val="social_dm" onclick="toggleFilter(this,'linha')">Social DM</span>
-            <span class="fchip" data-filter="linha" data-val="eventos" onclick="toggleFilter(this,'linha')">Eventos</span>
-            <span class="fchip" data-filter="linha" data-val="digital" onclick="toggleFilter(this,'linha')">Digital</span>
+            <span class="fchip" data-filter="linha" data-val="field_sales" onclick="toggleFilter(this,'linha')">Field Sales</span>
+            <span class="fchip" data-filter="linha" data-val="aquisicao" onclick="toggleFilter(this,'linha')">Aquisição</span>
+            <span class="fchip" data-filter="linha" data-val="selfcheckout" onclick="toggleFilter(this,'linha')">Self Checkout</span>
+            <span class="fchip" data-filter="linha" data-val="expansao" onclick="toggleFilter(this,'linha')">Expansão</span>
+            <span class="fchip" data-filter="linha" data-val="renovacao" onclick="toggleFilter(this,'linha')">Renovação</span>
+            <span class="fchip" data-filter="linha" data-val="reativacao" onclick="toggleFilter(this,'linha')">Reativação</span>
           </div>
         </div>
       </section>
@@ -1780,7 +1804,7 @@ const ACTIVE_FILTERS={fase:'todos',etapa:'todos',tier:'todos',linha:'todos',agin
 var FV2_LABELS={
   etapa:{'todos':'Todos','Dia 01':'D1','Dia 02':'D2','Dia 03':'D3','Dia 04':'D4','Dia 05':'D5','Dia 06':'D6','Conectados':'Conect.','Nova Oportunidade':'Nova Oport.','Agendamento':'Agend.','Entrevista Agendada':'Entrevista','Reagendamento':'Reagend.'},
   fase:{'todos':'Todas','Lead':'Lead','MQL':'MQL','SAL':'SAL','SQL':'SQL','Oportunidade':'Oport.','Negociacao':'Negoc.'},
-  linha:{'todos':'Todas','imersao':'Imersão','club':'Club','consulting':'Consulting','field_sales':'Field Sales','social_dm':'Social DM','eventos':'Eventos','digital':'Digital'},
+  linha:{'todos':'Todas','turmas':'Turmas','projetos_eventos':'Projetos & Eventos','social_dm':'Social DM','field_sales':'Field Sales','aquisicao':'Aquisição','selfcheckout':'Self Checkout','expansao':'Expansão','renovacao':'Renovação','reativacao':'Reativação','g4_tools':'G4 Tools','nao_definido':'Não Definido'},
   aging:{'todos':'Todos','fresh':'Fresh','normal':'Normal','aging':'Aging','critical':'Crítico'},
   canal:{'todos':'Todos','WhatsApp':'WA','Instagram':'IG','Form':'Form','Ligação':'Tel','E-mail':'Email','Direto':'Direto'},
   sinal:{'todos':'Todos','BUY':'BUY','CHAMP':'CHAMP','RISK':'RISK','STALL':'STALL','DOME':'DOME'},
@@ -1948,10 +1972,10 @@ function applyFilters(){
       const t=(deal._tier||deal.tier||'').toLowerCase();
       if(!t.includes(fTier.toLowerCase())){di.style.display='none';return;}
     }
-    // filtro linha de receita — DIM 4
+    // filtro linha de receita — compara com slug canonico _revLine (DIM3 grupo)
     if(fLinha!=='todos'){
-      const linha=(deal.linhaReceita||deal.linha_de_receita_vigente||deal._revLine||'').toLowerCase();
-      if(!linha.includes(fLinha.toLowerCase())){di.style.display='none';return;}
+      const linha=(deal._revLine||'').toLowerCase();
+      if(linha!==fLinha.toLowerCase()){di.style.display='none';return;}
     }
     // filtro aging band
     if(fAging!=='todos'){
@@ -2178,6 +2202,9 @@ function showCockpit(user){
     loadDealsFromSupabase(user.email);
   }
   initSlackAlerts();
+  // Onboarding tour — verifica no Supabase se operador ja fez o tour
+  // Obrigatorio para TODOS os usuarios, nao apenas primeiro acesso
+  _obCheckAndStart(user.email);
 }
 
 async function checkApproval(user){
@@ -2377,6 +2404,9 @@ document.addEventListener('DOMContentLoaded',()=>{
         const sb2=document.getElementById('sbdate');
         if(sb2) sb2.textContent='Atualizado: '+window.COCKPIT_UPDATED_AT;
       }
+      // Onboarding tour — modo local usa email do localStorage
+      var localEmail = localStorage.getItem('elucy_operator_email') || '';
+      _obCheckAndStart(localEmail);
     }
   }
 });
@@ -5358,10 +5388,13 @@ function _renderOperator(ct,AE){
 
 // ── LINE ──
 function _renderLine(ct,AE){
-  var data=(AE.calcByLine()||{data:{}}).data||{};
+  var rawLine;
+  try{ rawLine=AE.calcByLine(); }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro ao calcular linhas: '+e.message+'</div>'; return; }
+  var data=(rawLine||{data:{}}).data||{};
   var speed=((function(){try{return AE.calcSpeed();}catch(e){return{data:{}};}})()).data||{};
   // funil_marketing é geração de demanda (time de mkt) — fora do escopo SDR
   var keys=Object.keys(data).filter(function(k){return k!=='funil_marketing';}).sort(function(a,b){return data[b].active-data[a].active;});
+  if(!keys.length){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Nenhuma linha de receita identificada. Verifique se os deals possuem grupo_de_receita ou linha_de_receita_vigente.</div>'; return; }
   var total=keys.reduce(function(s,k){return s+data[k].active;},0);
   var maxActive=Math.max.apply(null,keys.map(function(k){return data[k].active;}).concat([1]));
 
@@ -5396,7 +5429,9 @@ function _renderLine(ct,AE){
 
 // ── STAGE ──
 function _renderStage(ct,AE){
-  var data=AE.calcByStage().data;
+  var rawStage;
+  try{ rawStage=AE.calcByStage(); }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro ao calcular etapas: '+e.message+'</div>'; return; }
+  var data=(rawStage||{data:{}}).data||{};
   var keys=Object.keys(data).sort(function(a,b){return (data[a].order||99)-(data[b].order||99);});
   var total=keys.reduce(function(s,k){return s+data[k].count;},0);
   var maxCount=Math.max.apply(null,keys.map(function(k){return data[k].count;}).concat([1]));
@@ -5428,7 +5463,9 @@ function _renderStage(ct,AE){
 
 // ── CHANNEL ──
 function _renderChannel(ct,AE){
-  var data=AE.calcByChannel().data;
+  var rawChannel;
+  try{ rawChannel=AE.calcByChannel(); }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro ao calcular canais: '+e.message+'</div>'; return; }
+  var data=(rawChannel||{data:{}}).data||{};
   var keys=Object.keys(data).sort(function(a,b){return data[b].active-data[a].active;});
   var total=keys.reduce(function(s,k){return s+data[k].active;},0);
   var maxActive=Math.max.apply(null,keys.map(function(k){return data[k].active;}).concat([1]));
@@ -5449,7 +5486,9 @@ function _renderChannel(ct,AE){
 
 // ── TASK ──
 function _renderTask(ct,AE){
-  var data=AE.calcByTask().data;
+  var rawTask;
+  try{ rawTask=AE.calcByTask(); }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro ao calcular tasks: '+e.message+'</div>'; return; }
+  var data=(rawTask||{data:{}}).data||{};
   var keys=Object.keys(data).sort(function(a,b){return data[b].count-data[a].count;});
   var totalTasks=keys.reduce(function(s,k){return s+data[k].count;},0);
   var maxCount=Math.max.apply(null,keys.map(function(k){return data[k].count;}).concat([1]));
@@ -5470,7 +5509,9 @@ function _renderTask(ct,AE){
 
 // ── VALUE ──
 function _renderValue(ct,AE){
-  var data=AE.calcValue();
+  var data;
+  try{ data=AE.calcValue(); }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro ao calcular valores: '+e.message+'</div>'; return; }
+  if(!data||data.totalActive===0){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Nenhum deal ativo com valor calculado.</div>'; return; }
   var html='';
 
   // Total
@@ -5487,7 +5528,7 @@ function _renderValue(ct,AE){
   html+=renderSection(2,'Valor por Linha',
     lineKeys.map(function(k){
       var v=data.byLine[k];
-      return '<div class="intel-bar-row"><span class="intel-bar-label" title="'+k+'">'+(k.length>22?k.slice(0,22)+'...':k)+'</span><div class="intel-bar-bg"><div class="intel-bar-fill" style="width:'+Math.max(5,v.total/maxLineVal*100)+'%;background:linear-gradient(90deg,rgba(34,197,94,0.4),rgba(34,197,94,0.7))"><span class="intel-bar-v">'+fmtBRL(v.total)+'</span></div></div><span class="intel-bar-pct">'+v.count+' deals</span></div>';
+      return '<div class="intel-bar-row"><span class="intel-bar-label" title="'+fmtRevLine(k)+'">'+fmtRevLine(k)+'</span><div class="intel-bar-bg"><div class="intel-bar-fill" style="width:'+Math.max(5,v.total/maxLineVal*100)+'%;background:linear-gradient(90deg,rgba(34,197,94,0.4),rgba(34,197,94,0.7))"><span class="intel-bar-v">'+fmtBRL(v.total)+'</span></div></div><span class="intel-bar-pct">'+v.count+' deals</span></div>';
     }).join(''));
 
   // By Stage
@@ -5512,9 +5553,11 @@ function _renderValue(ct,AE){
 
 // ── Forecast Intelligence Tab ─────────────────────────────────────────
 function _renderForecast(ct,allDeals,deals){
+  try{
   var html='';
   // KPIs gerais
   var scored=deals.filter(function(d){return d._forecastV6&&d._forecastV6.score!=null;});
+  if(!scored.length){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Nenhum deal com forecast calculado. Os scores sao gerados apos o enrich do pipeline.</div>'; return; }
   var avgScore=scored.length?Math.round(scored.reduce(function(s,d){return s+d._forecastV6.score;},0)/scored.length*100):0;
   var avgConf=scored.length?Math.round(scored.reduce(function(s,d){return s+(d._forecastV6.confidence||0);},0)/scored.length*100):0;
   var highProb=scored.filter(function(d){return d._forecastV6.score>=0.7;}).length;
@@ -5557,10 +5600,12 @@ function _renderForecast(ct,allDeals,deals){
       return _iBar(f+' ('+byFase[f].cnt+'d)',avg,100,100,'background:'+col);
     }).join(''));
   ct.innerHTML=html;
+  }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro no forecast: '+e.message+'</div>'; }
 }
 
 // ── Framework Intelligence Tab ────────────────────────────────────────
 function _renderFramework(ct,allDeals,deals){
+  try{
   var html='';
   // Deals com framework extractions
   var withFw=deals.filter(function(d){return d._frameworkRuntime&&d._frameworkRuntime.qualitative_score!=null;});
@@ -5613,6 +5658,7 @@ function _renderFramework(ct,allDeals,deals){
       return '<tr><td>'+_escHtml(d.nome||'—')+'</td><td style="font-size:10px;color:var(--clay)">'+_escHtml(d._framework||'—')+'</td><td style="color:'+col+';font-weight:700">'+s+'%</td><td style="color:var(--text2)">'+Math.round(fw.coverage_pct||0)+'%</td><td style="color:var(--green)">'+fmtBRL(d.revenueRaw)+'</td></tr>';
     }).join('')+'</tbody></table>');
   ct.innerHTML=html;
+  }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro no framework: '+e.message+'</div>'; }
 }
 
 function renderSection(num,title,content){
@@ -5640,7 +5686,8 @@ function fmtRevLine(k){
     projetos_eventos:'Projetos & Eventos',social_dm:'Social DM',
     social_dm_k:'Social DM K',selfcheckout:'Self Checkout',
     reativacao:'Reativação',expansao:'Expansão',renovacao:'Renovação',
-    field_sales:'Field Sales',aquisicao:'Time de Vendas',nao_definido:'Não Definido'
+    field_sales:'Field Sales',aquisicao:'Time de Vendas',
+    g4_tools:'G4 Tools',nao_definido:'Não Definido'
   };
   return fallback[k]||k;
 }
@@ -5919,6 +5966,185 @@ function initSlackAlerts(){
   // Poll every 60s for new alerts
   setInterval(()=>loadSlackAlerts(),60000);
 }
+
+// ══════════════════════════════════════════════════════════════
+// ONBOARDING TOUR — tooltip guiado para primeiro acesso
+// ══════════════════════════════════════════════════════════════
+var _OB_STEPS = [
+  {
+    target: '.ntab:nth-child(1)',  // Home tab
+    title: 'Bem-vindo ao Elucy',
+    desc: 'Este é seu cockpit de vendas inteligente. A Home explica como o sistema funciona, mostra seus OKRs conectados ao funil real e acompanha sua performance — tudo com dados do Databricks.',
+    pos: 'bottom'
+  },
+  {
+    target: '#deal-list',  // Sidebar deal list
+    title: 'Sidebar de Deals',
+    desc: 'Todos os seus deals ativos ficam aqui. Use os filtros por fase, etapa, tier, linha de receita, aging, canal e sinais para encontrar rapidamente o que precisa.',
+    pos: 'right'
+  },
+  {
+    target: '.ntab:nth-child(2)',  // Pipeline tab
+    title: 'Pipeline',
+    desc: 'Visualize seus deals em formato de lista com todos os detalhes: temperatura, sinais, forecast, aging. Clique em qualquer deal para ver o painel completo de inteligência e gerar copy.',
+    pos: 'bottom'
+  },
+  {
+    target: '.ntab:nth-child(3)',  // Tasks tab
+    title: 'Task Runner',
+    desc: 'Suas tarefas priorizadas pelo DAG de 25 camadas. O Elucy analisa cada deal e gera a próxima ação exata — follow-up, qualificação, agendamento, handoff. Ordenadas por valor x urgência.',
+    pos: 'bottom'
+  },
+  {
+    target: '.ntab:nth-child(6)',  // Intel tab
+    title: 'Intelligence',
+    desc: 'Analytics completo do seu pipeline: Score V9, conversão por linha de receita, sinais de risco, distribuição por canal, forecast agregado e Data Quality. Dados reais, zero achismo.',
+    pos: 'bottom'
+  },
+  {
+    target: '#op-pill',  // User chip / operator pill
+    title: 'Seu Perfil',
+    desc: 'Aqui fica seu nível, XP e streak. O Elucy gamifica sua operação — cada tarefa executada, cada deal qualificado e cada handoff gera pontos. Agora é só operar!',
+    pos: 'bottom',
+    last: true
+  }
+];
+var _obStep = 0;
+var _obOverlay = null;
+var _obSpotlight = null;
+var _obTooltip = null;
+
+// Verifica Supabase se o tour foi completado — obrigatorio para TODOS
+async function _obCheckAndStart(email){
+  console.log('[OB] _obCheckAndStart called, email:', email);
+  var sb = getSB();
+  if(sb && email){
+    try {
+      var res = await sb.from('operators').select('onboarding_done').eq('email',email).maybeSingle();
+      console.log('[OB] Supabase result:', JSON.stringify(res.data));
+      if(res.data && res.data.onboarding_done === true){
+        localStorage.setItem('elucy_ob_done', '1');
+        console.log('[OB] Tour already done, skipping');
+        return;
+      }
+    } catch(e){
+      console.warn('[OB] Supabase check failed:', e);
+    }
+  } else {
+    console.log('[OB] No supabase client or email, proceeding with tour anyway');
+  }
+  // Supabase diz que nao fez — forcar tour independente do localStorage
+  localStorage.removeItem('elucy_ob_done');
+  console.log('[OB] Scheduling tour start in 3s...');
+  // Aguarda mais tempo para garantir que DOM esta estavel
+  setTimeout(function(){
+    // Verifica se o primeiro target existe antes de iniciar
+    var firstTarget = document.querySelector(_OB_STEPS[0].target);
+    console.log('[OB] First target check:', _OB_STEPS[0].target, '→', firstTarget ? 'FOUND' : 'NOT FOUND');
+    if(!firstTarget){
+      // Tenta novamente em mais 3s
+      console.log('[OB] Retrying in 3s...');
+      setTimeout(function(){ _obStart(); }, 3000);
+      return;
+    }
+    _obStart();
+  }, 3000);
+}
+
+function _obStart(){
+  _obStep = 0;
+  // Create overlay elements
+  _obOverlay = document.createElement('div');
+  _obOverlay.className = 'ob-overlay';
+  _obSpotlight = document.createElement('div');
+  _obSpotlight.className = 'ob-spotlight';
+  _obTooltip = document.createElement('div');
+  _obTooltip.className = 'ob-tooltip';
+  document.body.appendChild(_obOverlay);
+  document.body.appendChild(_obSpotlight);
+  document.body.appendChild(_obTooltip);
+  _obRender();
+}
+
+function _obRender(){
+  if(_obStep >= _OB_STEPS.length){ _obEnd(); return; }
+  var s = _OB_STEPS[_obStep];
+  var el = document.querySelector(s.target);
+  if(!el){ _obStep++; _obRender(); return; }
+
+  // Position spotlight
+  var r = el.getBoundingClientRect();
+  var pad = 6;
+  _obSpotlight.style.top = (r.top - pad) + 'px';
+  _obSpotlight.style.left = (r.left - pad) + 'px';
+  _obSpotlight.style.width = (r.width + pad*2) + 'px';
+  _obSpotlight.style.height = (r.height + pad*2) + 'px';
+
+  // Build tooltip content
+  var dots = '';
+  for(var i=0; i<_OB_STEPS.length; i++){
+    dots += '<div class="ob-dot'+(i===_obStep?' on':'')+'"></div>';
+  }
+  var btnLabel = s.last ? 'Começar!' : 'Próximo';
+  _obTooltip.setAttribute('data-pos', s.pos);
+  _obTooltip.innerHTML =
+    '<button class="ob-close" onclick="_obEnd()">&times;</button>' +
+    '<div class="ob-title">'+s.title+'</div>' +
+    '<div class="ob-desc">'+s.desc+'</div>' +
+    '<div class="ob-footer">' +
+      '<div class="ob-dots">'+dots+'</div>' +
+      '<span class="ob-step">'+(_obStep+1)+' de '+_OB_STEPS.length+'</span>' +
+      '<span class="ob-skip" onclick="_obEnd()">Pular tour</span>' +
+      '<button class="ob-next" onclick="_obNext()">'+btnLabel+'</button>' +
+    '</div>';
+
+  // Position tooltip relative to target
+  var tw = 340;
+  var gap = 14;
+  if(s.pos === 'bottom'){
+    _obTooltip.style.top = (r.bottom + gap) + 'px';
+    _obTooltip.style.left = Math.max(8, r.left - 10) + 'px';
+    _obTooltip.style.right = 'auto';
+  } else if(s.pos === 'top'){
+    _obTooltip.style.top = (r.top - gap - 180) + 'px';
+    _obTooltip.style.left = Math.max(8, r.left - 10) + 'px';
+    _obTooltip.style.right = 'auto';
+  } else if(s.pos === 'right'){
+    _obTooltip.style.top = r.top + 'px';
+    _obTooltip.style.left = (r.right + gap) + 'px';
+    _obTooltip.style.right = 'auto';
+  } else if(s.pos === 'left'){
+    _obTooltip.style.top = r.top + 'px';
+    _obTooltip.style.left = 'auto';
+    _obTooltip.style.right = (window.innerWidth - r.left + gap) + 'px';
+  }
+  // Re-trigger animation
+  _obTooltip.style.animation = 'none';
+  _obTooltip.offsetHeight; // reflow
+  _obTooltip.style.animation = '';
+}
+
+function _obNext(){
+  _obStep++;
+  _obRender();
+}
+
+function _obEnd(){
+  if(_obOverlay) _obOverlay.remove();
+  if(_obSpotlight) _obSpotlight.remove();
+  if(_obTooltip) _obTooltip.remove();
+  _obOverlay = _obSpotlight = _obTooltip = null;
+  localStorage.setItem('elucy_ob_done', '1');
+  // Persist no Supabase
+  var sb = getSB();
+  var email = window._currentUserEmail;
+  if(sb && email){
+    sb.from('operators').update({onboarding_done:true}).eq('email',email).then(function(){});
+  }
+}
+
+// Expor para trigger manual
+window._obStart = _obStart;
 </script>
 <!-- ── TASK EXECUTION OVERLAY ────────────────────────────────────── -->
 <div class="tex-overlay" id="tex-overlay">

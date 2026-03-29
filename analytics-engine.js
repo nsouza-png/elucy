@@ -49,9 +49,9 @@ async function _loadActivity(periodDays){
 function _classifyDeal(d){
   if(!d._revLine) _enrichDeal(d);
   return {
-    line: d._revLine || d.linhaReceita || d.grupo_de_receita || 'Outro',
+    line: d._revLine || (window.resolveRevenueLine ? window.resolveRevenueLine(d) : null) || 'nao_definido',
     stage: d.etapa || d._etapa || d.fase || 'Outro',
-    channel: d.canal || d.utm_medium || 'Outro',
+    channel: d.canal || (window._resolveCanal ? window._resolveCanal(d.canal_de_marketing, d.utm_medium) : null) || d.utm_medium || 'Direto',
     persona: d._persona || 'Outro',
     framework: d._framework || 'Outro',
     tier: (d.tier || '').toLowerCase() || 'outro',
