@@ -1714,27 +1714,37 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 let cur=null;
 
-function setScreen(n,el){
+function setScreen(n,el,skipHash){
   document.querySelectorAll('#ct > .screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
   var ct=document.getElementById('ct'); if(ct) ct.scrollTop=0;
   const screenMap={home:'screen-home',pipeline:'screen-pipeline',tasks:'screen-tasks',reports:'screen-reports',prevendas:'screen-prevendas',intelligence:'screen-intelligence',playbooks:'screen-playbooks',dm:'screen-dm'};
-  const target=document.getElementById(screenMap[n]||'screen-home');
+  const validScreens=Object.keys(screenMap);
+  const name=validScreens.includes(n)?n:'home';
+  const target=document.getElementById(screenMap[name]);
   if(target) target.classList.add('on');
   if(el){ el.classList.add('on'); }
   else {
     const tabs=document.querySelectorAll('.ntab');
     const tabMap={home:0,pipeline:1,tasks:2,reports:3,prevendas:4,intelligence:5,playbooks:6};
-    const idx=tabMap[n]!=null?tabMap[n]:0;
+    const idx=tabMap[name]!=null?tabMap[name]:0;
     if(tabs[idx]) tabs[idx].classList.add('on');
   }
-  if(n==='home' && window.renderHome) window.renderHome();
-  if(n==='tasks' && window.renderTaskRunner) window.renderTaskRunner();
-  if(n==='intelligence') renderIntelligence();
-  if(n==='reports') loadReportsScreen();
-  if(n==='prevendas' && window.ReportsV4) window.ReportsV4.renderReportsV4('screen-reports-v4');
-  if(n==='playbooks') renderPlaybooks();
+  if(!skipHash) history.replaceState(null,'','#'+name);
+  if(name==='home' && window.renderHome) window.renderHome();
+  if(name==='tasks' && window.renderTaskRunner) window.renderTaskRunner();
+  if(name==='intelligence') renderIntelligence();
+  if(name==='reports') loadReportsScreen();
+  if(name==='prevendas' && window.ReportsV4) window.ReportsV4.renderReportsV4('screen-reports-v4');
+  if(name==='playbooks') renderPlaybooks();
 }
+// Hash routing — abre a seção correta ao carregar URL direta ou navegar pelo histórico
+function _routeFromHash(){
+  const hash=(location.hash||'').replace('#','').toLowerCase().trim();
+  const valid=['home','pipeline','tasks','reports','prevendas','intelligence','playbooks','dm'];
+  setScreen(valid.includes(hash)?hash:'home',null,true);
+}
+window.addEventListener('hashchange',_routeFromHash);
 
 function renderPlaybooks(){
   var el=document.getElementById('pb-root');
@@ -2573,6 +2583,8 @@ function showCockpit(user){
     loadDealsFromSupabase(user.email);
   }
   initSlackAlerts();
+  // Hash routing — abre seção da URL (ex: /elucy/#tasks) ou home por padrão
+  _routeFromHash();
   // Onboarding tour — verifica no Supabase se operador ja fez o tour
   // Obrigatorio para TODOS os usuarios, nao apenas primeiro acesso
   _obCheckAndStart(user.email);
@@ -2781,6 +2793,8 @@ document.addEventListener('DOMContentLoaded',()=>{
         const sb2=document.getElementById('sbdate');
         if(sb2) sb2.textContent='Atualizado: '+window.COCKPIT_UPDATED_AT;
       }
+      // Hash routing — modo local
+      _routeFromHash();
       // Onboarding tour — modo local usa email do localStorage
       var localEmail = localStorage.getItem('elucy_operator_email') || '';
       _obCheckAndStart(localEmail);
