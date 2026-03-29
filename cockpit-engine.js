@@ -1068,18 +1068,20 @@ function renderTaskRecommendation(deals){
   }).join('');
 }
 
-function renderTaskCard(deal){
-  var name  = deal.name||deal.person_name||deal.nome||'Deal';
+function renderTaskCard(deal, idx){
+  var name  = deal.name||deal.person_name||deal.nome||'Lead';
   var linha = deal.linha_de_receita_vigente||deal._revLine||'—';
   var fase  = deal.fase_atual_no_processo||'—';
   var aging = deal._aging||0;
   var nba   = deal._nextAction||'Realizar FUP';
   var tier  = (deal.tier_da_oportunidade||'').toLowerCase();
   var tasks = deal._tasks||[];
-  var firstTask = tasks[0]||{type:'follow_up', text: nba};
+  var firstTask = tasks[0]||{type:'follow_up'};
   var taskType  = firstTask.type||'follow_up';
   var ks = (deal._killSwitches||[]).length>0;
   var fw = deal._frameworkScore||0;
+  var deltaVal = deal.delta||deal._aging||0;
+  var deltaColor = deltaVal>=40?'var(--red)':deltaVal>=20?'var(--yellow)':'var(--text2)';
 
   var agingClass = aging>40?'task-aging-critical':aging>20?'task-aging-high':'task-aging-medium';
   var tierColor  = tier==='diamond'?'var(--green)':tier==='gold'?'var(--accent2)':tier==='silver'?'var(--text2)':'var(--clay)';
@@ -1091,47 +1093,48 @@ function renderTaskCard(deal){
     pain_quantification:'Quantificar Dor', cadence:'Cadência'
   };
   var taskLabel = taskTypeLabels[taskType]||taskType;
+  var taskColor = taskType==='follow_up'?'task-c-accent':taskType==='social_dm'?'task-c-text2':taskType==='handoff_prep'?'task-c-green':taskType==='reativacao'?'task-c-yellow':taskType==='no_show_recovery'?'task-c-red':'task-c-text2';
 
   var oppVal = deal._oppValue||0;
   var valStr = oppVal>0 ? (typeof window.fmtBRL==='function' ? window.fmtBRL(oppVal) : 'R$'+Math.round(oppVal/1000)+'k') : '—';
+
+  var empresa = deal.empresa||deal.company||'';
+  var cargo   = deal.cargo||deal.title||'';
 
   var signalBadge = '';
   if(typeof window.hasSignal==='function' && window.hasSignal(deal,'compra')){
     signalBadge = '<span class="tag is-buy" style="font-size:9px">Sinal de Compra</span>';
   }
 
-  return '<div class="task-card" data-id="'+_escHtml(String(deal.id||deal.contact_id||''))+'">'+
-    '<div class="task-card-main">'+
-      '<div class="task-card-top">'+
-        '<span class="task-type-badge '+
-          (taskType==='follow_up'?'task-c-accent':
-           taskType==='social_dm'?'task-c-text2':
-           taskType==='handoff_prep'?'task-c-green':
-           taskType==='reativacao'?'task-c-yellow':
-           taskType==='no_show_recovery'?'task-c-red':'task-c-text2')+'">'+
-          taskLabel+'</span>'+
-        (ks?'<span class="tag is-risk" style="font-size:9px">Kill Switch</span>':'')+
-        signalBadge+
-        (tier?'<span class="tag" style="color:'+tierColor+';font-size:9px">'+tier.toUpperCase()+'</span>':'')+
-        '<span class="task-aging '+agingClass+'">D'+aging+'</span>'+
-      '</div>'+
-      '<h3 class="task-card-title">'+_escHtml(name)+'</h3>'+
-      '<div class="task-card-sub">'+_escHtml(_fmtLinha(linha))+' · '+_escHtml(fase)+'</div>'+
-      '<div class="task-card-nba">'+_escHtml(nba)+'</div>'+
-      '<div class="task-actions">'+
-        '<button class="task-btn is-primary" onclick="window.selectLiveDeal&&window.selectLiveDeal(\''+_escHtml(String(deal.id||deal.contact_id||''))+'\',event)">Abrir Deal</button>'+
-        '<button class="task-btn" onclick="window._taskMarkDone&&window._taskMarkDone(\''+_escHtml(String(deal.id||deal.contact_id||''))+'\',this)">Concluir</button>'+
-        (taskType==='social_dm'?'<button class="task-btn" onclick="window.setScreen&&window.setScreen(\'dm\')">Ir p/ DM</button>':'')+
-      '</div>'+
-      '<div class="task-chip-row">'+
-        (fw>0?'<span class="tag" style="font-size:9px">FW '+Math.round(fw*100)+'%</span>':'')+
-      '</div>'+
-    '</div>'+
-    '<div class="task-card-side">'+
-      '<div class="kpi" style="padding:10px"><div class="kpi-l">Valor</div><div class="kpi-v" style="font-size:18px">'+valStr+'</div></div>'+
-      '<div class="kpi" style="padding:10px"><div class="kpi-l">Linha</div><div class="kpi-v" style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_escHtml(_fmtLinha(linha))+'</div></div>'+
-    '</div>'+
-  '</div>';
+  return '<div class="task-card" data-task-idx="'+idx+'" data-id="'+_escHtml(String(deal.id||deal.contact_id||deal.deal_id||''))+'" style="cursor:pointer" onclick="window.texOpen('+idx+')">'
+    + '<div class="task-card-main">'
+      + '<div class="task-card-top">'
+        + '<span class="task-type-badge '+taskColor+'">'+taskLabel+'</span>'
+        + (ks?'<span class="tag is-risk" style="font-size:9px">Kill Switch</span>':'')
+        + signalBadge
+        + (tier?'<span class="tag" style="color:'+tierColor+';font-size:9px">'+tier.toUpperCase()+'</span>':'')
+        + '<span class="task-aging '+agingClass+'">D'+aging+'</span>'
+      + '</div>'
+      + '<h3 class="task-card-title">'+_escHtml(name)+'</h3>'
+      + '<div class="task-card-sub">'+_escHtml(empresa+(cargo?' · '+cargo:''))+'</div>'
+      + '<div style="display:flex;gap:10px;font-size:11px;color:var(--text2);margin:4px 0 8px">'
+        + '<span>'+_escHtml(_fmtEtapa(fase))+'</span>'
+        + '<span>'+_escHtml(_fmtLinha(linha))+'</span>'
+        + '<span style="color:'+deltaColor+'">'+deltaVal+'d</span>'
+      + '</div>'
+      + '<div class="task-card-nba">→ '+_escHtml(nba)+'</div>'
+      + '<div class="task-actions">'
+        + '<button class="task-btn is-primary" onclick="event.stopPropagation();window.texOpen('+idx+')">Executar →</button>'
+        + '<button class="task-btn" onclick="event.stopPropagation();window.taskQuickAction&&window.taskQuickAction(\''+_escHtml(String(deal.id||deal.contact_id||deal.deal_id||''))+'\',\'fup\')">Gerar FUP</button>'
+        + '<button class="task-btn" onclick="event.stopPropagation();window.taskQuickAction&&window.taskQuickAction(\''+_escHtml(String(deal.id||deal.contact_id||deal.deal_id||''))+'\',\'analyze\')">Analisar</button>'
+      + '</div>'
+      + (fw>0?'<div class="task-chip-row"><span class="tag" style="font-size:9px">FW '+Math.round(fw*100)+'%</span></div>':'')
+    + '</div>'
+    + '<div class="task-card-side">'
+      + '<div class="kpi" style="padding:10px"><div class="kpi-l">Valor</div><div class="kpi-v" style="font-size:18px">'+valStr+'</div></div>'
+      + '<div class="kpi" style="padding:10px"><div class="kpi-l">Linha</div><div class="kpi-v" style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_escHtml(_fmtLinha(linha))+'</div></div>'
+    + '</div>'
+  + '</div>';
 }
 
 function renderTaskList(deals){
@@ -1141,7 +1144,20 @@ function renderTaskList(deals){
     el.innerHTML = '<div class="task-empty">Nenhuma tarefa para o modo e fila selecionados.</div>';
     return;
   }
-  el.innerHTML = deals.map(renderTaskCard).join('');
+  // Expõe a fila filtrada para texOpen — converte deals em formato que _texQueue espera
+  window._texV2Queue = deals.map(function(d){
+    var tasks = d._tasks||[];
+    var firstTask = tasks[0]||{type:'follow_up'};
+    return {
+      id: d.id||d.contact_id||d.deal_id||'',
+      taskType: firstTask.type||'follow_up',
+      label: d._nextAction||'Realizar FUP',
+      priority: d.tier_da_oportunidade||'medium',
+      deal: d,
+      aging: {isAtRisk:(d._aging||0)>20, riskLevel:(d._aging||0)>40?'critical':(d._aging||0)>20?'high':'medium', riskLabel:'D'+(d._aging||0)}
+    };
+  });
+  el.innerHTML = deals.map(function(deal, idx){ return renderTaskCard(deal, idx); }).join('');
 }
 
 function renderTasksV2(){
@@ -1475,11 +1491,17 @@ function _texStopTimer(){
 
 // Open execution mode at given task index
 window.texOpen = function(idx){
-  var filterEl = document.querySelector('.fchip.on');
-  var filterType = filterEl && filterEl.dataset.tfilter !== 'all' ? filterEl.dataset.tfilter : null;
-  var rlEl = document.querySelector('.task-rl-chip.on');
-  var filterRevLine = rlEl && rlEl.dataset.revline !== 'all' ? rlEl.dataset.revline : null;
-  _texQueue = buildTaskQueue(filterType, filterRevLine);
+  // Tasks V2: usa a fila já filtrada e enriquecida pelo renderTaskList
+  if(window._texV2Queue && window._texV2Queue.length){
+    _texQueue = window._texV2Queue;
+  } else {
+    // Fallback legado: reconstruir pela fila bruta
+    var filterEl = document.querySelector('.fchip.on');
+    var filterType = filterEl && filterEl.dataset.tfilter !== 'all' ? filterEl.dataset.tfilter : null;
+    var rlEl = document.querySelector('.task-rl-chip.on');
+    var filterRevLine = rlEl && rlEl.dataset.revline !== 'all' ? rlEl.dataset.revline : null;
+    _texQueue = buildTaskQueue(filterType, filterRevLine);
+  }
   if(!_texQueue.length) return;
   _texIdx = Math.min(idx, _texQueue.length - 1);
   document.getElementById('tex-overlay').classList.add('open');
