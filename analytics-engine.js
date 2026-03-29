@@ -331,6 +331,10 @@ async function calcGlobal(periodDays){
     operator.pipeline.atRisk = active.filter(function(d){ var aging=d._aging||_calcAgingRisk(d); return aging&&aging.isAtRisk; }).length;
   }
 
+  // Enterprise (V11)
+  var enterprise;
+  try { enterprise = calcEnterprise(); } catch(e){ console.warn('[analytics] calcEnterprise failed:',e.message); enterprise = {dimension:'enterprise',enterprise5m:{count:0,pipelineValue:0,byLine:{}},midMarket:{count:0},standard:{count:0},avgEVS:0,totalScored:0,advisor:null,strategic:null}; }
+
   return {
     dimension: 'global',
     period: periodDays || 30,
@@ -339,13 +343,17 @@ async function calcGlobal(periodDays){
       activeDeals: active.length,
       totalValue: totalValue,
       operatorScore: operator.scores.overall,
-      dqi: operator.scores.dqi
+      dqi: operator.scores.dqi,
+      enterprise5mCount: enterprise.enterprise5m.count,
+      avgEVS: enterprise.avgEVS,
+      trustedAdvisorScore: enterprise.advisor ? enterprise.advisor.score : null
     },
     operator: operator,
     byLine: byLine,
     byStage: byStage,
     byChannel: byChannel,
-    byTask: byTask
+    byTask: byTask,
+    enterprise: enterprise
   };
 }
 
@@ -466,6 +474,72 @@ function calcValue(){
 }
 
 // ==================================================================
+// calcEnterprise() — Enterprise Intelligence (L23-L25)
+// ==================================================================
+function calcEnterprise(){
+  var deals = _deals();
+  var active = deals.filter(function(d){ var s=(d.statusDeal||'').toLowerCase(); return s!=='perdido'&&s!=='ganho'; });
+
+  // L23 Enterprise Value
+  var enterprise5m = [];
+  var midMarket = [];
+  var standard = [];
+  var totalEVS = 0;
+  var evsCount = 0;
+
+  active.forEach(function(d){
+    _enrichDeal(d);
+    var ev = d._enterprise;
+    if(!ev && window.calcEnterpriseValueV23) ev = window.calcEnterpriseValueV23(d);
+    if(!ev) return;
+    totalEVS += ev.enterprise_value_score;
+    evsCount++;
+    if(ev.is_5m_plus) enterprise5m.push(d);
+    else if(ev.band === 'mid_market') midMarket.push(d);
+    else standard.push(d);
+  });
+
+  var avgEVS = evsCount > 0 ? Math.round(totalEVS / evsCount) : 0;
+  var pipeline5mValue = enterprise5m.reduce(function(s,d){ return s + (d.elucyValor||d.revenueRaw||0); }, 0);
+
+  // L23 by revenue line
+  var byLine5m = {};
+  enterprise5m.forEach(function(d){
+    var line = d._revLine || 'Outro';
+    byLine5m[line] = (byLine5m[line]||0) + 1;
+  });
+
+  // L24 Trusted Advisor
+  var advisor = window.calcTrustedAdvisorV24 ? window.calcTrustedAdvisorV24(null, null) : null;
+
+  // L25 Strategic
+  var strategic = window.calcStrategicIntelligenceV25 ? window.calcStrategicIntelligenceV25() : null;
+
+  return {
+    dimension: 'enterprise',
+    enterprise5m: { count: enterprise5m.length, pipelineValue: pipeline5mValue, byLine: byLine5m },
+    midMarket: { count: midMarket.length },
+    standard: { count: standard.length },
+    avgEVS: avgEVS,
+    totalScored: evsCount,
+    advisor: advisor ? {
+      score: advisor.trusted_advisor_score,
+      band: advisor.band,
+      credibility: advisor.credibility_score,
+      availability: advisor.availability_score,
+      intimacy: advisor.intimacy_score,
+      selfishness: advisor.selfishness_score,
+      biggestGap: advisor.biggest_gap,
+      needsCoaching: advisor.needs_coaching
+    } : null,
+    strategic: strategic ? {
+      revenueQuality: strategic.revenue_quality,
+      experienceQuality: strategic.experience_quality
+    } : null
+  };
+}
+
+// ==================================================================
 // EXPORT
 // ==================================================================
 window.AnalyticsEngine = {
@@ -477,9 +551,10 @@ window.AnalyticsEngine = {
   calcGlobal: calcGlobal,
   calcSpeed: calcSpeed,
   calcDQI: calcDQI,
-  calcValue: calcValue
+  calcValue: calcValue,
+  calcEnterprise: calcEnterprise
 };
 
-console.log('[analytics-engine] Enterprise Analytics Engine loaded — 9 dimensioned functions');
+console.log('[analytics-engine] Enterprise Analytics Engine loaded — 10 dimensioned functions (V11)');
 
 })();

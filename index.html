@@ -93,7 +93,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
 /* ── PILLARS ─────────────────────────────────────────────── */
 .pillars{padding:0 var(--sp-6) var(--sp-10);max-width:1100px;margin:0 auto;width:100%;scroll-snap-align:start}
 .pillars-title{text-align:center;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:2.5px;margin-bottom:var(--sp-5)}
-.pillars-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-4)}
+.pillars-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-4)}
 .pillar{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:var(--sp-5);transition:all var(--dur-normal) var(--ease-smooth);position:relative;-webkit-backdrop-filter:var(--blur-sm);backdrop-filter:var(--blur-sm)}
 .pillar:hover{border-color:rgba(10,132,255,.18);background:var(--surface-elevated);transform:translateY(-3px);box-shadow:var(--shadow-md)}
 .pillar-icon{width:44px;height:44px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;margin-bottom:var(--sp-4);font-size:22px}
@@ -183,7 +183,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
   .hero{padding:var(--sp-8) var(--sp-4) var(--sp-6)}
   .hero h1{font-size:36px;letter-spacing:-1px}
   .metrics-grid{grid-template-columns:repeat(3,1fr)}
-  .pillars-grid{grid-template-columns:1fr}
+  .pillars-grid{grid-template-columns:1fr 1fr}
   .engine-card{flex-direction:column;padding:var(--sp-5)}
   .engine-right{width:100%}
   .def-grid{grid-template-columns:1fr}
@@ -233,9 +233,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
       <span class="dot"></span>
       Revenue Intelligence Engine &#8212; Ativo
     </div>
-    <h1>Infraestrutura de qualificacao conversacional com inteligencia comercial</h1>
+    <h1>Revenue Intelligence Enterprise para times comerciais de alta performance</h1>
     <p class="hero-sub">
-      O Elucy nao e um CRM, nao e um chatbot, nao e um dashboard. E a <strong>camada de inteligencia</strong> que senta entre o operador e o pipeline &#8212; processa cada deal por 22 camadas de decisao, governa 3 frameworks de venda e entrega a <strong>proxima acao exata</strong> no tom certo do canal.
+      O Elucy nao e um CRM, nao e um chatbot, nao e um dashboard. E a <strong>camada de inteligencia</strong> que senta entre o operador e o pipeline &#8212; processa cada deal por <strong>25 camadas de decisao</strong>, governa 3 frameworks de venda, qualifica empresas 5M+ automaticamente e mede o <strong>Trusted Advisor Score</strong> de cada operador.
     </p>
     <div class="hero-ctas">
       <a class="btn-primary" href="cockpit.html">Entrar no Cockpit</a>
@@ -251,11 +251,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
       <div class="def-grid">
         <div class="def-block">
           <div class="def-block-label">O que faz</div>
-          <p>Processa cada deal por <strong>22 camadas de decisao</strong> em tempo real. Detecta <strong>49 sinais</strong> de comportamento e pipeline. Escolhe o framework correto pela persona do lead (Challenger, SPICED ou SPIN). Gera a <strong>proxima acao exata</strong> &#8212; copy calibrada, nota CRM, briefing pre-call &#8212; no tom certo do canal.</p>
+          <p>Processa cada deal por <strong>25 camadas de decisao</strong> em tempo real. Detecta <strong>49 sinais</strong> de comportamento e pipeline. Qualifica empresas por Enterprise Value Score. Mede Trusted Advisor Score de cada operador. Gera a <strong>proxima acao exata</strong> &#8212; copy calibrada, nota CRM, briefing pre-call &#8212; no tom certo do canal.</p>
         </div>
         <div class="def-block">
           <div class="def-block-label">Como funciona</div>
-          <p>Motor de decisao com <strong>DAG de 7 fases</strong> sem ciclos. Cada deal passa por contexto, taxonomia, enriquecimento, task routing, forecast, framework intelligence e priorizacao. <strong>7 kill switches</strong> bloqueiam erros fatais antes que cheguem ao lead. Tudo baseado em dados reais do Databricks &#8212; zero alucinacao.</p>
+          <p>Motor de decisao com <strong>DAG de 9 fases</strong> sem ciclos. Cada deal passa por contexto, taxonomia, enriquecimento, task routing, forecast, framework intelligence, priorizacao, <strong>enterprise qualification</strong> e <strong>strategic snapshot</strong>. <strong>7 kill switches</strong> bloqueiam erros fatais antes que cheguem ao lead. Tudo baseado em dados reais do Databricks &#8212; zero alucinacao.</p>
         </div>
         <div class="def-block">
           <div class="def-block-label">Para quem</div>
@@ -315,7 +315,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
 
   <!-- PILLARS -->
   <section class="pillars reveal">
-    <div class="pillars-title">Os 3 Pilares da Inteligencia Elucy</div>
+    <div class="pillars-title">Os 4 Pilares da Inteligencia Elucy</div>
     <div class="pillars-grid">
       <div class="pillar">
         <div class="pillar-icon conv">&#128483;&#65039;</div>
@@ -343,9 +343,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
         <h3>Revenue Intelligence</h3>
         <p>Priorizacao de portfolio por valor x urgencia x acionabilidade. Attribution Engine rastreia quais touchpoints geraram avanco. Data Quality Engine garante que a base analitica e confiavel antes de qualquer decisao.</p>
         <div class="pillar-tags">
-          <span class="pillar-tag gold">22 LAYERS</span>
+          <span class="pillar-tag gold">25 LAYERS</span>
           <span class="pillar-tag gold">ATTRIBUTION</span>
           <span class="pillar-tag gold">DQI ENGINE</span>
+        </div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon" style="background:rgba(212,149,106,.06);border:1px solid rgba(212,149,106,.12)">&#127942;</div>
+        <h3>Enterprise Intelligence</h3>
+        <p>Qualificacao automatica de empresas por Enterprise Value Score (6 componentes). Deteccao de deals 5M+ com priority boost. Trusted Advisor Score mede credibilidade, disponibilidade, intimidade e anti-egoismo de cada operador. Strategic Intelligence conecta o cockpit aos KPIs estrategicos do G4.</p>
+        <div class="pillar-tags">
+          <span class="pillar-tag" style="background:rgba(212,149,106,.06);color:var(--clay);border:1px solid rgba(212,149,106,.12)">ENTERPRISE 5M+</span>
+          <span class="pillar-tag" style="background:rgba(212,149,106,.06);color:var(--clay);border:1px solid rgba(212,149,106,.12)">TRUSTED ADVISOR</span>
+          <span class="pillar-tag" style="background:rgba(212,149,106,.06);color:var(--clay);border:1px solid rgba(212,149,106,.12)">STRATEGIC KPIs</span>
         </div>
       </div>
     </div>
@@ -356,8 +366,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
     <div class="engine-card">
       <div class="engine-left">
         <div class="engine-label">Motor de Decisao</div>
-        <h2>22 Camadas de Inteligencia Operacional</h2>
-        <p>O Elucy nao e um dashboard &#8212; e um motor de decisao com DAG orquestrado em 7 fases, sem ciclos, que processa cada deal em tempo real e entrega a proxima melhor acao.</p>
+        <h2>25 Camadas de Inteligencia Operacional</h2>
+        <p>O Elucy nao e um dashboard &#8212; e um motor de decisao com DAG orquestrado em <strong>9 fases</strong>, sem ciclos, que processa cada deal em tempo real e entrega a proxima melhor acao.</p>
         <div class="engine-layers">
           <div class="engine-layer"><span class="layer-num">L1-L2</span><span class="layer-name">Contexto &amp; Taxonomia</span><span class="layer-desc">operador, linhas, tiers</span></div>
           <div class="engine-layer"><span class="layer-num">L3-L4</span><span class="layer-name">Deal Runtime &amp; Tasks</span><span class="layer-desc">enriquecimento + execucao</span></div>
@@ -366,6 +376,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
           <div class="engine-layer"><span class="layer-num">L16-17</span><span class="layer-name">Framework Intelligence</span><span class="layer-desc">SPICED, MEDDIC, gaps</span></div>
           <div class="engine-layer"><span class="layer-num">L18</span><span class="layer-name">Signal Engine V8</span><span class="layer-desc">49 sinais canonicos</span></div>
           <div class="engine-layer"><span class="layer-num">L19-22</span><span class="layer-name">Intelligence V10</span><span class="layer-desc">DQI, transition, portfolio, attribution</span></div>
+          <div class="engine-layer" style="border-color:rgba(212,149,106,.2)"><span class="layer-num" style="color:var(--clay);background:rgba(212,149,106,.08)">L23</span><span class="layer-name">Enterprise Qualification</span><span class="layer-desc">5M+, EVS, band</span></div>
+          <div class="engine-layer" style="border-color:rgba(212,149,106,.2)"><span class="layer-num" style="color:var(--clay);background:rgba(212,149,106,.08)">L24</span><span class="layer-name">Trusted Advisor Score</span><span class="layer-desc">Maister equation</span></div>
+          <div class="engine-layer" style="border-color:rgba(48,209,88,.2)"><span class="layer-num" style="color:var(--green);background:rgba(48,209,88,.06)">L25</span><span class="layer-name">Strategic Intelligence</span><span class="layer-desc">KPIs G4 conectados</span></div>
         </div>
       </div>
       <div class="engine-right">
@@ -380,7 +393,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
               <defs><linearGradient id="ring-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0a84ff"/><stop offset="50%" stop-color="#5ac8fa"/><stop offset="100%" stop-color="#30d158"/></linearGradient></defs>
             </svg>
             <div class="viz-ring-center">
-              <div class="viz-ring-val">22</div>
+              <div class="viz-ring-val">25</div>
               <div class="viz-ring-lbl">layers ativas</div>
             </div>
           </div>
@@ -417,7 +430,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
       <div class="infra-item">
         <div class="infra-icon">&#128640;</div>
         <div class="infra-name">DAG Engine</div>
-        <div class="infra-desc">22 camadas em 7 fases sem ciclos. Contexto, taxonomia, runtime, analytics, forecast, framework, intelligence.</div>
+        <div class="infra-desc">25 camadas em 9 fases sem ciclos. Contexto, taxonomia, runtime, analytics, forecast, framework, intelligence, enterprise, strategic.</div>
       </div>
       <div class="infra-item">
         <div class="infra-icon">&#128274;</div>
@@ -457,9 +470,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
         <div class="cap-desc">Challenger para Titan, SPICED para Builder, SPIN + Champion para Executor. Governados por kill switches &#8212; framework errado = bloqueio.</div>
       </div>
       <div class="cap-item">
-        <div class="cap-num">22</div>
+        <div class="cap-num">25</div>
         <div class="cap-name">Camadas de inteligencia</div>
-        <div class="cap-desc">De contexto do operador ate attribution engine. Cada deal processado por DAG de 7 fases sem ciclos em tempo real.</div>
+        <div class="cap-desc">De contexto do operador ate strategic intelligence. Cada deal processado por DAG de 9 fases sem ciclos em tempo real.</div>
       </div>
       <div class="cap-item">
         <div class="cap-num">16</div>
@@ -481,7 +494,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
 
   <!-- FOOTER -->
   <footer class="footer">
-    <p class="footer-text"><strong>ELUCY</strong> &#8212; Infraestrutura de Qualificacao Conversacional &#183; <strong>G4 Educacao</strong> &#183; 2026</p>
+    <p class="footer-text"><strong>ELUCY</strong> &#8212; Revenue Intelligence Enterprise &#183; V11 &#183; 25 Layers &#183; <strong>G4 Educacao</strong> &#183; 2026</p>
   </footer>
 
 </div>

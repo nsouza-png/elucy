@@ -15,10 +15,22 @@
 window.IS_REMOTE = location.hostname !== '' && !location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1') && location.protocol !== 'file:';
 
 // ── CLAUDE API CONFIG (Motor LLM do Elucy Webapp) ───────────────────
-// Key centralizada — montada em runtime para todos os operadores
-window.ELUCY_API_KEY = (function(){var p=['sk-ant-','api03-FW','oOcI23OY','XmgXLC3P','7zJskT48','_NbwSm5E','bcySJLex','BL4tyyNu','zffPrqci','Sn_NCY4n','PgYw9-pf','UYZ0ccJS','sdxA-ohA','SbAAA'];return p.join('');})();
+// SEGURANCA: key NUNCA hardcoded no frontend. Obtida via Supabase Edge Function
+// ou configurada pelo operador nas Settings (armazenada apenas no localStorage).
+window.ELUCY_API_KEY = localStorage.getItem('elucy_api_key') || '';
 window.ELUCY_API_MODEL = localStorage.getItem('elucy_api_model') || 'claude-sonnet-4-20250514';
 window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false';
+
+// Tenta obter key do Supabase se nao tiver local (async, roda apos auth)
+window._resolveAPIKey = async function(){
+  if(window.ELUCY_API_KEY) return;
+  try {
+    const sb = typeof getSB === 'function' ? getSB() : null;
+    if(!sb) return;
+    const { data } = await sb.functions.invoke('get-api-key', { body: {} });
+    if(data && data.key){ window.ELUCY_API_KEY = data.key; }
+  } catch(e){ console.warn('[Elucy] Edge function unavailable, use Settings to configure API key.'); }
+};
 </script>
 <script>
 // Só carrega cockpit-data.js em ambiente local (G4 OS)
