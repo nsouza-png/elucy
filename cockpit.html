@@ -178,6 +178,41 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .home-insight-bad{background:var(--rdim);border:1px solid var(--red);color:var(--red)}
 .home-insight-msg{font-weight:600;margin-bottom:2px}
 .home-insight-sug{font-size:11px;opacity:.8}
+/* V11: Enterprise Home blocks */
+.home-strat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.home-strat-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px}
+.home-strat-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;font-weight:700}
+.home-strat-value{font-size:16px;font-weight:800;line-height:1.2}
+.home-strat-sub{font-size:10px;color:var(--text2);margin-top:2px}
+.home-advisor-gauge{display:flex;align-items:center;gap:16px;margin-bottom:12px}
+.home-advisor-ring{width:64px;height:64px;border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.home-advisor-ring-val{font-size:16px;font-weight:800;z-index:1}
+.home-advisor-ring svg{position:absolute;top:0;left:0;transform:rotate(-90deg)}
+.home-advisor-info{flex:1}
+.home-advisor-band{font-size:13px;font-weight:700;margin-bottom:2px}
+.home-advisor-gap{font-size:11px;color:var(--text2)}
+.home-advisor-bars{display:flex;flex-direction:column;gap:6px}
+.home-advisor-bar{display:flex;align-items:center;gap:8px}
+.home-advisor-bar-label{font-size:10px;color:var(--text2);width:80px;text-align:right;flex-shrink:0}
+.home-advisor-bar-bg{flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden}
+.home-advisor-bar-fill{height:100%;border-radius:3px;transition:width .3s}
+.home-advisor-bar-val{font-size:10px;font-weight:700;width:28px;flex-shrink:0}
+/* V11: 5M+ badge on deal cards */
+.tag-5m{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px;animation:pulse5m 2s ease-in-out infinite}
+@keyframes pulse5m{0%,100%{opacity:1}50%{opacity:.7}}
+/* V11: Enterprise Profile card in deal detail */
+.ent-profile{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:14px;margin:10px 0}
+.ent-profile-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.ent-profile-score{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.ent-profile-big{font-size:28px;font-weight:800;line-height:1}
+.ent-profile-band{font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px}
+.ent-band-enterprise{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff}
+.ent-band-mid_market{background:var(--adim);color:var(--accent2);border:1px solid var(--accent)}
+.ent-band-standard{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+.ent-profile-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.ent-profile-item{background:var(--bg3);border-radius:var(--r);padding:8px;text-align:center}
+.ent-profile-item-val{font-size:14px;font-weight:700}
+.ent-profile-item-lbl{font-size:9px;color:var(--text2);margin-top:2px;text-transform:uppercase}
 /* V3: Task Runner */
 .task-empty{padding:40px;text-align:center;font-size:13px;color:var(--text2)}
 .task-stats{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
@@ -296,6 +331,43 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .cad-option-steps{display:flex;gap:4px;flex-wrap:wrap}
 .cad-mini-step{font-size:9px;font-weight:600;padding:2px 5px;background:var(--bg4);border-radius:3px}
 .task-btn-next:hover{background:var(--accent);color:#fff}
+/* Cadence Panel */
+.cad-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);margin-top:8px;overflow:hidden}
+.cad-inner{padding:0}
+.cad-header{background:linear-gradient(135deg,#0d1025,#1a0d25);padding:13px 17px;border-bottom:1px solid var(--accent2);display:flex;align-items:center;gap:9px}
+.cad-stats{display:flex;gap:0;border-bottom:1px solid var(--border)}
+.cad-stat{flex:1;text-align:center;padding:10px 8px;border-right:1px solid var(--border)}
+.cad-stat:last-child{border-right:none}
+.cad-stat-n{display:block;font-size:18px;font-weight:800;color:var(--text)}
+.cad-stat-l{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.cad-channels{padding:12px 14px;border-bottom:1px solid var(--border)}
+.cad-ch{display:flex;align-items:center;gap:8px;padding:4px 0;opacity:.5}
+.cad-ch.has{opacity:1}
+.cad-ch-label{font-size:11px;color:var(--text2);width:70px}
+.cad-ch-bar{flex:1;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.cad-ch-fill{height:100%;border-radius:2px;transition:width .3s}
+.cad-ch-count{font-size:11px;font-weight:700;color:var(--text);width:20px;text-align:right}
+.cad-timeline{padding:14px;max-height:300px;overflow-y:auto}
+.cad-tp{display:flex;gap:10px;position:relative;padding-bottom:12px}
+.cad-tp:last-child .cad-tp-line{display:none}
+.cad-tp-dot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.cad-tp-line{position:absolute;left:3.5px;top:14px;bottom:0;width:1px;background:var(--border)}
+.cad-tp-body{flex:1;min-width:0}
+.cad-tp-meta{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.cad-tp-type{font-size:11px;font-weight:700}
+.cad-tp-date{font-size:10px;color:var(--text2)}
+.cad-tp-preview{font-size:11px;color:var(--text2);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cad-register{padding:14px;border-top:1px solid var(--border);background:var(--bg3)}
+.cad-reg-channels{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.cad-reg-btn{font-size:10px;padding:4px 10px;border:1px solid;border-radius:6px;background:transparent;cursor:pointer;transition:all .2s;font-weight:600}
+.cad-reg-btn:hover{filter:brightness(1.3);background:var(--bg4)}
+.cad-note{width:100%;min-height:40px;max-height:80px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;padding:8px;resize:vertical;font-family:inherit}
+.wa-panel{display:none;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);margin-top:8px;overflow:hidden}
+.wa-panel.show{display:block}
+.wa-panel-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)}
+.wa-panel-title{font-family:var(--font-title);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--green)}
+.wa-panel-close{font-size:11px;cursor:pointer;color:var(--text2);border:none;background:none;padding:2px 6px}
+.wa-panel-close:hover{color:var(--red)}
 /* Task stage filter bar */
 .task-stage-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding:8px 0;border-top:1px solid var(--border)}
 .task-stage-label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-right:4px}
@@ -904,6 +976,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .ob-dots{display:flex;gap:5px;margin-right:auto;margin-left:4px}
 .ob-dot{width:6px;height:6px;border-radius:50%;background:var(--bg4,#333);transition:background .2s}
 .ob-dot.on{background:var(--accent,#6366f1)}
+/* Batch Intelligence */
+.batch-table{width:100%;border-collapse:collapse;font-size:12px}
+.batch-table th{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border2);color:var(--text2);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.batch-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+.batch-table tr:hover{background:var(--surface)}
+.batch-err td{opacity:.5}
 </style>
 </head>
 <body>
