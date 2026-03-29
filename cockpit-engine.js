@@ -875,6 +875,333 @@ function renderTaskRunner(filterType, filterRevLine, filterFase, filterCiclo, fi
 }
 window.renderTaskRunner = renderTaskRunner;
 
+// ============================================================
+// TASKS V2 — Mesa de Execução
+// ============================================================
+
+var ELUCY_TASKS_STATE = {
+  mode: 'all',       // focus mode slug or 'all'
+  queue: 'all',      // queue slug or 'all'
+  filtersOpen: false
+};
+
+// Focus mode definitions (mirror taxonomy, human labels)
+var TASK_FOCUS_MODES = [
+  { slug:'all',           label:'Todos',          icon:'⚡' },
+  { slug:'velocidade',    label:'Velocidade',      icon:'🚀' },
+  { slug:'qualificacao',  label:'Qualificação',    icon:'🎯' },
+  { slug:'handoff',       label:'Handoff',         icon:'🤝' },
+  { slug:'reativacao',    label:'Reativação',      icon:'🔄' },
+  { slug:'social_dm',     label:'Social DM',       icon:'💬' },
+  { slug:'alta_performance', label:'Alta Performance', icon:'💎' }
+];
+
+// Queue definitions
+var TASK_QUEUES = [
+  { slug:'all',              label:'Todas as Filas',    color:'' },
+  { slug:'follow_up',        label:'FUP',               color:'var(--accent2)' },
+  { slug:'social_dm',        label:'DM',                color:'#a78bfa' },
+  { slug:'handoff_prep',     label:'Handoff',           color:'var(--green)' },
+  { slug:'reativacao',       label:'Reativação',        color:'var(--yellow)' },
+  { slug:'no_show_recovery', label:'No-Show',           color:'var(--red)' },
+  { slug:'framework_gap',    label:'Framework Gap',     color:'var(--clay)' }
+];
+
+function buildQueueCounts(){
+  var counts = {};
+  TASK_QUEUES.forEach(function(q){ counts[q.slug]=0; });
+  counts.all=0;
+  var map = window._COCKPIT_DEAL_MAP;
+  if(!map) return counts;
+  Object.values(map).forEach(function(d){
+    var tasks = (d._tasks||[]);
+    tasks.forEach(function(t){
+      var type = t.type||'follow_up';
+      counts.all++;
+      if(counts[type]!==undefined) counts[type]++;
+      else counts[type]=1;
+    });
+    // If no explicit tasks but deal has next action, count as follow_up
+    if(!tasks.length && d._nextAction){
+      counts.all++;
+      counts.follow_up++;
+    }
+  });
+  return counts;
+}
+
+function matchFocusMode(deal, mode){
+  if(!mode||mode==='all') return true;
+  var fm = (deal.focus_mode||deal._focusMode||'');
+  if(fm===mode) return true;
+  // derive from deal signals/aging
+  if(mode==='velocidade' && (deal._aging||0)<10) return true;
+  if(mode==='reativacao' && (deal._aging||0)>30) return true;
+  if(mode==='handoff' && (deal.fase_atual_no_processo||'').toLowerCase().includes('oportun')) return true;
+  if(mode==='social_dm' && (deal._tasks||[]).some(function(t){return t.type==='social_dm';})) return true;
+  if(mode==='alta_performance' && (deal.tier_da_oportunidade||'').toLowerCase()==='diamond') return true;
+  if(mode==='qualificacao') {
+    var fase = (deal.fase_atual_no_processo||'').toLowerCase();
+    return fase.includes('sal')||fase.includes('mql')||fase.includes('conect');
+  }
+  return false;
+}
+
+function matchQueue(deal, queue){
+  if(!queue||queue==='all') return true;
+  var tasks = (deal._tasks||[]);
+  if(tasks.some(function(t){return t.type===queue;})) return true;
+  // fallback: if no tasks, treat as follow_up
+  if(!tasks.length && queue==='follow_up') return true;
+  return false;
+}
+
+function getFilteredTaskDeals(){
+  var map = window._COCKPIT_DEAL_MAP;
+  if(!map) return [];
+  var fase  = (document.getElementById('tf-fase')||{}).value||'';
+  var ciclo = (document.getElementById('tf-ciclo')||{}).value||'';
+  var tier  = (document.getElementById('tf-tier')||{}).value||'';
+  var deals = Object.values(map).filter(function(d){
+    if(!matchFocusMode(d, ELUCY_TASKS_STATE.mode)) return false;
+    if(!matchQueue(d, ELUCY_TASKS_STATE.queue)) return false;
+    if(fase){
+      var f=(d.fase_atual_no_processo||'').toLowerCase();
+      if(fase==='CQL'&&!f.includes('mql')&&!f.includes('cql')) return false;
+      if(fase==='SAL'&&!f.includes('sal')&&!f.includes('conect')) return false;
+      if(fase==='SQL'&&!f.includes('oportun')&&!f.includes('negoc')) return false;
+      if(fase==='stall'&&(d._aging||0)<20) return false;
+    }
+    if(ciclo){
+      var age=d._aging||0;
+      if(ciclo==='d1'&&(age<0||age>10)) return false;
+      if(ciclo==='d2'&&(age<10||age>20)) return false;
+      if(ciclo==='d3'&&(age<20||age>30)) return false;
+      if(ciclo==='d4'&&(age<30||age>40)) return false;
+      if(ciclo==='d56'&&age<=40) return false;
+    }
+    if(tier){
+      var t=(d.tier_da_oportunidade||'').toLowerCase();
+      if(t!==tier) return false;
+    }
+    return true;
+  });
+  // Sort by portfolio priority score desc
+  deals.sort(function(a,b){
+    return ((b._portfolioPriority||b.portfolio_priority_score||0)-(a._portfolioPriority||a.portfolio_priority_score||0));
+  });
+  return deals;
+}
+
+function renderTaskFocusModes(){
+  var row = document.getElementById('tasks-focus-row');
+  if(!row) return;
+  // Use real focus modes from taxonomy if available
+  var modes = (window._taxonomyFocusModes && window._taxonomyFocusModes.length)
+    ? window._taxonomyFocusModes.map(function(fm){ return {slug:fm.slug,label:fm.name,icon:'⚡'}; })
+    : TASK_FOCUS_MODES;
+  // Always prepend 'all'
+  var hasAll = modes.some(function(m){return m.slug==='all';});
+  if(!hasAll) modes = [{slug:'all',label:'Todos',icon:'⚡'}].concat(modes);
+  row.innerHTML = modes.map(function(m){
+    var active = ELUCY_TASKS_STATE.mode===m.slug ? ' is-active' : '';
+    return '<button class="tasks-mode-btn'+active+'" onclick="window._tasksSetMode(\''+_escHtml(m.slug)+'\')">'
+      + m.icon + ' ' + _escHtml(m.label)
+      + '</button>';
+  }).join('');
+}
+
+function renderTaskQueues(){
+  var row = document.getElementById('tasks-queue-row');
+  if(!row) return;
+  var counts = buildQueueCounts();
+  row.innerHTML = TASK_QUEUES.map(function(q){
+    var active = ELUCY_TASKS_STATE.queue===q.slug ? ' is-active' : '';
+    var cnt = counts[q.slug]||0;
+    var colorStyle = q.color ? 'style="color:'+q.color+'"' : '';
+    return '<button class="tasks-queue-btn'+active+'" onclick="window._tasksSetQueue(\''+_escHtml(q.slug)+'\')">'
+      + '<span '+colorStyle+'>'+_escHtml(q.label)+'</span>'
+      + '<span class="tasks-queue-count">'+cnt+'</span>'
+      + '</button>';
+  }).join('');
+}
+
+function renderTaskRecommendation(deals){
+  var banner = document.getElementById('tasks-priority-banner');
+  var mainEl = document.getElementById('tasks-priority-main');
+  var metricsEl = document.getElementById('tasks-priority-metrics');
+  if(!banner||!mainEl||!metricsEl) return;
+  if(!deals||!deals.length){ banner.style.display='none'; return; }
+  banner.style.display='';
+
+  // Top deal recommendation
+  var top = deals[0];
+  var name = top.name||top.person_name||top.nome||'Deal';
+  var nba = top._nextAction||'Próxima ação recomendada';
+  var priority = Math.round((top._portfolioPriority||top.portfolio_priority_score||0)*100);
+  var tier = (top.tier_da_oportunidade||'').toLowerCase();
+  var tierColor = tier==='diamond'?'var(--green)':tier==='gold'?'var(--accent2)':tier==='silver'?'var(--text2)':'var(--clay)';
+
+  mainEl.innerHTML = '<div style="font-size:10px;font-weight:700;color:var(--accent2);letter-spacing:.7px;text-transform:uppercase;margin-bottom:6px">Próxima Prioridade</div>'
+    + '<div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">'+_escHtml(name)+'</div>'
+    + '<div class="task-card-nba">'+_escHtml(nba)+'</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">'
+    + (tier?'<span class="tag" style="color:'+tierColor+'">'+tier.toUpperCase()+'</span>':'')
+    + '<span class="tag">Score '+priority+'</span>'
+    + '</div>';
+
+  // Portfolio metrics
+  var killCount   = deals.filter(function(d){return (d._killSwitches||[]).length>0;}).length;
+  var handoffCount = deals.filter(function(d){
+    return (d.fase_atual_no_processo||'').toLowerCase().includes('oportun');
+  }).length;
+  var stalledCount = deals.filter(function(d){return (d._aging||0)>30;}).length;
+  metricsEl.innerHTML = [
+    {label:'Deals na fila', value:deals.length, color:'var(--text)'},
+    {label:'Kill Switch', value:killCount, color:'var(--red)'},
+    {label:'Prontos p/ Handoff', value:handoffCount, color:'var(--green)'},
+  ].map(function(m){
+    return '<div class="kpi" style="padding:10px">'
+      + '<div class="kpi-l">'+m.label+'</div>'
+      + '<div class="kpi-v" style="font-size:22px;color:'+m.color+'">'+m.value+'</div>'
+      + '</div>';
+  }).join('');
+}
+
+function renderTaskCard(deal){
+  var name  = deal.name||deal.person_name||deal.nome||'Deal';
+  var linha = deal.linha_de_receita_vigente||deal._revLine||'—';
+  var fase  = deal.fase_atual_no_processo||'—';
+  var aging = deal._aging||0;
+  var nba   = deal._nextAction||'Realizar FUP';
+  var tier  = (deal.tier_da_oportunidade||'').toLowerCase();
+  var tasks = deal._tasks||[];
+  var firstTask = tasks[0]||{type:'follow_up', text: nba};
+  var taskType  = firstTask.type||'follow_up';
+  var ks = (deal._killSwitches||[]).length>0;
+  var fw = deal._frameworkScore||0;
+
+  var agingClass = aging>40?'task-aging-critical':aging>20?'task-aging-high':'task-aging-medium';
+  var tierColor  = tier==='diamond'?'var(--green)':tier==='gold'?'var(--accent2)':tier==='silver'?'var(--text2)':'var(--clay)';
+
+  var taskTypeLabels = {
+    follow_up:'FUP', social_dm:'DM', handoff_prep:'Handoff',
+    reativacao:'Reativação', no_show_recovery:'No-Show',
+    framework_gap:'Framework Gap', authority_confirmation:'Autoridade',
+    pain_quantification:'Quantificar Dor', cadence:'Cadência'
+  };
+  var taskLabel = taskTypeLabels[taskType]||taskType;
+
+  var oppVal = deal._oppValue||0;
+  var valStr = oppVal>0 ? (typeof window.fmtBRL==='function' ? window.fmtBRL(oppVal) : 'R$'+Math.round(oppVal/1000)+'k') : '—';
+
+  var signalBadge = '';
+  if(typeof window.hasSignal==='function' && window.hasSignal(deal,'compra')){
+    signalBadge = '<span class="tag is-buy" style="font-size:9px">Sinal de Compra</span>';
+  }
+
+  return '<div class="task-card" data-id="'+_escHtml(String(deal.id||deal.contact_id||''))+'">'+
+    '<div class="task-card-main">'+
+      '<div class="task-card-top">'+
+        '<span class="task-type-badge '+
+          (taskType==='follow_up'?'task-c-accent':
+           taskType==='social_dm'?'task-c-text2':
+           taskType==='handoff_prep'?'task-c-green':
+           taskType==='reativacao'?'task-c-yellow':
+           taskType==='no_show_recovery'?'task-c-red':'task-c-text2')+'">'+
+          taskLabel+'</span>'+
+        (ks?'<span class="tag is-risk" style="font-size:9px">Kill Switch</span>':'')+
+        signalBadge+
+        (tier?'<span class="tag" style="color:'+tierColor+';font-size:9px">'+tier.toUpperCase()+'</span>':'')+
+        '<span class="task-aging '+agingClass+'">D'+aging+'</span>'+
+      '</div>'+
+      '<h3 class="task-card-title">'+_escHtml(name)+'</h3>'+
+      '<div class="task-card-sub">'+_escHtml(_fmtLinha(linha))+' · '+_escHtml(fase)+'</div>'+
+      '<div class="task-card-nba">'+_escHtml(nba)+'</div>'+
+      '<div class="task-actions">'+
+        '<button class="task-btn is-primary" onclick="window.selectLiveDeal&&window.selectLiveDeal(\''+_escHtml(String(deal.id||deal.contact_id||''))+'\',event)">Abrir Deal</button>'+
+        '<button class="task-btn" onclick="window._taskMarkDone&&window._taskMarkDone(\''+_escHtml(String(deal.id||deal.contact_id||''))+'\',this)">Concluir</button>'+
+        (taskType==='social_dm'?'<button class="task-btn" onclick="window.setScreen&&window.setScreen(\'dm\')">Ir p/ DM</button>':'')+
+      '</div>'+
+      '<div class="task-chip-row">'+
+        (fw>0?'<span class="tag" style="font-size:9px">FW '+Math.round(fw*100)+'%</span>':'')+
+      '</div>'+
+    '</div>'+
+    '<div class="task-card-side">'+
+      '<div class="kpi" style="padding:10px"><div class="kpi-l">Valor</div><div class="kpi-v" style="font-size:18px">'+valStr+'</div></div>'+
+      '<div class="kpi" style="padding:10px"><div class="kpi-l">Linha</div><div class="kpi-v" style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_escHtml(_fmtLinha(linha))+'</div></div>'+
+    '</div>'+
+  '</div>';
+}
+
+function renderTaskList(deals){
+  var el = document.getElementById('tasks-list');
+  if(!el) return;
+  if(!deals||!deals.length){
+    el.innerHTML = '<div class="task-empty">Nenhuma tarefa para o modo e fila selecionados.</div>';
+    return;
+  }
+  el.innerHTML = deals.map(renderTaskCard).join('');
+}
+
+function renderTasksV2(){
+  // summary line
+  var sumEl = document.getElementById('tasks-summary-line');
+  var focusEl = document.getElementById('tasks-focus-label');
+  var activeMode = ELUCY_TASKS_STATE.mode;
+  var focusDef = TASK_FOCUS_MODES.find(function(m){return m.slug===activeMode;})||{label:'Todos'};
+  if(focusEl) focusEl.textContent = focusDef.label;
+
+  renderTaskFocusModes();
+  renderTaskQueues();
+
+  var deals = getFilteredTaskDeals();
+  if(sumEl) sumEl.textContent = deals.length + ' tarefa' + (deals.length!==1?'s':'') + ' priorizadas';
+
+  renderTaskRecommendation(deals);
+  renderTaskList(deals);
+}
+
+// Public controls
+window._tasksSetMode = function(mode){
+  ELUCY_TASKS_STATE.mode = mode||'all';
+  renderTasksV2();
+};
+window._tasksSetQueue = function(queue){
+  ELUCY_TASKS_STATE.queue = queue||'all';
+  renderTasksV2();
+};
+window._tasksToggleFilters = function(){
+  var panel = document.getElementById('tasks-filters-panel');
+  if(!panel) return;
+  ELUCY_TASKS_STATE.filtersOpen = !ELUCY_TASKS_STATE.filtersOpen;
+  panel.classList.toggle('is-collapsed', !ELUCY_TASKS_STATE.filtersOpen);
+};
+window._tasksResetFilters = function(){
+  ['tf-fase','tf-ciclo','tf-tier'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.value='';
+  });
+  renderTasksV2();
+};
+window.rerenderTasks = function(){ renderTasksV2(); };
+
+// Mark task done (optimistic UI)
+window._taskMarkDone = function(dealId, btn){
+  if(btn){ btn.disabled=true; btn.textContent='Concluído'; }
+  var card = btn&&btn.closest('.task-card');
+  if(card) card.style.opacity='0.4';
+  // Log activity if available
+  if(window.logActivity) window.logActivity('task_complete','Deal '+dealId+' — tarefa concluída');
+};
+
+// Wire old renderTaskRunner to V2
+window.renderTaskRunner = function(){ renderTasksV2(); };
+
+// ============================================================
+// END TASKS V2
+// ============================================================
+
 // Filter tasks by pipeline stage (client-side show/hide)
 window._filterTaskStage = function(stage, el){
   // Toggle chip highlight

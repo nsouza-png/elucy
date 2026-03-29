@@ -238,42 +238,62 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .ent-profile-item{background:var(--bg3);border-radius:var(--r);padding:8px;text-align:center}
 .ent-profile-item-val{font-size:14px;font-weight:700}
 .ent-profile-item-lbl{font-size:9px;color:var(--text2);margin-top:2px;text-transform:uppercase}
-/* V3: Task Runner */
-.tr-dim-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;padding:7px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px}
-.tr-dim-lbl{font-size:9px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;min-width:42px}
-.tr-smart-ks.on{background:rgba(239,68,68,.12);border-color:var(--red);color:var(--red)}
-.tr-smart-ent.on{background:rgba(245,158,11,.10);border-color:var(--amber);color:var(--amber2)}
-.tr-smart-gap.on{background:rgba(14,165,233,.10);border-color:var(--blue2);color:var(--blue2)}
-.tr-smart-hv.on{background:rgba(16,185,129,.10);border-color:var(--green);color:var(--green)}
-.task-empty{padding:40px;text-align:center;font-size:13px;color:var(--text2)}
-.task-stats{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
-.task-stat-chip{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--bg3)}
-.task-cards{display:flex;flex-direction:column;gap:8px}
-.task-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px;cursor:pointer;transition:.15s}
+/* V4: Task Runner */
+.tasks-shell{display:flex;flex-direction:column;gap:14px;min-width:0}
+.tasks-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.tasks-header-left{min-width:0}
+.tasks-sub{display:flex;align-items:center;gap:8px;margin-top:4px}
+.tasks-dot{color:var(--text2)}
+.tasks-header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tasks-focus-card,.tasks-queues-card,.tasks-priority-banner,.tasks-filters{backdrop-filter:blur(18px);background:var(--glass);box-shadow:var(--shadow-lg)}
+.tasks-focus-row,.tasks-queue-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.tasks-mode-btn,.tasks-queue-btn{appearance:none;border:1px solid var(--border);background:var(--bg3);color:var(--text2);border-radius:999px;padding:10px 14px;font-size:var(--fs-body);line-height:1;font-weight:700;cursor:pointer;transition:.18s ease;font-family:inherit}
+.tasks-mode-btn:hover,.tasks-queue-btn:hover{border-color:rgba(255,255,255,.18);color:var(--text)}
+.tasks-mode-btn.is-active,.tasks-queue-btn.is-active{background:rgba(245,158,11,.14);color:var(--text);border-color:rgba(245,158,11,.45);box-shadow:0 0 0 1px rgba(245,158,11,.22) inset}
+.tasks-queue-btn{display:flex;align-items:center;gap:8px}
+.tasks-queue-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--bg4);color:var(--text);font-size:11px;font-weight:800}
+.tasks-queues-head{margin-bottom:10px}
+.tasks-priority-banner{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;align-items:stretch}
+.tasks-priority-main{display:flex;flex-direction:column;justify-content:center;min-width:0}
+.tasks-priority-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.tasks-filters{overflow:hidden;transition:max-height .22s ease,opacity .22s ease,transform .22s ease,padding .22s ease;max-height:800px;opacity:1}
+.tasks-filters.is-collapsed{max-height:0;opacity:0;padding-top:0!important;padding-bottom:0!important;margin-top:-6px;border-width:0;transform:translateY(-6px)}
+.tasks-filter-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}
+.tasks-filter-group{display:flex;flex-direction:column;gap:8px;min-width:0}
+.tasks-select{width:100%;height:40px;border-radius:var(--r2);border:1px solid var(--border);background:var(--bg3);color:var(--text);padding:0 12px;font-size:var(--fs-body);outline:none;font-family:inherit}
+.tasks-select:focus{border-color:rgba(245,158,11,.45);box-shadow:0 0 0 1px rgba(245,158,11,.25)}
+.tasks-list{display:flex;flex-direction:column;gap:12px}
+.task-card{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px;transition:.15s}
 .task-card:hover{border-color:var(--accent);background:var(--bg3)}
-.task-card-top{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.task-card-main{min-width:0}
+.task-card-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.task-card-title{margin:0;font-size:var(--fs-h3);font-weight:var(--fw-xbold);line-height:var(--lh-tight)}
+.task-card-sub{color:var(--text2);margin-top:2px;font-size:var(--fs-body-sm)}
+.task-chip-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.task-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.task-btn{appearance:none;border:1px solid var(--border);background:var(--bg3);color:var(--text);border-radius:10px;padding:10px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:.12s}
+.task-btn:hover{border-color:var(--accent);color:var(--accent2);background:var(--adim)}
+.task-btn.is-primary{background:rgba(245,158,11,.18);border-color:rgba(245,158,11,.45)}
+.task-card-side{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tag.is-live{color:var(--green);border:1px solid rgba(16,185,129,.35);background:rgba(16,185,129,.10)}
+.tag.is-risk{color:var(--red);border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.10)}
+.tag.is-warn{color:var(--yellow);border:1px solid rgba(252,211,77,.35);background:rgba(252,211,77,.10)}
+.tag.is-buy{color:var(--green);border:1px solid rgba(16,185,129,.35);background:rgba(16,185,129,.10)}
+/* preserved compat */
+.task-empty{padding:40px;text-align:center;font-size:13px;color:var(--text2)}
 .task-type-badge{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
 .task-c-accent{background:var(--adim);color:var(--accent2);border:1px solid var(--accent)}
 .task-c-green{background:var(--gdim);color:var(--green);border:1px solid var(--green)}
 .task-c-yellow{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}
 .task-c-red{background:var(--rdim);color:var(--red);border:1px solid var(--red)}
-.task-c-accent2{background:rgba(108,180,255,.12);color:var(--accent2);border:1px solid var(--accent2)}
 .task-c-text2{background:var(--bg4);color:var(--text2);border:1px solid var(--border)}
-.task-priority{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 6px;border-radius:3px}
-.task-p-critical{background:var(--rdim);color:var(--red)}
-.task-p-high{background:var(--ydim);color:var(--yellow)}
-.task-p-medium{background:var(--adim);color:var(--accent2)}
-.task-p-normal{background:var(--bg4);color:var(--text2)}
-.task-p-low{color:var(--text2)}
 .task-aging{font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;margin-left:auto}
 .task-aging-critical{background:var(--rdim);color:var(--red)}
 .task-aging-high{background:var(--ydim);color:var(--yellow)}
 .task-aging-medium{background:var(--adim);color:var(--accent2)}
-.task-card-name{font-size:var(--fs-body-sm);font-weight:var(--fw-bold);margin-bottom:2px;line-height:var(--lh-tight)}
-.task-card-co{font-size:var(--fs-caption);color:var(--text2);margin-bottom:8px}
-.task-card-meta{display:flex;gap:8px;font-size:var(--fs-caption);color:var(--text2);margin-bottom:8px}
-.task-card-meta span{background:var(--bg4);padding:2px 6px;border-radius:3px}
-.task-card-nba{font-size:var(--fs-caption);color:var(--amber);font-weight:var(--fw-medium);margin-bottom:10px;line-height:var(--lh-tight)}
+.task-card-nba{font-size:var(--fs-caption);color:var(--accent);font-weight:var(--fw-medium);margin-bottom:10px;line-height:var(--lh-tight)}
+@media(max-width:1100px){.tasks-priority-banner,.task-card{grid-template-columns:1fr}.tasks-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:720px){.tasks-header{flex-direction:column}.tasks-filter-grid,.tasks-priority-metrics,.task-card-side{grid-template-columns:1fr}.tasks-mode-btn,.tasks-queue-btn{width:100%}.tasks-focus-row,.tasks-queue-row{flex-direction:column}}
 .tag-bowtie{font-weight:700;letter-spacing:.4px}
 .tag-bowtie-acq{border-color:rgba(14,165,233,.4);color:var(--blue2);background:rgba(14,165,233,.08)}
 .tag-bowtie-ret{border-color:rgba(139,92,246,.4);color:#a78bfa;background:rgba(139,92,246,.08)}
@@ -1367,81 +1387,101 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
       <!-- Deal screens carregados dinamicamente via selectLiveDeal() -->
     </div>
 
-    <!-- V3: TASKS — FUP Task Runner -->
+    <!-- V4: TASKS — Mesa de Execução -->
     <div class="screen" id="screen-tasks">
-      <!-- Header -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div>
-          <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:2px">Task Runner</div>
-          <div style="font-size:11px;color:var(--text2)" id="tr-summary">Execute tarefas em serie por prioridade e focus mode</div>
-        </div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <span style="font-size:10px;color:var(--text2)">AÇÃO:</span>
-          <div class="task-filters" id="task-filters">
-            <span class="fchip on" data-tfilter="all" onclick="window._filterTasks(null,this)">Todas</span>
-            <span class="fchip" data-tfilter="follow_up" onclick="window._filterTasks('follow_up',this)">FUP</span>
-            <span class="fchip" data-tfilter="social_dm" onclick="window._filterTasks('social_dm',this)">DM</span>
-            <span class="fchip" data-tfilter="reativacao" onclick="window._filterTasks('reativacao',this)">Reativ.</span>
-            <span class="fchip" data-tfilter="handoff_prep" onclick="window._filterTasks('handoff_prep',this)">Handoff</span>
-            <span class="fchip" data-tfilter="no_show_recovery" onclick="window._filterTasks('no_show_recovery',this)">No-Show</span>
-            <span class="fchip" data-tfilter="cadence" onclick="window._filterTasks('cadence',this)">Cadência</span>
+      <section id="tasks-tab" class="tasks-shell">
+
+        <!-- Header -->
+        <header class="card tasks-header">
+          <div class="tasks-header-left">
+            <div style="font-size:18px;font-weight:800;color:var(--text);line-height:1.2">Mesa de Execução</div>
+            <div class="tasks-sub">
+              <span style="font-size:12px;color:var(--text2)" id="tasks-summary-line">Carregando tarefas...</span>
+              <span class="tasks-dot">·</span>
+              <span style="font-size:12px;color:var(--text2)" id="tasks-focus-label">—</span>
+            </div>
           </div>
-        </div>
-      </div>
+          <div class="tasks-header-right">
+            <button class="task-btn" style="font-size:11px;padding:7px 12px" onclick="window._tasksToggleFilters()">Filtros avançados</button>
+            <button class="task-btn" style="font-size:11px;padding:7px 12px" onclick="window.rerenderTasks()">Atualizar</button>
+          </div>
+        </header>
 
-      <!-- DIM 1: Estágio de Conversão -->
-      <div class="tr-dim-row" id="tr-dim-fase">
-        <span class="tr-dim-lbl">FASE:</span>
-        <span class="fchip on" data-trfase="all" onclick="window._trSetFase(null,this)">Todas</span>
-        <span class="fchip" data-trfase="CQL" onclick="window._trSetFase('CQL',this)" style="border-color:rgba(139,92,246,.3)">
-          <span style="color:#8b5cf6">CQL</span> · Novos
-        </span>
-        <span class="fchip" data-trfase="SAL" onclick="window._trSetFase('SAL',this)" style="border-color:rgba(245,158,11,.3)">
-          <span style="color:var(--amber)">SAL</span> · Qualificados
-        </span>
-        <span class="fchip" data-trfase="SQL" onclick="window._trSetFase('SQL',this)" style="border-color:rgba(16,185,129,.3)">
-          <span style="color:var(--green)">SQL</span> · Fechamento
-        </span>
-        <span class="fchip" data-trfase="stall" onclick="window._trSetFase('stall',this)" style="border-color:rgba(239,68,68,.3)">
-          <span style="color:var(--red)">Stall</span> · Reativar
-        </span>
-      </div>
+        <!-- Focus Mode -->
+        <section class="card tasks-focus-card">
+          <div style="font-size:10px;font-weight:700;color:var(--text2);letter-spacing:.7px;text-transform:uppercase">Modo de Foco</div>
+          <div class="tasks-focus-row" id="tasks-focus-row">
+            <!-- renderTaskFocusModes() -->
+          </div>
+        </section>
 
-      <!-- DIM 2: Ciclo D -->
-      <div class="tr-dim-row" id="tr-dim-ciclo">
-        <span class="tr-dim-lbl">CICLO:</span>
-        <span class="fchip on" data-trciclo="all" onclick="window._trSetCiclo(null,this)">Todos</span>
-        <span class="fchip" data-trciclo="d1" onclick="window._trSetCiclo('d1',this)">D1 · 0–10d <span style="font-size:9px;color:var(--text2)">Speed</span></span>
-        <span class="fchip" data-trciclo="d2" onclick="window._trSetCiclo('d2',this)">D2 · 10–20d <span style="font-size:9px;color:var(--text2)">SPICED</span></span>
-        <span class="fchip" data-trciclo="d3" onclick="window._trSetCiclo('d3',this)">D3 · 20–30d <span style="font-size:9px;color:var(--text2)">Reframe</span></span>
-        <span class="fchip" data-trciclo="d4" onclick="window._trSetCiclo('d4',this)">D4 · 30–40d <span style="font-size:9px;color:var(--text2)">Autoridade</span></span>
-        <span class="fchip" data-trciclo="d56" onclick="window._trSetCiclo('d56',this)" style="border-color:rgba(239,68,68,.3)">D5–D6 · 40d+ <span style="font-size:9px;color:var(--red)">Ultimato</span></span>
-      </div>
+        <!-- Filas -->
+        <section class="card tasks-queues-card">
+          <div class="tasks-queues-head">
+            <div style="font-size:10px;font-weight:700;color:var(--text2);letter-spacing:.7px;text-transform:uppercase">Fila de Execução</div>
+          </div>
+          <div class="tasks-queue-row" id="tasks-queue-row">
+            <!-- renderTaskQueues() -->
+          </div>
+        </section>
 
-      <!-- DIM 3: Smart View -->
-      <div class="tr-dim-row" id="tr-dim-smart">
-        <span class="tr-dim-lbl">VIEW:</span>
-        <span class="fchip on" data-trsmart="all" onclick="window._trSetSmart(null,this)">Padrão</span>
-        <span class="fchip tr-smart-ks" data-trsmart="kill_switch" onclick="window._trSetSmart('kill_switch',this)">
-          🚨 Kill Switch
-        </span>
-        <span class="fchip tr-smart-ent" data-trsmart="enterprise" onclick="window._trSetSmart('enterprise',this)">
-          💎 Enterprise · Titan
-        </span>
-        <span class="fchip tr-smart-gap" data-trsmart="framework_gap" onclick="window._trSetSmart('framework_gap',this)">
-          📉 Framework Gap
-        </span>
-        <span class="fchip tr-smart-hv" data-trsmart="high_value" onclick="window._trSetSmart('high_value',this)">
-          ⚡ Alta Urgência
-        </span>
-      </div>
+        <!-- Banner de Prioridade -->
+        <section id="tasks-priority-banner" class="card tasks-priority-banner" style="display:none">
+          <div class="tasks-priority-main" id="tasks-priority-main">
+            <!-- renderTaskRecommendation() -->
+          </div>
+          <div class="tasks-priority-metrics" id="tasks-priority-metrics">
+            <!-- métricas do portfolio -->
+          </div>
+        </section>
 
-      <!-- Modo recomendado banner -->
-      <div id="tr-mode-banner" style="display:none;padding:8px 12px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);margin-bottom:10px;font-size:11px;color:var(--text2)"></div>
+        <!-- Filtros Avançados (colapsado por default) -->
+        <section id="tasks-filters-panel" class="card tasks-filters is-collapsed" style="padding:0 14px">
+          <div class="tasks-filter-grid" id="tasks-filter-grid">
+            <div class="tasks-filter-group">
+              <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px">Fase</label>
+              <select class="tasks-select" id="tf-fase" onchange="window.rerenderTasks()">
+                <option value="">Todas</option>
+                <option value="CQL">CQL — Novos</option>
+                <option value="SAL">SAL — Qualificados</option>
+                <option value="SQL">SQL — Fechamento</option>
+                <option value="stall">Stall — Reativar</option>
+              </select>
+            </div>
+            <div class="tasks-filter-group">
+              <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px">Ciclo</label>
+              <select class="tasks-select" id="tf-ciclo" onchange="window.rerenderTasks()">
+                <option value="">Todos</option>
+                <option value="d1">D1 · 0–10d</option>
+                <option value="d2">D2 · 10–20d</option>
+                <option value="d3">D3 · 20–30d</option>
+                <option value="d4">D4 · 30–40d</option>
+                <option value="d56">D5–D6 · 40d+</option>
+              </select>
+            </div>
+            <div class="tasks-filter-group">
+              <label style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px">Tier</label>
+              <select class="tasks-select" id="tf-tier" onchange="window.rerenderTasks()">
+                <option value="">Todos</option>
+                <option value="diamond">Diamond</option>
+                <option value="gold">Gold</option>
+                <option value="silver">Silver</option>
+                <option value="bronze">Bronze</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 0">
+            <button class="task-btn" style="font-size:11px;padding:7px 12px" onclick="window._tasksResetFilters()">Limpar</button>
+            <button class="task-btn" style="font-size:11px;padding:7px 12px;background:var(--adim);border-color:rgba(245,158,11,.45);color:var(--text)" onclick="window._tasksToggleFilters()">Fechar</button>
+          </div>
+        </section>
 
-      <div id="task-runner-list">
-        <div id="task-skeleton" style="display:flex;flex-direction:column;gap:8px"></div>
-      </div>
+        <!-- Lista de Tasks -->
+        <section id="tasks-list" class="tasks-list">
+          <div class="task-empty">Carregando tarefas...</div>
+        </section>
+
+      </section>
     </div>
     <div class="screen" id="screen-reports">
       <div style="margin-bottom:16px">
