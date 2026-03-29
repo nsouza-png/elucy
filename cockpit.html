@@ -1410,7 +1410,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
     </div>
     <div class="screen" id="screen-batch">
       <div style="padding:16px 20px 8px">
-        <div style="font-size:18px;font-weight:800;margin-bottom:4px">Batch Intelligence</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
+          <div style="font-size:18px;font-weight:800">Batch Intelligence</div>
+          <button onclick="clearBatchCache()" style="background:none;border:1px solid var(--border);color:var(--text2);font-size:10px;padding:2px 8px;border-radius:4px;cursor:pointer" title="Limpar cache e reprocessar do zero">Limpar Cache</button>
+        </div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:16px">Processar todos os deals ativos em paralelo com ELUCY</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
           <button class="btn bp" onclick="runBatchIntelligence('classify')" style="font-size:12px">
@@ -1426,6 +1429,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
             Signal Engine (batch)
           </button>
         </div>
+        <div id="batch-cache-banner" style="display:none;padding:8px 12px;margin-bottom:8px;border-radius:6px;background:rgba(0,122,255,.08);border:1px solid rgba(0,122,255,.2);font-size:11px;color:var(--accent)"></div>
         <div id="batch-status" style="font-size:12px;color:var(--text2);margin-bottom:8px"></div>
       </div>
       <div id="batch-panel" style="display:none;padding:0 20px 20px">
@@ -1662,6 +1666,7 @@ function setScreen(n,el){
   if(n==='reports') loadReportsScreen();
   if(n==='prevendas' && window.ReportsV4) window.ReportsV4.renderReportsV4('screen-reports-v4');
   if(n==='playbooks') renderPlaybooks();
+  if(n==='batch') restoreBatchCache();
 }
 
 function renderPlaybooks(){
@@ -3899,7 +3904,100 @@ function canUseIntelligenceAPI(){
   return false;
 }
 
-async function callIntelligenceAPI(dealData, requestType, extraContext){
+// ══════════════════════════════════════════════════════════════════════
+// INTELLIGENCE CACHE — localStorage per-deal/requestType with TTL
+// ══════════════════════════════════════════════════════════════════════
+var _INTELLI_CACHE_PREFIX = 'elucy_ic_';
+var _INTELLI_CACHE_TTL = {
+  batch_classify:4*3600e3, classify:4*3600e3, signals:4*3600e3,
+  analyze:2*3600e3, note:2*3600e3, copy:1*3600e3,
+  briefing:6*3600e3, competitive:6*3600e3, business_analysis:6*3600e3,
+  conv_enrichment:2*3600e3, _default:2*3600e3
+};
+var _INTELLI_CACHE_MAX = 200;
+
+function _icKey(dealId, reqType){ return _INTELLI_CACHE_PREFIX + (dealId||'global') + '_' + reqType; }
+
+function _icDealHash(deal){
+  var d=deal||{};
+  return [d.deal_id,d.etapa||d.etapa_atual_no_pipeline,d.fase||d.fase_atual_no_processo,
+    d.tier||d.tier_da_oportunidade,d.status_do_deal||d.statusDeal,d.revenue,d.delta_t].join('|');
+}
+
+function _icGet(dealId, reqType, deal){
+  try{
+    var raw=localStorage.getItem(_icKey(dealId,reqType));
+    if(!raw) return null;
+    var entry=JSON.parse(raw);
+    var ttl=_INTELLI_CACHE_TTL[reqType]||_INTELLI_CACHE_TTL._default;
+    if(Date.now()-entry.ts > ttl) { localStorage.removeItem(_icKey(dealId,reqType)); return null; }
+    if(deal && entry.dh && entry.dh !== _icDealHash(deal)) return null;
+    return entry;
+  }catch(e){ return null; }
+}
+
+function _icSet(dealId, reqType, result, deal){
+  try{
+    var entry={ts:Date.now(), result:result, dh:deal?_icDealHash(deal):'', reqType:reqType};
+    localStorage.setItem(_icKey(dealId,reqType), JSON.stringify(entry));
+    _icEvict();
+  }catch(e){}
+}
+
+function _icEvict(){
+  try{
+    var keys=[];
+    for(var i=0;i<localStorage.length;i++){
+      var k=localStorage.key(i);
+      if(k&&k.startsWith(_INTELLI_CACHE_PREFIX)){
+        try{ var e=JSON.parse(localStorage.getItem(k)); keys.push({k:k,ts:e.ts||0}); }catch(x){ keys.push({k:k,ts:0}); }
+      }
+    }
+    if(keys.length>_INTELLI_CACHE_MAX){
+      keys.sort(function(a,b){return a.ts-b.ts;});
+      var toRemove=keys.length-_INTELLI_CACHE_MAX;
+      for(var j=0;j<toRemove;j++) localStorage.removeItem(keys[j].k);
+    }
+  }catch(e){}
+}
+
+function _icGetBatch(reqType){
+  try{
+    var raw=localStorage.getItem(_INTELLI_CACHE_PREFIX+'batch_'+reqType);
+    if(!raw) return null;
+    var entry=JSON.parse(raw);
+    var ttl=_INTELLI_CACHE_TTL[reqType]||_INTELLI_CACHE_TTL._default;
+    if(Date.now()-entry.ts > ttl) return null;
+    return entry;
+  }catch(e){ return null; }
+}
+
+function _icSetBatch(reqType, results){
+  try{
+    localStorage.setItem(_INTELLI_CACHE_PREFIX+'batch_'+reqType, JSON.stringify({ts:Date.now(), results:results}));
+  }catch(e){}
+}
+
+function _icFormatAge(ts){
+  var mins=Math.round((Date.now()-ts)/60000);
+  if(mins<1) return 'agora';
+  if(mins<60) return mins+'min atrás';
+  var hrs=Math.round(mins/60);
+  if(hrs<24) return hrs+'h atrás';
+  return Math.round(hrs/24)+'d atrás';
+}
+
+async function callIntelligenceAPI(dealData, requestType, extraContext, _skipCache){
+  var dealId=dealData&&dealData.deal_id;
+  // ── CHECK CACHE ──
+  if(!_skipCache){
+    var cached=_icGet(dealId, requestType, dealData);
+    if(cached){
+      console.log('[Elucy Cache] HIT '+requestType+' deal='+dealId+' age='+_icFormatAge(cached.ts));
+      return cached.result;
+    }
+  }
+
   // Carrega histórico e contexto (necessário para ambos os caminhos)
   const history = await loadDealFullHistory(dealData.deal_id);
   const dealCtx = buildDealContext(dealData);
@@ -3936,6 +4034,7 @@ async function callIntelligenceAPI(dealData, requestType, extraContext){
               const total = (result.usage.input_tokens||0) + cached;
               if(cached > 0) console.log('[Elucy] Prompt cache hit: '+Math.round(cached/total*100)+'% cached ('+cached+'/'+total+' tokens) — '+result.elapsed_ms+'ms');
             }
+            _icSet(dealId, requestType, result, dealData);
             return result;
           }
           // Edge function returned error — log and fall through to direct path
@@ -3985,7 +4084,9 @@ async function callIntelligenceAPI(dealData, requestType, extraContext){
   }
   const result = await resp.json();
   const text = (result.content || []).filter(c=>c.type==='text').map(c=>c.text).join('\n');
-  return { intelligence: text, model: result.model, usage: result.usage };
+  var apiResult = { intelligence: text, model: result.model, usage: result.usage };
+  _icSet(dealId, requestType, apiResult, dealData);
+  return apiResult;
 }
 
 async function saveAPIResponse(dealId, requestType, output){
@@ -4434,6 +4535,68 @@ async function requestCompetitiveIntel(id, btnEl){
 // ══════════════════════════════════════════════════════════════════════
 // BATCH INTELLIGENCE — Processar múltiplos deals em paralelo
 // ══════════════════════════════════════════════════════════════════════
+function restoreBatchCache(){
+  var panel=document.getElementById('batch-panel');
+  var body=document.getElementById('batch-body');
+  var status=document.getElementById('batch-status');
+  var banner=document.getElementById('batch-cache-banner');
+  if(!panel||!body) return;
+  // Try each batch type, show most recent
+  var best=null;
+  ['classify','notes','signals'].forEach(function(t){
+    var c=_icGetBatch(t);
+    if(c&&c.results&&(!best||c.ts>best.ts)) best={type:t,data:c};
+  });
+  if(best){
+    panel.style.display='block';
+    var label={classify:'Classificação por Risco/Potencial',notes:'Notas CRM',signals:'Análise de Sinais'}[best.type]||best.type;
+    _renderBatchResults(best.data.results, best.type, body, true);
+    if(status) status.textContent=label+' — '+best.data.results.length+' deals (cache)';
+    if(banner){
+      banner.style.display='block';
+      banner.innerHTML='<strong>Último batch: '+label+'</strong> — '+_icFormatAge(best.data.ts)+' — '+best.data.results.filter(function(r){return r.ok}).length+'/'+best.data.results.length+' deals processados. Clique num botão acima para reprocessar.';
+    }
+  }
+}
+
+function clearBatchCache(){
+  var removed=0;
+  for(var i=localStorage.length-1;i>=0;i--){
+    var k=localStorage.key(i);
+    if(k&&k.startsWith(_INTELLI_CACHE_PREFIX)){ localStorage.removeItem(k); removed++; }
+  }
+  var banner=document.getElementById('batch-cache-banner');
+  if(banner){ banner.style.display='none'; }
+  var panel=document.getElementById('batch-panel');
+  if(panel){ panel.style.display='none'; }
+  showSyncToast('ok', removed+' itens de cache removidos.');
+}
+
+function _renderBatchResults(results, batchType, batchBody, fromCache){
+  let html='<table class="batch-table"><thead><tr><th>Lead</th><th>Etapa</th><th>Resultado</th><th style="width:40px"></th></tr></thead><tbody>';
+  results.forEach(r=>{
+    let parsed='';
+    var src=r.cached?'<span style="font-size:9px;color:var(--text2);opacity:.6" title="Resultado do cache">CACHE</span>':'<span style="font-size:9px;color:var(--green);opacity:.7" title="Resultado fresco">NOVO</span>';
+    if(batchType==='classify'){
+      try{
+        const j=JSON.parse(r.result.replace(/```json\n?/g,'').replace(/```/g,'').trim());
+        parsed='<span class="tag '+(j.risk>=7?'t-risk':j.risk>=4?'t-stall':'t-buy')+'">Risco:'+j.risk+'</span> <span class="tag '+(j.potential>=7?'t-buy':'t-stall')+'">Pot:'+j.potential+'</span> <span class="tag '+(j.urgency>=7?'t-risk':'t-stall')+'">Urg:'+j.urgency+'</span><br><span style="font-size:11px;color:var(--text2)">'+(j.action||'')+'</span>';
+      }catch(e){parsed=escHtml((r.result||'').slice(0,200));}
+    } else if(batchType==='signals'){
+      try{
+        const j=JSON.parse(r.result.replace(/```json\n?/g,'').replace(/```/g,'').trim());
+        const sigs=(j.signals||[]).map(s=>'<span class="tag t-'+({BUY:'buy',RISK:'risk',STALL:'stall',CHAMP:'champ'}[s.type]||'gray')+'">'+s.type+'</span>').join(' ');
+        parsed=sigs+' <span class="tag t-gray">'+j.risk_level+'</span><br><span style="font-size:11px;color:var(--text2)">'+escHtml(j.next_action||'')+'</span>';
+      }catch(e){parsed=escHtml((r.result||'').slice(0,200));}
+    } else {
+      parsed='<span style="font-size:11px">'+escHtml((r.result||'').slice(0,300))+'</span>';
+    }
+    html+='<tr class="'+(r.ok?'':'batch-err')+'"><td>'+escHtml(r.nome)+'</td><td>'+escHtml(r.etapa)+'</td><td>'+parsed+'</td><td>'+src+'</td></tr>';
+  });
+  html+='</tbody></table>';
+  batchBody.innerHTML=html;
+}
+
 async function runBatchIntelligence(batchType){
   const deals=Object.values(window._COCKPIT_DEAL_MAP||{}).filter(d=>{
     const s=(d.statusDeal||d.status_do_deal||'').toLowerCase();
@@ -4449,33 +4612,65 @@ async function runBatchIntelligence(batchType){
   batchPanel.style.display='block';
   const batchBody=document.getElementById('batch-body');
   const batchStatus=document.getElementById('batch-status');
+  const cacheBanner=document.getElementById('batch-cache-banner');
 
   const MAX_PARALLEL=5;
+  const reqType = batchType==='notes'?'note':batchType==='signals'?'signals':'batch_classify';
   const BATCH_PROMPTS={
     classify: REQUEST_PROMPTS.batch_classify,
     notes: 'Gere uma nota CRM completa para este deal. Formato: [ELUCI NOTE] data | Deal ID | Fase | Temp\nAção executada | Próximo passo | DQI. Máximo 5 linhas.',
     signals: 'Analise os sinais deste deal e retorne JSON: {"signals":[{"type":"BUY|RISK|STALL|CHAMP","reason":"motivo"}],"risk_level":"LOW|MED|HIGH","priority_score":N,"next_action":"ação"}'
   };
-
   const prompt=BATCH_PROMPTS[batchType]||BATCH_PROMPTS.classify;
   const label={classify:'Classificação por Risco/Potencial',notes:'Notas CRM',signals:'Análise de Sinais'}[batchType]||batchType;
-  batchStatus.textContent=`Processando ${deals.length} deals — ${label}...`;
-  batchBody.innerHTML='<div style="padding:12px"><span class="elucy-pulse">ELUCY processando '+deals.length+' deals em paralelo (max '+MAX_PARALLEL+' simultâneos)...</span></div>';
+
+  // ── RESTORE FROM CACHE — show previous results immediately ──
+  var cachedDeals=0, freshDeals=0;
+  var cachedResults=[];
+  deals.forEach(function(d){
+    var c=_icGet(d.deal_id, reqType, d);
+    if(c){
+      var text=(c.result&&c.result.intelligence)?(typeof c.result.intelligence==='string'?c.result.intelligence:JSON.stringify(c.result.intelligence)):'';
+      cachedResults.push({deal_id:d.deal_id,nome:d.contact_name||d.nome||'',etapa:d.etapa||d.etapa_atual_no_pipeline||'',result:text,ok:true,cached:true});
+      cachedDeals++;
+    }
+  });
+
+  // Show cached results immediately while fresh ones process
+  if(cachedDeals>0){
+    var lastBatch=_icGetBatch(batchType);
+    var batchAge=lastBatch?_icFormatAge(lastBatch.ts):'';
+    if(cacheBanner){
+      cacheBanner.style.display='block';
+      cacheBanner.innerHTML='<strong>'+cachedDeals+'/'+deals.length+' deals com cache</strong>'+(batchAge?' — último batch '+batchAge:'')+' — processando '+((deals.length-cachedDeals)>0?(deals.length-cachedDeals)+' deals restantes...':'somente deals que mudaram...');
+    }
+    if(lastBatch&&lastBatch.results){
+      _renderBatchResults(lastBatch.results, batchType, batchBody, true);
+    }
+  } else {
+    if(cacheBanner) cacheBanner.style.display='none';
+  }
+
+  batchStatus.textContent='Processando '+deals.length+' deals — '+label+'...';
+  if(!cachedDeals){
+    batchBody.innerHTML='<div style="padding:12px"><span class="elucy-pulse">ELUCY processando '+deals.length+' deals em paralelo (max '+MAX_PARALLEL+' simultâneos)...</span></div>';
+  }
 
   const results=[];
   let completed=0;
 
-  // Process in parallel with concurrency limit — uses Edge Function (secure, cached)
+  // Process deals — cache layer inside callIntelligenceAPI handles hit/miss per deal
   async function processDeal(deal){
     try{
-      const apiResult = await callIntelligenceAPI(deal, 'batch_classify', prompt);
+      const apiResult = await callIntelligenceAPI(deal, reqType, prompt);
       const text = (apiResult && apiResult.intelligence) ? (typeof apiResult.intelligence === 'string' ? apiResult.intelligence : JSON.stringify(apiResult.intelligence)) : '';
       completed++;
-      batchStatus.textContent=`${completed}/${deals.length} processados — ${label}`;
-      return {deal_id:deal.deal_id,nome:deal.contact_name||deal.nome||'',etapa:deal.etapa||deal.etapa_atual_no_pipeline||'',result:text,ok:true};
+      var wasCached=!!_icGet(deal.deal_id, reqType, deal);
+      batchStatus.textContent=completed+'/'+deals.length+' processados — '+label;
+      return {deal_id:deal.deal_id,nome:deal.contact_name||deal.nome||'',etapa:deal.etapa||deal.etapa_atual_no_pipeline||'',result:text,ok:true,cached:wasCached};
     }catch(e){
       completed++;
-      return {deal_id:deal.deal_id,nome:deal.contact_name||deal.nome||'',etapa:'',result:e.message,ok:false};
+      return {deal_id:deal.deal_id,nome:deal.contact_name||deal.nome||'',etapa:'',result:e.message,ok:false,cached:false};
     }
   }
 
@@ -4484,32 +4679,24 @@ async function runBatchIntelligence(batchType){
     const chunk=deals.slice(i,i+MAX_PARALLEL);
     const chunkResults=await Promise.all(chunk.map(d=>processDeal(d)));
     results.push(...chunkResults);
+    // Progressive render
+    _renderBatchResults(results, batchType, batchBody, false);
   }
 
-  // Render results
-  let html='<table class="batch-table"><thead><tr><th>Lead</th><th>Etapa</th><th>Resultado</th></tr></thead><tbody>';
-  results.forEach(r=>{
-    let parsed='';
-    if(batchType==='classify'){
-      try{
-        const j=JSON.parse(r.result.replace(/```json\n?/g,'').replace(/```/g,'').trim());
-        parsed=`<span class="tag ${j.risk>=7?'t-risk':j.risk>=4?'t-stall':'t-buy'}">Risco:${j.risk}</span> <span class="tag ${j.potential>=7?'t-buy':'t-stall'}">Pot:${j.potential}</span> <span class="tag ${j.urgency>=7?'t-risk':'t-stall'}">Urg:${j.urgency}</span><br><span style="font-size:11px;color:var(--text2)">${j.action||''}</span>`;
-      }catch(e){parsed=escHtml((r.result||'').slice(0,200));}
-    } else if(batchType==='signals'){
-      try{
-        const j=JSON.parse(r.result.replace(/```json\n?/g,'').replace(/```/g,'').trim());
-        const sigs=(j.signals||[]).map(s=>'<span class="tag t-'+({BUY:'buy',RISK:'risk',STALL:'stall',CHAMP:'champ'}[s.type]||'gray')+'">'+s.type+'</span>').join(' ');
-        parsed=sigs+' <span class="tag t-gray">'+j.risk_level+'</span><br><span style="font-size:11px;color:var(--text2)">'+escHtml(j.next_action||'')+'</span>';
-      }catch(e){parsed=escHtml((r.result||'').slice(0,200));}
+  // Save batch results to cache for instant restore next time
+  _icSetBatch(batchType, results);
+
+  var freshCount=results.filter(r=>!r.cached).length;
+  var cachedCount=results.filter(r=>r.cached).length;
+  batchStatus.textContent=label+' completa — '+results.filter(r=>r.ok).length+'/'+results.length+' deals'+(cachedCount>0?' ('+cachedCount+' cache, '+freshCount+' novos)':'');
+  if(cacheBanner){
+    if(cachedCount>0){
+      cacheBanner.innerHTML='<strong>'+cachedCount+' deals do cache</strong>, '+freshCount+' processados agora — Tokens economizados!';
     } else {
-      parsed='<span style="font-size:11px">'+escHtml((r.result||'').slice(0,300))+'</span>';
+      cacheBanner.style.display='none';
     }
-    html+=`<tr class="${r.ok?'':'batch-err'}"><td>${escHtml(r.nome)}</td><td>${escHtml(r.etapa)}</td><td>${parsed}</td></tr>`;
-  });
-  html+='</tbody></table>';
-  batchBody.innerHTML=html;
-  batchStatus.textContent=`${label} completa — ${results.filter(r=>r.ok).length}/${results.length} deals processados`;
-  logActivity('batch_'+batchType+'_completed', results.length+' deals');
+  }
+  logActivity('batch_'+batchType+'_completed', results.length+' deals ('+cachedCount+' cached)');
 }
 
 // ══════════════════════════════════════════════════════════════════════
