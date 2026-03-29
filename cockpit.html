@@ -634,6 +634,54 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .perf-dimension-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 @media(max-width:980px){.perf-meta-grid,.perf-dimension-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.perf-meta-grid,.perf-dimension-grid{grid-template-columns:1fr}}
+/* Playbooks V2 */
+.pb-container{padding:16px}
+.pb-dash{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.pb-dash-title{font-size:18px;font-weight:800;color:var(--text)}
+.pb-dash-stats{display:flex;gap:16px;align-items:center}
+.pb-dstat{text-align:center}
+.pb-dstat-n{display:block;font-size:16px;font-weight:800;color:var(--text)}
+.pb-dstat-l{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--text2)}
+.pb-coverage-ring{width:36px;height:36px;border-radius:50%;border:3px solid var(--accent2);display:flex;align-items:center;justify-content:center;margin:0 auto 2px}
+.pb-coverage-ring span{font-size:10px;font-weight:800;color:var(--accent2)}
+.pb-alert{padding:8px 14px;border-radius:8px;font-size:12px;margin-bottom:8px;line-height:1.5}
+.pb-alert-red{background:var(--rdim);border:1px solid var(--red);color:var(--text)}
+.pb-alert-green{background:var(--gdim);border:1px solid var(--green);color:var(--text)}
+.pb-cat-header{font-size:13px;font-weight:800;color:var(--text);margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px}
+.pb-cat-sub{font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.4}
+.pb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.pb-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:all .2s}
+.pb-card:hover{border-color:var(--pb-color);background:var(--bg4)}
+.pb-card-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.pb-card-icon{font-size:22px}
+.pb-card-info{flex:1;min-width:0}
+.pb-card-title{font-size:13px;font-weight:700;color:var(--text)}
+.pb-card-persona{font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700}
+.pb-card-count{text-align:right}
+.pb-card-n{display:block;font-size:16px;font-weight:800;color:var(--text)}
+.pb-card-nl{font-size:9px;color:var(--text2)}
+.pb-card-desc{font-size:11px;color:var(--text2);line-height:1.4;margin-bottom:6px}
+.pb-card-cov{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.pb-card-cov-bar{flex:1;height:3px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.pb-card-cov-fill{height:100%;border-radius:2px;transition:width .3s}
+.pb-card-cov-pct{font-size:9px;color:var(--text2);font-weight:600;white-space:nowrap}
+.pb-card-steps{font-size:9px;color:var(--text2)}
+.pb-det{}
+.pb-det-header{display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg3);border-radius:8px;margin-bottom:8px}
+.pb-ks{background:#2a1a00;border:1px solid var(--yellow);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--yellow);margin-bottom:12px;line-height:1.5}
+.pb-step{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.pb-step:last-child{border-bottom:none}
+.pb-step-num{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;margin-top:1px}
+.pb-step-body{flex:1;min-width:0}
+.pb-step-label{font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px}
+.pb-step-desc{font-size:11px;color:var(--text2);line-height:1.5}
+.pb-step-check{font-size:10px;color:var(--accent2);margin-top:4px;font-style:italic}
+.pb-deal-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.pb-deal-row:hover{background:var(--bg4)}
+.pb-deal-info{flex:1;min-width:0}
+.pb-deal-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pb-deal-meta{font-size:10px;color:var(--text2);display:flex;align-items:center;gap:6px}
+.pb-deal-aging{font-size:11px;font-weight:600}
 /* Intelligence dashboard */
 .intel-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
 .intel-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:15px;overflow:hidden}
