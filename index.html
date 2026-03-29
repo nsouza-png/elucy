@@ -4,654 +4,931 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ELUCY — Revenue Intelligence Enterprise</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2304080f'/><text x='50' y='66' font-size='36' font-weight='900' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='2'>EC</text><rect x='28' y='72' width='44' height='14' rx='4' fill='%230a84ff'/><text x='50' y='82' font-size='9' font-weight='800' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>BY G4</text></svg>">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2304080f'/><text x='50' y='66' font-size='36' font-weight='900' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='2'>EC</text><rect x='28' y='72' width='44' height='14' rx='4' fill='%23f59e0b'/><text x='50' y='82' font-size='9' font-weight='800' text-anchor='middle' fill='%23000' font-family='system-ui' letter-spacing='1'>BY G4</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg:#000;--bg2:#0a0a0a;--bg3:#141416;--bg4:#1c1c1e;--bg5:#2c2c2e;
-  --border:rgba(255,255,255,.06);--border2:rgba(255,255,255,.12);--border3:rgba(255,255,255,.18);
-  --accent:#0a84ff;--accent2:#5ac8fa;--accent-glow:rgba(10,132,255,.15);
-  --green:#30d158;--yellow:#ffd60a;--red:#ff453a;--orange:#ff9f0a;
-  --text:#f5f5f7;--text2:#86868b;--text3:#48484a;
-  --r:12px;--r2:16px;--r3:24px;
-  --font:-apple-system,'SF Pro Display','Manrope',Inter,system-ui,sans-serif;
+  /* Âmbar Translúcido */
+  --bg:#04080f;--bg2:#080e18;--bg3:#0d1520;--bg4:#131d2b;--bg5:#1a2535;
+  --amber:#f59e0b;--amber2:#fbbf24;--amber3:#fcd34d;--amber-dim:#d97706;
+  --amber-glass:rgba(245,158,11,.08);--amber-glow:rgba(245,158,11,.15);
+  --amber-border:rgba(245,158,11,.18);--amber-border2:rgba(245,158,11,.30);
+  --blue:#0ea5e9;--blue2:#38bdf8;--green:#10b981;--red:#ef4444;--purple:#8b5cf6;
+  --border:rgba(255,255,255,.05);--border2:rgba(255,255,255,.10);--border3:rgba(255,255,255,.16);
+  --text:#f0f4ff;--text2:#8899aa;--text3:#445566;
+  --r:10px;--r2:16px;--r3:24px;
+  --font:-apple-system,'SF Pro Display',Inter,system-ui,sans-serif;
 }
-html,body{height:100%;overflow:hidden}
-body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;overflow-x:hidden}
 
-/* ── BACKGROUND ─────────────────────────────────────────────── */
-.bg-grid{position:fixed;inset:0;z-index:0;
-  background-image:
-    linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
-  background-size:60px 60px;
-}
-.bg-glow{position:fixed;z-index:0;border-radius:50%;filter:blur(120px);opacity:.35;pointer-events:none}
-.bg-glow-1{width:600px;height:600px;background:radial-gradient(circle,rgba(10,132,255,.25),transparent 70%);top:-100px;left:50%;transform:translateX(-50%)}
-.bg-glow-2{width:400px;height:400px;background:radial-gradient(circle,rgba(90,200,250,.12),transparent 70%);bottom:0;right:10%}
-.bg-glow-3{width:300px;height:300px;background:radial-gradient(circle,rgba(48,209,88,.08),transparent 70%);bottom:20%;left:5%}
+/* ─ BG ─────────────────────────────────────────── */
+.bg-layer{position:fixed;inset:0;z-index:0;pointer-events:none}
+.bg-grid{background-image:linear-gradient(rgba(245,158,11,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(245,158,11,.025) 1px,transparent 1px);background-size:72px 72px;opacity:.6}
+.bg-noise{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");opacity:.4}
+.glow-top{position:fixed;top:-200px;left:50%;transform:translateX(-50%);width:900px;height:600px;background:radial-gradient(ellipse at center,rgba(245,158,11,.12) 0%,transparent 65%);z-index:0}
+.glow-right{position:fixed;bottom:0;right:-100px;width:500px;height:500px;background:radial-gradient(ellipse,rgba(14,165,233,.07) 0%,transparent 65%);z-index:0}
 
-/* ── LAYOUT ──────────────────────────────────────────────────── */
-.container{position:relative;z-index:1;height:100vh;display:flex;flex-direction:column;overflow-y:auto;scroll-behavior:smooth}
-.container::-webkit-scrollbar{width:6px}
-.container::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:3px}
-section{padding:0 32px;max-width:1200px;margin:0 auto;width:100%}
+/* ─ LAYOUT ──────────────────────────────────────── */
+main{position:relative;z-index:1}
+.wrap{max-width:1100px;margin:0 auto;padding:0 32px}
 
-/* ── TOPBAR ──────────────────────────────────────────────────── */
-.topbar{height:52px;display:flex;align-items:center;padding:0 32px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.6);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);flex-shrink:0;position:sticky;top:0;z-index:10}
-.logo{display:flex;align-items:center;gap:10px}
-.logo-mark{width:28px;height:28px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;color:#fff;letter-spacing:1px}
-.logo-text{font-size:15px;font-weight:800;letter-spacing:2px;text-transform:uppercase}
-.logo-badge{background:var(--accent);color:#fff;font-size:8px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:1px;margin-left:2px}
-.topbar-right{margin-left:auto;display:flex;align-items:center;gap:16px}
-.top-link{font-size:12px;color:var(--text2);text-decoration:none;font-weight:500;transition:.2s;cursor:pointer}
-.top-link:hover{color:var(--text)}
-.btn-cockpit{padding:7px 16px;border-radius:20px;background:var(--accent);color:#fff;font-size:12px;font-weight:600;border:none;cursor:pointer;font-family:inherit;transition:.2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
-.btn-cockpit:hover{background:#3395ff;box-shadow:0 0 20px rgba(10,132,255,.3)}
+/* ─ NAV ─────────────────────────────────────────── */
+nav{position:sticky;top:0;z-index:50;border-bottom:1px solid var(--border);background:rgba(4,8,15,.75);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
+.nav-inner{height:54px;display:flex;align-items:center;gap:0;max-width:1100px;margin:0 auto;padding:0 32px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-mark{width:30px;height:30px;background:linear-gradient(135deg,var(--amber),var(--amber3));border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;color:#000;letter-spacing:1px;flex-shrink:0}
+.logo-name{font-size:15px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;color:var(--text)}
+.logo-tag{font-size:8px;font-weight:700;padding:2px 7px;border-radius:4px;background:var(--amber-glass);color:var(--amber2);border:1px solid var(--amber-border);letter-spacing:1px;text-transform:uppercase;margin-left:4px}
+.nav-links{margin-left:auto;display:flex;align-items:center;gap:24px}
+.nav-link{font-size:12px;color:var(--text2);text-decoration:none;font-weight:500;transition:.2s;cursor:pointer}
+.nav-link:hover{color:var(--amber2)}
+.btn-nav{padding:7px 18px;border-radius:20px;background:var(--amber);color:#000;font-size:12px;font-weight:700;border:none;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:.2s}
+.btn-nav:hover{background:var(--amber2);box-shadow:0 0 20px var(--amber-glow)}
 
-/* ── HERO ────────────────────────────────────────────────────── */
-.hero{padding:64px 32px 40px;text-align:center;max-width:900px;margin:0 auto}
-.hero-eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:20px;border:1px solid var(--border2);background:rgba(10,132,255,.06);margin-bottom:24px;font-size:11px;font-weight:600;color:var(--accent2);letter-spacing:.5px}
-.hero-eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.hero h1{font-size:52px;font-weight:900;line-height:1.08;letter-spacing:-1.5px;margin-bottom:20px;background:linear-gradient(135deg,#fff 30%,var(--accent2) 70%,var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.hero-sub{font-size:17px;color:var(--text2);line-height:1.65;max-width:680px;margin:0 auto 32px;font-weight:400}
-.hero-sub strong{color:var(--text);font-weight:600}
-.hero-ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:0}
-.btn-primary{padding:12px 28px;border-radius:var(--r);background:var(--accent);color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:.2s;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
-.btn-primary:hover{background:#3395ff;box-shadow:0 4px 24px rgba(10,132,255,.35);transform:translateY(-1px)}
-.btn-secondary{padding:12px 28px;border-radius:var(--r);background:rgba(255,255,255,.05);color:var(--text);font-size:14px;font-weight:600;border:1px solid var(--border2);cursor:pointer;font-family:inherit;transition:.2s;text-decoration:none}
-.btn-secondary:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2)}
+/* ─ HERO ─────────────────────────────────────────── */
+.hero{padding:100px 32px 80px;text-align:center;max-width:1100px;margin:0 auto}
+.hero-pill{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:20px;border:1px solid var(--amber-border);background:var(--amber-glass);margin-bottom:28px;font-size:11px;font-weight:600;color:var(--amber2);letter-spacing:.5px}
+.hero-pill .live{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.hero h1{font-size:64px;font-weight:900;line-height:1.05;letter-spacing:-2.5px;margin-bottom:24px}
+.hero h1 .line1{display:block;color:var(--text)}
+.hero h1 .line2{display:block;background:linear-gradient(90deg,var(--amber),var(--amber3),var(--amber2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:18px;color:var(--text2);line-height:1.7;max-width:680px;margin:0 auto 36px;font-weight:400}
+.hero-sub b{color:var(--text);font-weight:600}
+.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn-primary{padding:13px 30px;border-radius:var(--r2);background:var(--amber);color:#000;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:.2s}
+.btn-primary:hover{background:var(--amber2);box-shadow:0 6px 28px var(--amber-glow);transform:translateY(-1px)}
+.btn-outline{padding:13px 30px;border-radius:var(--r2);background:transparent;color:var(--text);font-size:14px;font-weight:600;border:1px solid var(--border2);cursor:pointer;font-family:inherit;text-decoration:none;transition:.2s}
+.btn-outline:hover{background:rgba(255,255,255,.04);border-color:var(--border3)}
 
-/* ── HERO DASHBOARD (quant vs qual) ──────────────────────────── */
-.hero-dashboard{margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:900px;margin-left:auto;margin-right:auto}
-.dash-panel{background:rgba(14,14,16,.85);border:1px solid var(--border);border-radius:var(--r2);padding:20px 24px;position:relative;overflow:hidden}
-.dash-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:2px 2px 0 0}
-.dash-panel.quant::before{background:linear-gradient(90deg,var(--accent),var(--accent2))}
-.dash-panel.qual::before{background:linear-gradient(90deg,var(--green),var(--yellow))}
-.dash-panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.dash-panel-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px}
-.dash-panel.quant .dash-panel-title{color:var(--accent2)}
-.dash-panel.qual .dash-panel-title{color:var(--green)}
-.dash-panel-badge{font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px;letter-spacing:.5px}
-.dash-panel.quant .dash-panel-badge{background:rgba(10,132,255,.1);color:var(--accent2);border:1px solid rgba(10,132,255,.15)}
-.dash-panel.qual .dash-panel-badge{background:rgba(48,209,88,.08);color:var(--green);border:1px solid rgba(48,209,88,.15)}
-.dash-rows{display:flex;flex-direction:column;gap:10px}
-.dash-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:8px}
-.dash-row-label{font-size:12px;color:var(--text2);font-weight:500}
-.dash-row-val{font-size:14px;font-weight:800;letter-spacing:-.3px}
-.dash-row-val.blue{color:var(--accent2)}
-.dash-row-val.green{color:var(--green)}
-.dash-row-val.yellow{color:var(--yellow)}
-.dash-row-val.red{color:var(--red)}
-.dash-row-val.white{color:#fff}
-.dash-row-val.orange{color:var(--orange)}
-.dash-highlight{padding:12px;background:rgba(255,69,58,.04);border:1px solid rgba(255,69,58,.12);border-radius:8px;margin-top:4px;text-align:center}
-.dash-highlight-label{font-size:9px;color:var(--red);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
-.dash-highlight-row{display:flex;align-items:baseline;justify-content:center;gap:6px}
-.dash-highlight-val{font-size:28px;font-weight:900;color:var(--red);letter-spacing:-1px}
-.dash-highlight-of{font-size:12px;color:var(--text3);font-weight:500}
-.dash-trust{padding:12px;background:rgba(48,209,88,.04);border:1px solid rgba(48,209,88,.12);border-radius:8px;margin-top:4px;text-align:center}
-.dash-trust-label{font-size:9px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
-.dash-trust-row{display:flex;align-items:center;justify-content:center;gap:12px}
-.dash-trust-item{text-align:center}
-.dash-trust-val{font-size:24px;font-weight:900;line-height:1}
-.dash-trust-sub{font-size:9px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
-.dash-connector{position:absolute;right:-16px;top:50%;width:32px;height:2px;background:linear-gradient(90deg,var(--accent),var(--green));z-index:2}
+/* ─ STATS BAR ────────────────────────────────────── */
+.stats-bar{padding:32px;max-width:1100px;margin:0 auto}
+.stats-inner{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+.stat-cell{background:var(--bg2);padding:24px 20px;text-align:center}
+.stat-val{font-size:30px;font-weight:900;letter-spacing:-1px;line-height:1;margin-bottom:4px}
+.stat-lbl{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:1px}
+.stat-cell.amber .stat-val{color:var(--amber2)}
+.stat-cell.blue .stat-val{color:var(--blue2)}
+.stat-cell.green .stat-val{color:var(--green)}
+.stat-cell.red .stat-val{color:var(--red)}
+.stat-cell.purple .stat-val{color:var(--purple)}
 
-/* ── CONTRAST BANNER ─────────────────────────────────────────── */
-.contrast-banner{padding:16px 32px;max-width:900px;margin:32px auto 0;text-align:center}
-.contrast-text{font-size:13px;color:var(--text3);font-weight:500;line-height:1.7}
-.contrast-text strong{color:var(--text2);font-weight:700}
-.contrast-text em{color:var(--accent2);font-style:normal;font-weight:600}
+/* ─ SECTION HEADERS ──────────────────────────────── */
+.sec-eyebrow{font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;text-align:center}
+.sec-title{font-size:34px;font-weight:800;letter-spacing:-1px;margin-bottom:12px;text-align:center}
+.sec-sub{font-size:15px;color:var(--text2);line-height:1.65;text-align:center;max-width:640px;margin:0 auto}
 
-/* ── PILLARS (4 colunas) ─────────────────────────────────────── */
-.pillars{padding-top:56px;padding-bottom:56px}
-.section-label{text-align:center;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px}
-.section-title{text-align:center;font-size:28px;font-weight:800;letter-spacing:-.5px;margin-bottom:24px}
-.pillars-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.pillar{background:rgba(20,20,22,.7);border:1px solid var(--border);border-radius:var(--r2);padding:22px;transition:.3s;position:relative}
-.pillar:hover{border-color:rgba(10,132,255,.2);background:rgba(28,28,30,.8);transform:translateY(-2px)}
-.pillar-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:18px}
-.pillar-icon.conv{background:rgba(10,132,255,.1);border:1px solid rgba(10,132,255,.2)}
-.pillar-icon.fore{background:rgba(48,209,88,.08);border:1px solid rgba(48,209,88,.15)}
-.pillar-icon.gov{background:rgba(255,69,58,.06);border:1px solid rgba(255,69,58,.12)}
-.pillar-icon.ent{background:rgba(255,214,10,.08);border:1px solid rgba(255,214,10,.15)}
-.pillar h3{font-size:14px;font-weight:700;margin-bottom:5px;letter-spacing:-.2px}
-.pillar p{font-size:11px;color:var(--text2);line-height:1.6}
-.pillar-stat{margin-top:12px;display:flex;align-items:baseline;gap:6px}
-.pillar-stat-val{font-size:22px;font-weight:900;line-height:1}
-.pillar-stat-lbl{font-size:10px;color:var(--text3);font-weight:600}
-.pillar-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:10px}
-.pillar-tag{font-size:8px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:.5px;text-transform:uppercase}
-.pillar-tag.blue{background:rgba(10,132,255,.1);color:var(--accent2);border:1px solid rgba(10,132,255,.2)}
-.pillar-tag.green{background:rgba(48,209,88,.08);color:var(--green);border:1px solid rgba(48,209,88,.15)}
-.pillar-tag.red{background:rgba(255,69,58,.06);color:var(--red);border:1px solid rgba(255,69,58,.12)}
-.pillar-tag.gold{background:rgba(255,214,10,.08);color:var(--yellow);border:1px solid rgba(255,214,10,.15)}
+/* ─ SECTION SPACING ──────────────────────────────── */
+.section{padding:80px 32px;max-width:1100px;margin:0 auto}
+.section-divider{height:1px;background:linear-gradient(90deg,transparent,var(--amber-border),transparent);margin:0 auto;max-width:800px}
 
-/* ── X-RAY SECTION ───────────────────────────────────────────── */
-.xray{padding-top:0;padding-bottom:56px}
-.xray-card{background:rgba(14,14,16,.7);border:1px solid var(--border);border-radius:var(--r3);padding:32px;position:relative;overflow:hidden}
-.xray-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--green),var(--yellow))}
-.xray-header{text-align:center;margin-bottom:28px}
-.xray-header h2{font-size:24px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px}
-.xray-header p{font-size:12px;color:var(--text3);font-weight:500}
-.xray-grid{display:grid;grid-template-columns:1fr 60px 1fr;gap:0;align-items:start}
-.xray-col{display:flex;flex-direction:column;gap:8px}
-.xray-col-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;padding-left:4px}
-.xray-col.surface .xray-col-label{color:var(--text3)}
-.xray-col.deep .xray-col-label{color:var(--green)}
-.xray-item{padding:10px 14px;border-radius:8px;border:1px solid var(--border);transition:.3s}
-.xray-col.surface .xray-item{background:rgba(255,255,255,.02)}
-.xray-col.deep .xray-item{background:rgba(48,209,88,.03);border-color:rgba(48,209,88,.1)}
-.xray-col.deep .xray-item:hover{border-color:rgba(48,209,88,.25);background:rgba(48,209,88,.06)}
-.xray-item-label{font-size:10px;color:var(--text3);font-weight:600;margin-bottom:3px}
-.xray-item-val{font-size:13px;font-weight:700}
-.xray-col.surface .xray-item-val{color:var(--text2)}
-.xray-col.deep .xray-item-val{color:var(--text)}
-.xray-arrow-col{display:flex;flex-direction:column;align-items:center;justify-content:center;padding-top:32px;gap:12px}
-.xray-arrow{font-size:16px;color:var(--accent);opacity:.5;animation:arrowPulse 2s infinite}
-@keyframes arrowPulse{0%,100%{opacity:.3;transform:translateX(0)}50%{opacity:.8;transform:translateX(3px)}}
-.xray-verdict{margin-top:20px;padding:14px 20px;background:rgba(10,132,255,.04);border:1px solid rgba(10,132,255,.12);border-radius:var(--r);text-align:center}
-.xray-verdict-label{font-size:9px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
-.xray-verdict-text{font-size:13px;color:var(--text);font-weight:600;line-height:1.6}
-.xray-verdict-text span.risk{color:var(--red);font-weight:800}
-.xray-verdict-text span.signal{color:var(--green);font-weight:800}
+/* ─ PROBLEM / CONTRAST ───────────────────────────── */
+.contrast-grid{display:grid;grid-template-columns:1fr 64px 1fr;gap:0;align-items:start;margin-top:48px}
+.contrast-col{display:flex;flex-direction:column;gap:10px}
+.contrast-col-hdr{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;padding:10px 16px;border-radius:var(--r) var(--r) 0 0;border:1px solid var(--border)}
+.contrast-col.crm .contrast-col-hdr{background:rgba(255,255,255,.02);color:var(--text3);border-color:var(--border)}
+.contrast-col.elucy .contrast-col-hdr{background:var(--amber-glass);color:var(--amber2);border-color:var(--amber-border)}
+.contrast-item{padding:12px 16px;border-left:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border);transition:.2s}
+.contrast-col.crm .contrast-item{background:rgba(255,255,255,.015);color:var(--text2)}
+.contrast-col.elucy .contrast-item{background:rgba(245,158,11,.025);border-color:var(--amber-border);color:var(--text)}
+.contrast-col.elucy .contrast-item:hover{background:var(--amber-glass)}
+.contrast-item-lbl{font-size:9px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+.contrast-item-val{font-size:13px;font-weight:600}
+.contrast-col.crm .contrast-item-val{color:var(--text2)}
+.contrast-col.elucy .contrast-item-val{color:var(--text)}
+.contrast-item:last-child{border-radius:0 0 var(--r) var(--r)}
+.contrast-mid{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding-top:40px}
+.contrast-arrow{font-size:18px;color:var(--amber);opacity:.5;animation:arr 2s infinite}
+@keyframes arr{0%,100%{opacity:.3;transform:translateX(0)}50%{opacity:.9;transform:translateX(4px)}}
+.contrast-verdict{margin-top:32px;padding:18px 24px;background:var(--amber-glass);border:1px solid var(--amber-border);border-radius:var(--r2);text-align:center}
+.verdict-lbl{font-size:9px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px}
+.verdict-text{font-size:14px;color:var(--text);font-weight:600;line-height:1.7}
+.verdict-text .risk{color:var(--red);font-weight:800}
+.verdict-text .signal{color:var(--green);font-weight:800}
+.verdict-text .amber{color:var(--amber2);font-weight:800}
 
-/* ── DAG STRIP ───────────────────────────────────────────────── */
-.dag-strip{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-top:20px}
-.dag-phase{padding:5px 10px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:rgba(255,255,255,.03);border:1px solid var(--border);color:var(--text3);transition:.3s}
-.dag-phase:hover{border-color:var(--accent);color:var(--accent);background:rgba(10,132,255,.05)}
-.dag-phase.active{border-color:var(--accent);color:var(--accent);background:rgba(10,132,255,.08)}
+/* ─ PILLARS ──────────────────────────────────────── */
+.pillars-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:48px}
+.pillar-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:26px;transition:.3s;position:relative;overflow:hidden}
+.pillar-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;opacity:0;transition:.3s}
+.pillar-card:hover{border-color:var(--amber-border);transform:translateY(-3px)}
+.pillar-card:hover::after{opacity:1}
+.pillar-card.p1::after{background:var(--amber)}
+.pillar-card.p2::after{background:var(--green)}
+.pillar-card.p3::after{background:var(--red)}
+.pillar-card.p4::after{background:var(--purple)}
+.pillar-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:16px}
+.pillar-card.p1 .pillar-icon{background:rgba(245,158,11,.1);border:1px solid var(--amber-border)}
+.pillar-card.p2 .pillar-icon{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2)}
+.pillar-card.p3 .pillar-icon{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.15)}
+.pillar-card.p4 .pillar-icon{background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.18)}
+.pillar-card h3{font-size:15px;font-weight:700;margin-bottom:8px;letter-spacing:-.2px}
+.pillar-card p{font-size:12px;color:var(--text2);line-height:1.65}
+.pillar-num{font-size:36px;font-weight:900;letter-spacing:-1.5px;margin-top:16px;line-height:1}
+.pillar-num-lbl{font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.8px;margin-top:2px}
+.pillar-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:12px}
+.ptag{font-size:8px;font-weight:700;padding:3px 7px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px}
+.ptag.amber{background:var(--amber-glass);color:var(--amber2);border:1px solid var(--amber-border)}
+.ptag.green{background:rgba(16,185,129,.08);color:var(--green);border:1px solid rgba(16,185,129,.18)}
+.ptag.red{background:rgba(239,68,68,.07);color:var(--red);border:1px solid rgba(239,68,68,.14)}
+.ptag.purple{background:rgba(139,92,246,.08);color:var(--purple);border:1px solid rgba(139,92,246,.18)}
 
-/* ── ENGINE SECTION ──────────────────────────────────────────── */
-.engine{padding-top:0;padding-bottom:56px}
-.engine-card{background:rgba(20,20,22,.6);border:1px solid var(--border);border-radius:var(--r2);padding:28px;display:flex;gap:28px;align-items:stretch}
-.engine-left{flex:1}
-.engine-label{font-size:10px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px}
-.engine h2{font-size:24px;font-weight:800;line-height:1.2;margin-bottom:10px;letter-spacing:-.5px}
-.engine p{font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:14px}
-.engine-layers{display:flex;flex-direction:column;gap:5px}
-.engine-layer{display:flex;align-items:center;gap:10px;padding:7px 12px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:8px;transition:.2s}
-.engine-layer:hover{background:rgba(255,255,255,.04);border-color:var(--border2)}
-.layer-num{font-size:9px;font-weight:800;color:var(--accent);background:rgba(10,132,255,.1);padding:3px 7px;border-radius:4px;letter-spacing:1px;min-width:28px;text-align:center}
-.layer-name{font-size:11px;font-weight:600;color:var(--text)}
-.layer-desc{font-size:10px;color:var(--text3);margin-left:auto}
-.engine-right{width:280px;flex-shrink:0;display:flex;flex-direction:column;gap:12px}
-.engine-viz{background:rgba(10,10,12,.8);border:1px solid var(--border);border-radius:var(--r2);padding:18px;flex:1;display:flex;flex-direction:column}
-.viz-title{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px;text-align:center}
-.viz-ring{width:140px;height:140px;margin:0 auto 14px;position:relative}
-.viz-ring svg{width:100%;height:100%}
-.viz-ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.viz-ring-val{font-size:32px;font-weight:900;color:var(--accent2);line-height:1}
-.viz-ring-lbl{font-size:9px;color:var(--text2);margin-top:2px;font-weight:600}
-.viz-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.viz-stat{text-align:center;padding:8px;background:rgba(255,255,255,.02);border-radius:8px}
-.viz-stat-val{font-size:15px;font-weight:800;line-height:1}
-.viz-stat-lbl{font-size:8px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
+/* ─ FORECAST DEEP DIVE ───────────────────────────── */
+.forecast-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r3);padding:40px;margin-top:48px;position:relative;overflow:hidden}
+.forecast-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--amber),var(--amber3),var(--green))}
+.forecast-top{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-bottom:32px}
+.forecast-dim{padding:20px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);text-align:center}
+.forecast-dim-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
+.forecast-dim-val{font-size:28px;font-weight:900;line-height:1;margin-bottom:4px}
+.forecast-dim-sub{font-size:10px;color:var(--text3);font-weight:500}
+.forecast-dim.quant .forecast-dim-label{color:var(--blue2)}
+.forecast-dim.quant .forecast-dim-val{color:var(--blue2)}
+.forecast-dim.qual .forecast-dim-label{color:var(--amber2)}
+.forecast-dim.qual .forecast-dim-val{color:var(--amber2)}
+.forecast-dim.framework .forecast-dim-label{color:var(--green)}
+.forecast-dim.framework .forecast-dim-val{color:var(--green)}
+.components-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.comp-item{padding:12px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);text-align:center;transition:.2s}
+.comp-item:hover{border-color:var(--amber-border);background:var(--amber-glass)}
+.comp-weight{font-size:16px;font-weight:900;color:var(--amber2);line-height:1}
+.comp-name{font-size:8px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:4px;line-height:1.3}
 
-/* ── CTA FINAL ───────────────────────────────────────────────── */
-.final-cta{padding:40px 32px 24px;text-align:center;max-width:600px;margin:0 auto}
-.final-cta h2{font-size:24px;font-weight:800;margin-bottom:10px;letter-spacing:-.5px}
-.final-cta p{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:20px}
+/* ─ DAG PIPELINE ─────────────────────────────────── */
+.dag-section{margin-top:48px}
+.dag-phases{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:32px}
+.dag-phase{padding:10px 16px;border-radius:var(--r);font-size:11px;font-weight:700;border:1px solid var(--border);background:var(--bg2);color:var(--text2);transition:.3s;cursor:default;text-align:center}
+.dag-phase span{display:block;font-size:8px;font-weight:600;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.5px}
+.dag-phase:hover,.dag-phase.active{border-color:var(--amber-border);background:var(--amber-glass);color:var(--amber2)}
+.dag-phase:hover span,.dag-phase.active span{color:var(--amber)}
+.dag-connector{display:flex;align-items:center;justify-content:center;gap:8px;margin:24px 0;color:var(--text3);font-size:11px;font-weight:600}
+.dag-connector::before,.dag-connector::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--amber-border),transparent)}
 
-/* ── FOOTER ──────────────────────────────────────────────────── */
-.footer{padding:20px 32px;border-top:1px solid var(--border);text-align:center;flex-shrink:0}
+/* ─ LAYERS LIST ──────────────────────────────────── */
+.layers-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:32px}
+.layer-row{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);transition:.2s}
+.layer-row:hover{border-color:var(--amber-border);background:var(--amber-glass)}
+.layer-num-badge{font-size:9px;font-weight:800;color:var(--amber);background:var(--amber-glass);border:1px solid var(--amber-border);padding:3px 8px;border-radius:4px;min-width:38px;text-align:center;letter-spacing:.5px;flex-shrink:0}
+.layer-name{font-size:12px;font-weight:600;color:var(--text)}
+.layer-desc{font-size:10px;color:var(--text3);margin-left:auto;text-align:right;max-width:160px}
+
+/* ─ SIGNALS ──────────────────────────────────────── */
+.signals-section{margin-top:48px}
+.signals-cats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:32px}
+.sig-cat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:22px;transition:.3s}
+.sig-cat:hover{border-color:var(--amber-border)}
+.sig-cat-hdr{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.sig-cat-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.sig-cat-name{font-size:12px;font-weight:700}
+.sig-cat-count{margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:var(--amber-glass);color:var(--amber2);border:1px solid var(--amber-border)}
+.sig-list{display:flex;flex-direction:column;gap:5px}
+.sig-item{font-size:11px;color:var(--text2);padding:5px 10px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:5px;display:flex;align-items:center;gap:6px;transition:.2s}
+.sig-item:hover{color:var(--text);border-color:var(--border2)}
+.sig-item::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.5;flex-shrink:0}
+
+/* ─ GOVERNANCE ───────────────────────────────────── */
+.gov-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:32px}
+.kill-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:18px;border-left:3px solid var(--red);transition:.3s}
+.kill-card:hover{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.03)}
+.kill-num{font-size:20px;font-weight:900;color:var(--red);line-height:1;margin-bottom:4px}
+.kill-name{font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px}
+.kill-desc{font-size:10px;color:var(--text2);line-height:1.5}
+
+/* ─ ROLES ────────────────────────────────────────── */
+.roles-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:32px}
+.role-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:18px;text-align:center;transition:.3s}
+.role-card:hover{border-color:var(--amber-border);transform:translateY(-2px)}
+.role-icon{font-size:28px;margin-bottom:10px}
+.role-name{font-size:12px;font-weight:700;margin-bottom:4px}
+.role-framework{font-size:10px;color:var(--amber2);font-weight:600;padding:2px 8px;border-radius:4px;background:var(--amber-glass);border:1px solid var(--amber-border);display:inline-block}
+.role-desc{font-size:10px;color:var(--text2);line-height:1.5;margin-top:8px}
+
+/* ─ ARCHITECTURE ─────────────────────────────────── */
+.arch-flow{display:flex;align-items:center;gap:0;margin-top:40px;overflow-x:auto;padding:8px 0}
+.arch-node{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px 20px;text-align:center;min-width:160px;flex-shrink:0;transition:.2s}
+.arch-node:hover{border-color:var(--amber-border)}
+.arch-node-icon{font-size:22px;margin-bottom:6px}
+.arch-node-name{font-size:11px;font-weight:700;margin-bottom:2px}
+.arch-node-desc{font-size:9px;color:var(--text3);font-weight:500}
+.arch-arrow{font-size:18px;color:var(--amber);opacity:.4;padding:0 4px;flex-shrink:0}
+.arch-legend{display:flex;gap:16px;justify-content:center;margin-top:24px;flex-wrap:wrap}
+.arch-leg-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);font-weight:500}
+.arch-leg-dot{width:8px;height:8px;border-radius:50%}
+
+/* ─ COCKPIT PREVIEW ──────────────────────────────── */
+.cockpit-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:40px}
+.cockpit-tab{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:24px;transition:.3s}
+.cockpit-tab:hover{border-color:var(--amber-border)}
+.cockpit-tab-top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.tab-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.cockpit-tab-name{font-size:13px;font-weight:700}
+.cockpit-tab-sub{font-size:10px;color:var(--text2);font-weight:500}
+.tab-features{display:flex;flex-direction:column;gap:5px}
+.tab-feat{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px}
+.tab-feat::before{content:'→';color:var(--amber);font-weight:700;font-size:10px}
+
+/* ─ CTA FINAL ────────────────────────────────────── */
+.cta-section{padding:100px 32px;text-align:center;max-width:800px;margin:0 auto}
+.cta-section h2{font-size:46px;font-weight:900;letter-spacing:-1.5px;margin-bottom:16px;line-height:1.1}
+.cta-section h2 .amber{color:var(--amber2)}
+.cta-section p{font-size:16px;color:var(--text2);line-height:1.7;margin-bottom:36px}
+.cta-pills{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:32px}
+.cta-pill{font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px;background:var(--amber-glass);color:var(--amber2);border:1px solid var(--amber-border)}
+
+/* ─ FOOTER ───────────────────────────────────────── */
+footer{border-top:1px solid var(--border);padding:24px 32px;text-align:center}
 .footer-text{font-size:11px;color:var(--text3);font-weight:500}
-.footer-text strong{color:var(--text2);font-weight:700}
+.footer-text b{color:var(--text2)}
 
-/* ── ANIMATIONS ──────────────────────────────────────────────── */
-@keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-.fade-in{opacity:0;animation:fadeInUp .6s ease forwards}
-.fade-in.d1{animation-delay:.1s}.fade-in.d2{animation-delay:.2s}.fade-in.d3{animation-delay:.3s}.fade-in.d4{animation-delay:.4s}
+/* ─ ANIMATIONS ───────────────────────────────────── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.anim{opacity:0;animation:fadeUp .6s ease forwards}
+.anim.d1{animation-delay:.1s}.anim.d2{animation-delay:.2s}.anim.d3{animation-delay:.3s}.anim.d4{animation-delay:.4s}.anim.d5{animation-delay:.5s}
 
-/* ── RESPONSIVE ──────────────────────────────────────────────── */
+/* ─ RESPONSIVE ───────────────────────────────────── */
 @media(max-width:1000px){
-  .hero h1{font-size:36px}
+  .hero h1{font-size:44px}
   .pillars-grid{grid-template-columns:repeat(2,1fr)}
-  .engine-card{flex-direction:column}
-  .engine-right{width:100%}
-  .xray-grid{grid-template-columns:1fr}
-  .xray-arrow-col{flex-direction:row;padding:8px 0}
-  .hero-dashboard{grid-template-columns:1fr}
+  .forecast-top{grid-template-columns:1fr}
+  .components-grid{grid-template-columns:repeat(4,1fr)}
+  .layers-grid{grid-template-columns:1fr}
+  .signals-cats{grid-template-columns:1fr 1fr}
+  .gov-grid{grid-template-columns:repeat(2,1fr)}
+  .roles-grid{grid-template-columns:repeat(3,1fr)}
+  .cockpit-grid{grid-template-columns:1fr}
+  .stats-inner{grid-template-columns:repeat(3,1fr)}
+  .contrast-grid{grid-template-columns:1fr}
+  .contrast-mid{flex-direction:row;padding:8px 0}
 }
 @media(max-width:600px){
-  .hero{padding:40px 16px 24px}
-  .hero h1{font-size:28px}
+  .hero{padding:60px 16px 48px}
+  .hero h1{font-size:32px;letter-spacing:-1px}
+  .wrap,.section,.hero,.stats-bar,.cta-section{padding-left:16px;padding-right:16px}
+  .nav-inner{padding:0 16px}
+  .nav-links .nav-link{display:none}
   .pillars-grid{grid-template-columns:1fr}
-  .topbar{padding:0 16px}
-  section{padding-left:16px;padding-right:16px}
-  .xray-card{padding:20px}
-  .engine-card{padding:20px}
+  .stats-inner{grid-template-columns:repeat(2,1fr)}
+  .roles-grid{grid-template-columns:repeat(2,1fr)}
+  .signals-cats{grid-template-columns:1fr}
+  .gov-grid{grid-template-columns:1fr 1fr}
+  .components-grid{grid-template-columns:repeat(3,1fr)}
+  .cta-section h2{font-size:30px}
 }
 </style>
 </head>
 <body>
 
-<div class="bg-grid"></div>
-<div class="bg-glow bg-glow-1"></div>
-<div class="bg-glow bg-glow-2"></div>
-<div class="bg-glow bg-glow-3"></div>
+<!-- BG -->
+<div class="bg-layer bg-grid"></div>
+<div class="bg-layer bg-noise"></div>
+<div class="glow-top"></div>
+<div class="glow-right"></div>
 
-<div class="container">
+<main>
 
-  <!-- TOPBAR -->
-  <header class="topbar">
-    <div class="logo">
+<!-- ═══════════════════════════════════ NAV ═══ -->
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="#">
       <div class="logo-mark">EC</div>
-      <span class="logo-text">Elucy</span>
-      <span class="logo-badge">ENTERPRISE</span>
+      <span class="logo-name">Elucy</span>
+      <span class="logo-tag">ENTERPRISE</span>
+    </a>
+    <div class="nav-links">
+      <span class="nav-link" onclick="document.getElementById('s-problem').scrollIntoView({behavior:'smooth'})">Problema</span>
+      <span class="nav-link" onclick="document.getElementById('s-pillars').scrollIntoView({behavior:'smooth'})">Pilares</span>
+      <span class="nav-link" onclick="document.getElementById('s-forecast').scrollIntoView({behavior:'smooth'})">Forecast</span>
+      <span class="nav-link" onclick="document.getElementById('s-engine').scrollIntoView({behavior:'smooth'})">Motor</span>
+      <span class="nav-link" onclick="document.getElementById('s-governance').scrollIntoView({behavior:'smooth'})">Governança</span>
+      <a class="btn-nav" href="cockpit.html">Cockpit →</a>
     </div>
-    <div class="topbar-right">
-      <span class="top-link" onclick="document.querySelector('.pillars').scrollIntoView({behavior:'smooth'})">Pilares</span>
-      <span class="top-link" onclick="document.querySelector('.xray').scrollIntoView({behavior:'smooth'})">X-Ray</span>
-      <span class="top-link" onclick="document.querySelector('.engine').scrollIntoView({behavior:'smooth'})">Motor</span>
-      <a class="btn-cockpit" href="cockpit.html">Abrir Cockpit &rarr;</a>
-    </div>
-  </header>
+  </div>
+</nav>
 
-  <!-- ════════════════════════════════════════════════════════════ -->
-  <!-- HERO — CRO Persona                                         -->
-  <!-- ════════════════════════════════════════════════════════════ -->
-  <section class="hero">
-    <div class="hero-eyebrow fade-in">
-      <span class="dot"></span>
-      Revenue Intelligence Enterprise &mdash; Ativo
-    </div>
-    <h1 class="fade-in d1">O Fim do Achismo<br>em Vendas Complexas</h1>
-    <p class="hero-sub fade-in d2">
-      Seu CRM mostra <strong>o que aconteceu</strong>. O Elucy mostra <strong>por que aconteceu</strong>, <strong>o que vai acontecer</strong> e <strong>o que fazer agora</strong> &mdash; com 49 sinais comportamentais, forecast de 7 componentes e governan&ccedil;a ativa por deal.
-    </p>
-    <div class="hero-ctas fade-in d3">
-      <a class="btn-primary" href="cockpit.html">Entrar no Cockpit</a>
-      <a class="btn-secondary" onclick="document.querySelector('.xray').scrollIntoView({behavior:'smooth'})">Ver o X-Ray &darr;</a>
-    </div>
-  </section>
+<!-- ═══════════════════════════════════ HERO ═══ -->
+<div class="hero anim">
+  <div class="hero-pill">
+    <span class="live"></span>
+    Revenue Intelligence Enterprise — Ativo
+  </div>
+  <h1>
+    <span class="line1">Chega de Achismo.</span>
+    <span class="line2">Decisão por Evidência.</span>
+  </h1>
+  <p class="hero-sub anim d2">
+    Seu CRM entrega <b>o que aconteceu</b>. O Elucy entrega <b>por que aconteceu</b>, <b>o que vai acontecer</b> e <b>o que fazer agora</b> — com 49 sinais comportamentais, forecast de 7 componentes e 25 camadas de inteligência por deal.
+  </p>
+  <div class="hero-btns anim d3">
+    <a class="btn-primary" href="cockpit.html">Entrar no Cockpit →</a>
+    <a class="btn-outline" onclick="document.getElementById('s-problem').scrollIntoView({behavior:'smooth'})">Ver como funciona ↓</a>
+  </div>
+</div>
 
-  <!-- ════════════════════════════════════════════════════════════ -->
-  <!-- HERO DASHBOARD — Quantitativo vs Qualitativo                -->
-  <!-- ════════════════════════════════════════════════════════════ -->
-  <section style="padding-top:0;padding-bottom:0">
-    <div class="hero-dashboard fade-in d4">
-      <!-- PAINEL QUANTITATIVO -->
-      <div class="dash-panel quant" style="position:relative">
-        <div class="dash-panel-header">
-          <span class="dash-panel-title">Pipeline Quantitativo</span>
-          <span class="dash-panel-badge">CRM Data</span>
-        </div>
-        <div class="dash-rows">
-          <div class="dash-row">
-            <span class="dash-row-label">Deals Ativos</span>
-            <span class="dash-row-val blue" id="d-deals">--</span>
-          </div>
-          <div class="dash-row">
-            <span class="dash-row-label">Valor Pipeline</span>
-            <span class="dash-row-val blue" id="d-valor">--</span>
-          </div>
-          <div class="dash-row">
-            <span class="dash-row-label">Conectados</span>
-            <span class="dash-row-val white" id="d-conectados">--</span>
-          </div>
-          <div class="dash-row">
-            <span class="dash-row-label">Agendamentos</span>
-            <span class="dash-row-val white" id="d-agendados">--</span>
-          </div>
-        </div>
-        <div class="dash-highlight">
-          <div class="dash-highlight-label">Deals em Risco &mdash; Ocultos no CRM</div>
-          <div class="dash-highlight-row">
-            <span class="dash-highlight-val" id="d-risco">--</span>
-            <span class="dash-highlight-of">de <span id="d-risco-total">--</span> deals</span>
-          </div>
-        </div>
-        <div class="dash-connector" style="display:none"></div>
+<!-- ═══════════════════════════════════ STATS BAR ═══ -->
+<div class="stats-bar anim d4">
+  <div class="stats-inner">
+    <div class="stat-cell amber">
+      <div class="stat-val">49</div>
+      <div class="stat-lbl">Sinais por Deal</div>
+    </div>
+    <div class="stat-cell blue">
+      <div class="stat-val">25</div>
+      <div class="stat-lbl">Layers de Inteligência</div>
+    </div>
+    <div class="stat-cell green">
+      <div class="stat-val">9</div>
+      <div class="stat-lbl">Fases DAG</div>
+    </div>
+    <div class="stat-cell red">
+      <div class="stat-val">7</div>
+      <div class="stat-lbl">Kill Switches</div>
+    </div>
+    <div class="stat-cell purple">
+      <div class="stat-val">3</div>
+      <div class="stat-lbl">Dim. Forecast</div>
+    </div>
+  </div>
+</div>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════════════════ PROBLEMA / CONTRASTE ═══ -->
+<section id="s-problem" class="section">
+  <div class="sec-eyebrow">O Problema</div>
+  <div class="sec-title">O CRM te dá uma foto. O Elucy te dá um filme.</div>
+  <p class="sec-sub">Cada deal no seu pipeline tem uma história que o CRM não conta. O Elucy revela camada por camada o que está realmente acontecendo.</p>
+
+  <div class="contrast-grid">
+    <!-- CRM -->
+    <div class="contrast-col crm">
+      <div class="contrast-col-hdr">Visão CRM — Surface</div>
+      <div class="contrast-item">
+        <div class="contrast-item-lbl">Etapa</div>
+        <div class="contrast-item-val">Agendamento</div>
       </div>
-
-      <!-- PAINEL QUALITATIVO -->
-      <div class="dash-panel qual">
-        <div class="dash-panel-header">
-          <span class="dash-panel-title">Inteligencia Qualitativa</span>
-          <span class="dash-panel-badge">Elucy Engine</span>
-        </div>
-        <div class="dash-rows">
-          <div class="dash-row">
-            <span class="dash-row-label">Sinais Detectados</span>
-            <span class="dash-row-val green">49 tipos</span>
-          </div>
-          <div class="dash-row">
-            <span class="dash-row-label">Forecast Dimensions</span>
-            <span class="dash-row-val green">Quant x Qual x Framework</span>
-          </div>
-          <div class="dash-row">
-            <span class="dash-row-label">Kill Switches</span>
-            <span class="dash-row-val red">7 ativos</span>
-          </div>
-          <div class="dash-row">
-            <span class="dash-row-label">Decision Layers</span>
-            <span class="dash-row-val orange">25 por deal</span>
-          </div>
-        </div>
-        <div class="dash-trust">
-          <div class="dash-trust-label">Enterprise Scores</div>
-          <div class="dash-trust-row">
-            <div class="dash-trust-item">
-              <div class="dash-trust-val" style="color:var(--green)">0.73</div>
-              <div class="dash-trust-sub">Trust Score</div>
-            </div>
-            <div class="dash-trust-item">
-              <div class="dash-trust-val" style="color:var(--accent2)">0.68</div>
-              <div class="dash-trust-sub">EVS</div>
-            </div>
-            <div class="dash-trust-item">
-              <div class="dash-trust-val" style="color:var(--yellow)">0.81</div>
-              <div class="dash-trust-sub">DQI</div>
-            </div>
-          </div>
-        </div>
+      <div class="contrast-item">
+        <div class="contrast-item-lbl">Probabilidade</div>
+        <div class="contrast-item-val">40% (stage-based)</div>
+      </div>
+      <div class="contrast-item">
+        <div class="contrast-item-lbl">Valor</div>
+        <div class="contrast-item-val">R$ 38.000</div>
+      </div>
+      <div class="contrast-item">
+        <div class="contrast-item-lbl">Último Contato</div>
+        <div class="contrast-item-val">3 dias atrás</div>
+      </div>
+      <div class="contrast-item">
+        <div class="contrast-item-lbl">Nota</div>
+        <div class="contrast-item-val">Lead interessado, agendar call</div>
+      </div>
+      <div class="contrast-item">
+        <div class="contrast-item-lbl">Próxima Ação</div>
+        <div class="contrast-item-val">— não definida —</div>
       </div>
     </div>
-  </section>
 
-  <!-- CONTRAST BANNER -->
-  <div class="contrast-banner">
-    <p class="contrast-text">
-      O painel esquerdo e tudo que seu CRM entrega. O painel direito e o que o <em>Elucy revela por baixo</em>.<br>
-      <strong>A diferen&ccedil;a entre os dois e a receita que voce esta perdendo sem saber.</strong>
-    </p>
+    <!-- SETAS -->
+    <div class="contrast-mid">
+      <span class="contrast-arrow">→</span>
+      <span class="contrast-arrow">→</span>
+      <span class="contrast-arrow">→</span>
+      <span class="contrast-arrow">→</span>
+    </div>
+
+    <!-- ELUCY -->
+    <div class="contrast-col elucy">
+      <div class="contrast-col-hdr">Elucy Intelligence — Deep</div>
+      <div class="contrast-item">
+        <div class="contrast-item-lbl">Fase + Readiness</div>
+        <div class="contrast-item-val">Agendado · Readiness <span style="color:var(--amber2)">0.62</span> · 2 hard blocks ativos</div>
+      </div>
+      <div class="contrast-item">
+        <div class="contrast-item-lbl">Forecast V7 — Real</div>
+        <div class="contrast-item-val">Confidence <span style="color:var(--red)">0.34</span> · Framework gap em Authority</div>
+      </div>
+      <div class="contrast-item">
+        <div class="contrast-item-lbl">Opportunity Value (7 fatores)</div>
+        <div class="contrast-item-val"><span style="color:var(--amber2)">R$ 26.600</span> ajustado · aging penaliza 30%</div>
+      </div>
+      <div class="contrast-item">
+        <div class="contrast-item-lbl">Sinais Detectados</div>
+        <div class="contrast-item-val"><span style="color:var(--red)">3 risk</span> · <span style="color:var(--green)">1 buy</span> · velocity_drop + ghost_risk</div>
+      </div>
+      <div class="contrast-item">
+        <div class="contrast-item-lbl">Data Trust Score</div>
+        <div class="contrast-item-val"><span style="color:var(--amber)">0.58</span> · Recency baixa, evidence incompleta</div>
+      </div>
+      <div class="contrast-item">
+        <div class="contrast-item-lbl">Próxima Ação (DAG)</div>
+        <div class="contrast-item-val" style="color:var(--green)">authority_confirmation → pain_quantification</div>
+      </div>
+    </div>
   </div>
 
-  <!-- ════════════════════════════════════════════════════════════ -->
-  <!-- 4 PILARES DE BENEFICIO                                      -->
-  <!-- ════════════════════════════════════════════════════════════ -->
-  <section class="pillars">
-    <div class="section-label">Revenue Intelligence Stack</div>
-    <div class="section-title">4 Pilares que o CRM Nao Entrega</div>
-    <div class="pillars-grid">
-
-      <!-- A: Conversational Intelligence -->
-      <div class="pillar">
-        <div class="pillar-icon conv">&#x1F50D;</div>
-        <h3>Conversational Intelligence</h3>
-        <p>Signal Engine V8 analisa cada interacao e detecta sinais de compra, risco e estagnacao em tempo real. CSE com 8 estados rastreia a jornada conversacional.</p>
-        <div class="pillar-stat">
-          <span class="pillar-stat-val" style="color:var(--accent2)">49</span>
-          <span class="pillar-stat-lbl">sinais comportamentais / deal</span>
-        </div>
-        <div class="pillar-tags">
-          <span class="pillar-tag blue">SIGNAL ENGINE V8</span>
-          <span class="pillar-tag blue">CSE 8 STATES</span>
-        </div>
-      </div>
-
-      <!-- B: Predictive Forecast -->
-      <div class="pillar">
-        <div class="pillar-icon fore">&#x1F4C8;</div>
-        <h3>Predictive Forecast V7</h3>
-        <p>Tres dimensoes (quantitativo x qualitativo x framework) e 7 componentes de confianca. Forecast explicavel com audit trail, nao black box.</p>
-        <div class="pillar-stat">
-          <span class="pillar-stat-val" style="color:var(--green)">7</span>
-          <span class="pillar-stat-lbl">componentes de confianca</span>
-        </div>
-        <div class="pillar-tags">
-          <span class="pillar-tag green">3 DIMENSOES</span>
-          <span class="pillar-tag green">AUDIT TRAIL</span>
-        </div>
-      </div>
-
-      <!-- C: Governance Kill Switches -->
-      <div class="pillar">
-        <div class="pillar-icon gov">&#x1F6E1;</div>
-        <h3>Governance &amp; Kill Switches</h3>
-        <p>7 kill switches ativos: framework violation, premature close, anti-anxiety, tier block, authority gap, data trust floor e BEG compliance. Erro fatal = bloqueio automatico.</p>
-        <div class="pillar-stat">
-          <span class="pillar-stat-val" style="color:var(--red)">7</span>
-          <span class="pillar-stat-lbl">kill switches ativos</span>
-        </div>
-        <div class="pillar-tags">
-          <span class="pillar-tag red">BEG GOVERNOR</span>
-          <span class="pillar-tag red">ZERO TOLERANCE</span>
-        </div>
-      </div>
-
-      <!-- D: Enterprise Intelligence -->
-      <div class="pillar">
-        <div class="pillar-icon ent">&#x1F3AF;</div>
-        <h3>Enterprise Intelligence</h3>
-        <p>Portfolio Prioritization (valor x urgencia x acionabilidade), Attribution Engine com janela 72h, e Data Quality Engine com trust score de 4 dimensoes.</p>
-        <div class="pillar-stat">
-          <span class="pillar-stat-val" style="color:var(--yellow)">25</span>
-          <span class="pillar-stat-lbl">decision layers / deal</span>
-        </div>
-        <div class="pillar-tags">
-          <span class="pillar-tag gold">DQI ENGINE</span>
-          <span class="pillar-tag gold">ATTRIBUTION</span>
-        </div>
-      </div>
-
+  <div class="contrast-verdict">
+    <div class="verdict-lbl">Elucy Verdict</div>
+    <div class="verdict-text">
+      O CRM diz <span class="risk">"40% de probabilidade"</span>. O Elucy diz <span class="risk">"confidence real 0.34"</span> com <span class="amber">authority gap não resolvido</span>. Sem intervenção, este deal entra em ghost em 48h. Ação recomendada: <span class="signal">confirmar autoridade antes de qualquer avanço de framework</span>.
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- ════════════════════════════════════════════════════════════ -->
-  <!-- X-RAY — Deal Drill-Down Interativo                          -->
-  <!-- ════════════════════════════════════════════════════════════ -->
-  <section class="xray">
-    <div class="section-label">X-Ray de Deal</div>
-    <div class="section-title">O que o CRM mostra vs. o que o Elucy ve</div>
+<div class="section-divider"></div>
 
-    <div class="xray-card">
-      <div class="xray-header">
-        <h2>Deal #4821 &mdash; Empresa Exemplo S.A.</h2>
-        <p>Imersao Presencial &middot; Gold &middot; Pipeline ha 12 dias</p>
-      </div>
+<!-- ═══════════════════════════════════ PILLARS ═══ -->
+<section id="s-pillars" class="section">
+  <div class="sec-eyebrow">Revenue Intelligence Stack</div>
+  <div class="sec-title">4 Pilares que o CRM Não Entrega</div>
+  <p class="sec-sub">Cada pilar resolve uma dimensão de cegueira diferente — juntos, cobrem 100% do deal lifecycle.</p>
 
-      <div class="xray-grid">
-        <!-- COLUNA SURFACE (CRM) -->
-        <div class="xray-col surface">
-          <div class="xray-col-label">Visao CRM (Surface)</div>
-          <div class="xray-item">
-            <div class="xray-item-label">Etapa</div>
-            <div class="xray-item-val">Agendamento</div>
-          </div>
-          <div class="xray-item">
-            <div class="xray-item-label">Valor</div>
-            <div class="xray-item-val">R$ 38.000</div>
-          </div>
-          <div class="xray-item">
-            <div class="xray-item-label">Probabilidade</div>
-            <div class="xray-item-val">40% (stage-based)</div>
-          </div>
-          <div class="xray-item">
-            <div class="xray-item-label">Ultimo Contato</div>
-            <div class="xray-item-val">3 dias atras</div>
-          </div>
-          <div class="xray-item">
-            <div class="xray-item-label">Nota CRM</div>
-            <div class="xray-item-val">Lead interessado, agendar call</div>
-          </div>
-        </div>
-
-        <!-- SETAS -->
-        <div class="xray-arrow-col">
-          <span class="xray-arrow">&rarr;</span>
-          <span class="xray-arrow">&rarr;</span>
-          <span class="xray-arrow">&rarr;</span>
-          <span class="xray-arrow">&rarr;</span>
-          <span class="xray-arrow">&rarr;</span>
-        </div>
-
-        <!-- COLUNA DEEP (ELUCY) -->
-        <div class="xray-col deep">
-          <div class="xray-col-label">Elucy Intelligence (Deep)</div>
-          <div class="xray-item">
-            <div class="xray-item-label">Fase + Readiness</div>
-            <div class="xray-item-val">Agendado &middot; Readiness <span style="color:var(--yellow)">0.62</span> &middot; 2 hard blocks</div>
-          </div>
-          <div class="xray-item">
-            <div class="xray-item-label">Forecast V7</div>
-            <div class="xray-item-val">Confidence <span style="color:var(--red)">0.34</span> &middot; Framework gap em Authority</div>
-          </div>
-          <div class="xray-item">
-            <div class="xray-item-label">Sinais Ativos</div>
-            <div class="xray-item-val"><span style="color:var(--red)">3 risk</span> &middot; <span style="color:var(--green)">1 buy</span> &middot; velocity_drop + ghost_risk</div>
-          </div>
-          <div class="xray-item">
-            <div class="xray-item-label">Data Trust Score</div>
-            <div class="xray-item-val"><span style="color:var(--orange)">0.58</span> &middot; Recency baixa, evidence incompleta</div>
-          </div>
-          <div class="xray-item">
-            <div class="xray-item-label">Proxima Acao (DAG)</div>
-            <div class="xray-item-val" style="color:var(--green)">authority_confirmation &rarr; pain_quantification</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- VERDICT -->
-      <div class="xray-verdict">
-        <div class="xray-verdict-label">Elucy Verdict</div>
-        <div class="xray-verdict-text">
-          CRM diz <span class="risk">"40% probabilidade"</span>. Elucy diz <span class="risk">"confidence real 0.34"</span> com <span class="signal">authority gap nao resolvido</span>.
-          Sem interven&ccedil;ao, este deal entra em ghost em 48h. A&ccedil;ao recomendada: <span class="signal">confirmar autoridade antes de qualquer avan&ccedil;o</span>.
-        </div>
-      </div>
-
-      <!-- DAG STRIP -->
-      <div class="dag-strip">
-        <div class="dag-phase active">P1 Context</div>
-        <div class="dag-phase active">P2 Taxonomy</div>
-        <div class="dag-phase active">P3 Runtime</div>
-        <div class="dag-phase active">P4 Tasks</div>
-        <div class="dag-phase active">P5 Analytics</div>
-        <div class="dag-phase active">P6 Forecast</div>
-        <div class="dag-phase active">P7 Framework</div>
-        <div class="dag-phase active">P8 Signals</div>
-        <div class="dag-phase active">P9 Intelligence</div>
+  <div class="pillars-grid">
+    <div class="pillar-card p1">
+      <div class="pillar-icon">🔍</div>
+      <h3>Conversational Intelligence</h3>
+      <p>Signal Engine V8 analisa cada interação e detecta sinais de compra, risco e estagnação em tempo real. CSE com 8 estados rastreia a jornada conversacional com granularidade cirúrgica.</p>
+      <div class="pillar-num" style="color:var(--amber2)">49</div>
+      <div class="pillar-num-lbl">sinais comportamentais por deal</div>
+      <div class="pillar-tags">
+        <span class="ptag amber">SIGNAL V8</span>
+        <span class="ptag amber">CSE 8 STATES</span>
       </div>
     </div>
-  </section>
 
-  <!-- ════════════════════════════════════════════════════════════ -->
-  <!-- ENGINE — 25 Layers, 9 Fases DAG                             -->
-  <!-- ════════════════════════════════════════════════════════════ -->
-  <section class="engine">
-    <div class="engine-card">
-      <div class="engine-left">
-        <div class="engine-label">Motor de Decisao</div>
-        <h2>25 Camadas de Inteligencia em 9 Fases DAG</h2>
-        <p>O Elucy nao e um dashboard &mdash; e um motor de decisao com DAG orquestrado em 9 fases sem ciclos, que processa cada deal em tempo real e entrega a proxima melhor acao.</p>
-        <div class="engine-layers">
-          <div class="engine-layer"><span class="layer-num">L1-L2</span><span class="layer-name">Contexto & Taxonomia</span><span class="layer-desc">operador, linhas, tiers, frameworks</span></div>
-          <div class="engine-layer"><span class="layer-num">L3-L4</span><span class="layer-name">Deal Runtime & Tasks</span><span class="layer-desc">enriquecimento + filas de execucao</span></div>
-          <div class="engine-layer"><span class="layer-num">L5-L12</span><span class="layer-name">Analytics, Cadencia & Sync</span><span class="layer-desc">KPIs, touchpoints, snapshots</span></div>
-          <div class="engine-layer"><span class="layer-num">L13-L15</span><span class="layer-name">Forecast V7 & Performance</span><span class="layer-desc">quant x qual x framework + operator model</span></div>
-          <div class="engine-layer"><span class="layer-num">L16-L17</span><span class="layer-name">Framework Intelligence</span><span class="layer-desc">SPICED, MEDDIC, gap analysis</span></div>
-          <div class="engine-layer"><span class="layer-num">L18</span><span class="layer-name">Signal Engine V8</span><span class="layer-desc">49 sinais canonicos, 6 categorias</span></div>
-          <div class="engine-layer"><span class="layer-num">L19</span><span class="layer-name">Data Quality Engine V10</span><span class="layer-desc">trust score 4 dimensoes</span></div>
-          <div class="engine-layer"><span class="layer-num">L20</span><span class="layer-name">Transition Rules Engine</span><span class="layer-desc">readiness + hard blocks</span></div>
-          <div class="engine-layer"><span class="layer-num">L21</span><span class="layer-name">Portfolio Prioritization</span><span class="layer-desc">valor x urgencia x acionabilidade</span></div>
-          <div class="engine-layer"><span class="layer-num">L22</span><span class="layer-name">Attribution Engine V10</span><span class="layer-desc">janela 72h, proximity weights</span></div>
+    <div class="pillar-card p2">
+      <div class="pillar-icon">📈</div>
+      <h3>Predictive Forecast V7</h3>
+      <p>Três dimensões ortogonais (quantitativo × qualitativo × framework) com 7 componentes de confiança ponderados. Forecast completamente explicável com audit trail append-only — não black box.</p>
+      <div class="pillar-num" style="color:var(--green)">3×7</div>
+      <div class="pillar-num-lbl">dimensões × componentes de confiança</div>
+      <div class="pillar-tags">
+        <span class="ptag green">EXPLICÁVEL</span>
+        <span class="ptag green">AUDIT TRAIL</span>
+      </div>
+    </div>
+
+    <div class="pillar-card p3">
+      <div class="pillar-icon">🛡️</div>
+      <h3>Governance & Kill Switches</h3>
+      <p>7 kill switches ativos: framework violation, premature close, anti-anxiety, tier block, authority gap, data trust floor e BEG compliance. Erro fatal = bloqueio automático antes do dano.</p>
+      <div class="pillar-num" style="color:var(--red)">7</div>
+      <div class="pillar-num-lbl">kill switches de tolerância zero</div>
+      <div class="pillar-tags">
+        <span class="ptag red">BEG GOVERNOR</span>
+        <span class="ptag red">ZERO TOLERANCE</span>
+      </div>
+    </div>
+
+    <div class="pillar-card p4">
+      <div class="pillar-icon">🎯</div>
+      <h3>Enterprise Intelligence</h3>
+      <p>Portfolio Prioritization (valor × urgência × acionabilidade × negligência), Attribution Engine 72h com proximity weights, e Data Quality Engine com trust score 4 dimensões.</p>
+      <div class="pillar-num" style="color:var(--purple)">25</div>
+      <div class="pillar-num-lbl">decision layers por deal</div>
+      <div class="pillar-tags">
+        <span class="ptag purple">DQI ENGINE</span>
+        <span class="ptag purple">ATTRIBUTION V10</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════════════════ FORECAST DEEP DIVE ═══ -->
+<section id="s-forecast" class="section">
+  <div class="sec-eyebrow">Forecast V7</div>
+  <div class="sec-title">O Forecast Mais Preciso do Mercado</div>
+  <p class="sec-sub">Três dimensões ortogonais multiplicadas por 7 componentes de confiança. Cada número tem rastreabilidade completa até o evento que o gerou.</p>
+
+  <div class="forecast-card">
+    <div class="forecast-top">
+      <div class="forecast-dim quant">
+        <div class="forecast-dim-label">Quantitativo</div>
+        <div class="forecast-dim-val">0.52</div>
+        <div class="forecast-dim-sub">stage_prob × aging × velocity × engagement</div>
+      </div>
+      <div class="forecast-dim qual">
+        <div class="forecast-dim-label">Qualitativo</div>
+        <div class="forecast-dim-val">0.61</div>
+        <div class="forecast-dim-sub">show · note · authority · urgency · behavior · next_step</div>
+      </div>
+      <div class="forecast-dim framework">
+        <div class="forecast-dim-label">Framework (V7)</div>
+        <div class="forecast-dim-val">0.74</div>
+        <div class="forecast-dim-sub">SPICED × MEDDIC × coverage × confidence × authority</div>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--text3);margin-bottom:6px">7 Componentes de Confiança (Confidence V10)</div>
+    </div>
+    <div class="components-grid">
+      <div class="comp-item">
+        <div class="comp-weight">28%</div>
+        <div class="comp-name">Framework Evidence</div>
+      </div>
+      <div class="comp-item">
+        <div class="comp-weight">18%</div>
+        <div class="comp-name">Source Density</div>
+      </div>
+      <div class="comp-item">
+        <div class="comp-weight">16%</div>
+        <div class="comp-name">Recency Reliability</div>
+      </div>
+      <div class="comp-item">
+        <div class="comp-weight">14%</div>
+        <div class="comp-name">Meeting Reliability</div>
+      </div>
+      <div class="comp-item">
+        <div class="comp-weight">10%</div>
+        <div class="comp-name">Signal Stability</div>
+      </div>
+      <div class="comp-item">
+        <div class="comp-weight">10%</div>
+        <div class="comp-name">Data Trust</div>
+      </div>
+      <div class="comp-item">
+        <div class="comp-weight">4%</div>
+        <div class="comp-name">FW Confidence</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════════════════ DAG ENGINE ═══ -->
+<section id="s-engine" class="section">
+  <div class="sec-eyebrow">Motor de Decisão</div>
+  <div class="sec-title">25 Layers em 9 Fases DAG — Sem Ciclos</div>
+  <p class="sec-sub">O Elucy não é um dashboard — é um motor de decisão com DAG orquestrado em 9 fases que processa cada deal em tempo real e entrega a próxima melhor ação.</p>
+
+  <div class="dag-section">
+    <div class="dag-phases">
+      <div class="dag-phase active">P1 — Context<span>Operador + Permissões</span></div>
+      <div class="dag-phase active">P2 — Taxonomy<span>Linhas + Tiers + Frameworks</span></div>
+      <div class="dag-phase active">P3 — Runtime<span>Deal Enrichment</span></div>
+      <div class="dag-phase active">P4 — Tasks<span>Filas de Execução</span></div>
+      <div class="dag-phase active">P5 — Analytics<span>KPIs + Snapshots</span></div>
+      <div class="dag-phase active">P6 — Forecast<span>V7 Quant×Qual×FW</span></div>
+      <div class="dag-phase active">P7 — Framework<span>SPICED + MEDDIC Gap</span></div>
+      <div class="dag-phase active">P8 — Signals<span>49 Sinais Canônicos</span></div>
+      <div class="dag-phase active">P9 — Intelligence<span>DQI + Portfolio + Attribution</span></div>
+    </div>
+
+    <div class="dag-connector">9 fases orquestradas sem dependências circulares</div>
+
+    <div class="layers-grid">
+      <div class="layer-row"><span class="layer-num-badge">L1–L2</span><span class="layer-name">Contexto & Taxonomia</span><span class="layer-desc">operador, linhas, tiers, frameworks</span></div>
+      <div class="layer-row"><span class="layer-num-badge">L3–L4</span><span class="layer-name">Deal Runtime & Tasks</span><span class="layer-desc">enriquecimento + filas</span></div>
+      <div class="layer-row"><span class="layer-num-badge">L5–L9</span><span class="layer-name">Analytics, Cadência & Sync</span><span class="layer-desc">KPIs, touchpoints, snapshots</span></div>
+      <div class="layer-row"><span class="layer-num-badge">L10–L12</span><span class="layer-name">Taxonomy Loader & DM</span><span class="layer-desc">revenue lines, kill switches, DM sequences</span></div>
+      <div class="layer-row"><span class="layer-num-badge">L13–L15</span><span class="layer-name">Forecast V7 & Performance</span><span class="layer-desc">quant × qual × framework + operator model</span></div>
+      <div class="layer-row"><span class="layer-num-badge">L16–L17</span><span class="layer-name">Framework Intelligence</span><span class="layer-desc">SPICED, MEDDIC, gap analysis</span></div>
+      <div class="layer-row"><span class="layer-num-badge">L18</span><span class="layer-name">Signal Engine V8</span><span class="layer-desc">49 sinais canônicos, 6 categorias</span></div>
+      <div class="layer-row"><span class="layer-num-badge">L19</span><span class="layer-name">Data Quality Engine V10</span><span class="layer-desc">trust score 4 dimensões</span></div>
+      <div class="layer-row"><span class="layer-num-badge">L20</span><span class="layer-name">Transition Rules Engine</span><span class="layer-desc">readiness + hard blocks por estágio</span></div>
+      <div class="layer-row"><span class="layer-num-badge">L21</span><span class="layer-name">Portfolio Prioritization</span><span class="layer-desc">valor × urgência × acionabilidade × negligência</span></div>
+      <div class="layer-row"><span class="layer-num-badge">L22</span><span class="layer-name">Attribution Engine V10</span><span class="layer-desc">janela 72h, proximity + activity + outcome</span></div>
+      <div class="layer-row"><span class="layer-num-badge">DAG</span><span class="layer-name">Orchestrator</span><span class="layer-desc">runIntelligenceDAG() — 9 fases sem ciclos</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════════════════ SIGNALS ═══ -->
+<section id="s-signals" class="section">
+  <div class="sec-eyebrow">Signal Engine V8</div>
+  <div class="sec-title">49 Sinais em 6 Categorias</div>
+  <p class="sec-sub">Cada sinal tem peso calibrado, threshold de ativação e action routing automático. Nenhum comportamento relevante passa despercebido.</p>
+
+  <div class="signals-section">
+    <div class="signals-cats">
+      <div class="sig-cat">
+        <div class="sig-cat-hdr">
+          <div class="sig-cat-dot" style="background:var(--green)"></div>
+          <span class="sig-cat-name">Sinais de Compra</span>
+          <span class="sig-cat-count">9</span>
+        </div>
+        <div class="sig-list">
+          <div class="sig-item" style="color:var(--green)">high_urgency_expressed</div>
+          <div class="sig-item" style="color:var(--green)">multiple_decision_makers</div>
+          <div class="sig-item" style="color:var(--green)">competitor_mention</div>
+          <div class="sig-item" style="color:var(--green)">budget_confirmed</div>
+          <div class="sig-item" style="color:var(--green)">timeline_pressure</div>
+          <div class="sig-item" style="color:var(--text2)">+ 4 mais...</div>
         </div>
       </div>
-      <div class="engine-right">
-        <div class="engine-viz">
-          <div class="viz-title">Cobertura de Inteligencia</div>
-          <div class="viz-ring">
-            <svg viewBox="0 0 140 140">
-              <circle cx="70" cy="70" r="60" fill="none" stroke="rgba(255,255,255,.04)" stroke-width="10"/>
-              <circle cx="70" cy="70" r="60" fill="none" stroke="url(#ring-grad)" stroke-width="10" stroke-dasharray="377" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 70 70)"/>
-              <defs><linearGradient id="ring-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0a84ff"/><stop offset="50%" stop-color="#5ac8fa"/><stop offset="100%" stop-color="#30d158"/></linearGradient></defs>
-            </svg>
-            <div class="viz-ring-center">
-              <div class="viz-ring-val">25</div>
-              <div class="viz-ring-lbl">layers ativas</div>
-            </div>
-          </div>
-          <div class="viz-stats">
-            <div class="viz-stat"><div class="viz-stat-val" style="color:var(--accent2)">49</div><div class="viz-stat-lbl">Sinais</div></div>
-            <div class="viz-stat"><div class="viz-stat-val" style="color:var(--red)">7</div><div class="viz-stat-lbl">Kill Switches</div></div>
-            <div class="viz-stat"><div class="viz-stat-val" style="color:var(--yellow)">16</div><div class="viz-stat-lbl">Linhas Receita</div></div>
-            <div class="viz-stat"><div class="viz-stat-val" style="color:var(--green)">9</div><div class="viz-stat-lbl">Fases DAG</div></div>
-          </div>
+
+      <div class="sig-cat">
+        <div class="sig-cat-hdr">
+          <div class="sig-cat-dot" style="background:var(--red)"></div>
+          <span class="sig-cat-name">Sinais de Risco</span>
+          <span class="sig-cat-count">12</span>
+        </div>
+        <div class="sig-list">
+          <div class="sig-item" style="color:var(--red)">ghost_risk</div>
+          <div class="sig-item" style="color:var(--red)">velocity_drop</div>
+          <div class="sig-item" style="color:var(--red)">authority_gap</div>
+          <div class="sig-item" style="color:var(--red)">objection_unresolved</div>
+          <div class="sig-item" style="color:var(--red)">no_show_pattern</div>
+          <div class="sig-item" style="color:var(--text2)">+ 7 mais...</div>
+        </div>
+      </div>
+
+      <div class="sig-cat">
+        <div class="sig-cat-hdr">
+          <div class="sig-cat-dot" style="background:var(--amber2)"></div>
+          <span class="sig-cat-name">Sinais de Engajamento</span>
+          <span class="sig-cat-count">8</span>
+        </div>
+        <div class="sig-list">
+          <div class="sig-item" style="color:var(--amber2)">high_response_rate</div>
+          <div class="sig-item" style="color:var(--amber2)">proactive_contact</div>
+          <div class="sig-item" style="color:var(--amber2)">content_consumption</div>
+          <div class="sig-item" style="color:var(--amber2)">multi_channel_active</div>
+          <div class="sig-item" style="color:var(--text2)">+ 4 mais...</div>
+        </div>
+      </div>
+
+      <div class="sig-cat">
+        <div class="sig-cat-hdr">
+          <div class="sig-cat-dot" style="background:var(--blue2)"></div>
+          <span class="sig-cat-name">Sinais de Framework</span>
+          <span class="sig-cat-count">10</span>
+        </div>
+        <div class="sig-list">
+          <div class="sig-item" style="color:var(--blue2)">spiced_gap_identified</div>
+          <div class="sig-item" style="color:var(--blue2)">meddic_incomplete</div>
+          <div class="sig-item" style="color:var(--blue2)">pain_not_quantified</div>
+          <div class="sig-item" style="color:var(--blue2)">champion_weak</div>
+          <div class="sig-item" style="color:var(--blue2)">economic_buyer_missing</div>
+          <div class="sig-item" style="color:var(--text2)">+ 5 mais...</div>
+        </div>
+      </div>
+
+      <div class="sig-cat">
+        <div class="sig-cat-hdr">
+          <div class="sig-cat-dot" style="background:var(--purple)"></div>
+          <span class="sig-cat-name">Sinais de Estagnação</span>
+          <span class="sig-cat-count">6</span>
+        </div>
+        <div class="sig-list">
+          <div class="sig-item" style="color:var(--purple)">stage_stuck</div>
+          <div class="sig-item" style="color:var(--purple)">aging_critical</div>
+          <div class="sig-item" style="color:var(--purple)">no_next_step</div>
+          <div class="sig-item" style="color:var(--purple)">follow_up_overdue</div>
+          <div class="sig-item" style="color:var(--text2)">+ 2 mais...</div>
+        </div>
+      </div>
+
+      <div class="sig-cat">
+        <div class="sig-cat-hdr">
+          <div class="sig-cat-dot" style="background:var(--text2)"></div>
+          <span class="sig-cat-name">Sinais de Qualidade</span>
+          <span class="sig-cat-count">4</span>
+        </div>
+        <div class="sig-list">
+          <div class="sig-item">data_incomplete</div>
+          <div class="sig-item">low_trust_score</div>
+          <div class="sig-item">inconsistent_data</div>
+          <div class="sig-item">stale_enrichment</div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- ════════════════════════════════════════════════════════════ -->
-  <!-- CTA FINAL                                                   -->
-  <!-- ════════════════════════════════════════════════════════════ -->
-  <section class="final-cta">
-    <h2>Pare de perder deals que parecem saudaveis</h2>
-    <p>Cada deal do seu pipeline tem uma historia que o CRM nao conta. O Elucy conta &mdash; com dados, sinais e governanca.</p>
-    <div class="hero-ctas">
-      <a class="btn-primary" href="cockpit.html">Acessar o Cockpit &rarr;</a>
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════════════════ GOVERNANCE ═══ -->
+<section id="s-governance" class="section">
+  <div class="sec-eyebrow">Governança Ativa</div>
+  <div class="sec-title">7 Kill Switches — Tolerância Zero</div>
+  <p class="sec-sub">Antes de qualquer ação ser entregue ao operador, passa pelo BEG Governor. Violação detectada = bloqueio automático com explicação acionável.</p>
+
+  <div class="gov-grid">
+    <div class="kill-card">
+      <div class="kill-num">KS1</div>
+      <div class="kill-name">Framework Violation</div>
+      <div class="kill-desc">Persona mismatch — Titan usando SPICED, Builder usando Challenger</div>
     </div>
-  </section>
+    <div class="kill-card">
+      <div class="kill-num">KS2</div>
+      <div class="kill-name">Premature Close</div>
+      <div class="kill-desc">Tentativa de fechamento sem readiness mínimo de 0.65</div>
+    </div>
+    <div class="kill-card">
+      <div class="kill-num">KS3</div>
+      <div class="kill-name">Anti-Anxiety</div>
+      <div class="kill-desc">Concessão de desconto ou urgência artificial para lead ansioso</div>
+    </div>
+    <div class="kill-card">
+      <div class="kill-num">KS4</div>
+      <div class="kill-name">Tier Block</div>
+      <div class="kill-desc">Tier 2 (menos de R$1M) tentando acessar Imersão Presencial</div>
+    </div>
+    <div class="kill-card">
+      <div class="kill-num">KS5</div>
+      <div class="kill-name">Authority Gap</div>
+      <div class="kill-desc">Avanço sem economic buyer confirmado no pipeline</div>
+    </div>
+    <div class="kill-card">
+      <div class="kill-num">KS6</div>
+      <div class="kill-name">Data Trust Floor</div>
+      <div class="kill-desc">Trust score abaixo de 0.40 — dados insuficientes para decisão</div>
+    </div>
+    <div class="kill-card">
+      <div class="kill-num">KS7</div>
+      <div class="kill-name">BEG Compliance</div>
+      <div class="kill-desc">Output fora do formato BEG canônico ou estágio incorreto</div>
+    </div>
+    <div class="kill-card" style="border-left-color:var(--amber);background:var(--amber-glass)">
+      <div class="kill-num" style="color:var(--amber2)">DQI</div>
+      <div class="kill-name" style="color:var(--amber2)">Decision Quality Index</div>
+      <div class="kill-desc">Métrica primária — supera receita imediata como critério de decisão</div>
+    </div>
+  </div>
+</section>
 
-  <!-- FOOTER -->
-  <footer class="footer">
-    <p class="footer-text"><strong>ELUCY</strong> &mdash; Revenue Intelligence Enterprise &middot; <strong>G4 Educacao</strong> &middot; 2026</p>
-  </footer>
+<div class="section-divider"></div>
 
+<!-- ═══════════════════════════════════ ROLES ═══ -->
+<section id="s-roles" class="section">
+  <div class="sec-eyebrow">Multi-Role</div>
+  <div class="sec-title">Um Motor, Cinco Papéis</div>
+  <p class="sec-sub">Cada role recebe o framework correto, os sinais relevantes e as ações calibradas para sua posição no ciclo de receita.</p>
+
+  <div class="roles-grid">
+    <div class="role-card">
+      <div class="role-icon">📡</div>
+      <div class="role-name">SDR</div>
+      <div class="role-framework">SPIN + Social DM</div>
+      <div class="role-desc">Pipeline diário, Social DM CQL, geração de leads qualificados</div>
+    </div>
+    <div class="role-card">
+      <div class="role-icon">⚔️</div>
+      <div class="role-name">Closer</div>
+      <div class="role-framework">Challenger / SPICED</div>
+      <div class="role-desc">Deal briefs, análise SPICED, notas CRM, Iron Dome</div>
+    </div>
+    <div class="role-card">
+      <div class="role-icon">🤝</div>
+      <div class="role-name">CS</div>
+      <div class="role-framework">SPICED Expansão</div>
+      <div class="role-desc">Expansão de conta, renovação, sinais de churn</div>
+    </div>
+    <div class="role-card">
+      <div class="role-icon">💬</div>
+      <div class="role-name">CX</div>
+      <div class="role-framework">Champion Selling</div>
+      <div class="role-desc">Suporte a decisão, gestão de expectativas</div>
+    </div>
+    <div class="role-card">
+      <div class="role-icon">📊</div>
+      <div class="role-name">Account Manager</div>
+      <div class="role-framework">SPICED + Portfolio</div>
+      <div class="role-desc">Portfolio prioritization, portfolio health, attribution</div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════════════════ COCKPIT ═══ -->
+<section id="s-cockpit" class="section">
+  <div class="sec-eyebrow">Cockpit Enterprise</div>
+  <div class="sec-title">6 Módulos. Uma Superfície.</div>
+  <p class="sec-sub">O frontend operacional do Elucy — onde cada deal tem um painel completo e cada ação é rastreada até o resultado.</p>
+
+  <div class="cockpit-grid">
+    <div class="cockpit-tab">
+      <div class="cockpit-tab-top">
+        <div class="tab-icon" style="background:var(--amber-glass);border:1px solid var(--amber-border)">🏠</div>
+        <div>
+          <div class="cockpit-tab-name">Home</div>
+          <div class="cockpit-tab-sub">Tela operacional de foco</div>
+        </div>
+      </div>
+      <div class="tab-features">
+        <div class="tab-feat">4 blocos: foco, tarefas críticas, desempenho, inteligência</div>
+        <div class="tab-feat">Focus Mode ativo (6 modos disponíveis)</div>
+        <div class="tab-feat">Score do operador em tempo real</div>
+      </div>
+    </div>
+
+    <div class="cockpit-tab">
+      <div class="cockpit-tab-top">
+        <div class="tab-icon" style="background:rgba(14,165,233,.08);border:1px solid rgba(14,165,233,.18)">📋</div>
+        <div>
+          <div class="cockpit-tab-name">Pipeline</div>
+          <div class="cockpit-tab-sub">Exploração de deals</div>
+        </div>
+      </div>
+      <div class="tab-features">
+        <div class="tab-feat">ELUCI REPORT por deal com 25 layers</div>
+        <div class="tab-feat">Filtros por fase, tier, sinal, risk level</div>
+        <div class="tab-feat">Portfolio priority score visual</div>
+      </div>
+    </div>
+
+    <div class="cockpit-tab">
+      <div class="cockpit-tab-top">
+        <div class="tab-icon" style="background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.18)">✅</div>
+        <div>
+          <div class="cockpit-tab-name">Tasks</div>
+          <div class="cockpit-tab-sub">FUP Task Runner</div>
+        </div>
+      </div>
+      <div class="tab-features">
+        <div class="tab-feat">12 tipos de task com filas por focus mode</div>
+        <div class="tab-feat">authority_confirmation, pain_quantification, framework_gap</div>
+        <div class="tab-feat">Persistência automática no Supabase</div>
+      </div>
+    </div>
+
+    <div class="cockpit-tab">
+      <div class="cockpit-tab-top">
+        <div class="tab-icon" style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.18)">💬</div>
+        <div>
+          <div class="cockpit-tab-name">DM War Room</div>
+          <div class="cockpit-tab-sub">Social DM com WhatsApp</div>
+        </div>
+      </div>
+      <div class="tab-features">
+        <div class="tab-feat">Pipeline visual com touchpoints por sequência</div>
+        <div class="tab-feat">WhatsApp deep link com copy gerada por IA</div>
+        <div class="tab-feat">DM Assist — gerador calibrado por persona</div>
+      </div>
+    </div>
+
+    <div class="cockpit-tab">
+      <div class="cockpit-tab-top">
+        <div class="tab-icon" style="background:rgba(245,158,11,.08);border:1px solid var(--amber-border)">📊</div>
+        <div>
+          <div class="cockpit-tab-name">Reports</div>
+          <div class="cockpit-tab-sub">Performance V4</div>
+        </div>
+      </div>
+      <div class="tab-features">
+        <div class="tab-feat">Filtrado por qualificador_name e período</div>
+        <div class="tab-feat">Enterprise KPI: 5M+, pipeline value, EVS, Trusted Advisor</div>
+        <div class="tab-feat">Gamificação: XP, Level, Badges, Streak</div>
+      </div>
+    </div>
+
+    <div class="cockpit-tab">
+      <div class="cockpit-tab-top">
+        <div class="tab-icon" style="background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.15)">🧠</div>
+        <div>
+          <div class="cockpit-tab-name">Intelligence</div>
+          <div class="cockpit-tab-sub">Analytics taxonômico</div>
+        </div>
+      </div>
+      <div class="tab-features">
+        <div class="tab-feat">Conversão por linha de receita e canal</div>
+        <div class="tab-feat">Attribution Engine V10 com 72h window</div>
+        <div class="tab-feat">Data Quality panorama e DQI trends</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════════════════ CTA FINAL ═══ -->
+<div class="cta-section">
+  <h2>Pare de perder deals que<br><span class="amber">parecem saudáveis.</span></h2>
+  <p>Cada deal do seu pipeline tem uma história que o CRM não conta. O Elucy conta — com dados, sinais e governança ativa. Sem achismo. Sem ghost. Sem deal perdido sem aviso.</p>
+  <div class="cta-pills">
+    <span class="cta-pill">49 Sinais Comportamentais</span>
+    <span class="cta-pill">Forecast 3 Dimensões</span>
+    <span class="cta-pill">7 Kill Switches</span>
+    <span class="cta-pill">25 Layers por Deal</span>
+    <span class="cta-pill">Multi-Role</span>
+  </div>
+  <div class="hero-btns">
+    <a class="btn-primary" href="cockpit.html">Acessar o Cockpit →</a>
+  </div>
 </div>
+
+<!-- ═══════════════════════════════════ FOOTER ═══ -->
+<footer>
+  <p class="footer-text"><b>ELUCY</b> — Revenue Intelligence Enterprise &middot; <b>G4 Educação</b> &middot; 2026</p>
+</footer>
+
+</main>
 
 <!-- DATA LOADER -->
 <script>
 (function(){
-  var s = document.createElement('script');
-  s.src = 'cockpit-data.js';
-  s.onload = function(){ populateMetrics(); };
-  s.onerror = function(){ setFallback(); };
+  var s=document.createElement('script');
+  s.src='cockpit-data.js';
+  s.onerror=function(){};
   document.head.appendChild(s);
-
-  function populateMetrics(){
-    if(!window.COCKPIT_DEALS || !window.COCKPIT_COLS) return setFallback();
-    var COLS = {};
-    window.COCKPIT_COLS.forEach(function(c,i){ COLS[c] = i; });
-    var deals = window.COCKPIT_DEALS;
-    var g = function(row, name){ var i = COLS[name]; return i != null ? (row[i] || '') : ''; };
-
-    // Deals ativos
-    document.getElementById('d-deals').textContent = deals.length;
-
-    // Valor pipeline
-    var totalVal = 0;
-    deals.forEach(function(d){
-      var v = parseFloat(g(d, 'valor_da_oportunidade')) || 0;
-      totalVal += v;
-    });
-    document.getElementById('d-valor').textContent = totalVal > 1000
-      ? 'R$' + (totalVal/1000).toFixed(0) + 'k'
-      : 'R$' + totalVal.toFixed(0);
-
-    // Conectados
-    var conectados = deals.filter(function(d){ return g(d,'etapa_atual_no_pipeline') === 'Conectados'; }).length;
-    document.getElementById('d-conectados').textContent = conectados;
-
-    // Agendamentos
-    var agendados = deals.filter(function(d){
-      var e = g(d,'etapa_atual_no_pipeline');
-      return e === 'Agendamento' || e === 'Reagendamento' || e === 'Entrevista Agendada';
-    }).length;
-    document.getElementById('d-agendados').textContent = agendados;
-
-    // Risco (aging > 4 dias)
-    var risco = deals.filter(function(d){
-      var delta = parseInt(g(d,'delta_t')) || 0;
-      return delta > 4;
-    }).length;
-    document.getElementById('d-risco').textContent = risco;
-    document.getElementById('d-risco-total').textContent = deals.length;
-  }
-
-  function setFallback(){
-    document.getElementById('d-deals').textContent = '1.521';
-    document.getElementById('d-valor').textContent = 'R$4.2M';
-    document.getElementById('d-conectados').textContent = '342';
-    document.getElementById('d-agendados').textContent = '89';
-    document.getElementById('d-risco').textContent = '704';
-    document.getElementById('d-risco-total').textContent = '1.521';
-  }
 })();
 </script>
 
