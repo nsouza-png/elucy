@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ELUCY — Revenue Intelligence</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2304080f'/><text x='50' y='62' font-size='28' font-weight='900' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>elucy</text><rect x='28' y='72' width='44' height='14' rx='4' fill='%230a84ff'/><text x='50' y='82' font-size='9' font-weight='800' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>BY G4</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  /* Apple Design System — Dark */
+  --bg:#000;--bg2:#0a0a0a;--bg3:#1c1c1e;--bg4:#2c2c2e;
+  --surface:rgba(28,28,30,.65);--surface-elevated:rgba(44,44,46,.55);
+  --border:rgba(255,255,255,.06);--border2:rgba(255,255,255,.12);--border-focus:rgba(10,132,255,.5);
+  --accent:#0a84ff;--accent2:#5ac8fa;--accent-glow:rgba(10,132,255,.12);
+  --green:#30d158;--yellow:#ffd60a;--red:#ff453a;
+  --text:#f5f5f7;--text2:#86868b;--text3:#48484a;
+  --r:14px;--r2:18px;--r3:24px;--r-pill:100px;
+  --font:-apple-system,'SF Pro Display','Manrope',Inter,system-ui,sans-serif;
+  /* Elevation */
+  --shadow-sm:0 2px 8px rgba(0,0,0,.3);--shadow-md:0 4px 16px rgba(0,0,0,.4);--shadow-lg:0 8px 32px rgba(0,0,0,.55);--shadow-xl:0 16px 48px rgba(0,0,0,.65);
+  --blur-sm:saturate(180%) blur(12px);--blur-md:saturate(180%) blur(20px);--blur-lg:saturate(180%) blur(40px);
+  /* Motion — Apple Spring */
+  --ease-spring:cubic-bezier(.175,.885,.32,1.1);--ease-out:cubic-bezier(.25,.46,.45,.94);--ease-smooth:cubic-bezier(.4,0,.2,1);
+  --dur-fast:.15s;--dur-normal:.25s;--dur-slow:.4s;
+  /* 8pt Grid */
+  --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px;--sp-7:40px;--sp-8:48px;--sp-10:64px;--sp-12:80px;
+}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;letter-spacing:.01em}
+
+/* ── AMBIENT BACKGROUND ──────────────────────────────────── */
+.bg-mesh{position:fixed;inset:0;z-index:0;overflow:hidden}
+.bg-orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.3;pointer-events:none;will-change:transform;animation:orbFloat 20s ease-in-out infinite alternate}
+.bg-orb-1{width:700px;height:700px;background:radial-gradient(circle,rgba(10,132,255,.2),transparent 70%);top:-15%;left:45%;animation-delay:0s}
+.bg-orb-2{width:500px;height:500px;background:radial-gradient(circle,rgba(90,200,250,.1),transparent 70%);bottom:-10%;right:5%;animation-delay:-7s}
+.bg-orb-3{width:350px;height:350px;background:radial-gradient(circle,rgba(48,209,88,.07),transparent 70%);bottom:15%;left:3%;animation-delay:-14s}
+@keyframes orbFloat{0%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-20px) scale(1.05)}100%{transform:translate(-20px,15px) scale(.97)}}
+.bg-noise{position:fixed;inset:0;z-index:0;opacity:.018;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:128px}
+
+/* ── LAYOUT ──────────────────────────────────────────────── */
+.container{position:relative;z-index:1;height:100vh;display:flex;flex-direction:column;overflow-y:auto;scroll-behavior:smooth;scroll-snap-type:y proximity}
+.container::-webkit-scrollbar{width:5px}
+.container::-webkit-scrollbar-thumb{background:rgba(255,255,255,.06);border-radius:var(--r-pill)}
+
+/* ── TOPBAR ──────────────────────────────────────────────── */
+.topbar{height:52px;display:flex;align-items:center;padding:0 var(--sp-6);border-bottom:1px solid var(--border);background:rgba(0,0,0,.5);-webkit-backdrop-filter:var(--blur-md);backdrop-filter:var(--blur-md);flex-shrink:0;position:sticky;top:0;z-index:10;transition:background var(--dur-normal) var(--ease-smooth)}
+.logo{display:flex;align-items:center;gap:var(--sp-3)}
+.logo-mark{width:28px;height:28px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;color:#fff;letter-spacing:1px;box-shadow:0 2px 8px rgba(10,132,255,.25)}
+.logo-text{font-size:15px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase}
+.logo-badge{background:var(--accent);color:#fff;font-size:8px;font-weight:700;padding:2px 7px;border-radius:5px;letter-spacing:1px;margin-left:2px;box-shadow:0 1px 4px rgba(10,132,255,.3)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:var(--sp-4)}
+.top-link{font-size:12px;color:var(--text2);text-decoration:none;font-weight:500;transition:color var(--dur-fast) var(--ease-smooth);cursor:pointer;letter-spacing:.02em}
+.top-link:hover{color:var(--text)}
+.btn-cockpit{padding:7px 18px;border-radius:var(--r-pill);background:var(--accent);color:#fff;font-size:12px;font-weight:600;border:none;cursor:pointer;font-family:inherit;transition:all var(--dur-fast) var(--ease-smooth);text-decoration:none;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(10,132,255,.2);letter-spacing:.02em}
+.btn-cockpit:hover{background:#3395ff;box-shadow:0 4px 20px rgba(10,132,255,.35);transform:translateY(-1px)}
+.btn-cockpit:active{transform:scale(.97)}
+
+/* ── HERO — Apple iPhone-style ───────────────────────────── */
+.hero{padding:var(--sp-12) var(--sp-6) var(--sp-8);text-align:center;max-width:860px;margin:0 auto;scroll-snap-align:start}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:var(--sp-2);padding:6px 18px;border-radius:var(--r-pill);border:1px solid var(--border2);background:rgba(10,132,255,.05);margin-bottom:var(--sp-6);font-size:11px;font-weight:600;color:var(--accent2);letter-spacing:.5px;-webkit-backdrop-filter:var(--blur-sm);backdrop-filter:var(--blur-sm)}
+.hero-eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.hero h1{font-size:52px;font-weight:900;line-height:1.06;letter-spacing:-1.5px;margin-bottom:var(--sp-5);background:linear-gradient(135deg,#fff 20%,rgba(255,255,255,.85) 40%,var(--accent2) 75%,var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:heroIn var(--dur-slow) var(--ease-out)}
+@keyframes heroIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.hero-sub{font-size:18px;color:var(--text2);line-height:1.65;max-width:620px;margin:0 auto var(--sp-7);font-weight:400;animation:heroIn .5s var(--ease-out) .1s both}
+.hero-sub strong{color:var(--text);font-weight:600}
+.hero-ctas{display:flex;gap:var(--sp-3);justify-content:center;flex-wrap:wrap;animation:heroIn .5s var(--ease-out) .2s both}
+.btn-primary{padding:14px var(--sp-6);border-radius:var(--r);background:var(--accent);color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:all var(--dur-fast) var(--ease-smooth);display:inline-flex;align-items:center;gap:8px;text-decoration:none;box-shadow:0 2px 12px rgba(10,132,255,.25);letter-spacing:.02em}
+.btn-primary:hover{background:#3395ff;box-shadow:0 6px 28px rgba(10,132,255,.4);transform:translateY(-2px)}
+.btn-primary:active{transform:scale(.97)}
+.btn-secondary{padding:14px var(--sp-6);border-radius:var(--r);background:rgba(255,255,255,.04);color:var(--text);font-size:15px;font-weight:600;border:1px solid var(--border2);cursor:pointer;font-family:inherit;transition:all var(--dur-fast) var(--ease-smooth);text-decoration:none;-webkit-backdrop-filter:var(--blur-sm);backdrop-filter:var(--blur-sm)}
+.btn-secondary:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2);transform:translateY(-1px)}
+
+/* ── LIVE METRICS ────────────────────────────────────────── */
+.metrics{padding:0 var(--sp-6) var(--sp-10);max-width:1100px;margin:0 auto;width:100%;scroll-snap-align:start}
+.metrics-label{text-align:center;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:2.5px;margin-bottom:var(--sp-4)}
+.metrics-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--sp-3)}
+.metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:var(--sp-5);text-align:center;transition:all var(--dur-normal) var(--ease-smooth);position:relative;overflow:hidden;-webkit-backdrop-filter:var(--blur-sm);backdrop-filter:var(--blur-sm)}
+.metric:hover{border-color:var(--border2);background:var(--surface-elevated);transform:translateY(-3px);box-shadow:var(--shadow-md)}
+.metric::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:32px;height:2px;background:var(--accent);border-radius:0 0 2px 2px;opacity:.4;transition:width var(--dur-normal) var(--ease-spring)}
+.metric:hover::before{width:64px;opacity:.7}
+.metric-val{font-size:34px;font-weight:900;line-height:1;margin-bottom:var(--sp-2);letter-spacing:-1.5px}
+.metric-val.blue{color:var(--accent2)}.metric-val.green{color:var(--green)}.metric-val.yellow{color:var(--yellow)}.metric-val.red{color:var(--red)}.metric-val.white{color:#fff}
+.metric-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:var(--sp-1)}
+.metric-sub{font-size:11px;color:var(--text3);font-weight:500}
+
+/* ── PILLARS ─────────────────────────────────────────────── */
+.pillars{padding:0 var(--sp-6) var(--sp-10);max-width:1100px;margin:0 auto;width:100%;scroll-snap-align:start}
+.pillars-title{text-align:center;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:2.5px;margin-bottom:var(--sp-5)}
+.pillars-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-4)}
+.pillar{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:var(--sp-5);transition:all var(--dur-normal) var(--ease-smooth);position:relative;-webkit-backdrop-filter:var(--blur-sm);backdrop-filter:var(--blur-sm)}
+.pillar:hover{border-color:rgba(10,132,255,.18);background:var(--surface-elevated);transform:translateY(-3px);box-shadow:var(--shadow-md)}
+.pillar-icon{width:44px;height:44px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;margin-bottom:var(--sp-4);font-size:22px}
+.pillar-icon.conv{background:rgba(10,132,255,.08);border:1px solid rgba(10,132,255,.18)}
+.pillar-icon.fore{background:rgba(48,209,88,.06);border:1px solid rgba(48,209,88,.12)}
+.pillar-icon.rev{background:rgba(255,214,10,.06);border:1px solid rgba(255,214,10,.12)}
+.pillar h3{font-size:16px;font-weight:700;margin-bottom:var(--sp-2);letter-spacing:-.2px}
+.pillar p{font-size:13px;color:var(--text2);line-height:1.65}
+.pillar-tags{display:flex;gap:var(--sp-1);flex-wrap:wrap;margin-top:var(--sp-4)}
+.pillar-tag{font-size:9px;font-weight:700;padding:3px 10px;border-radius:6px;letter-spacing:.5px;text-transform:uppercase}
+.pillar-tag.blue{background:rgba(10,132,255,.08);color:var(--accent2);border:1px solid rgba(10,132,255,.18)}
+.pillar-tag.green{background:rgba(48,209,88,.06);color:var(--green);border:1px solid rgba(48,209,88,.12)}
+.pillar-tag.gold{background:rgba(255,214,10,.06);color:var(--yellow);border:1px solid rgba(255,214,10,.12)}
+
+/* ── ENGINE SECTION ──────────────────────────────────────── */
+.engine{padding:0 var(--sp-6) var(--sp-10);max-width:1100px;margin:0 auto;width:100%;scroll-snap-align:start}
+.engine-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);padding:var(--sp-7);display:flex;gap:var(--sp-7);align-items:center;-webkit-backdrop-filter:var(--blur-sm);backdrop-filter:var(--blur-sm);box-shadow:var(--shadow-sm)}
+.engine-left{flex:1}
+.engine-label{font-size:10px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:2.5px;margin-bottom:var(--sp-3)}
+.engine h2{font-size:28px;font-weight:800;line-height:1.15;margin-bottom:var(--sp-3);letter-spacing:-.5px}
+.engine p{font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:var(--sp-5)}
+.engine-layers{display:flex;flex-direction:column;gap:var(--sp-2)}
+.engine-layer{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-2) var(--sp-3);background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:var(--r);transition:all var(--dur-fast) var(--ease-smooth)}
+.engine-layer:hover{background:rgba(255,255,255,.04);border-color:var(--border2);transform:translateX(4px)}
+.layer-num{font-size:9px;font-weight:800;color:var(--accent);background:rgba(10,132,255,.08);padding:4px 8px;border-radius:6px;letter-spacing:1px;min-width:32px;text-align:center}
+.layer-name{font-size:12px;font-weight:600;color:var(--text)}
+.layer-desc{font-size:11px;color:var(--text3);margin-left:auto}
+.engine-right{width:280px;flex-shrink:0}
+.engine-viz{background:rgba(10,10,12,.7);border:1px solid var(--border);border-radius:var(--r2);padding:var(--sp-5);height:100%;-webkit-backdrop-filter:var(--blur-sm);backdrop-filter:var(--blur-sm)}
+.viz-title{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:2px;margin-bottom:var(--sp-4);text-align:center}
+.viz-ring{width:160px;height:160px;margin:0 auto var(--sp-4);position:relative}
+.viz-ring svg{width:100%;height:100%}
+.viz-ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.viz-ring-val{font-size:38px;font-weight:900;color:var(--accent2);line-height:1}
+.viz-ring-lbl{font-size:10px;color:var(--text2);margin-top:2px;font-weight:600}
+.viz-stats{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-2)}
+.viz-stat{text-align:center;padding:var(--sp-2);background:rgba(255,255,255,.02);border-radius:var(--r);transition:background var(--dur-fast) var(--ease-smooth)}
+.viz-stat:hover{background:rgba(255,255,255,.05)}
+.viz-stat-val{font-size:17px;font-weight:800;line-height:1}
+.viz-stat-lbl{font-size:9px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.5px}
+
+/* ── FOOTER ──────────────────────────────────────────────── */
+.footer{padding:var(--sp-5) var(--sp-6);border-top:1px solid var(--border);text-align:center;flex-shrink:0}
+.footer-text{font-size:11px;color:var(--text3);font-weight:500;letter-spacing:.02em}
+.footer-text strong{color:var(--text2);font-weight:700}
+
+/* ── SCROLL REVEAL ───────────────────────────────────────── */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .6s var(--ease-out),transform .6s var(--ease-out)}
+.reveal.visible{opacity:1;transform:none}
+
+/* ── RESPONSIVE ──────────────────────────────────────────── */
+@media(max-width:900px){
+  .hero{padding:var(--sp-8) var(--sp-4) var(--sp-6)}
+  .hero h1{font-size:36px;letter-spacing:-1px}
+  .metrics-grid{grid-template-columns:repeat(3,1fr)}
+  .pillars-grid{grid-template-columns:1fr}
+  .engine-card{flex-direction:column;padding:var(--sp-5)}
+  .engine-right{width:100%}
+}
+@media(max-width:600px){
+  .hero{padding:var(--sp-7) var(--sp-4) var(--sp-5)}
+  .hero h1{font-size:28px}
+  .hero-sub{font-size:15px}
+  .metrics-grid{grid-template-columns:repeat(2,1fr)}
+  .topbar{padding:0 var(--sp-4)}
+  .pillars,.metrics,.engine{padding-left:var(--sp-4);padding-right:var(--sp-4)}
+}
+@media(max-width:400px){
+  .metrics-grid{grid-template-columns:1fr}
+  .hero h1{font-size:22px}
+  .metric{padding:var(--sp-3)}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-mesh">
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <div class="bg-orb bg-orb-3"></div>
+</div>
+<div class="bg-noise"></div>
+
+<div class="container">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="logo">
+      <span class="logo-text">Elucy</span>
+      <span class="logo-badge">BY G4</span>
+    </div>
+    <div class="topbar-right">
+      <span class="top-link" onclick="document.querySelector('.pillars').scrollIntoView({behavior:'smooth'})">Pilares</span>
+      <span class="top-link" onclick="document.querySelector('.engine').scrollIntoView({behavior:'smooth'})">Motor</span>
+      <a class="btn-cockpit" href="cockpit.html">Abrir Cockpit &#8594;</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-eyebrow">
+      <span class="dot"></span>
+      Revenue Intelligence Engine &#8212; Ativo
+    </div>
+    <h1>Revenue Intelligence Enterprise que transforma qualificacao em receita previsivel</h1>
+    <p class="hero-sub">
+      O Elucy e o motor de <strong>inteligencia conversacional</strong>, <strong>enterprise qualification</strong>, <strong>forecasting</strong> e <strong>revenue intelligence</strong> que opera dentro do pipeline do G4 Educacao &#8212; <strong>25 camadas de decisao</strong>, Trusted Advisor Score e Strategic KPIs conectados.
+    </p>
+    <div class="hero-ctas">
+      <a class="btn-primary" href="cockpit.html">Entrar no Cockpit</a>
+      <a class="btn-secondary" href="#" onclick="event.preventDefault();document.querySelector('.engine').scrollIntoView({behavior:'smooth'})">Ver o Motor &#8594;</a>
+    </div>
+  </section>
+
+  <!-- LIVE METRICS -->
+  <section class="metrics reveal">
+    <div class="metrics-label" id="metrics-title">Pipeline Comercial — Todos os SDRs — Mar/2026</div>
+    <div class="metrics-grid">
+      <div class="metric">
+        <div class="metric-val blue" id="m-deals">&#8212;</div>
+        <div class="metric-label">Deals Ativos</div>
+        <div class="metric-sub" id="m-deals-sub">carregando...</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val white" id="m-sdrs">&#8212;</div>
+        <div class="metric-label">SDRs Ativos</div>
+        <div class="metric-sub" id="m-sdrs-sub">qualificadores no funil</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val green" id="m-pipeline">&#8212;</div>
+        <div class="metric-label">Valor Pipeline</div>
+        <div class="metric-sub" id="m-pipeline-sub">oportunidades qualificadas</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val yellow" id="m-conectados">&#8212;</div>
+        <div class="metric-label">Conectados</div>
+        <div class="metric-sub">leads em conversa ativa</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val white" id="m-agendados">&#8212;</div>
+        <div class="metric-label">Agendamentos</div>
+        <div class="metric-sub">entrevistas marcadas</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val red" id="m-risco">&#8212;</div>
+        <div class="metric-label">Em Risco</div>
+        <div class="metric-sub" id="m-risco-sub">deals com aging critico</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PILLARS -->
+  <section class="pillars reveal">
+    <div class="pillars-title">Os 4 Pilares da Inteligencia Elucy</div>
+    <div class="pillars-grid">
+      <div class="pillar">
+        <div class="pillar-icon conv">&#128483;&#65039;</div>
+        <h3>Inteligencia Conversacional</h3>
+        <p>Cada interacao com o lead e analisada, classificada e transformada em sinais de compra ou risco. O framework e escolhido pela persona &#8212; Challenger, SPICED ou SPIN &#8212; e governado por kill switches que impedem erros fatais.</p>
+        <div class="pillar-tags">
+          <span class="pillar-tag blue">SPICED</span>
+          <span class="pillar-tag blue">CHALLENGER</span>
+          <span class="pillar-tag blue">SPIN</span>
+          <span class="pillar-tag blue">49 SINAIS</span>
+        </div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon fore">&#128200;</div>
+        <h3>Forecasting Preditivo</h3>
+        <p>Forecast V7 com 3 dimensoes &#8212; quantitativo (stage x aging x velocity), qualitativo (notas x autoridade x urgencia) e framework (cobertura SPICED/MEDDIC). Confianca calculada em 7 componentes, nao em achismo.</p>
+        <div class="pillar-tags">
+          <span class="pillar-tag green">FORECAST V7</span>
+          <span class="pillar-tag green">7 COMPONENTES</span>
+          <span class="pillar-tag green">ZERO ACHISMO</span>
+        </div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon rev">&#128176;</div>
+        <h3>Revenue Intelligence</h3>
+        <p>Priorizacao de portfolio por valor x urgencia x acionabilidade. Attribution Engine rastreia quais touchpoints geraram avanco. Data Quality Engine garante que a base analitica e confiavel antes de qualquer decisao.</p>
+        <div class="pillar-tags">
+          <span class="pillar-tag gold">25 LAYERS</span>
+          <span class="pillar-tag gold">ATTRIBUTION</span>
+          <span class="pillar-tag gold">DQI ENGINE</span>
+        </div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon" style="background:rgba(212,149,106,.06);border:1px solid rgba(212,149,106,.12)">&#127942;</div>
+        <h3>Enterprise Intelligence</h3>
+        <p>Enterprise Value Score qualifica empresas 5M+ automaticamente. Trusted Advisor Score mede credibilidade, disponibilidade e intimidade de cada operador. Strategic Intelligence conecta o cockpit aos KPIs estrategicos do G4.</p>
+        <div class="pillar-tags">
+          <span class="pillar-tag" style="background:rgba(212,149,106,.06);color:#d4956a;border:1px solid rgba(212,149,106,.12)">ENTERPRISE 5M+</span>
+          <span class="pillar-tag" style="background:rgba(212,149,106,.06);color:#d4956a;border:1px solid rgba(212,149,106,.12)">TRUSTED ADVISOR</span>
+          <span class="pillar-tag" style="background:rgba(212,149,106,.06);color:#d4956a;border:1px solid rgba(212,149,106,.12)">STRATEGIC KPIs</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ENGINE -->
+  <section class="engine reveal">
+    <div class="engine-card">
+      <div class="engine-left">
+        <div class="engine-label">Motor de Decisao</div>
+        <h2>25 Camadas de Inteligencia Operacional</h2>
+        <p>O Elucy nao e um dashboard &#8212; e um motor de decisao com DAG orquestrado em <strong>9 fases</strong>, sem ciclos, que processa cada deal em tempo real e entrega a proxima melhor acao.</p>
+        <div class="engine-layers">
+          <div class="engine-layer"><span class="layer-num">L1-L2</span><span class="layer-name">Contexto &amp; Taxonomia</span><span class="layer-desc">operador, linhas, tiers</span></div>
+          <div class="engine-layer"><span class="layer-num">L3-L4</span><span class="layer-name">Deal Runtime &amp; Tasks</span><span class="layer-desc">enriquecimento + execucao</span></div>
+          <div class="engine-layer"><span class="layer-num">L5-L8</span><span class="layer-name">Analytics &amp; Cadencia</span><span class="layer-desc">KPIs, touchpoints, timeline</span></div>
+          <div class="engine-layer"><span class="layer-num">L13</span><span class="layer-name">Forecast V7</span><span class="layer-desc">quant x qual x framework</span></div>
+          <div class="engine-layer"><span class="layer-num">L16-17</span><span class="layer-name">Framework Intelligence</span><span class="layer-desc">SPICED, MEDDIC, gaps</span></div>
+          <div class="engine-layer"><span class="layer-num">L18</span><span class="layer-name">Signal Engine V8</span><span class="layer-desc">49 sinais canonicos</span></div>
+          <div class="engine-layer"><span class="layer-num">L19-22</span><span class="layer-name">Intelligence V10</span><span class="layer-desc">DQI, transition, portfolio, attribution</span></div>
+          <div class="engine-layer" style="border-color:rgba(212,149,106,.2)"><span class="layer-num" style="color:#d4956a;background:rgba(212,149,106,.08)">L23-24</span><span class="layer-name">Enterprise + Trusted Advisor</span><span class="layer-desc">5M+, EVS, Maister eq.</span></div>
+          <div class="engine-layer" style="border-color:rgba(48,209,88,.2)"><span class="layer-num" style="color:#30d158;background:rgba(48,209,88,.06)">L25</span><span class="layer-name">Strategic Intelligence</span><span class="layer-desc">KPIs G4 conectados</span></div>
+        </div>
+      </div>
+      <div class="engine-right">
+        <div class="engine-viz">
+          <div class="viz-title">Cobertura de Inteligencia</div>
+          <div class="viz-ring">
+            <svg viewBox="0 0 160 160">
+              <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,.03)" stroke-width="12"/>
+              <circle cx="80" cy="80" r="70" fill="none" stroke="url(#ring-grad)" stroke-width="12" stroke-dasharray="395" stroke-dashoffset="40" stroke-linecap="round" transform="rotate(-90 80 80)">
+                <animate attributeName="stroke-dashoffset" from="440" to="40" dur="1.2s" fill="freeze" calcMode="spline" keySplines=".4 0 .2 1"/>
+              </circle>
+              <defs><linearGradient id="ring-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0a84ff"/><stop offset="50%" stop-color="#5ac8fa"/><stop offset="100%" stop-color="#30d158"/></linearGradient></defs>
+            </svg>
+            <div class="viz-ring-center">
+              <div class="viz-ring-val">25</div>
+              <div class="viz-ring-lbl">layers ativas</div>
+            </div>
+          </div>
+          <div class="viz-stats">
+            <div class="viz-stat"><div class="viz-stat-val" style="color:var(--accent2)">49</div><div class="viz-stat-lbl">Sinais</div></div>
+            <div class="viz-stat"><div class="viz-stat-val" style="color:var(--green)">7</div><div class="viz-stat-lbl">Kill Switches</div></div>
+            <div class="viz-stat"><div class="viz-stat-val" style="color:var(--yellow)">16</div><div class="viz-stat-lbl">Linhas Receita</div></div>
+            <div class="viz-stat"><div class="viz-stat-val" style="color:#fff">3</div><div class="viz-stat-lbl">Frameworks</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <p class="footer-text"><strong>ELUCY</strong> &#8212; Revenue Intelligence Enterprise &#183; V11 &#183; 25 Layers &#183; <strong>G4 Educacao</strong> &#183; 2026</p>
+  </footer>
+
+</div>
+
+<!-- SCROLL REVEAL OBSERVER -->
+<script>
+(function(){
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('visible'); io.unobserve(e.target); }});
+  },{threshold:0.15});
+  document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+})();
+</script>
+
+<!-- DATA LOADER -->
+<script>
+(function(){
+  var s = document.createElement('script');
+  s.src = 'cockpit-data.js?v=' + Date.now();
+  s.onload = function(){ populateMetrics(); };
+  s.onerror = function(){ setFallback(); };
+  document.head.appendChild(s);
+
+  function populateMetrics(){
+    if(!window.COCKPIT_DEALS || !window.COCKPIT_COLS) return setFallback();
+    var COLS = {};
+    window.COCKPIT_COLS.forEach(function(c,i){ COLS[c] = i; });
+    var deals = window.COCKPIT_DEALS;
+    var g = function(row, name){ var i = COLS[name]; return i != null ? (row[i] || '') : ''; };
+
+    document.getElementById('m-deals').textContent = deals.length;
+    var sdrs = {};
+    deals.forEach(function(d){ var q = g(d,'qualificador_name'); if(q) sdrs[q] = true; });
+    var sdrCount = Object.keys(sdrs).length;
+    document.getElementById('m-deals-sub').textContent = sdrCount + ' qualificadores ativos';
+
+    document.getElementById('m-sdrs').textContent = sdrCount;
+    document.getElementById('m-sdrs-sub').textContent = 'operando em marco/2026';
+
+    var totalVal = 0;
+    deals.forEach(function(d){ totalVal += parseFloat(g(d, 'valor_da_oportunidade')) || 0; });
+    if(totalVal >= 1000000) document.getElementById('m-pipeline').textContent = 'R$' + (totalVal/1000000).toFixed(1) + 'M';
+    else if(totalVal > 1000) document.getElementById('m-pipeline').textContent = 'R$' + (totalVal/1000).toFixed(0) + 'k';
+    else document.getElementById('m-pipeline').textContent = 'R$' + totalVal.toFixed(0);
+
+    var conectados = deals.filter(function(d){ return g(d,'etapa_atual_no_pipeline') === 'Conectados'; }).length;
+    document.getElementById('m-conectados').textContent = conectados;
+
+    var agendados = deals.filter(function(d){
+      var e = g(d,'etapa_atual_no_pipeline');
+      return e === 'Agendamento' || e === 'Reagendamento' || e === 'Entrevista Agendada';
+    }).length;
+    document.getElementById('m-agendados').textContent = agendados;
+
+    var risco = deals.filter(function(d){ return (parseInt(g(d,'delta_t')) || 0) > 4; }).length;
+    document.getElementById('m-risco').textContent = risco;
+    document.getElementById('m-risco-sub').textContent = risco > 0 ? 'deals com aging > 4 dias' : 'pipeline saudavel';
+
+    if(window.COCKPIT_UPDATED_AT){
+      document.getElementById('metrics-title').textContent = 'Pipeline Comercial \u2014 Todos os SDRs \u2014 atualizado ' + window.COCKPIT_UPDATED_AT;
+    }
+  }
+
+  function setFallback(){
+    document.getElementById('m-deals').textContent = '\u2014';
+    document.getElementById('m-deals-sub').textContent = 'conecte o cockpit-data.js';
+  }
+})();
+</script>
+
+</body>
+</html>

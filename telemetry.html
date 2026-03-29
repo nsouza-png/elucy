@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ELUCY — Cockpit de Telemetria</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23040404'/><text x='50' y='62' font-size='28' font-weight='900' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>elucy</text><rect x='28' y='72' width='44' height='14' rx='4' fill='%23ED2614'/><text x='50' y='82' font-size='9' font-weight='800' text-anchor='middle' fill='%23ffffff' font-family='system-ui' letter-spacing='1'>TELEM</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#040404;--bg2:#0a0a0a;--bg3:#111113;--bg4:#1a1a1c;--bg5:#222225;
+  --surface:rgba(18,18,20,.92);--surface2:rgba(30,30,32,.88);
+  --card:#0d0d0f;--card2:#141416;--card3:#1c1c1f;
+  --border:rgba(255,255,255,.06);--border2:rgba(255,255,255,.10);
+  --accent:#ED2614;--accent2:#FF4D3A;--accent-dim:rgba(237,38,20,.08);--accent-glow:rgba(237,38,20,.15);
+  --copper:#d4956a;--copper2:#e8a97e;--copper-dim:rgba(212,149,106,.08);
+  --green:#30d158;--green-dim:rgba(48,209,88,.10);
+  --yellow:#ffd60a;--yellow-dim:rgba(255,214,10,.10);
+  --red:#ff453a;--red-dim:rgba(255,69,58,.10);
+  --blue:#5ac8fa;--blue-dim:rgba(90,200,250,.10);
+  --white:#f5f5f7;--gray1:#c5c5c7;--gray2:#86868b;--gray3:#48484a;--gray4:#2c2c2e;
+  --r:10px;--r2:14px;--r3:18px;
+  --font:'Inter',-apple-system,system-ui,sans-serif;
+  --mono:'JetBrains Mono','SF Mono','Menlo',monospace;
+  --shadow-sm:0 2px 8px rgba(0,0,0,.5);--shadow-md:0 4px 20px rgba(0,0,0,.6);
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--white);font-family:var(--font);-webkit-font-smoothing:antialiased;line-height:1.5;overflow-x:hidden;min-height:100vh}
+::selection{background:rgba(237,38,20,.3);color:#fff}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.06);border-radius:100px}
+
+/* ── HEADER ─────────────────────────────────────────────────── */
+.tele-header{
+  position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 24px;
+  background:rgba(4,4,4,.85);backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:1px solid var(--border);
+}
+.tele-logo{display:flex;align-items:center;gap:12px}
+.tele-logo-mark{
+  width:32px;height:32px;border-radius:8px;
+  background:linear-gradient(135deg,var(--accent),#ff6b4a);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:11px;color:#fff;letter-spacing:.5px;
+}
+.tele-logo-text{font-weight:800;font-size:15px;letter-spacing:.8px;color:var(--white)}
+.tele-logo-sub{font-size:10px;color:var(--gray2);letter-spacing:2px;text-transform:uppercase;margin-top:-2px}
+.tele-header-right{display:flex;align-items:center;gap:16px}
+.tele-status{display:flex;align-items:center;gap:6px;font-size:11px;font-family:var(--mono);color:var(--gray2)}
+.tele-status-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse-dot 2s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1;box-shadow:0 0 4px var(--green)}50%{opacity:.5;box-shadow:0 0 12px var(--green)}}
+.tele-header-stat{
+  display:flex;flex-direction:column;align-items:flex-end;
+  font-family:var(--mono);font-size:11px;
+}
+.tele-header-stat .val{color:var(--white);font-weight:700;font-size:14px}
+.tele-header-stat .lbl{color:var(--gray3);font-size:9px;letter-spacing:1px;text-transform:uppercase}
+
+/* ── LAYOUT GRID ────────────────────────────────────────────── */
+.tele-grid{
+  display:grid;
+  grid-template-columns:280px 1fr 320px;
+  grid-template-rows:auto 1fr;
+  gap:1px;
+  height:calc(100vh - 49px);
+  background:var(--border);
+}
+.tele-panel{background:var(--bg);padding:16px;overflow-y:auto}
+.tele-panel-header{
+  font-size:9px;letter-spacing:2.5px;text-transform:uppercase;
+  color:var(--gray3);font-weight:700;margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;
+}
+.tele-panel-header::before{
+  content:'';width:3px;height:12px;border-radius:2px;background:var(--accent);
+}
+
+/* ── LEFT PANEL: Pipeline Overview ──────────────────────────── */
+.pipe-stat{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:14px 16px;margin-bottom:8px;
+  transition:border-color .2s var(--ease);
+}
+.pipe-stat:hover{border-color:var(--border2)}
+.pipe-stat-label{font-size:10px;color:var(--gray2);letter-spacing:1px;text-transform:uppercase;font-weight:600}
+.pipe-stat-val{font-size:28px;font-weight:800;letter-spacing:-.5px;line-height:1.1;margin-top:4px;font-family:var(--font)}
+.pipe-stat-sub{font-size:10px;color:var(--gray3);font-family:var(--mono);margin-top:2px}
+.pipe-stat.accent .pipe-stat-val{color:var(--accent)}
+.pipe-stat.green .pipe-stat-val{color:var(--green)}
+.pipe-stat.yellow .pipe-stat-val{color:var(--yellow)}
+.pipe-stat.red .pipe-stat-val{color:var(--red)}
+.pipe-stat.blue .pipe-stat-val{color:var(--blue)}
+
+.pipe-forecast{margin-top:16px}
+.pipe-forecast-bar{
+  display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px;
+}
+.pipe-forecast-bar .label{flex:0 0 80px;color:var(--gray2);font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+.pipe-forecast-bar .track{flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.pipe-forecast-bar .fill{height:100%;border-radius:3px;transition:width .8s var(--ease)}
+.pipe-forecast-bar .pct{flex:0 0 36px;text-align:right;font-family:var(--mono);font-size:10px;color:var(--gray1)}
+
+/* ── KILL SWITCHES (LEDs) ───────────────────────────────────── */
+.ks-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px;
+}
+.ks-led{
+  display:flex;align-items:center;gap:8px;
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:8px 10px;font-size:10px;font-family:var(--mono);
+  transition:all .3s var(--ease);
+}
+.ks-led-dot{
+  width:8px;height:8px;border-radius:50%;flex-shrink:0;
+  transition:all .3s var(--ease);
+}
+.ks-led.active .ks-led-dot{background:var(--green);box-shadow:0 0 8px var(--green)}
+.ks-led.triggered .ks-led-dot{background:var(--red);box-shadow:0 0 8px var(--red);animation:pulse-red .8s infinite}
+.ks-led.inactive .ks-led-dot{background:var(--gray4)}
+.ks-led-name{color:var(--gray1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@keyframes pulse-red{0%,100%{box-shadow:0 0 6px var(--red)}50%{box-shadow:0 0 16px var(--red)}}
+
+/* ── CENTER: DAG Visualizer ─────────────────────────────────── */
+.dag-container{
+  display:flex;flex-direction:column;height:100%;
+  background:var(--bg2);position:relative;overflow:hidden;
+}
+.dag-canvas{
+  flex:1;position:relative;padding:24px;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+}
+.dag-bg-grid{
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
+  background-size:40px 40px;
+  pointer-events:none;
+}
+.dag-phases{
+  display:flex;gap:12px;width:100%;max-width:900px;position:relative;z-index:1;
+}
+.dag-phase{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;
+}
+.dag-phase-node{
+  width:64px;height:64px;border-radius:16px;
+  background:var(--card2);border:2px solid var(--border2);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:10px;font-weight:700;color:var(--gray2);
+  position:relative;transition:all .4s var(--ease);cursor:default;
+}
+.dag-phase-node .phase-num{font-size:18px;font-weight:900;color:var(--white);line-height:1}
+.dag-phase-node .phase-lbl{font-size:7px;letter-spacing:1.5px;text-transform:uppercase;margin-top:2px}
+.dag-phase-node.active{
+  border-color:var(--accent);
+  background:linear-gradient(135deg, rgba(237,38,20,.12), rgba(237,38,20,.04));
+  box-shadow:0 0 24px rgba(237,38,20,.2);
+}
+.dag-phase-node.active .phase-num{color:var(--accent)}
+.dag-phase-node.done{border-color:var(--green);background:rgba(48,209,88,.06)}
+.dag-phase-node.done .phase-num{color:var(--green)}
+.dag-phase-name{font-size:8px;color:var(--gray3);letter-spacing:1.5px;text-transform:uppercase;text-align:center}
+/* Connection lines between phases */
+.dag-connector{
+  position:absolute;top:50%;height:2px;background:var(--border2);
+  transform:translateY(-50%);z-index:0;
+}
+.dag-connector.active{background:var(--accent);box-shadow:0 0 8px rgba(237,38,20,.3)}
+
+/* Layer list below DAG */
+.dag-layers{
+  padding:16px 24px;border-top:1px solid var(--border);
+  display:flex;flex-wrap:wrap;gap:4px;
+  max-height:140px;overflow-y:auto;
+}
+.dag-layer-chip{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 8px;border-radius:6px;font-size:9px;font-family:var(--mono);
+  background:var(--card);border:1px solid var(--border);color:var(--gray2);
+  transition:all .3s var(--ease);
+}
+.dag-layer-chip.active{
+  background:var(--accent-dim);border-color:rgba(237,38,20,.3);color:var(--accent);
+}
+.dag-layer-chip.done{
+  background:var(--green-dim);border-color:rgba(48,209,88,.2);color:var(--green);
+}
+.dag-layer-chip .l-num{font-weight:700}
+
+/* Processing pulse animation */
+.dag-pulse{
+  position:absolute;width:12px;height:12px;border-radius:50%;
+  background:var(--accent);opacity:0;pointer-events:none;
+  animation:dag-pulse-anim 1.5s var(--ease) forwards;
+}
+@keyframes dag-pulse-anim{
+  0%{opacity:1;transform:scale(.5)}
+  50%{opacity:.7;transform:scale(1.2)}
+  100%{opacity:0;transform:scale(2)}
+}
+
+/* Event counter strip */
+.dag-strip{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 24px;border-top:1px solid var(--border);
+  font-family:var(--mono);font-size:10px;color:var(--gray3);
+}
+.dag-strip-counter{color:var(--accent);font-weight:700}
+.dag-strip-latency{color:var(--green)}
+
+/* ── RIGHT PANEL: Signal Terminal ───────────────────────────── */
+.terminal{
+  display:flex;flex-direction:column;height:100%;
+}
+.terminal-feed{
+  flex:1;overflow-y:auto;padding:0;
+  font-family:var(--mono);font-size:10.5px;line-height:1.65;
+}
+.terminal-line{
+  padding:4px 16px;border-bottom:1px solid rgba(255,255,255,.02);
+  display:flex;align-items:flex-start;gap:8px;
+  animation:term-slide .3s var(--ease);
+}
+@keyframes term-slide{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.terminal-line:hover{background:rgba(255,255,255,.02)}
+.term-ts{color:var(--gray3);flex-shrink:0;font-size:9px;margin-top:1px}
+.term-deal{color:var(--blue);font-weight:600;flex-shrink:0}
+.term-msg{color:var(--gray1)}
+.term-msg .sig-pos{color:var(--green)}
+.term-msg .sig-neg{color:var(--red)}
+.term-msg .ks-trig{color:var(--red);font-weight:700;text-transform:uppercase}
+.term-msg .layer{color:var(--copper)}
+.term-msg .phase{color:var(--accent)}
+
+/* Terminal filter tabs */
+.term-tabs{
+  display:flex;gap:0;border-bottom:1px solid var(--border);
+}
+.term-tab{
+  flex:1;padding:8px 0;text-align:center;font-size:9px;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;color:var(--gray3);
+  cursor:pointer;border-bottom:2px solid transparent;
+  transition:all .2s var(--ease);
+}
+.term-tab:hover{color:var(--gray1)}
+.term-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* ── BOTTOM BAR ─────────────────────────────────────────────── */
+.tele-bottom{
+  grid-column:1/-1;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 24px;
+  background:var(--bg);border-top:1px solid var(--border);
+  font-family:var(--mono);font-size:10px;color:var(--gray3);
+}
+.tele-bottom a{color:var(--accent);text-decoration:none}
+.bottom-stats{display:flex;gap:20px}
+.bottom-stat{display:flex;align-items:center;gap:6px}
+.bottom-stat .dot{width:5px;height:5px;border-radius:50%}
+
+/* ── RESPONSIVE ─────────────────────────────────────────────── */
+@media(max-width:1200px){
+  .tele-grid{grid-template-columns:240px 1fr 280px}
+}
+@media(max-width:900px){
+  .tele-grid{grid-template-columns:1fr;grid-template-rows:auto auto auto auto}
+  .tele-grid .tele-panel{max-height:300px}
+}
+</style>
+</head>
+<body>
+
+<!-- ════ HEADER ════════════════════════════════════════════════ -->
+<header class="tele-header">
+  <div class="tele-logo">
+    <div class="tele-logo-mark">E</div>
+    <div>
+      <div class="tele-logo-text">ELUCY</div>
+      <div class="tele-logo-sub">Cockpit de Telemetria</div>
+    </div>
+  </div>
+  <div class="tele-header-right">
+    <div class="tele-status">
+      <span class="tele-status-dot" id="statusDot"></span>
+      <span id="statusText">CONECTANDO...</span>
+    </div>
+    <div class="tele-header-stat">
+      <span class="val" id="hdrOperators">—</span>
+      <span class="lbl">Operadores</span>
+    </div>
+    <div class="tele-header-stat">
+      <span class="val" id="hdrEventsMin">—</span>
+      <span class="lbl">Events/min</span>
+    </div>
+    <div class="tele-header-stat">
+      <span class="val" id="hdrAvgLatency">—</span>
+      <span class="lbl">Avg Latency</span>
+    </div>
+    <div class="tele-header-stat">
+      <span class="val" id="hdrCostEst">—</span>
+      <span class="lbl">API Cost/h</span>
+    </div>
+  </div>
+</header>
+
+<!-- ════ MAIN GRID ════════════════════════════════════════════ -->
+<div class="tele-grid">
+
+  <!-- ── LEFT: Pipeline Overview ───────────────────────────── -->
+  <div class="tele-panel" id="panelLeft">
+    <div class="tele-panel-header">Pipeline Overview</div>
+
+    <div class="pipe-stat accent">
+      <div class="pipe-stat-label">Valor Pipeline</div>
+      <div class="pipe-stat-val" id="pipeValue">R$ —</div>
+      <div class="pipe-stat-sub" id="pipeValueSub">— deals ativos</div>
+    </div>
+    <div class="pipe-stat green">
+      <div class="pipe-stat-label">Conectados</div>
+      <div class="pipe-stat-val" id="pipeConectados">—</div>
+      <div class="pipe-stat-sub" id="pipeConectadosSub">— conversion rate</div>
+    </div>
+    <div class="pipe-stat yellow">
+      <div class="pipe-stat-label">Agendamentos</div>
+      <div class="pipe-stat-val" id="pipeAgendamentos">—</div>
+      <div class="pipe-stat-sub" id="pipeAgendSub">— esta semana</div>
+    </div>
+    <div class="pipe-stat red">
+      <div class="pipe-stat-label">Em Risco</div>
+      <div class="pipe-stat-val" id="pipeRisco">—</div>
+      <div class="pipe-stat-sub">aging > 4 dias</div>
+    </div>
+    <div class="pipe-stat blue">
+      <div class="pipe-stat-label">5M+ Enterprise</div>
+      <div class="pipe-stat-val" id="pipe5m">—</div>
+      <div class="pipe-stat-sub" id="pipe5mSub">enterprise score > 75</div>
+    </div>
+
+    <!-- Forecast bars -->
+    <div class="pipe-forecast">
+      <div class="tele-panel-header" style="margin-top:8px">Forecast V7</div>
+      <div class="pipe-forecast-bar">
+        <span class="label">High</span>
+        <div class="track"><div class="fill" id="fcHigh" style="width:0;background:var(--green)"></div></div>
+        <span class="pct" id="fcHighPct">—</span>
+      </div>
+      <div class="pipe-forecast-bar">
+        <span class="label">Medium</span>
+        <div class="track"><div class="fill" id="fcMed" style="width:0;background:var(--yellow)"></div></div>
+        <span class="pct" id="fcMedPct">—</span>
+      </div>
+      <div class="pipe-forecast-bar">
+        <span class="label">Low</span>
+        <div class="track"><div class="fill" id="fcLow" style="width:0;background:var(--red)"></div></div>
+        <span class="pct" id="fcLowPct">—</span>
+      </div>
+    </div>
+
+    <!-- Kill Switches -->
+    <div style="margin-top:16px">
+      <div class="tele-panel-header">Kill Switches</div>
+      <div class="ks-grid" id="ksGrid"></div>
+    </div>
+  </div>
+
+  <!-- ── CENTER: DAG Visualizer ────────────────────────────── -->
+  <div class="dag-container">
+    <div class="tele-panel-header" style="padding:16px 24px 0">DAG Intelligence — 9 Phases / 25 Layers</div>
+    <div class="dag-canvas">
+      <div class="dag-bg-grid"></div>
+      <div class="dag-phases" id="dagPhases"></div>
+    </div>
+    <div class="dag-layers" id="dagLayers"></div>
+    <div class="dag-strip">
+      <span>Events processados: <span class="dag-strip-counter" id="dagEventCount">0</span></span>
+      <span>Ultimo DAG: <span class="dag-strip-latency" id="dagLastLatency">—</span></span>
+      <span>Uptime: <span id="dagUptime">00:00:00</span></span>
+    </div>
+  </div>
+
+  <!-- ── RIGHT: Signal Terminal ────────────────────────────── -->
+  <div class="terminal" id="panelRight">
+    <div class="tele-panel-header" style="padding:16px 16px 0">Signal & Risk Terminal</div>
+    <div class="term-tabs">
+      <div class="term-tab active" data-filter="all">Todos</div>
+      <div class="term-tab" data-filter="signal">Sinais</div>
+      <div class="term-tab" data-filter="dag">DAG</div>
+      <div class="term-tab" data-filter="kill">Blocks</div>
+    </div>
+    <div class="terminal-feed" id="termFeed"></div>
+  </div>
+
+  <!-- ── BOTTOM BAR ────────────────────────────────────────── -->
+  <div class="tele-bottom">
+    <span>ELUCY v11.0 Enterprise — 25-Layer DAG — 49 Signals — 7 Kill Switches</span>
+    <div class="bottom-stats">
+      <div class="bottom-stat"><span class="dot" style="background:var(--green)"></span> <span id="btmDag">DAG OK</span></div>
+      <div class="bottom-stat"><span class="dot" style="background:var(--accent)"></span> <span id="btmRealtime">Realtime</span></div>
+      <div class="bottom-stat"><span class="dot" style="background:var(--blue)"></span> <span id="btmBlackBox">Black Box: Enforced</span></div>
+    </div>
+    <a href="cockpit.html">Abrir Cockpit &rarr;</a>
+  </div>
+</div>
+
+<!-- ════ ENGINE ════════════════════════════════════════════════ -->
+<script>
+(function(){
+'use strict';
+
+// ── Supabase ──────────────────────────────────────────────────
+var SB_URL  = 'https://tnbbsjvzwleeoqnxtafp.supabase.co';
+var SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRuYmJzanZ6d2xlZW9xbnh0YWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMTY5ODMsImV4cCI6MjA1NjU5Mjk4M30.FUcQaGMFLfLLNa9j2XMEe0PxhS42NjnWvkJDReUosHI';
+var sb = window.supabase.createClient(SB_URL, SB_KEY);
+
+// ── DAG DEFINITION ────────────────────────────────────────────
+var DAG_PHASES = [
+  { num:1, name:'Contexto',    layers:[1,2,3,10] },
+  { num:2, name:'Data Quality', layers:[19] },
+  { num:3, name:'Enrich',      layers:[8,9,11,16,17] },
+  { num:4, name:'Transition',  layers:[20] },
+  { num:5, name:'Prioridade',  layers:[21] },
+  { num:6, name:'Performance', layers:[4,5,12,14,15,7] },
+  { num:7, name:'Atribuicao',  layers:[22] },
+  { num:8, name:'Enterprise',  layers:[23,24] },
+  { num:9, name:'Strategic',   layers:[25] }
+];
+var ALL_LAYERS = [
+  {n:1, name:'Operator Ctx'},{n:2, name:'Taxonomy'},{n:3, name:'Deal Runtime'},
+  {n:4, name:'Task Exec'},{n:5, name:'Analytics'},{n:6, name:'UI State'},
+  {n:7, name:'Product Intel'},{n:8, name:'Cadence'},{n:9, name:'Runtime Sync'},
+  {n:10, name:'Tax Loader'},{n:11, name:'DM Touch'},{n:12, name:'Snapshot'},
+  {n:13, name:'Forecast V7'},{n:14, name:'Op Perf'},{n:15, name:'Perf Report'},
+  {n:16, name:'FW Extract'},{n:17, name:'FW UI'},{n:18, name:'Signal V8'},
+  {n:19, name:'Data Quality'},{n:20, name:'Transition'},{n:21, name:'Portfolio'},
+  {n:22, name:'Attribution'},{n:23, name:'Enterprise'},{n:24, name:'Advisor'},
+  {n:25, name:'Strategic'}
+];
+var KILL_SWITCH_NAMES = {
+  titan_challenger_only:'Titan=Challenger',
+  builder_spiced:'Builder=SPICED',
+  executor_spin:'Executor=SPIN',
+  tier2_block_imersao_presencial:'Tier2 Block',
+  ceo_mei_downgrade_authority:'MEI Downgrade',
+  dqi_over_revenue:'DQI > Revenue',
+  black_box_protocol:'Black Box'
+};
+
+// ── STATE ─────────────────────────────────────────────────────
+var state = {
+  events: [],
+  eventCount: 0,
+  activePhase: -1,
+  activeLayers: {},
+  doneLayers: {},
+  ksTriggered: {},
+  termFilter: 'all',
+  startTime: Date.now(),
+  lastLatency: 0,
+  operators: new Set(),
+  eventsLastMinute: 0
+};
+
+// ── RENDER: DAG Phases ────────────────────────────────────────
+function renderDAGPhases(){
+  var el = document.getElementById('dagPhases');
+  el.innerHTML = DAG_PHASES.map(function(p){
+    var cls = 'dag-phase-node';
+    if(state.activePhase === p.num) cls += ' active';
+    else if(state.activePhase > p.num) cls += ' done';
+    return '<div class="dag-phase">' +
+      '<div class="'+cls+'" data-phase="'+p.num+'">' +
+        '<span class="phase-num">'+p.num+'</span>' +
+        '<span class="phase-lbl">P'+p.num+'</span>' +
+      '</div>' +
+      '<div class="dag-phase-name">'+p.name+'</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ── RENDER: Layer Chips ───────────────────────────────────────
+function renderLayers(){
+  var el = document.getElementById('dagLayers');
+  el.innerHTML = ALL_LAYERS.map(function(l){
+    var cls = 'dag-layer-chip';
+    if(state.activeLayers[l.n]) cls += ' active';
+    else if(state.doneLayers[l.n]) cls += ' done';
+    return '<div class="'+cls+'"><span class="l-num">L'+l.n+'</span> '+l.name+'</div>';
+  }).join('');
+}
+
+// ── RENDER: Kill Switches ─────────────────────────────────────
+function renderKillSwitches(){
+  var el = document.getElementById('ksGrid');
+  var html = '';
+  Object.keys(KILL_SWITCH_NAMES).forEach(function(slug){
+    var triggered = state.ksTriggered[slug];
+    var cls = triggered ? 'ks-led triggered' : 'ks-led active';
+    html += '<div class="'+cls+'" data-ks="'+slug+'">' +
+      '<span class="ks-led-dot"></span>' +
+      '<span class="ks-led-name">'+KILL_SWITCH_NAMES[slug]+'</span>' +
+    '</div>';
+  });
+  el.innerHTML = html;
+}
+
+// ── RENDER: Terminal Line ─────────────────────────────────────
+function addTerminalLine(evt){
+  var feed = document.getElementById('termFeed');
+  var ts = new Date(evt.created_at || Date.now()).toLocaleTimeString('pt-BR',{hour12:false});
+  var dealTag = evt.deal_id ? '<span class="term-deal">#'+String(evt.deal_id).slice(-4)+'</span>' : '';
+
+  var msg = '';
+  if(evt.event_type === 'dag_step' || evt.event_type === 'dag_complete'){
+    msg = '<span class="phase">P'+evt.dag_phase+'</span> <span class="layer">L'+evt.layer_processed+'</span> '+(evt.layer_name||'');
+    if(evt.latency_ms) msg += ' <span style="color:var(--gray3)">('+evt.latency_ms+'ms)</span>';
+  }
+  if(evt.event_type === 'signal_detected' && evt.signal_detected && evt.signal_detected.length){
+    var sigs = evt.signal_detected.map(function(s){
+      var isNeg = s.includes('missing') || s.includes('no_') || s.includes('low_') || s.includes('ghosting') || s.includes('stuck') || s.includes('risk');
+      return '<span class="'+(isNeg?'sig-neg':'sig-pos')+'">'+s+'</span>';
+    }).join(', ');
+    msg = 'Signal: ' + sigs;
+  }
+  if(evt.kill_switch_triggered){
+    msg += ' <span class="ks-trig">BLOCK: '+evt.kill_switch_triggered+'</span>';
+  }
+  if(evt.event_type === 'dag_complete'){
+    msg = '<span style="color:var(--green);font-weight:700">DAG COMPLETE</span> 25 layers in '+(evt.latency_ms||'?')+'ms';
+  }
+
+  // Check filter
+  var show = true;
+  if(state.termFilter === 'signal' && evt.event_type !== 'signal_detected') show = false;
+  if(state.termFilter === 'dag' && evt.event_type !== 'dag_step' && evt.event_type !== 'dag_complete') show = false;
+  if(state.termFilter === 'kill' && !evt.kill_switch_triggered) show = false;
+
+  var line = document.createElement('div');
+  line.className = 'terminal-line';
+  line.style.display = show ? '' : 'none';
+  line.dataset.type = evt.event_type + (evt.kill_switch_triggered ? ' kill' : '');
+  line.innerHTML = '<span class="term-ts">'+ts+'</span> '+dealTag+' <span class="term-msg">'+msg+'</span>';
+
+  feed.insertBefore(line, feed.firstChild);
+
+  // Limit to 200 lines
+  while(feed.children.length > 200) feed.removeChild(feed.lastChild);
+}
+
+// ── RENDER: Header Stats ──────────────────────────────────────
+function updateHeaderStats(){
+  document.getElementById('hdrOperators').textContent = state.operators.size;
+  document.getElementById('hdrEventsMin').textContent = state.eventsLastMinute;
+  document.getElementById('hdrAvgLatency').textContent = state.lastLatency ? state.lastLatency + 'ms' : '—';
+
+  // Rough cost estimate: ~$0.01 per DAG run
+  var dagRuns = state.events.filter(function(e){ return e.event_type === 'dag_complete'; }).length;
+  var costEst = (dagRuns * 0.01).toFixed(2);
+  document.getElementById('hdrCostEst').textContent = '$' + costEst;
+}
+
+// ── RENDER: Pipeline stats from deals ─────────────────────────
+function updatePipelineStats(){
+  // Try to read from cockpit-data.js or Supabase deals
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var deals = Object.values(map);
+  if(!deals.length) return;
+
+  var active = deals.filter(function(d){ var s=(d.statusDeal||'').toLowerCase(); return s!=='perdido'&&s!=='ganho'; });
+  var totalValue = 0;
+  var conectados = 0, agendamentos = 0, risco = 0, enterprise5m = 0;
+  var fcHigh=0, fcMed=0, fcLow=0;
+
+  active.forEach(function(d){
+    totalValue += (d.elucyValor || d.revenueRaw || 0);
+    var fase = (d.fase || d.fase_atual_no_processo || '').toLowerCase();
+    if(fase === 'conectado' || fase === 'conectados') conectados++;
+    if(fase === 'oportunidade' || (d.etapa||'').toLowerCase().includes('agend')) agendamentos++;
+    if((d.delta || d._delta || 0) > 4) risco++;
+    var ev = d._enterprise;
+    if(ev && ev.is_5m_plus) enterprise5m++;
+    // Forecast
+    var fc = d._forecastV6 || d._forecastV7 || {};
+    var score = fc.forecast_score || fc.score || 0;
+    if(score > 0.7) fcHigh++;
+    else if(score > 0.4) fcMed++;
+    else fcLow++;
+  });
+
+  document.getElementById('pipeValue').textContent = 'R$ ' + (totalValue/1e6).toFixed(1) + 'M';
+  document.getElementById('pipeValueSub').textContent = active.length + ' deals ativos';
+  document.getElementById('pipeConectados').textContent = conectados;
+  document.getElementById('pipeConectadosSub').textContent = active.length ? Math.round(conectados/active.length*100)+'% conversion' : '—';
+  document.getElementById('pipeAgendamentos').textContent = agendamentos;
+  document.getElementById('pipeRisco').textContent = risco;
+  document.getElementById('pipe5m').textContent = enterprise5m;
+
+  var total = active.length || 1;
+  document.getElementById('fcHigh').style.width = Math.round(fcHigh/total*100)+'%';
+  document.getElementById('fcHighPct').textContent = Math.round(fcHigh/total*100)+'%';
+  document.getElementById('fcMed').style.width = Math.round(fcMed/total*100)+'%';
+  document.getElementById('fcMedPct').textContent = Math.round(fcMed/total*100)+'%';
+  document.getElementById('fcLow').style.width = Math.round(fcLow/total*100)+'%';
+  document.getElementById('fcLowPct').textContent = Math.round(fcLow/total*100)+'%';
+}
+
+// ── PROCESS INCOMING EVENT ────────────────────────────────────
+function processEvent(evt){
+  state.events.push(evt);
+  state.eventCount++;
+  if(evt.operator_id) state.operators.add(evt.operator_id);
+  if(evt.latency_ms) state.lastLatency = evt.latency_ms;
+
+  // Update active phase/layer
+  if(evt.dag_phase) state.activePhase = evt.dag_phase;
+  if(evt.layer_processed){
+    state.activeLayers = {};
+    state.activeLayers[evt.layer_processed] = true;
+    state.doneLayers[evt.layer_processed] = true;
+  }
+  if(evt.event_type === 'dag_complete'){
+    state.activePhase = 10; // all done
+    state.activeLayers = {};
+  }
+  if(evt.kill_switch_triggered){
+    state.ksTriggered[evt.kill_switch_triggered] = Date.now();
+    // Clear after 10s
+    setTimeout(function(){ delete state.ksTriggered[evt.kill_switch_triggered]; renderKillSwitches(); }, 10000);
+  }
+
+  // Render
+  renderDAGPhases();
+  renderLayers();
+  renderKillSwitches();
+  addTerminalLine(evt);
+  updateHeaderStats();
+
+  document.getElementById('dagEventCount').textContent = state.eventCount;
+  if(evt.latency_ms) document.getElementById('dagLastLatency').textContent = evt.latency_ms + 'ms';
+}
+
+// ── UPTIME TICKER ─────────────────────────────────────────────
+setInterval(function(){
+  var elapsed = Math.floor((Date.now() - state.startTime) / 1000);
+  var h = String(Math.floor(elapsed/3600)).padStart(2,'0');
+  var m = String(Math.floor((elapsed%3600)/60)).padStart(2,'0');
+  var s = String(elapsed%60).padStart(2,'0');
+  document.getElementById('dagUptime').textContent = h+':'+m+':'+s;
+}, 1000);
+
+// Events per minute counter
+setInterval(function(){
+  var oneMinAgo = Date.now() - 60000;
+  state.eventsLastMinute = state.events.filter(function(e){
+    return new Date(e.created_at || 0).getTime() > oneMinAgo;
+  }).length;
+  updateHeaderStats();
+}, 5000);
+
+// ── TERMINAL FILTER TABS ──────────────────────────────────────
+document.querySelectorAll('.term-tab').forEach(function(tab){
+  tab.addEventListener('click', function(){
+    document.querySelectorAll('.term-tab').forEach(function(t){ t.classList.remove('active'); });
+    tab.classList.add('active');
+    state.termFilter = tab.dataset.filter;
+    // Re-filter visible lines
+    document.querySelectorAll('.terminal-line').forEach(function(line){
+      var types = line.dataset.type || '';
+      var show = true;
+      if(state.termFilter === 'signal' && !types.includes('signal_detected')) show = false;
+      if(state.termFilter === 'dag' && !types.includes('dag_step') && !types.includes('dag_complete')) show = false;
+      if(state.termFilter === 'kill' && !types.includes('kill')) show = false;
+      line.style.display = show ? '' : 'none';
+    });
+  });
+});
+
+// ── LOAD INITIAL DATA ─────────────────────────────────────────
+async function loadInitialEvents(){
+  try {
+    var res = await sb.from('elucy_telemetry_events')
+      .select('*')
+      .order('created_at', {ascending:false})
+      .limit(100);
+    if(res.data && res.data.length){
+      res.data.reverse().forEach(function(evt){ processEvent(evt); });
+      document.getElementById('statusText').textContent = 'LIVE — ' + res.data.length + ' eventos carregados';
+    } else {
+      document.getElementById('statusText').textContent = 'LIVE — Aguardando eventos...';
+    }
+    document.getElementById('statusDot').style.background = 'var(--green)';
+  } catch(err){
+    console.warn('[Telemetry] Load error:', err);
+    document.getElementById('statusText').textContent = 'OFFLINE';
+    document.getElementById('statusDot').style.background = 'var(--red)';
+  }
+}
+
+// ── REALTIME SUBSCRIPTION ─────────────────────────────────────
+function subscribeRealtime(){
+  sb.channel('telemetry-live')
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'elucy_telemetry_events'
+    }, function(payload){
+      processEvent(payload.new);
+    })
+    .subscribe(function(status){
+      if(status === 'SUBSCRIBED'){
+        document.getElementById('btmRealtime').textContent = 'Realtime: Connected';
+        console.log('[Telemetry] Realtime subscribed');
+      }
+    });
+}
+
+// ── LOAD DEALS FOR PIPELINE STATS ─────────────────────────────
+async function loadDealsForPipeline(){
+  try {
+    var res = await sb.from('deals')
+      .select('deal_id,contact_name,empresa_name,fase_atual_no_processo,etapa_atual_no_pipeline,tier_da_oportunidade,delta_t,revenue,linha_de_receita_vigente,grupo_de_receita,status_deal,qualificador_name,proprietario_name')
+      .in('status_deal', ['em_andamento','Em andamento','aberto','Aberto','novo','Novo',''])
+      .limit(2000);
+    if(res.data && res.data.length){
+      var map = {};
+      res.data.forEach(function(d){
+        map[d.deal_id] = {
+          dealId: d.deal_id,
+          contactName: d.contact_name,
+          empresa: d.empresa_name,
+          fase: d.fase_atual_no_processo,
+          etapa: d.etapa_atual_no_pipeline,
+          tier: d.tier_da_oportunidade,
+          delta: d.delta_t,
+          _delta: d.delta_t,
+          elucyValor: d.revenue || 0,
+          revenueRaw: d.revenue || 0,
+          linhaReceita: d.linha_de_receita_vigente,
+          grupo_de_receita: d.grupo_de_receita,
+          statusDeal: d.status_deal,
+          qualificador_name: d.qualificador_name,
+          proprietario_name: d.proprietario_name,
+          _enterprise: { is_5m_plus: (d.revenue||0) >= 5000000, enterprise_value_score: 0 }
+        };
+      });
+      window._COCKPIT_DEAL_MAP = map;
+      updatePipelineStats();
+    }
+  } catch(e){ console.warn('[Telemetry] Deals load error:', e); }
+}
+
+// ── DEMO MODE: Simulate events when no real data ──────────────
+var DEMO_DEALS = ['DL-4421','DL-3387','DL-5590','DL-2218','DL-6673','DL-1142','DL-8894','DL-7751'];
+var DEMO_OPS = ['nathan@g4','vitor@g4','lucas@g4','mariana@g4','pedro@g4'];
+var DEMO_SIGNALS = Object.keys({
+  lead_replied_fast:1, lead_ghosting:1, lead_requested_price:1, lead_no_show:1,
+  pain_detected:1, authority_missing:1, aging_high:1, fast_progress:1,
+  forecast_high_confidence:1, forecast_low_confidence:1, high_value_deal:1,
+  no_next_step:1, meeting_scheduled:1, champion_detected:1, stage_stuck:1
+});
+var DEMO_KS = Object.keys(KILL_SWITCH_NAMES);
+
+function simulateEvent(){
+  var phaseIdx = Math.floor(Math.random() * DAG_PHASES.length);
+  var phase = DAG_PHASES[phaseIdx];
+  var layerIdx = Math.floor(Math.random() * phase.layers.length);
+  var layerNum = phase.layers[layerIdx];
+  var layerDef = ALL_LAYERS.find(function(l){ return l.n === layerNum; });
+
+  var evtType = 'dag_step';
+  var rand = Math.random();
+  if(rand > 0.92) evtType = 'dag_complete';
+  else if(rand > 0.75) evtType = 'signal_detected';
+
+  var sigs = [];
+  if(evtType === 'signal_detected'){
+    var sigCount = 1 + Math.floor(Math.random()*3);
+    for(var i=0; i<sigCount; i++) sigs.push(DEMO_SIGNALS[Math.floor(Math.random()*DEMO_SIGNALS.length)]);
+  }
+
+  var ks = null;
+  if(Math.random() > 0.95) ks = DEMO_KS[Math.floor(Math.random()*DEMO_KS.length)];
+
+  var evt = {
+    deal_id: DEMO_DEALS[Math.floor(Math.random()*DEMO_DEALS.length)],
+    operator_id: DEMO_OPS[Math.floor(Math.random()*DEMO_OPS.length)],
+    role: 'sdr',
+    dag_phase: phase.num,
+    layer_processed: layerNum,
+    layer_name: layerDef ? layerDef.name : 'L'+layerNum,
+    signal_detected: sigs.length ? sigs : null,
+    kill_switch_triggered: ks,
+    event_type: evtType,
+    latency_ms: 50 + Math.floor(Math.random()*450),
+    created_at: new Date().toISOString()
+  };
+
+  processEvent(evt);
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+async function init(){
+  renderDAGPhases();
+  renderLayers();
+  renderKillSwitches();
+
+  // Load real data
+  await loadDealsForPipeline();
+  await loadInitialEvents();
+  subscribeRealtime();
+
+  // If no real events after 3s, start demo simulation
+  setTimeout(function(){
+    if(state.eventCount < 5){
+      console.log('[Telemetry] No real events detected — starting simulation mode');
+      document.getElementById('statusText').textContent = 'SIMULATION MODE';
+      document.getElementById('statusDot').style.background = 'var(--yellow)';
+      // Simulate events at variable rate
+      function scheduleNext(){
+        var delay = 300 + Math.floor(Math.random()*2000);
+        setTimeout(function(){ simulateEvent(); scheduleNext(); }, delay);
+      }
+      scheduleNext();
+    }
+  }, 3000);
+}
+
+init();
+
+})();
+</script>
+</body>
+</html>
