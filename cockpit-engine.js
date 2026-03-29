@@ -5609,6 +5609,20 @@ function detectSignals(deal){
   if(deal.leadGhosting)        add('lead_ghosting');
   if(deal.leadRescheduled)     add('lead_rescheduled');
 
+  // Telemetry: emit signal detection event
+  if(signals.length && typeof emitTelemetry === 'function'){
+    var sigTypes = signals.map(function(s){ return s.signal_type; });
+    emitTelemetry({
+      event_type: 'signal_detected',
+      deal_id: deal.dealId || deal.deal_id,
+      dag_phase: 3,
+      layer_processed: 18,
+      layer_name: 'Signal V8',
+      signal_detected: sigTypes,
+      metadata: { count: signals.length, pos: signals.filter(function(s){return s.pol>0}).length, neg: signals.filter(function(s){return s.pol<0}).length }
+    });
+  }
+
   return signals;
 }
 window.detectSignals = detectSignals;
@@ -6642,38 +6656,86 @@ window.syncAttributionRuntimeV22 = syncAttributionRuntimeV22;
 // Fase 7: Retrospectivo (L22)
 // ==================================================================
 
+// ==================================================================
+// TELEMETRY EMITTER — emite eventos para elucy_telemetry_events
+// Alimenta o Cockpit de Telemetria (telemetry.html) via Realtime
+// ==================================================================
+
+var _telemetryQueue = [];
+var _telemetryFlushTimer = null;
+
+function emitTelemetry(evt){
+  var sb = _sb(); if(!sb) return;
+  var base = {
+    operator_id: getOperatorId() || 'unknown',
+    role: (_operatorCtx.role || 'sdr'),
+    created_at: new Date().toISOString()
+  };
+  var row = Object.assign(base, evt);
+  _telemetryQueue.push(row);
+  // Batch flush every 500ms to reduce writes
+  if(!_telemetryFlushTimer){
+    _telemetryFlushTimer = setTimeout(function(){
+      _flushTelemetry();
+      _telemetryFlushTimer = null;
+    }, 500);
+  }
+}
+
+async function _flushTelemetry(){
+  var sb = _sb(); if(!sb || !_telemetryQueue.length) return;
+  var batch = _telemetryQueue.splice(0, 50);
+  try {
+    await sb.from('elucy_telemetry_events').insert(batch);
+  } catch(e){ console.warn('[Telemetry] flush error:', e); }
+}
+
+window.emitTelemetry = emitTelemetry;
+
+// Instrument a DAG phase step — emits telemetry + measures latency
+async function _dagStep(phase, layer, layerName, fn){
+  var t0 = Date.now();
+  emitTelemetry({ event_type:'dag_step', dag_phase:phase, layer_processed:layer, layer_name:layerName });
+  await fn();
+  var latency = Date.now() - t0;
+  emitTelemetry({ event_type:'dag_step', dag_phase:phase, layer_processed:layer, layer_name:layerName, latency_ms:latency, metadata:{status:'done'} });
+}
+
 async function runIntelligenceDAG(){
-  console.log('[DAG] Starting 22-Layer Intelligence DAG...');
+  console.log('[DAG] Starting 25-Layer Intelligence DAG (9 phases)...');
   var t0 = Date.now();
 
   try {
-    // Phase 2: Data Quality (L19) — depends on base data only
+    // Phase 2: Data Quality (L19)
     console.log('[DAG] Phase 2: L19 Data Quality...');
-    await syncDataQualityRuntimeV19();
+    await _dagStep(2, 19, 'Data Quality', syncDataQualityRuntimeV19);
 
-    // Phase 4: Transition Rules (L20) — depends on L19
+    // Phase 4: Transition Rules (L20)
     console.log('[DAG] Phase 4: L20 Transition Rules...');
-    await syncTransitionRuntimeV20();
+    await _dagStep(4, 20, 'Transition Rules', syncTransitionRuntimeV20);
 
-    // Phase 5: Portfolio Prioritization (L21) — depends on L19, L20
+    // Phase 5: Portfolio Prioritization (L21)
     console.log('[DAG] Phase 5: L21 Portfolio Prioritization...');
-    await syncPortfolioRuntimeV21();
+    await _dagStep(5, 21, 'Portfolio Priority', syncPortfolioRuntimeV21);
 
-    // Phase 7: Attribution (L22) — retrospective, batch
+    // Phase 7: Attribution (L22)
     console.log('[DAG] Phase 7: L22 Attribution...');
-    await syncAttributionRuntimeV22();
+    await _dagStep(7, 22, 'Attribution', syncAttributionRuntimeV22);
 
-    // Phase 8: Enterprise (L23) — depends on enriched deals
+    // Phase 8: Enterprise (L23)
     console.log('[DAG] Phase 8: L23 Enterprise Qualification...');
-    await syncEnterpriseRuntimeV23();
+    await _dagStep(8, 23, 'Enterprise Qual', syncEnterpriseRuntimeV23);
 
-    // Phase 9: Strategic Snapshot (L25) — depends on L23 + L24
+    // Phase 9: Strategic Snapshot (L25)
     console.log('[DAG] Phase 9: L25 Strategic Snapshot...');
-    await syncStrategicSnapshotV25();
+    await _dagStep(9, 25, 'Strategic Intel', syncStrategicSnapshotV25);
 
-    console.log('[DAG] 25-Layer DAG completed in ' + (Date.now() - t0) + 'ms');
+    var totalMs = Date.now() - t0;
+    console.log('[DAG] 25-Layer DAG completed in ' + totalMs + 'ms');
+    emitTelemetry({ event_type:'dag_complete', dag_phase:9, layer_processed:25, layer_name:'DAG Complete', latency_ms:totalMs });
   } catch(err){
     console.error('[DAG] Error:', err);
+    emitTelemetry({ event_type:'dag_error', dag_phase:0, layer_processed:0, layer_name:'ERROR', metadata:{error:String(err)} });
   }
 }
 window.runIntelligenceDAG = runIntelligenceDAG;
@@ -7066,6 +7128,51 @@ async function syncStrategicSnapshotV25(){
 }
 window.syncStrategicSnapshotV25 = syncStrategicSnapshotV25;
 
-console.log('[cockpit-engine v11.0] 25-Layer Architecture loaded — L23 Enterprise + L24 Trusted Advisor + L25 Strategic Intelligence');
+// ==================================================================
+// TELEMETRY: Kill Switch listener via cockpit_responses
+// Detects governance alerts in responses and emits telemetry events
+// ==================================================================
+
+(function initTelemetryResponseListener(){
+  var sb = _sb(); if(!sb) return;
+  try {
+    sb.channel('telemetry-ks')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'cockpit_responses'
+      }, function(payload){
+        var row = payload.new || {};
+        var resp = row.response_text || row.response_json || '';
+        var respStr = typeof resp === 'string' ? resp : JSON.stringify(resp);
+        // Detect governance alerts / kill switch triggers
+        var ksPatterns = [
+          {re:/titan.*challenger|challenger.*only/i, slug:'titan_challenger_only'},
+          {re:/builder.*spiced|spiced.*only/i, slug:'builder_spiced'},
+          {re:/executor.*spin|spin.*champion/i, slug:'executor_spin'},
+          {re:/tier.?2.*block|bloqueio.*imers/i, slug:'tier2_block_imersao_presencial'},
+          {re:/mei.*downgrade|ceo.*mei/i, slug:'ceo_mei_downgrade_authority'},
+          {re:/dqi.*over.*revenue|dqi.*superior/i, slug:'dqi_over_revenue'},
+          {re:/black.?box|protocolo.*black/i, slug:'black_box_protocol'}
+        ];
+        ksPatterns.forEach(function(pat){
+          if(pat.re.test(respStr)){
+            emitTelemetry({
+              event_type: 'kill_switch',
+              deal_id: row.deal_id || null,
+              dag_phase: 0,
+              layer_processed: 0,
+              layer_name: 'BEG Governor',
+              kill_switch_triggered: pat.slug,
+              metadata: { request_id: row.request_id }
+            });
+          }
+        });
+      })
+      .subscribe();
+  } catch(e){ console.warn('[Telemetry] KS listener error:', e); }
+})();
+
+console.log('[cockpit-engine v11.0] 25-Layer Architecture loaded — L23 Enterprise + L24 Trusted Advisor + L25 Strategic Intelligence + Telemetry Emitter');
 
 })();
