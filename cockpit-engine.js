@@ -19,16 +19,65 @@ function _escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(
 function _today(){ return new Date().toISOString().slice(0,10); }
 function _now(){ return new Date().toISOString(); }
 
-// Sync error logger — centralizes Supabase op failures
-// Usage: catch(e){ _syncErr('syncDealRuntime', e); }
-// Inspect: window._elucySyncErrors (latest 50, newest first)
+// ── TOAST SYSTEM ──────────────────────────────────────────────────
+// _toast(msg, sub?, retryFn?, type?) — type: 'ok'|'error'|'warn'|'info'
+// _syncStatus('syncing'|'ok'|'error') — topbar dot indicator
+var _toastQueue = [];
+var _toastActive = false;
+
+function _toast(msg, sub, retryFn, type){
+  _toastQueue.push({ msg: msg, sub: sub, retryFn: retryFn, type: type||'info' });
+  if(!_toastActive) _nextToast();
+}
+
+function _nextToast(){
+  if(!_toastQueue.length){ _toastActive=false; return; }
+  _toastActive = true;
+  var t = _toastQueue.shift();
+  var el = document.getElementById('elucy-toast');
+  if(!el) return (_toastActive=false);
+  var color = t.type==='error'?'var(--red)':t.type==='ok'?'var(--green)':t.type==='warn'?'var(--yellow)':'var(--accent)';
+  var icon = t.type==='error'?'✕':t.type==='ok'?'✓':t.type==='warn'?'⚠':'ℹ';
+  var retryHtml = t.retryFn ? '<button onclick="window._toastRetry()" style="margin-left:8px;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;border:1px solid '+color+';background:transparent;color:'+color+';cursor:pointer">Tentar novamente</button>' : '';
+  el.innerHTML = '<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:'+color+';color:#000;font-size:10px;font-weight:900;flex-shrink:0">'+icon+'</span>'
+    + '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:var(--text)">'+_escHtml(msg)+'</div>'
+    + (t.sub?'<div style="font-size:10px;color:var(--text2);margin-top:1px">'+_escHtml(t.sub)+'</div>':'')+'</div>'
+    + retryHtml
+    + '<button onclick="document.getElementById(\'elucy-toast\').classList.remove(\'show\')" style="margin-left:4px;background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px;line-height:1">✕</button>';
+  if(t.retryFn) window._toastRetry = t.retryFn;
+  el.classList.add('show');
+  var dur = t.type==='error' ? 6000 : 3000;
+  setTimeout(function(){ el.classList.remove('show'); setTimeout(_nextToast, 300); }, dur);
+}
+window._toast = _toast;
+
+function _syncStatus(state){
+  var dot = document.getElementById('sync-dot');
+  if(!dot) return;
+  dot.className = 'sync-dot sync-dot-'+state;
+  dot.title = state==='syncing'?'Sincronizando...':state==='error'?'Erro de sincronização — dados podem estar desatualizados':'Sincronizado';
+}
+window._syncStatus = _syncStatus;
+
+// Sync error logger — now also surfaces errors to user
 var _syncErrLog = [];
+var _recentErrOps = {};  // deduplicate same op within 30s
+
 function _syncErr(op, err){
   var entry = { op: op, msg: err && err.message ? err.message : String(err), ts: new Date().toISOString() };
   _syncErrLog.unshift(entry);
   if(_syncErrLog.length > 50) _syncErrLog.length = 50;
   console.warn('[elucy:sync]', op, entry.msg);
   window._elucySyncErrors = _syncErrLog;
+  // Surface to user — deduplicate same op within 30s to avoid spam
+  var now = Date.now();
+  if(!_recentErrOps[op] || now - _recentErrOps[op] > 30000){
+    _recentErrOps[op] = now;
+    _syncStatus('error');
+    _toast('Erro ao sincronizar: '+op, entry.msg, null, 'error');
+    // Auto-clear error dot after 10s if no new errors
+    setTimeout(function(){ if(_syncStatus) _syncStatus('ok'); }, 10000);
+  }
 }
 
 // UX Writer — normaliza nomes canônicos para exibição visual
@@ -742,6 +791,10 @@ function renderTaskRunner(filterType, filterRevLine, filterFase, filterCiclo, fi
       + '</div>'
       + '</div>';
   }).join('');
+
+  // Remove skeleton if present
+  var sk = document.getElementById('task-skeleton');
+  if(sk) sk.remove();
 
   wrap.innerHTML = statsHtml + '<div class="task-cards">' + cardsHtml + '</div>';
 
