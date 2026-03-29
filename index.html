@@ -227,6 +227,49 @@ nav{position:sticky;top:0;z-index:50;border-bottom:1px solid var(--border);backg
 .tab-feat{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px}
 .tab-feat::before{content:'→';color:var(--amber);font-weight:700;font-size:10px}
 
+/* ─ REVENUE FACTORY ──────────────────────────────── */
+.rf-intro{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:48px;align-items:start}
+.rf-book-card{background:var(--bg2);border:1px solid var(--amber-border);border-radius:var(--r2);padding:28px;position:relative;overflow:hidden}
+.rf-book-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--amber),var(--amber3))}
+.rf-book-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--amber);margin-bottom:10px}
+.rf-book-title{font-size:20px;font-weight:800;letter-spacing:-.5px;margin-bottom:8px;line-height:1.25}
+.rf-book-sub{font-size:12px;color:var(--text2);line-height:1.65}
+.rf-verdict-card{background:linear-gradient(135deg,rgba(245,158,11,.06),rgba(245,158,11,.02));border:1px solid var(--amber-border);border-radius:var(--r2);padding:28px}
+.rf-verdict-icon{font-size:32px;margin-bottom:12px}
+.rf-verdict-title{font-size:16px;font-weight:800;letter-spacing:-.3px;margin-bottom:10px}
+.rf-verdict-text{font-size:13px;color:var(--text2);line-height:1.7}
+.rf-verdict-text b{color:var(--text);font-weight:600}
+.rf-criteria-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:40px}
+.rf-crit-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:22px 24px;transition:.3s;position:relative;overflow:hidden}
+.rf-crit-card:hover{border-color:var(--amber-border);transform:translateY(-2px)}
+.rf-crit-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--amber);opacity:0;transition:.3s}
+.rf-crit-card:hover::after{opacity:.6}
+.rf-crit-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:12px}
+.rf-crit-num{font-size:11px;font-weight:800;color:var(--amber);background:var(--amber-glass);border:1px solid var(--amber-border);padding:4px 10px;border-radius:5px;flex-shrink:0;letter-spacing:.5px}
+.rf-crit-title{font-size:13px;font-weight:700;line-height:1.3}
+.rf-crit-book{font-size:11px;color:var(--text3);line-height:1.5;border-left:2px solid var(--border);padding-left:10px;margin-bottom:10px;font-style:italic}
+.rf-crit-elucy{font-size:11px;color:var(--text2);line-height:1.6}
+.rf-crit-elucy b{color:var(--text);font-weight:600}
+.rf-crit-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px}
+.rf-3e{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:36px}
+.e-card{border:1px solid var(--border);border-radius:var(--r2);padding:22px;transition:.3s;text-align:center}
+.e-card:hover{border-color:var(--amber-border)}
+.e-card.effectiveness{border-top:3px solid var(--green)}
+.e-card.efficiency{border-top:3px solid var(--blue2)}
+.e-card.economy{border-top:3px solid var(--amber2)}
+.e-card-letter{font-size:36px;font-weight:900;line-height:1;margin-bottom:4px}
+.e-card.effectiveness .e-card-letter{color:var(--green)}
+.e-card.efficiency .e-card-letter{color:var(--blue2)}
+.e-card.economy .e-card-letter{color:var(--amber2)}
+.e-card-name{font-size:12px;font-weight:700;margin-bottom:10px}
+.e-card-desc{font-size:11px;color:var(--text2);line-height:1.6}
+.e-card-desc b{color:var(--text);font-weight:600}
+.rf-conclusion{margin-top:36px;padding:24px 28px;background:var(--amber-glass);border:1px solid var(--amber-border2);border-radius:var(--r2);text-align:center}
+.rf-conclusion-text{font-size:15px;font-weight:600;color:var(--text);line-height:1.7}
+.rf-conclusion-text .em{color:var(--amber2);font-weight:800}
+@media(max-width:1000px){.rf-intro{grid-template-columns:1fr}.rf-criteria-grid{grid-template-columns:1fr}.rf-3e{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.rf-3e{grid-template-columns:1fr}}
+
 /* ─ CTA FINAL ────────────────────────────────────── */
 .cta-section{padding:100px 32px;text-align:center;max-width:800px;margin:0 auto}
 .cta-section h2{font-size:46px;font-weight:900;letter-spacing:-1.5px;margin-bottom:16px;line-height:1.1}
@@ -299,6 +342,7 @@ footer{border-top:1px solid var(--border);padding:24px 32px;text-align:center}
       <span class="nav-link" onclick="document.getElementById('s-forecast').scrollIntoView({behavior:'smooth'})">Forecast</span>
       <span class="nav-link" onclick="document.getElementById('s-engine').scrollIntoView({behavior:'smooth'})">Motor</span>
       <span class="nav-link" onclick="document.getElementById('s-governance').scrollIntoView({behavior:'smooth'})">Governança</span>
+      <span class="nav-link" onclick="document.getElementById('s-revenue-factory').scrollIntoView({behavior:'smooth'})">Rev. Factory</span>
       <a class="btn-nav" href="cockpit.html">Cockpit →</a>
     </div>
   </div>
@@ -891,6 +935,119 @@ footer{border-top:1px solid var(--border);padding:24px 32px;text-align:center}
         <div class="tab-feat">Attribution Engine V10 com 72h window</div>
         <div class="tab-feat">Data Quality panorama e DQI trends</div>
       </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════════════════ REVENUE FACTORY ═══ -->
+<section id="s-revenue-factory" class="section">
+  <div class="sec-eyebrow">Validação Teórica</div>
+  <div class="sec-title">A Fábrica de Receita encontrou seu motor.</div>
+  <p class="sec-sub">Avaliado sob o framework da Arquitetura de Receita, o Elucy não é apenas uma ferramenta de excelência — é a materialização tecnológica do modelo. O livro oferece a teoria. O Elucy executa.</p>
+
+  <div class="rf-intro">
+    <div class="rf-book-card">
+      <div class="rf-book-label">Referência Bibliográfica</div>
+      <div class="rf-book-title">Fábrica de Receita<br><span style="font-size:15px;font-weight:500;color:var(--text2)">Revenue Factory</span></div>
+      <div class="rf-book-sub">Framework que define como organizações B2B constroem crescimento sustentável e receita recorrente através de modelos padronizados, dados estruturados e ciência de decisão. Três pilares: <b style="color:var(--text)">Data Model</b>, <b style="color:var(--text)">Bowtie GTM</b> e <b style="color:var(--text)">Decisões por Evidência</b>. Frameworks citados explicitamente: SPIN, MEDDIC, PLG.</div>
+      <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:6px">
+        <span class="ptag amber">DATA MODEL</span>
+        <span class="ptag green">BOWTIE GTM</span>
+        <span class="ptag purple">EVIDÊNCIA</span>
+        <span class="ptag amber">3 E's</span>
+      </div>
+    </div>
+    <div class="rf-verdict-card">
+      <div class="rf-verdict-icon">⚗️</div>
+      <div class="rf-verdict-title">Elucy como Motor de Execução</div>
+      <div class="rf-verdict-text">O livro oferece o modelo teórico. O Elucy atua como o <b>motor de execução</b> da Arquitetura de Receita — cada um dos 5 critérios avaliados resulta em conformidade irretocável ou superação do framework proposto. <b>Isso não é coincidência de design</b>: é o resultado direto de construir sobre dados estruturados, frameworks canônicos e governança ativa por kill switches.</div>
+    </div>
+  </div>
+
+  <div class="rf-criteria-grid">
+    <div class="rf-crit-card">
+      <div class="rf-crit-top">
+        <span class="rf-crit-num">RF·1</span>
+        <div class="rf-crit-title">Fundação para IA — Data Model Padronizado</div>
+      </div>
+      <div class="rf-crit-book">O livro exige modelo e estrutura de dados padronizados como pré-requisito para que a IA gere impacto real — sem essa base, a IA fica limitada a tarefas isoladas.</div>
+      <div class="rf-crit-elucy">O Elucy opera sobre um <b>Data Lake estruturado no Databricks</b> (<code style="font-size:10px;color:var(--amber2)">funil_comercial</code>, <code style="font-size:10px;color:var(--amber2)">customer_360</code>) integrado a <b>25 camadas de decisão em DAG de 9 fases</b>. A IA não faz transcrição — cruza <b>49 sinais vitais em tempo real</b>, gerando exatamente o Data Model canônico exigido pela Arquitetura.</div>
+      <div class="rf-crit-tags">
+        <span class="ptag amber">DATABRICKS</span>
+        <span class="ptag amber">25 LAYERS DAG</span>
+        <span class="ptag amber">49 SINAIS</span>
+      </div>
+    </div>
+
+    <div class="rf-crit-card">
+      <div class="rf-crit-top">
+        <span class="rf-crit-num">RF·2</span>
+        <div class="rf-crit-title">Modelo Bowtie — Ciclo de Vida Completo</div>
+      </div>
+      <div class="rf-crit-book">O livro critica o funil clássico e propõe o Bowtie — mapeando todo o ciclo: Aquisição, Retenção e Expansão em loop fechado. Receita recorrente só ocorre com impacto contínuo pós-venda.</div>
+      <div class="rf-crit-elucy">O Elucy integra <b>metodologia RFV</b> para clusterizar clientes, rastreia <b>deals em risco e oportunidades de expansão/upsell</b>, conectando inteligência conversacional à jornada completa. O GTM multi-role (SDR→Closer→CS→AM) unifica Aquisição e Expansão em arquitetura única.</div>
+      <div class="rf-crit-tags">
+        <span class="ptag green">MULTI-ROLE</span>
+        <span class="ptag green">RFV</span>
+        <span class="ptag green">EXPANSÃO</span>
+      </div>
+    </div>
+
+    <div class="rf-crit-card">
+      <div class="rf-crit-top">
+        <span class="rf-crit-num">RF·3</span>
+        <div class="rf-crit-title">Frameworks Uniformes Centrados no Comprador</div>
+      </div>
+      <div class="rf-crit-book">O livro cita explicitamente SPIN, MEDDIC e PLG como interfaces vitais para execução centrada no comprador. A metodologia uniforme é a pedra angular do sucesso — não pode ser deturpada na ponta.</div>
+      <div class="rf-crit-elucy">Ponto mais forte da plataforma. O Elucy <b>obriga governança cirúrgica</b> via MCPs — auditando ativamente se o vendedor roda SPIN, SPICED ou Challenger corretamente. Com <b>49 sinais comportamentais</b> e <b>7 kill switches</b>, o Elucy age como o <em>"fiscal da Arquitetura de Receita"</em>: a metodologia definida pela liderança nunca é deturpada na ponta.</div>
+      <div class="rf-crit-tags">
+        <span class="ptag purple">SPIN</span>
+        <span class="ptag purple">MEDDIC</span>
+        <span class="ptag purple">SPICED</span>
+        <span class="ptag red">KILL SWITCHES</span>
+      </div>
+    </div>
+
+    <div class="rf-crit-card">
+      <div class="rf-crit-top">
+        <span class="rf-crit-num">RF·4</span>
+        <div class="rf-crit-title">Decisões por Evidência — Forecast Previsível</div>
+      </div>
+      <div class="rf-crit-book">O livro exige tomadas de decisão baseadas em First Principles, Modelos e Dados — previsão confiável de receita e ação proativa antes que problemas ocorram. Zero "achismo".</div>
+      <div class="rf-crit-elucy">O <b>Forecast V7 preditivo — 3 dimensões (quant × qual × framework)</b> — traduz a matemática exigida pelo livro com audit trail append-only para cada score. O sistema de Kill Switches age <b>preventivamente</b> contra erros fatais antes que o operador tome a ação errada — detecção precoce de falha como o modelo exige.</div>
+      <div class="rf-crit-tags">
+        <span class="ptag blue">FORECAST V7</span>
+        <span class="ptag blue">AUDIT TRAIL</span>
+        <span class="ptag red">PREVENTIVO</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="rf-3e">
+    <div class="e-card effectiveness">
+      <div class="e-card-letter">E1</div>
+      <div class="e-card-name">Effectiveness — Eficácia</div>
+      <div class="e-card-desc">O Elucy garante <b>resultados certos</b> — filtra Continuações de Avanços reais e mapeia <b>EVS (Enterprise Value Score)</b> para focar apenas nas contas certas (5M+). Sem output sem validação BEG.</div>
+    </div>
+    <div class="e-card efficiency">
+      <div class="e-card-letter">E2</div>
+      <div class="e-card-name">Efficiency — Eficiência</div>
+      <div class="e-card-desc">A IA retira o peso analítico humano — <b>automatiza auditorias de calls</b> e calcula o <b>Trusted Advisor Score</b> instantaneamente. 25 layers por deal sem overhead operacional.</div>
+    </div>
+    <div class="e-card economy">
+      <div class="e-card-letter">E3</div>
+      <div class="e-card-name">Economy — Economia</div>
+      <div class="e-card-desc"><b>Prompt caching + Supabase Edge Functions</b> mantêm a operação em frações de centavo por request (~$0.01). 200 SDRs ativa a ~$2.500/mês — sofisticação de Fábrica de Receita sem custo inviável.</div>
+    </div>
+  </div>
+
+  <div class="rf-conclusion">
+    <div class="rf-conclusion-text">
+      O Elucy não é avaliado pelo livro como uma <em>ferramenta com alto grau de excelência</em> —<br>
+      é a <span class="em">materialização tecnológica perfeita da Arquitetura de Receita</span>.<br>
+      <span style="font-size:13px;color:var(--text2);font-weight:500">O modelo teórico encontrou seu motor de execução.</span>
     </div>
   </div>
 </section>
