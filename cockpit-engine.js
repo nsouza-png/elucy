@@ -380,6 +380,18 @@ function enrichDealContext(deal){
   deal._timeline = calcTimelineIntelligence(deal);
   // Next best action
   deal._nextAction = deriveNextAction(deal);
+  // Feature 1: SPIN Audit + Advance/Continuation + Objections
+  if(!deal._spinAudit) deal._spinAudit = calcSpinAudit(deal);
+  if(!deal._advanceState) deal._advanceState = calcAdvanceState(deal);
+  if(!deal._objections) deal._objections = extractObjections(deal);
+  // Feature 2: RFV Cluster
+  if(!deal._rfvCluster) deal._rfvCluster = resolveRFVCluster(deal);
+  // Feature 3: Enterprise + Trusted Advisor (inline lightweight — full calc in L23/L24)
+  if(!deal._enterpriseScore) deal._enterpriseScore = calcEnterpriseQuickScore(deal);
+  if(!deal._trustedAdvisor) deal._trustedAdvisor = calcTrustedAdvisorQuick(deal);
+  // Feature 4: Channel conversion + GTM alignment
+  if(!deal._channelConversion) deal._channelConversion = resolveChannelConversion(deal);
+  if(deal._channelConversion !== undefined) deal._gtmMisaligned = checkGTMMisalignment(deal);
   return deal;
 }
 window.enrichDealContext = enrichDealContext;
@@ -5571,6 +5583,48 @@ function detectSignals(deal){
   if(deal.leadGhosting)        add('lead_ghosting');
   if(deal.leadRescheduled)     add('lead_rescheduled');
 
+  // == SPIN AUDIT (Feature 1) ==
+  var spinAudit = deal._spinAudit || {};
+  if(spinAudit.situation_ratio > 0.50) add('spin_situation_heavy');
+  if(spinAudit.implication_ratio >= 0.25) add('spin_implication_strong');
+  if(spinAudit.premature_solution) add('spin_premature_solution');
+  if(spinAudit.need_payoff_ratio >= 0.20) add('spin_need_payoff_hit');
+
+  // == ADVANCE vs CONTINUATION (Feature 1) ==
+  var advState = deal._advanceState || {};
+  if(advState.is_advance) add('advance_confirmed');
+  if(advState.is_continuation && !advState.is_advance) add('continuation_only');
+  if(advState.is_advance && (fr.authority_score||0) < 0.30) add('advance_without_decisor');
+
+  // == OBJECTION CLASSIFICATION (Feature 1) ==
+  var objections = deal._objections || [];
+  objections.forEach(function(obj){
+    if(obj.type === 'price') add('objection_price');
+    if(obj.type === 'timing') add('objection_timing');
+    if(obj.type === 'authority') add('objection_authority');
+    if(obj.type === 'technical') add('objection_technical');
+    if(obj.resolved) add('objection_resolved');
+    else add('objection_unresolved');
+  });
+
+  // == RFV (Feature 2) ==
+  var rfv = deal._rfvCluster || '';
+  if(rfv === 'champion') add('rfv_champion');
+  if(rfv === 'at_risk') add('rfv_at_risk');
+  if(rfv === 'hibernating') add('rfv_hibernating');
+  if(rfv === 'potential_loyal') add('rfv_potential_loyal');
+
+  // == ENTERPRISE (Feature 3) ==
+  if(deal._enterpriseScore && deal._enterpriseScore.is_enterprise) add('enterprise_5m_detected');
+  if(deal._trustedAdvisor && deal._trustedAdvisor.score >= 0.70) add('trusted_advisor_high');
+  if(deal._trustedAdvisor && deal._trustedAdvisor.score < 0.35) add('trusted_advisor_low');
+
+  // == STRATEGIC (Feature 4) ==
+  var chanConv = deal._channelConversion || 0;
+  if(chanConv >= 0.40) add('channel_high_convert');
+  else if(chanConv > 0 && chanConv < 0.10) add('channel_low_convert');
+  if(deal._gtmMisaligned) add('gtm_misalignment');
+
   return signals;
 }
 window.detectSignals = detectSignals;
@@ -6594,7 +6648,814 @@ async function syncAttributionRuntimeV22(){
 window.syncAttributionRuntimeV22 = syncAttributionRuntimeV22;
 
 // ==================================================================
-// DAG ORCHESTRATOR — Executa as 22 layers na ordem correta sem ciclos
+// FEATURE 1 — SPIN AUDITING ENGINE + ADVANCE/CONTINUATION + OBJECTIONS
+// Audita proporção S/P/I/N, detecta avanço vs continuação,
+// classifica objeções por tipo (price/timing/authority/technical).
+// ==================================================================
+
+// SPIN Audit — analisa componentes do framework SPIN a partir de notas/runtime
+function calcSpinAudit(deal){
+  var fr = deal._frameworkRuntime || {};
+  var na = deal._noteAnalysis || {};
+  var framework = deal._framework || '';
+
+  // Default vazio se não é Executor/SPIN
+  if(!framework.toLowerCase().includes('spin'))
+    return { applicable:false, situation_ratio:0, problem_ratio:0, implication_ratio:0, need_payoff_ratio:0, premature_solution:false, score:0 };
+
+  // Extrair componentes de notas e runtime
+  // Cada componente vai de 0 a 1.0 baseado em cobertura
+  var situation = fr.spin_situation || fr.spiced_situation || 0;
+  var problem = fr.spin_problem || fr.spiced_pain || 0;
+  var implication = fr.spin_implication || 0;
+  var need_payoff = fr.spin_need_payoff || fr.next_step_clarity || 0;
+
+  // Se temos dados do noteAnalysis, enriquecer
+  if(na.spin_components){
+    situation = Math.max(situation, na.spin_components.situation || 0);
+    problem = Math.max(problem, na.spin_components.problem || 0);
+    implication = Math.max(implication, na.spin_components.implication || 0);
+    need_payoff = Math.max(need_payoff, na.spin_components.need_payoff || 0);
+  }
+
+  var total = situation + problem + implication + need_payoff;
+  if(total === 0) total = 1; // avoid div by zero
+
+  var sit_ratio = situation / total;
+  var prob_ratio = problem / total;
+  var impl_ratio = implication / total;
+  var np_ratio = need_payoff / total;
+
+  // Premature solution: ofereceu solução (need_payoff alto) sem construir problema (implication baixo)
+  var premature = np_ratio > 0.30 && impl_ratio < 0.10 && prob_ratio < 0.15;
+
+  // Score SPIN: ideal é equilíbrio com ênfase em I e N
+  // Pesos ideais: S=15%, P=25%, I=35%, N=25%
+  var ideal_s = 0.15, ideal_p = 0.25, ideal_i = 0.35, ideal_n = 0.25;
+  var deviation = Math.abs(sit_ratio - ideal_s) + Math.abs(prob_ratio - ideal_p) +
+                  Math.abs(impl_ratio - ideal_i) + Math.abs(np_ratio - ideal_n);
+  var score = Math.max(0, Math.min(1.0, 1.0 - deviation));
+
+  return {
+    applicable: true,
+    situation_ratio: +sit_ratio.toFixed(3),
+    problem_ratio: +prob_ratio.toFixed(3),
+    implication_ratio: +impl_ratio.toFixed(3),
+    need_payoff_ratio: +np_ratio.toFixed(3),
+    premature_solution: premature,
+    score: +score.toFixed(3),
+    dominant: sit_ratio >= prob_ratio && sit_ratio >= impl_ratio && sit_ratio >= np_ratio ? 'situation' :
+              prob_ratio >= impl_ratio && prob_ratio >= np_ratio ? 'problem' :
+              impl_ratio >= np_ratio ? 'implication' : 'need_payoff'
+  };
+}
+
+// Advance vs Continuation — diferencia avanço real de continuação vaga
+function calcAdvanceState(deal){
+  var na = deal._noteAnalysis || {};
+  var fr = deal._frameworkRuntime || {};
+  var timeline = deal._timeline || {};
+  var nba = deal._nextAction || {};
+
+  // Sinais de avanço real:
+  // 1. Próximo passo definido COM data (não genérico)
+  var hasDatedNextStep = (fr.next_step_clarity || 0) >= 0.60;
+  // 2. Progresso de estágio recente
+  var stageAdvanced = (timeline.stagesCompleted || 0) > 0 && (deal._stageDelta || 0) >= 1;
+  // 3. Compromisso específico do lead (pediu proposta, agendou, trouxe decisor)
+  var leadCommitment = deal.leadRequestedPrice || deal.reuniao_agendada ||
+    (na.advancement_signal && na.advancement_signal !== 'none');
+  // 4. Decisor engajado
+  var decisorEngaged = (fr.authority_score || 0) >= 0.50;
+
+  var advanceSignals = 0;
+  if(hasDatedNextStep) advanceSignals++;
+  if(stageAdvanced) advanceSignals++;
+  if(leadCommitment) advanceSignals++;
+  if(decisorEngaged) advanceSignals++;
+
+  // Sinais de continuação (sem compromisso):
+  var noNextStep = (fr.next_step_clarity || 0) < 0.30;
+  var noStageMovement = (deal._stageDelta || 0) === 0 && (deal._delta || deal.delta || 0) > 3;
+  var genericAction = nba.priority === 'low' || nba.type === 'follow_up';
+
+  var continuationSignals = 0;
+  if(noNextStep) continuationSignals++;
+  if(noStageMovement) continuationSignals++;
+  if(genericAction) continuationSignals++;
+
+  var is_advance = advanceSignals >= 2;
+  var is_continuation = continuationSignals >= 2 && !is_advance;
+
+  return {
+    is_advance: is_advance,
+    is_continuation: is_continuation,
+    advance_signals: advanceSignals,
+    continuation_signals: continuationSignals,
+    has_dated_next_step: hasDatedNextStep,
+    stage_advanced: stageAdvanced,
+    lead_commitment: !!leadCommitment,
+    decisor_engaged: decisorEngaged,
+    classification: is_advance ? 'advance' : is_continuation ? 'continuation' : 'neutral'
+  };
+}
+
+// Objection Extraction — classifica objeções por tipo a partir de notas
+// Tipos: price (produto/preço), timing (momento), authority (decisor), technical (produto/feature)
+function extractObjections(deal){
+  var na = deal._noteAnalysis || {};
+  var fr = deal._frameworkRuntime || {};
+  var objections = [];
+
+  // Se noteAnalysis tem objeções detectadas
+  if(na.objections && Array.isArray(na.objections)){
+    na.objections.forEach(function(obj){
+      objections.push({
+        type: classifyObjectionType(obj.text || obj.type || ''),
+        text: obj.text || '',
+        resolved: !!obj.resolved,
+        resolution: obj.resolution || null,
+        detected_at: obj.detected_at || null
+      });
+    });
+  }
+
+  // Se deal tem flag de objeção aberta (do UI)
+  if(deal.objection_open || deal.objecaoAberta){
+    var existing = objections.find(function(o){ return !o.resolved; });
+    if(!existing){
+      objections.push({
+        type: classifyObjectionType(deal.objection_type || deal.objecao_tipo || ''),
+        text: deal.objection_text || deal.objecao_texto || '',
+        resolved: false,
+        resolution: null,
+        detected_at: deal.objection_date || null
+      });
+    }
+  }
+
+  // Inferir objeção por sinais indiretos
+  if(!objections.length){
+    // Pediu adiamento = possível objeção de timing
+    if(deal.leadRequestedTime || (na.sentiment === 'negative' && (fr.spiced_critical_event || 0) < 0.20)){
+      objections.push({ type:'timing', text:'Lead pediu adiamento / sem urgência detectada', resolved:false, resolution:null, detected_at:null });
+    }
+    // Authority baixo + stall = objeção de autoridade
+    if((fr.authority_score || 0) < 0.25 && (deal._stageDelta || 0) === 0 && (deal._delta || deal.delta || 0) > 5){
+      objections.push({ type:'authority', text:'Deal travado sem decisor mapeado', resolved:false, resolution:null, detected_at:null });
+    }
+  }
+
+  return objections;
+}
+
+function classifyObjectionType(text){
+  if(!text) return 'unknown';
+  var t = text.toLowerCase();
+  if(t.includes('preco') || t.includes('price') || t.includes('caro') || t.includes('budget') ||
+     t.includes('orcamento') || t.includes('investimento') || t.includes('valor')) return 'price';
+  if(t.includes('tempo') || t.includes('timing') || t.includes('momento') || t.includes('agora nao') ||
+     t.includes('depois') || t.includes('semestre') || t.includes('adiamento')) return 'timing';
+  if(t.includes('autoridade') || t.includes('authority') || t.includes('decisor') || t.includes('socio') ||
+     t.includes('conselho') || t.includes('diretoria') || t.includes('aprovacao')) return 'authority';
+  if(t.includes('tecnic') || t.includes('funcionalidade') || t.includes('integracao') ||
+     t.includes('feature') || t.includes('produto') || t.includes('plataforma')) return 'technical';
+  return 'unknown';
+}
+
+// ==================================================================
+// FEATURE 2 — MOTOR RFV RUNTIME
+// Clusteriza deals/contas por Recência, Frequência e Valor.
+// Clusters: champion, loyal, potential_loyal, at_risk, hibernating, new_customer
+// ==================================================================
+
+// Constantes RFV — thresholds de segmentação
+var RFV_THRESHOLDS = {
+  recency_high: 7,    // dias — último toque <= 7 dias
+  recency_med: 21,    // dias — último toque <= 21 dias
+  frequency_high: 5,  // touchpoints totais >= 5
+  frequency_med: 2,   // touchpoints >= 2
+  value_high: 30000,  // valor oportunidade >= 30k
+  value_med: 10000    // valor >= 10k
+};
+
+function resolveRFVCluster(deal){
+  var delta = deal._delta || deal.delta || 0;
+  var tp = deal._touchpoints || deal.touchpointCount || 0;
+  var val = deal._oppValue || deal.opportunityValue || 0;
+
+  // R score: 3=recente, 2=médio, 1=antigo
+  var r = delta <= RFV_THRESHOLDS.recency_high ? 3 : delta <= RFV_THRESHOLDS.recency_med ? 2 : 1;
+  // F score: 3=frequente, 2=médio, 1=baixo
+  var f = tp >= RFV_THRESHOLDS.frequency_high ? 3 : tp >= RFV_THRESHOLDS.frequency_med ? 2 : 1;
+  // V score: 3=alto, 2=médio, 1=baixo
+  var v = val >= RFV_THRESHOLDS.value_high ? 3 : val >= RFV_THRESHOLDS.value_med ? 2 : 1;
+
+  var rfvScore = r + f + v; // 3-9
+  deal._rfvScore = { r:r, f:f, v:v, total:rfvScore };
+
+  // Clustering por combinação RFV
+  if(rfvScore >= 8) return 'champion';          // R3+F3+V2 ou R3+F2+V3
+  if(r >= 2 && f >= 2 && v >= 2) return 'loyal'; // todos médio+
+  if(r >= 2 && rfvScore >= 6) return 'potential_loyal';
+  if(r <= 1 && f >= 2) return 'at_risk';         // não recente mas engajado antes
+  if(r <= 1 && f <= 1) return 'hibernating';     // sumiu
+  return 'new_customer'; // recente mas sem histórico
+}
+
+// Calcula métricas RFV agregadas para toda a carteira do operador
+function calcRFVPortfolio(deals){
+  var clusters = { champion:[], loyal:[], potential_loyal:[], at_risk:[], hibernating:[], new_customer:[] };
+  var totalValue = 0;
+
+  deals.forEach(function(d){
+    var cluster = d._rfvCluster || resolveRFVCluster(d);
+    if(clusters[cluster]) clusters[cluster].push(d);
+    totalValue += d._oppValue || 0;
+  });
+
+  var result = {};
+  Object.keys(clusters).forEach(function(k){
+    var arr = clusters[k];
+    var clusterValue = arr.reduce(function(s,d){ return s + (d._oppValue||0); }, 0);
+    result[k] = {
+      count: arr.length,
+      pct: deals.length > 0 ? +(arr.length / deals.length * 100).toFixed(1) : 0,
+      value: clusterValue,
+      value_pct: totalValue > 0 ? +(clusterValue / totalValue * 100).toFixed(1) : 0,
+      avg_aging: arr.length > 0 ? +(arr.reduce(function(s,d){ return s+(d._delta||d.delta||0); },0)/arr.length).toFixed(1) : 0,
+      deals: arr.map(function(d){ return d.dealId||d.deal_id; })
+    };
+  });
+
+  result._summary = {
+    total_deals: deals.length,
+    total_value: totalValue,
+    health_score: deals.length > 0 ? +((
+      (result.champion.count * 3) +
+      (result.loyal.count * 2) +
+      (result.potential_loyal.count * 1.5) +
+      (result.new_customer.count * 1) -
+      (result.at_risk.count * 1.5) -
+      (result.hibernating.count * 2)
+    ) / deals.length).toFixed(3) : 0
+  };
+
+  return result;
+}
+
+// ==================================================================
+// FEATURE 3 — L23 ENTERPRISE QUALIFICATION + L24 TRUSTED ADVISOR
+// L23: Enterprise Value Score (EVS) para deals 5M+
+// L24: Trusted Advisor Score (Equação de Maister expandida)
+// ==================================================================
+
+// L23 — Enterprise Qualification (lightweight inline)
+function calcEnterpriseQuickScore(deal){
+  var faturamento = parseFloat(deal.faturamento || deal.revenue || 0);
+  var tier = (deal.tier_da_oportunidade || deal.tier || '').toLowerCase();
+  var oppVal = deal._oppValue || 0;
+  var persona = deal._persona || '';
+
+  // Detectar Enterprise: faturamento >= 5M OU tier diamond OU ticket alto
+  var is_enterprise = faturamento >= 5000000 || tier === 'diamond' || oppVal >= 50000;
+
+  if(!is_enterprise) return { is_enterprise:false, evs:0, band:'standard' };
+
+  // EVS — Enterprise Value Score (6 componentes, 0-100)
+  // 1. Revenue Scale (0-20): baseado em faturamento
+  var rev_scale = faturamento >= 50000000 ? 20 : faturamento >= 20000000 ? 16 :
+                  faturamento >= 10000000 ? 12 : faturamento >= 5000000 ? 8 : 4;
+
+  // 2. Strategic Fit (0-20): baseado em tier + linha de receita
+  var strategic_fit = tier === 'diamond' ? 20 : tier === 'gold' ? 14 : tier === 'silver' ? 8 : 4;
+
+  // 3. Decision Complexity (0-15): baseado em autoridade detectada
+  var fr = deal._frameworkRuntime || {};
+  var auth = fr.authority_score || 0;
+  var decision_complexity = auth >= 0.70 ? 15 : auth >= 0.50 ? 11 : auth >= 0.30 ? 7 : 3;
+
+  // 4. Engagement Depth (0-15): touchpoints + meetings
+  var tp = deal._touchpoints || deal.touchpointCount || 0;
+  var meetings = deal._meetingCount || 0;
+  var engagement_depth = Math.min(15, (tp * 1.5) + (meetings * 3));
+
+  // 5. Framework Coverage (0-15): SPICED + MEDDIC coverage
+  var fw_cov = (fr.overall_coverage || 0) * 15;
+
+  // 6. Pipeline Momentum (0-15): velocity + forecast
+  var fc = deal._forecastV6 || {};
+  var momentum = ((fc.score || 0) * 8) + ((deal._timeline || {}).velocity_score || 0) * 7;
+  momentum = Math.min(15, momentum);
+
+  var evs = +(rev_scale + strategic_fit + decision_complexity + engagement_depth + fw_cov + momentum).toFixed(1);
+  evs = Math.min(100, evs);
+
+  var band = evs >= 80 ? 'platinum' : evs >= 60 ? 'gold' : evs >= 40 ? 'silver' : 'qualifying';
+
+  return {
+    is_enterprise: true,
+    evs: evs,
+    band: band,
+    components: {
+      rev_scale: +rev_scale.toFixed(1),
+      strategic_fit: +strategic_fit.toFixed(1),
+      decision_complexity: +decision_complexity.toFixed(1),
+      engagement_depth: +engagement_depth.toFixed(1),
+      framework_coverage: +fw_cov.toFixed(1),
+      pipeline_momentum: +momentum.toFixed(1)
+    }
+  };
+}
+
+// L24 — Trusted Advisor Score (Equação de Maister + Resistência a Objeção)
+// Maister: Trust = (Credibility + Reliability + Intimacy) / Self-Orientation
+// Expandido com: Objection Resistance Score
+function calcTrustedAdvisorQuick(deal){
+  var fr = deal._frameworkRuntime || {};
+  var na = deal._noteAnalysis || {};
+  var timeline = deal._timeline || {};
+  var objections = deal._objections || [];
+
+  // Credibility (0-1): qualidade das notas + cobertura de framework + métricas definidas
+  var note_q = fr.note_quality_score || 0;
+  var fw_cov = fr.overall_coverage || 0;
+  var metrics = fr.meddic_metrics || 0;
+  var credibility = (note_q * 0.40) + (fw_cov * 0.35) + (metrics * 0.25);
+
+  // Reliability (0-1): consistência de follow-up + cumprimento de next steps
+  var next_step = fr.next_step_clarity || 0;
+  var touchConsistency = 0;
+  var tp = deal._touchpoints || deal.touchpointCount || 0;
+  var delta = deal._delta || deal.delta || 0;
+  if(delta > 0 && tp > 0){
+    var touchFrequency = tp / Math.max(1, delta); // toques por dia
+    touchConsistency = touchFrequency >= 0.5 ? 1.0 : touchFrequency >= 0.25 ? 0.70 : touchFrequency >= 0.10 ? 0.40 : 0.15;
+  }
+  var no_shows_operator = 0; // operator side no-shows (missed follow-ups)
+  if(deal.missedFollowUps) no_shows_operator = Math.min(1.0, deal.missedFollowUps * 0.20);
+  var reliability = (next_step * 0.40) + (touchConsistency * 0.35) + ((1 - no_shows_operator) * 0.25);
+
+  // Intimacy (0-1): profundidade da relação — pain dual mapeado + champion + sentiment
+  var pain_depth = fr.spiced_pain || 0;
+  var champion = fr.meddic_champion || 0;
+  var sentiment = na.sentiment === 'positive' ? 0.80 : na.sentiment === 'neutral' ? 0.50 : 0.20;
+  var intimacy = (pain_depth * 0.40) + (champion * 0.30) + (sentiment * 0.30);
+
+  // Self-Orientation (0-1): quanto o operador foca em si vs no lead
+  // Alto = ruim. Sinais: solução prematura, muitos toques sem escuta, pushed close
+  var spin = deal._spinAudit || {};
+  var premature = spin.premature_solution ? 0.40 : 0;
+  var over_touch = tp > 8 && delta < 5 ? 0.30 : 0;
+  var pushed = deal._advanceState && deal._advanceState.is_advance &&
+               (fr.authority_score || 0) < 0.25 ? 0.30 : 0;
+  var self_orientation = Math.max(0.10, Math.min(1.0, 0.10 + premature + over_touch + pushed));
+
+  // Maister equation: Trust = (C + R + I) / SO
+  var maister_raw = (credibility + reliability + intimacy) / self_orientation;
+  var maister_score = Math.max(0, Math.min(1.0, maister_raw / 3.0)); // normalize to 0-1
+
+  // Objection Resistance Score (0-1)
+  var objection_resistance = 1.0; // default: no objections = perfect
+  if(objections.length > 0){
+    var resolved = objections.filter(function(o){ return o.resolved; }).length;
+    var total = objections.length;
+    var resolution_rate = resolved / total;
+    // Penalize by type severity: authority > price > timing > technical
+    var severity_penalty = 0;
+    objections.forEach(function(o){
+      if(!o.resolved){
+        if(o.type === 'authority') severity_penalty += 0.25;
+        else if(o.type === 'price') severity_penalty += 0.20;
+        else if(o.type === 'timing') severity_penalty += 0.10;
+        else if(o.type === 'technical') severity_penalty += 0.15;
+        else severity_penalty += 0.10;
+      }
+    });
+    objection_resistance = Math.max(0, (resolution_rate * 0.60) + ((1 - Math.min(1, severity_penalty)) * 0.40));
+  }
+
+  // Combined Trusted Advisor Score: Maister (70%) + Objection Resistance (30%)
+  var score = (maister_score * 0.70) + (objection_resistance * 0.30);
+
+  return {
+    score: +score.toFixed(3),
+    maister_score: +maister_score.toFixed(3),
+    objection_resistance: +objection_resistance.toFixed(3),
+    components: {
+      credibility: +credibility.toFixed(3),
+      reliability: +reliability.toFixed(3),
+      intimacy: +intimacy.toFixed(3),
+      self_orientation: +self_orientation.toFixed(3)
+    },
+    objection_summary: {
+      total: objections.length,
+      resolved: objections.filter(function(o){ return o.resolved; }).length,
+      unresolved: objections.filter(function(o){ return !o.resolved; }).length,
+      types: objections.reduce(function(acc,o){ acc[o.type] = (acc[o.type]||0)+1; return acc; }, {})
+    },
+    level: score >= 0.75 ? 'trusted_advisor' :
+           score >= 0.55 ? 'expert' :
+           score >= 0.35 ? 'vendor' : 'commodity'
+  };
+}
+
+// ==================================================================
+// FEATURE 4 — L25 STRATEGIC INTELLIGENCE
+// Avalia qualidade de leads por canal, alinhamento GTM,
+// e gera insights preditivos para gestores.
+// ==================================================================
+
+// Channel conversion rate lookup (inline — calculated from portfolio)
+var _channelConversionCache = {};
+
+function resolveChannelConversion(deal){
+  var canal = (deal.canal_de_marketing || deal.utm_medium || '').toLowerCase();
+  if(!canal) return 0;
+  if(_channelConversionCache[canal] !== undefined) return _channelConversionCache[canal];
+  // Will be populated by calcStrategicIntelligence()
+  return 0;
+}
+
+function checkGTMMisalignment(deal){
+  var canal = (deal.canal_de_marketing || deal.utm_medium || '').toLowerCase();
+  var grupo = (deal.grupo_de_receita || '').toLowerCase();
+  var tier = (deal.tier_da_oportunidade || deal.tier || '').toLowerCase();
+
+  // Misalignment rules:
+  // 1. PLG channel with enterprise deal = misaligned (should be sales-led)
+  if((canal === 'plg' || canal === 'selfcheckout') && (tier === 'diamond' || tier === 'gold')) return true;
+  // 2. Field Sales channel with low-tier = inefficient
+  if(canal === 'field sales' && (tier === 'bronze' || tier === 'silver')) return true;
+  // 3. Marketing funnel in SDR scope = misaligned (MKT scope, not SDR)
+  if(grupo === 'funil de marketing') return true;
+  return false;
+}
+
+// L25 — Strategic Intelligence Engine (batch calculation)
+function calcStrategicIntelligence(deals){
+  if(!deals || !deals.length) return null;
+
+  // 1. Channel Quality Assessment
+  var channels = {};
+  deals.forEach(function(d){
+    var canal = (d.canal_de_marketing || d.utm_medium || '').toLowerCase() || 'unknown';
+    if(!channels[canal]) channels[canal] = { total:0, converted:0, value:0, aging_sum:0, enterprise:0 };
+    channels[canal].total++;
+    var fase = (d._fase || d.fase || d.fase_atual_no_processo || '').toLowerCase();
+    if(fase === 'oportunidade' || fase.includes('negoc') || fase === 'ganho') channels[canal].converted++;
+    channels[canal].value += d._oppValue || 0;
+    channels[canal].aging_sum += d._delta || d.delta || 0;
+    if(d._enterpriseScore && d._enterpriseScore.is_enterprise) channels[canal].enterprise++;
+  });
+
+  var channelQuality = {};
+  Object.keys(channels).forEach(function(k){
+    var ch = channels[k];
+    var conv_rate = ch.total > 0 ? +(ch.converted / ch.total).toFixed(3) : 0;
+    var avg_value = ch.total > 0 ? Math.round(ch.value / ch.total) : 0;
+    var avg_aging = ch.total > 0 ? +(ch.aging_sum / ch.total).toFixed(1) : 0;
+    channelQuality[k] = {
+      total: ch.total,
+      converted: ch.converted,
+      conversion_rate: conv_rate,
+      avg_ticket: avg_value,
+      avg_aging: avg_aging,
+      enterprise_count: ch.enterprise,
+      quality_score: +(conv_rate * 0.40 + Math.min(1, avg_value / 50000) * 0.35 +
+                      (1 - Math.min(1, avg_aging / 30)) * 0.25).toFixed(3)
+    };
+    // Update cache for signal detection
+    _channelConversionCache[k] = conv_rate;
+  });
+
+  // 2. GTM Alignment Analysis
+  var gtm_aligned = 0, gtm_misaligned = 0;
+  deals.forEach(function(d){
+    if(d._gtmMisaligned) gtm_misaligned++;
+    else gtm_aligned++;
+  });
+
+  // 3. Predictive Insights — which revenue lines are accelerating vs decelerating
+  var lineVelocity = {};
+  deals.forEach(function(d){
+    var rl = d._revLine || 'nao_definido';
+    if(!lineVelocity[rl]) lineVelocity[rl] = { total:0, fast:0, stuck:0, value:0 };
+    lineVelocity[rl].total++;
+    var tl = d._timeline || {};
+    if(tl.avgDaysPerStage < 4) lineVelocity[rl].fast++;
+    if((d._delta || d.delta || 0) > 7 && (d._stageDelta || 0) === 0) lineVelocity[rl].stuck++;
+    lineVelocity[rl].value += d._oppValue || 0;
+  });
+
+  var lineInsights = {};
+  Object.keys(lineVelocity).forEach(function(k){
+    var lv = lineVelocity[k];
+    var velocity = lv.total > 0 ? +((lv.fast - lv.stuck) / lv.total).toFixed(3) : 0;
+    lineInsights[k] = {
+      total: lv.total,
+      fast_movers: lv.fast,
+      stuck_deals: lv.stuck,
+      velocity_index: velocity,
+      total_value: lv.value,
+      trend: velocity > 0.20 ? 'accelerating' : velocity < -0.20 ? 'decelerating' : 'stable'
+    };
+  });
+
+  // 4. RFV Portfolio Health
+  var rfvPortfolio = calcRFVPortfolio(deals);
+
+  // 5. Enterprise Pipeline
+  var enterpriseDeals = deals.filter(function(d){ return d._enterpriseScore && d._enterpriseScore.is_enterprise; });
+  var enterprisePipeline = {
+    count: enterpriseDeals.length,
+    total_value: enterpriseDeals.reduce(function(s,d){ return s+(d._oppValue||0); }, 0),
+    avg_evs: enterpriseDeals.length > 0 ? +(enterpriseDeals.reduce(function(s,d){ return s+(d._enterpriseScore.evs||0); },0)/enterpriseDeals.length).toFixed(1) : 0,
+    bands: { platinum:0, gold:0, silver:0, qualifying:0 }
+  };
+  enterpriseDeals.forEach(function(d){
+    var b = d._enterpriseScore.band || 'qualifying';
+    enterprisePipeline.bands[b] = (enterprisePipeline.bands[b]||0) + 1;
+  });
+
+  // 6. Trusted Advisor Distribution
+  var taLevels = { trusted_advisor:0, expert:0, vendor:0, commodity:0 };
+  deals.forEach(function(d){
+    if(d._trustedAdvisor){
+      var lvl = d._trustedAdvisor.level || 'commodity';
+      taLevels[lvl] = (taLevels[lvl]||0) + 1;
+    }
+  });
+
+  // 7. Objection Landscape
+  var objectionMap = { price:0, timing:0, authority:0, technical:0, unknown:0 };
+  var totalObj = 0, resolvedObj = 0;
+  deals.forEach(function(d){
+    (d._objections || []).forEach(function(o){
+      objectionMap[o.type || 'unknown']++;
+      totalObj++;
+      if(o.resolved) resolvedObj++;
+    });
+  });
+
+  return {
+    channel_quality: channelQuality,
+    gtm_alignment: {
+      aligned: gtm_aligned,
+      misaligned: gtm_misaligned,
+      alignment_rate: deals.length > 0 ? +((gtm_aligned / deals.length) * 100).toFixed(1) : 0
+    },
+    line_velocity: lineInsights,
+    rfv_portfolio: rfvPortfolio,
+    enterprise_pipeline: enterprisePipeline,
+    trusted_advisor_distribution: taLevels,
+    objection_landscape: {
+      total: totalObj,
+      resolved: resolvedObj,
+      resolution_rate: totalObj > 0 ? +(resolvedObj / totalObj * 100).toFixed(1) : 0,
+      by_type: objectionMap,
+      dominant_type: Object.keys(objectionMap).reduce(function(a,b){ return objectionMap[a]>objectionMap[b]?a:b; })
+    }
+  };
+}
+window.calcStrategicIntelligence = calcStrategicIntelligence;
+
+// ==================================================================
+// LAYER 23 — ENTERPRISE QUALIFICATION (Supabase sync)
+// ==================================================================
+async function syncEnterpriseRuntimeV23(){
+  var sb = _sb(); if(!sb) return null;
+  var email = getOperatorId(); if(!email) return null;
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var rows = [];
+
+  Object.keys(map).forEach(function(id){
+    var d = map[id];
+    if((d.statusDeal||'').toLowerCase()==='perdido'||(d.statusDeal||'').toLowerCase()==='ganho') return;
+    var es = d._enterpriseScore || calcEnterpriseQuickScore(d);
+    if(!es.is_enterprise) return;
+    rows.push({
+      deal_id: id,
+      operator_email: email,
+      is_enterprise: true,
+      evs: es.evs,
+      band: es.band,
+      rev_scale: es.components.rev_scale,
+      strategic_fit: es.components.strategic_fit,
+      decision_complexity: es.components.decision_complexity,
+      engagement_depth: es.components.engagement_depth,
+      framework_coverage: es.components.framework_coverage,
+      pipeline_momentum: es.components.pipeline_momentum,
+      updated_at: new Date().toISOString()
+    });
+  });
+
+  if(rows.length){
+    var res = await sb.from('deal_enterprise_runtime').upsert(rows, { onConflict: 'deal_id' });
+    if(res.error) console.warn('[L23] sync error:', res.error.message);
+    else console.log('[L23] Enterprise synced for ' + rows.length + ' deals');
+  }
+  return rows;
+}
+window.syncEnterpriseRuntimeV23 = syncEnterpriseRuntimeV23;
+
+// ==================================================================
+// LAYER 24 — TRUSTED ADVISOR RUNTIME (Supabase sync)
+// ==================================================================
+async function syncTrustedAdvisorRuntimeV24(){
+  var sb = _sb(); if(!sb) return null;
+  var email = getOperatorId(); if(!email) return null;
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var rows = [];
+
+  Object.keys(map).forEach(function(id){
+    var d = map[id];
+    if((d.statusDeal||'').toLowerCase()==='perdido'||(d.statusDeal||'').toLowerCase()==='ganho') return;
+    var ta = d._trustedAdvisor || calcTrustedAdvisorQuick(d);
+    rows.push({
+      deal_id: id,
+      operator_email: email,
+      score: ta.score,
+      maister_score: ta.maister_score,
+      objection_resistance: ta.objection_resistance,
+      credibility: ta.components.credibility,
+      reliability: ta.components.reliability,
+      intimacy: ta.components.intimacy,
+      self_orientation: ta.components.self_orientation,
+      objections_total: ta.objection_summary.total,
+      objections_resolved: ta.objection_summary.resolved,
+      level: ta.level,
+      updated_at: new Date().toISOString()
+    });
+  });
+
+  if(rows.length){
+    var res = await sb.from('deal_trusted_advisor_runtime').upsert(rows, { onConflict: 'deal_id' });
+    if(res.error) console.warn('[L24] sync error:', res.error.message);
+    else console.log('[L24] Trusted Advisor synced for ' + rows.length + ' deals');
+  }
+  return rows;
+}
+window.syncTrustedAdvisorRuntimeV24 = syncTrustedAdvisorRuntimeV24;
+
+// ==================================================================
+// LAYER 25 — STRATEGIC INTELLIGENCE RUNTIME (Supabase sync)
+// ==================================================================
+async function syncStrategicIntelligenceV25(){
+  var sb = _sb(); if(!sb) return null;
+  var email = getOperatorId(); if(!email) return null;
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var allDeals = Object.values(map).filter(function(d){
+    var s = (d.statusDeal||'').toLowerCase();
+    return s !== 'perdido' && s !== 'ganho';
+  });
+
+  if(!allDeals.length) return null;
+
+  // Ensure all deals are enriched
+  allDeals.forEach(function(d){ enrichDealContext(d); });
+
+  var intel = calcStrategicIntelligence(allDeals);
+  if(!intel) return null;
+
+  var row = {
+    operator_email: email,
+    channel_quality_json: JSON.stringify(intel.channel_quality),
+    gtm_alignment_rate: intel.gtm_alignment.alignment_rate,
+    gtm_misaligned_count: intel.gtm_alignment.misaligned,
+    line_velocity_json: JSON.stringify(intel.line_velocity),
+    rfv_health_score: intel.rfv_portfolio._summary ? intel.rfv_portfolio._summary.health_score : 0,
+    rfv_champion_count: intel.rfv_portfolio.champion ? intel.rfv_portfolio.champion.count : 0,
+    rfv_at_risk_count: intel.rfv_portfolio.at_risk ? intel.rfv_portfolio.at_risk.count : 0,
+    enterprise_count: intel.enterprise_pipeline.count,
+    enterprise_value: intel.enterprise_pipeline.total_value,
+    enterprise_avg_evs: intel.enterprise_pipeline.avg_evs,
+    ta_trusted_advisor_count: intel.trusted_advisor_distribution.trusted_advisor,
+    ta_commodity_count: intel.trusted_advisor_distribution.commodity,
+    objection_resolution_rate: intel.objection_landscape.resolution_rate,
+    objection_dominant_type: intel.objection_landscape.dominant_type,
+    snapshot_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  var res = await sb.from('strategic_intelligence_runtime').upsert([row], { onConflict: 'operator_email' });
+  if(res.error) console.warn('[L25] sync error:', res.error.message);
+  else console.log('[L25] Strategic Intelligence synced');
+
+  // Store in window for UI access
+  window._strategicIntelligence = intel;
+  return intel;
+}
+window.syncStrategicIntelligenceV25 = syncStrategicIntelligenceV25;
+
+// ==================================================================
+// LAYER 26 — SPIN AUDIT RUNTIME (Supabase sync)
+// ==================================================================
+async function syncSpinAuditRuntimeV26(){
+  var sb = _sb(); if(!sb) return null;
+  var email = getOperatorId(); if(!email) return null;
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var rows = [];
+
+  Object.keys(map).forEach(function(id){
+    var d = map[id];
+    if((d.statusDeal||'').toLowerCase()==='perdido'||(d.statusDeal||'').toLowerCase()==='ganho') return;
+    var sa = d._spinAudit || calcSpinAudit(d);
+    if(!sa.applicable) return;
+    var adv = d._advanceState || calcAdvanceState(d);
+    var obj = d._objections || extractObjections(d);
+
+    rows.push({
+      deal_id: id,
+      operator_email: email,
+      spin_score: sa.score,
+      situation_ratio: sa.situation_ratio,
+      problem_ratio: sa.problem_ratio,
+      implication_ratio: sa.implication_ratio,
+      need_payoff_ratio: sa.need_payoff_ratio,
+      premature_solution: sa.premature_solution,
+      dominant_component: sa.dominant,
+      advance_classification: adv.classification,
+      advance_signals: adv.advance_signals,
+      continuation_signals: adv.continuation_signals,
+      objection_count: obj.length,
+      objection_types_json: JSON.stringify(obj.map(function(o){ return { type:o.type, resolved:o.resolved }; })),
+      updated_at: new Date().toISOString()
+    });
+  });
+
+  if(rows.length){
+    var res = await sb.from('deal_spin_audit_runtime').upsert(rows, { onConflict: 'deal_id' });
+    if(res.error) console.warn('[L26] sync error:', res.error.message);
+    else console.log('[L26] SPIN Audit synced for ' + rows.length + ' deals');
+  }
+  return rows;
+}
+window.syncSpinAuditRuntimeV26 = syncSpinAuditRuntimeV26;
+
+// ==================================================================
+// LAYER 27 — RFV PORTFOLIO RUNTIME (Supabase sync)
+// ==================================================================
+async function syncRFVPortfolioRuntimeV27(){
+  var sb = _sb(); if(!sb) return null;
+  var email = getOperatorId(); if(!email) return null;
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var allDeals = Object.values(map).filter(function(d){
+    var s = (d.statusDeal||'').toLowerCase();
+    return s !== 'perdido' && s !== 'ganho';
+  });
+
+  if(!allDeals.length) return null;
+
+  var portfolio = calcRFVPortfolio(allDeals);
+
+  // Per-deal RFV
+  var dealRows = [];
+  allDeals.forEach(function(d){
+    var rfvS = d._rfvScore || {};
+    dealRows.push({
+      deal_id: d.dealId || d.deal_id,
+      operator_email: email,
+      rfv_cluster: d._rfvCluster || 'new_customer',
+      r_score: rfvS.r || 0,
+      f_score: rfvS.f || 0,
+      v_score: rfvS.v || 0,
+      rfv_total: rfvS.total || 0,
+      updated_at: new Date().toISOString()
+    });
+  });
+
+  if(dealRows.length){
+    var res = await sb.from('deal_rfv_runtime').upsert(dealRows, { onConflict: 'deal_id' });
+    if(res.error) console.warn('[L27] deal RFV sync error:', res.error.message);
+  }
+
+  // Portfolio summary
+  var summaryRow = {
+    operator_email: email,
+    total_deals: portfolio._summary.total_deals,
+    total_value: portfolio._summary.total_value,
+    health_score: portfolio._summary.health_score,
+    champion_count: portfolio.champion.count,
+    champion_value: portfolio.champion.value,
+    loyal_count: portfolio.loyal.count,
+    at_risk_count: portfolio.at_risk.count,
+    hibernating_count: portfolio.hibernating.count,
+    snapshot_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  var res2 = await sb.from('rfv_portfolio_runtime').upsert([summaryRow], { onConflict: 'operator_email' });
+  if(res2.error) console.warn('[L27] portfolio sync error:', res2.error.message);
+  else console.log('[L27] RFV Portfolio synced: ' + dealRows.length + ' deals, health=' + portfolio._summary.health_score);
+
+  window._rfvPortfolio = portfolio;
+  return portfolio;
+}
+window.syncRFVPortfolioRuntimeV27 = syncRFVPortfolioRuntimeV27;
+
+// ==================================================================
+// DAG ORCHESTRATOR — Executa as 27 layers na ordem correta sem ciclos
 // Fase 1: Base (L1-L3,L6,L8,L10,L11) — já executadas no boot
 // Fase 2: Inteligência Estrutural (L16,L18,L19)
 // Fase 3: Forecast (L13)
@@ -6602,10 +7463,13 @@ window.syncAttributionRuntimeV22 = syncAttributionRuntimeV22;
 // Fase 5: Priorização (L21)
 // Fase 6: Performance (L5,L14,L15,L12,L7)
 // Fase 7: Retrospectivo (L22)
+// Fase 8: SPIN Audit + RFV (L26, L27) — depends on enrichment
+// Fase 9: Enterprise + Trusted Advisor (L23, L24) — depends on L26
+// Fase 10: Strategic Intelligence (L25) — depends on L23, L24, L27
 // ==================================================================
 
 async function runIntelligenceDAG(){
-  console.log('[DAG] Starting 22-Layer Intelligence DAG...');
+  console.log('[DAG] Starting 27-Layer Intelligence DAG...');
   var t0 = Date.now();
 
   try {
@@ -6625,13 +7489,31 @@ async function runIntelligenceDAG(){
     console.log('[DAG] Phase 7: L22 Attribution...');
     await syncAttributionRuntimeV22();
 
-    console.log('[DAG] 22-Layer DAG completed in ' + (Date.now() - t0) + 'ms');
+    // Phase 8: SPIN Audit + RFV (L26, L27) — depends on enrichment
+    console.log('[DAG] Phase 8: L26 SPIN Audit + L27 RFV Portfolio...');
+    await Promise.all([
+      syncSpinAuditRuntimeV26(),
+      syncRFVPortfolioRuntimeV27()
+    ]);
+
+    // Phase 9: Enterprise + Trusted Advisor (L23, L24) — depends on L26
+    console.log('[DAG] Phase 9: L23 Enterprise + L24 Trusted Advisor...');
+    await Promise.all([
+      syncEnterpriseRuntimeV23(),
+      syncTrustedAdvisorRuntimeV24()
+    ]);
+
+    // Phase 10: Strategic Intelligence (L25) — depends on L23, L24, L27
+    console.log('[DAG] Phase 10: L25 Strategic Intelligence...');
+    await syncStrategicIntelligenceV25();
+
+    console.log('[DAG] 27-Layer DAG completed in ' + (Date.now() - t0) + 'ms');
   } catch(err){
     console.error('[DAG] Error:', err);
   }
 }
 window.runIntelligenceDAG = runIntelligenceDAG;
 
-console.log('[cockpit-engine v10.0] 22-Layer Architecture loaded — L19 Data Quality + L20 Transition Rules + L21 Portfolio Priority + L22 Attribution');
+console.log('[cockpit-engine v11.1] 27-Layer Architecture loaded — L19-L22 Quality + L23 Enterprise + L24 Trusted Advisor + L25 Strategic + L26 SPIN Audit + L27 RFV Portfolio');
 
 })();
