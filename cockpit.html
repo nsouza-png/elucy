@@ -216,6 +216,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .ent-profile-item-val{font-size:14px;font-weight:700}
 .ent-profile-item-lbl{font-size:9px;color:var(--text2);margin-top:2px;text-transform:uppercase}
 /* V3: Task Runner */
+.tr-dim-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;padding:7px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px}
+.tr-dim-lbl{font-size:9px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;min-width:42px}
+.tr-smart-ks.on{background:rgba(239,68,68,.12);border-color:var(--red);color:var(--red)}
+.tr-smart-ent.on{background:rgba(245,158,11,.10);border-color:var(--amber);color:var(--amber2)}
+.tr-smart-gap.on{background:rgba(14,165,233,.10);border-color:var(--blue2);color:var(--blue2)}
+.tr-smart-hv.on{background:rgba(16,185,129,.10);border-color:var(--green);color:var(--green)}
 .task-empty{padding:40px;text-align:center;font-size:13px;color:var(--text2)}
 .task-stats{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 .task-stat-chip{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--bg3)}
@@ -1305,21 +1311,76 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
     <!-- V3: TASKS — FUP Task Runner -->
     <div class="screen" id="screen-tasks">
-      <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div>
-          <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:3px">Task Runner</div>
-          <div style="font-size:12px;color:var(--text2)">Execute tarefas em serie por prioridade e focus mode</div>
+          <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:2px">Task Runner</div>
+          <div style="font-size:11px;color:var(--text2)" id="tr-summary">Execute tarefas em serie por prioridade e focus mode</div>
         </div>
-        <div class="task-filters" id="task-filters">
-          <span class="fchip on" data-tfilter="all" onclick="window._filterTasks(null,this)">Todas</span>
-          <span class="fchip" data-tfilter="follow_up" onclick="window._filterTasks('follow_up',this)">FUP</span>
-          <span class="fchip" data-tfilter="social_dm" onclick="window._filterTasks('social_dm',this)">DM</span>
-          <span class="fchip" data-tfilter="reativacao" onclick="window._filterTasks('reativacao',this)">Reativ.</span>
-          <span class="fchip" data-tfilter="handoff_prep" onclick="window._filterTasks('handoff_prep',this)">Handoff</span>
-          <span class="fchip" data-tfilter="no_show_recovery" onclick="window._filterTasks('no_show_recovery',this)">No-Show</span>
-          <span class="fchip" data-tfilter="cadence" onclick="window._filterTasks('cadence',this)">Cadência</span>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="font-size:10px;color:var(--text2)">AÇÃO:</span>
+          <div class="task-filters" id="task-filters">
+            <span class="fchip on" data-tfilter="all" onclick="window._filterTasks(null,this)">Todas</span>
+            <span class="fchip" data-tfilter="follow_up" onclick="window._filterTasks('follow_up',this)">FUP</span>
+            <span class="fchip" data-tfilter="social_dm" onclick="window._filterTasks('social_dm',this)">DM</span>
+            <span class="fchip" data-tfilter="reativacao" onclick="window._filterTasks('reativacao',this)">Reativ.</span>
+            <span class="fchip" data-tfilter="handoff_prep" onclick="window._filterTasks('handoff_prep',this)">Handoff</span>
+            <span class="fchip" data-tfilter="no_show_recovery" onclick="window._filterTasks('no_show_recovery',this)">No-Show</span>
+            <span class="fchip" data-tfilter="cadence" onclick="window._filterTasks('cadence',this)">Cadência</span>
+          </div>
         </div>
       </div>
+
+      <!-- DIM 1: Estágio de Conversão -->
+      <div class="tr-dim-row" id="tr-dim-fase">
+        <span class="tr-dim-lbl">FASE:</span>
+        <span class="fchip on" data-trfase="all" onclick="window._trSetFase(null,this)">Todas</span>
+        <span class="fchip" data-trfase="CQL" onclick="window._trSetFase('CQL',this)" style="border-color:rgba(139,92,246,.3)">
+          <span style="color:#8b5cf6">CQL</span> · Novos
+        </span>
+        <span class="fchip" data-trfase="SAL" onclick="window._trSetFase('SAL',this)" style="border-color:rgba(245,158,11,.3)">
+          <span style="color:var(--amber)">SAL</span> · Qualificados
+        </span>
+        <span class="fchip" data-trfase="SQL" onclick="window._trSetFase('SQL',this)" style="border-color:rgba(16,185,129,.3)">
+          <span style="color:var(--green)">SQL</span> · Fechamento
+        </span>
+        <span class="fchip" data-trfase="stall" onclick="window._trSetFase('stall',this)" style="border-color:rgba(239,68,68,.3)">
+          <span style="color:var(--red)">Stall</span> · Reativar
+        </span>
+      </div>
+
+      <!-- DIM 2: Ciclo D -->
+      <div class="tr-dim-row" id="tr-dim-ciclo">
+        <span class="tr-dim-lbl">CICLO:</span>
+        <span class="fchip on" data-trciclo="all" onclick="window._trSetCiclo(null,this)">Todos</span>
+        <span class="fchip" data-trciclo="d1" onclick="window._trSetCiclo('d1',this)">D1 · 0–10d <span style="font-size:9px;color:var(--text2)">Speed</span></span>
+        <span class="fchip" data-trciclo="d2" onclick="window._trSetCiclo('d2',this)">D2 · 10–20d <span style="font-size:9px;color:var(--text2)">SPICED</span></span>
+        <span class="fchip" data-trciclo="d3" onclick="window._trSetCiclo('d3',this)">D3 · 20–30d <span style="font-size:9px;color:var(--text2)">Reframe</span></span>
+        <span class="fchip" data-trciclo="d4" onclick="window._trSetCiclo('d4',this)">D4 · 30–40d <span style="font-size:9px;color:var(--text2)">Autoridade</span></span>
+        <span class="fchip" data-trciclo="d56" onclick="window._trSetCiclo('d56',this)" style="border-color:rgba(239,68,68,.3)">D5–D6 · 40d+ <span style="font-size:9px;color:var(--red)">Ultimato</span></span>
+      </div>
+
+      <!-- DIM 3: Smart View -->
+      <div class="tr-dim-row" id="tr-dim-smart">
+        <span class="tr-dim-lbl">VIEW:</span>
+        <span class="fchip on" data-trsmart="all" onclick="window._trSetSmart(null,this)">Padrão</span>
+        <span class="fchip tr-smart-ks" data-trsmart="kill_switch" onclick="window._trSetSmart('kill_switch',this)">
+          🚨 Kill Switch
+        </span>
+        <span class="fchip tr-smart-ent" data-trsmart="enterprise" onclick="window._trSetSmart('enterprise',this)">
+          💎 Enterprise · Titan
+        </span>
+        <span class="fchip tr-smart-gap" data-trsmart="framework_gap" onclick="window._trSetSmart('framework_gap',this)">
+          📉 Framework Gap
+        </span>
+        <span class="fchip tr-smart-hv" data-trsmart="high_value" onclick="window._trSetSmart('high_value',this)">
+          ⚡ Alta Urgência
+        </span>
+      </div>
+
+      <!-- Modo recomendado banner -->
+      <div id="tr-mode-banner" style="display:none;padding:8px 12px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);margin-bottom:10px;font-size:11px;color:var(--text2)"></div>
+
       <div id="task-runner-list">
         <div class="task-empty">Carregue o pipeline para ver as tarefas.</div>
       </div>
@@ -1841,11 +1902,65 @@ function closePlaybook(){
   var ct=document.getElementById('ct'); if(ct) ct.scrollTop=0;
 }
 
-// V3: Task filter handler
+// V3: Task Runner — estado multidimensional
+window._trState = { tipo: null, fase: null, ciclo: null, smart: null };
+
+// Dim 0 — Tipo de ação (original)
 window._filterTasks = function(type, el){
   document.querySelectorAll('#task-filters .fchip').forEach(c=>c.classList.remove('on'));
   if(el) el.classList.add('on');
-  if(window.renderTaskRunner) window.renderTaskRunner(type);
+  window._trState.tipo = type;
+  window._trApply();
+};
+
+// Dim 1 — Fase de conversão (CQL/SAL/SQL/stall)
+window._trSetFase = function(fase, el){
+  document.querySelectorAll('#tr-dim-fase .fchip').forEach(c=>c.classList.remove('on'));
+  if(el) el.classList.add('on');
+  window._trState.fase = fase;
+  window._trApply();
+};
+
+// Dim 2 — Ciclo D (d1/d2/d3/d4/d56)
+window._trSetCiclo = function(ciclo, el){
+  document.querySelectorAll('#tr-dim-ciclo .fchip').forEach(c=>c.classList.remove('on'));
+  if(el) el.classList.add('on');
+  window._trState.ciclo = ciclo;
+  window._trApply();
+};
+
+// Dim 3 — Smart View (kill_switch/enterprise/framework_gap/high_value)
+window._trSetSmart = function(smart, el){
+  document.querySelectorAll('#tr-dim-smart .fchip').forEach(c=>c.classList.remove('on'));
+  if(el) el.classList.add('on');
+  window._trState.smart = smart;
+  window._trApply();
+};
+
+// Aplica todos os filtros e atualiza o banner contextual
+window._trApply = function(){
+  var s = window._trState;
+  // Banner contextual por combinação
+  var banner = document.getElementById('tr-mode-banner');
+  if(banner){
+    var msgs = {
+      'd1_SAL': '⚡ D1+SAL — Speed to Lead ativo. Foco em abertura e quebra de inércia nas primeiras 24h.',
+      'd2_SAL': '🔍 D2+SAL — Janela de diagnóstico SPICED. Extrair dor, impacto e critical event antes de pedir agenda.',
+      'd3_SAL': '🎯 D3+SAL — Reframe Challenger. Lead esfriando — desafiar a visão atual com custo de inação.',
+      'd4_SAL': '📊 D4+SAL — Construção de autoridade. Enviar case/prova social antes do próximo CTA.',
+      'd56_SAL': '🚨 D5–D6+SAL — Ultimato. CTA imperativo: avançar, downsell ou arquivar. Sem exceção.',
+      'd56_stall': '🚨 D5–D6+Stall — Iron Dome ativo. Diagnóstico de causa do stall → reengajamento ou arquivamento.',
+      'enterprise': '💎 Enterprise View — Apenas leads Titan (faturamento >1MM). Modo Peer-to-Peer ativo.',
+      'kill_switch': '🚨 Kill Switch — Deals com violação detectada pelo BEG Governor. Correção obrigatória antes de avançar.',
+      'framework_gap': '📉 Framework Gap — Deals sem dor monetizada ou sem authority confirmado. Preencher antes de proposta.',
+      'high_value': '⚡ Alta Urgência — Deals com buy signals ou urgency detectada. Janela de 48h para ação.',
+    };
+    var key = (s.ciclo||'')+'_'+(s.fase||'');
+    var msg = msgs[key] || msgs[s.smart||''] || '';
+    if(msg){ banner.innerHTML = 'MODO ATIVO &nbsp;·&nbsp; '+msg; banner.style.display='block'; }
+    else { banner.style.display='none'; }
+  }
+  if(window.renderTaskRunner) window.renderTaskRunner(s.tipo, null, s.fase, s.ciclo, s.smart);
 };
 
 function selectDeal(id){

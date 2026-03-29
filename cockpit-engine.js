@@ -440,7 +440,7 @@ var TASK_TYPES = {
 };
 window.TASK_TYPES = TASK_TYPES;
 
-function buildTaskQueue(filterType, filterRevLine){
+function buildTaskQueue(filterType, filterRevLine, filterFase, filterCiclo, filterSmart){
   var map = window._COCKPIT_DEAL_MAP||{};
   var tasks = [];
   var focusMode = _operatorCtx.focus_mode||'velocidade';
@@ -460,6 +460,58 @@ function buildTaskQueue(filterType, filterRevLine){
     if(filterRevLine){
       var rl = d._revLine || resolveRevenueLine(d);
       if(rl !== filterRevLine) return;
+    }
+
+    // DIM 1: Fase de conversão (CQL/SAL/SQL/stall)
+    if(filterFase && filterFase !== 'all'){
+      var fase = (d.fase_atual_no_processo||d.fase||'').toLowerCase();
+      var aging = d._aging||{};
+      var delta = d.delta||0;
+      if(filterFase==='CQL'){
+        // MQL ou Lead/Novo — ainda não qualificado
+        if(!fase.includes('mql')&&!fase.includes('lead')&&!fase.includes('novo')) return;
+      } else if(filterFase==='SAL'){
+        if(!fase.includes('sal')&&!fase.includes('conectado')) return;
+      } else if(filterFase==='SQL'){
+        if(!fase.includes('oportunidade')&&!fase.includes('negociacao')&&!fase.includes('sql')) return;
+      } else if(filterFase==='stall'){
+        // Stall: aging crítico ou sem ação há mais de 10 dias
+        var isStall = (aging.riskLevel==='critical')||(delta>10&&(d.tc==='tc'||d.tc==='tf'));
+        if(!isStall) return;
+      }
+    }
+
+    // DIM 2: Ciclo D (baseado em delta_t / aging real)
+    if(filterCiclo && filterCiclo !== 'all'){
+      var delta2 = d.delta||0;
+      if(filterCiclo==='d1' && (delta2<0||delta2>=10)) return;
+      if(filterCiclo==='d2' && (delta2<10||delta2>=20)) return;
+      if(filterCiclo==='d3' && (delta2<20||delta2>=30)) return;
+      if(filterCiclo==='d4' && (delta2<30||delta2>=40)) return;
+      if(filterCiclo==='d56' && delta2<40) return;
+    }
+
+    // DIM 3: Smart View
+    if(filterSmart && filterSmart !== 'all'){
+      if(filterSmart==='enterprise'){
+        // Tier diamond ou gold + persona Titan
+        var tier = (d.tier_da_oportunidade||d.tier||'').toLowerCase();
+        var persona = d._persona||'';
+        if(persona!=='Titan'&&tier!=='diamond') return;
+      } else if(filterSmart==='kill_switch'){
+        // Deal com kill switch ativo (da transitionRuntime ou dataQuality)
+        var hasKS = (d._transitionRuntime&&d._transitionRuntime.hard_blocks&&d._transitionRuntime.hard_blocks.length>0)||
+                    (d._dataQuality&&d._dataQuality.data_trust_score<0.40);
+        if(!hasKS) return;
+      } else if(filterSmart==='framework_gap'){
+        // Deal com framework gap (sem pain quantificada ou authority missing)
+        var hasGap = d._frameworkRuntime&&(d._frameworkRuntime.authority_score<0.5||d._frameworkRuntime.pain_score<0.5);
+        if(!hasGap) return;
+      } else if(filterSmart==='high_value'){
+        // Deal com urgência alta (signals de compra ou urgency score alto)
+        var isHV = (d._urgency||0)>=60||(d._signals&&d._signals.some&&d._signals.some(function(s){return s.category==='buy'&&s.active;}));
+        if(!isHV) return;
+      }
     }
 
     // Check if deal has active cadence — cadence overrides default _nextAction
@@ -540,13 +592,24 @@ function calcTaskExecutionScore(){
 window.calcTaskExecutionScore = calcTaskExecutionScore;
 
 // Renderiza a fila de tarefas na tela Tasks
-function renderTaskRunner(filterType){
-  var tasks = buildTaskQueue(filterType);
+function renderTaskRunner(filterType, filterRevLine, filterFase, filterCiclo, filterSmart){
+  // Fallback: ler estado do _trState se não passado diretamente
+  var st = window._trState||{};
+  filterFase = filterFase||st.fase||null;
+  filterCiclo = filterCiclo||st.ciclo||null;
+  filterSmart = filterSmart||st.smart||null;
+  var tasks = buildTaskQueue(filterType, filterRevLine, filterFase, filterCiclo, filterSmart);
   var wrap = document.getElementById('task-runner-list');
   if(!wrap) return;
 
+  // Update summary
+  var sumEl = document.getElementById('tr-summary');
+  if(sumEl){
+    var activeFilters = [filterFase,filterCiclo,filterSmart].filter(Boolean).length + (filterType?1:0);
+    sumEl.textContent = tasks.length + ' tarefa' + (tasks.length!==1?'s':'') + ' · ' + (activeFilters>0?activeFilters+' filtro'+(activeFilters>1?'s':'')+' ativo':'por prioridade e focus mode');
+  }
   if(!tasks.length){
-    wrap.innerHTML = '<div class="task-empty">Nenhuma tarefa pendente' + (filterType ? ' do tipo ' + filterType : '') + '.</div>';
+    wrap.innerHTML = '<div class="task-empty">Nenhuma tarefa com os filtros selecionados.</div>';
     return;
   }
 
@@ -2911,8 +2974,8 @@ window.getCadenceTasks = getCadenceTasks;
 
 // Inject cadence tasks into buildTaskQueue
 var _origBuildTaskQueue = buildTaskQueue;
-buildTaskQueue = function(filterType, filterRevLine){
-  var tasks = _origBuildTaskQueue(filterType, filterRevLine);
+buildTaskQueue = function(filterType, filterRevLine, filterFase, filterCiclo, filterSmart){
+  var tasks = _origBuildTaskQueue(filterType, filterRevLine, filterFase, filterCiclo, filterSmart);
   // Add cadence tasks
   var cadTasks = getCadenceTasks();
   if(filterType && filterType!=='cadence') return tasks; // non-cadence filter active
