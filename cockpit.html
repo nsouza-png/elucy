@@ -98,7 +98,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .t-label{font-size:var(--fs-caption);font-weight:var(--fw-bold);text-transform:uppercase;letter-spacing:.8px;color:var(--text2);line-height:var(--lh-tight)}
 .t-micro{font-size:var(--fs-micro);font-weight:var(--fw-xbold);letter-spacing:1px;line-height:var(--lh-tight)}
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:var(--r-pill)}::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.16)}
-#topbar{height:52px;background:rgba(10,10,10,.72);-webkit-backdrop-filter:var(--blur-md);backdrop-filter:var(--blur-md);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 var(--sp-5);gap:var(--sp-3);flex-shrink:0;z-index:10;transition:background var(--duration-normal) var(--ease-smooth)}
+nav#topbar,#topbar{height:52px;background:rgba(10,10,10,.72);-webkit-backdrop-filter:var(--blur-md);backdrop-filter:var(--blur-md);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 var(--sp-5);gap:var(--sp-3);flex-shrink:0;z-index:10;transition:background var(--duration-normal) var(--ease-smooth)}
 .logo{display:flex;align-items:center;gap:8px;margin-right:12px}.logo-name{font-family:var(--font-title);font-size:var(--fs-h3);font-weight:var(--fw-xbold);color:#fff;text-transform:uppercase;letter-spacing:1.5px}.logo-badge{background:var(--accent);color:#fff;font-size:8px;font-weight:var(--fw-bold);padding:2px 6px;border-radius:4px;letter-spacing:1px;text-transform:uppercase;line-height:var(--lh-tight)}
 .ntab{padding:6px 14px;border-radius:var(--r-pill);font-size:var(--fs-body-sm);color:var(--text2);cursor:pointer;transition:all var(--duration-fast) var(--ease-smooth);border:1px solid transparent;background:none;font-family:inherit;font-weight:var(--fw-medium);letter-spacing:.02em}.ntab:hover{color:var(--text);background:rgba(255,255,255,.06)}.ntab.on{color:#fff;background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.14);font-weight:var(--fw-semibold);box-shadow:var(--shadow-xs)}
 .tbr{margin-left:auto;display:flex;align-items:center;gap:10px}
@@ -171,7 +171,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .fbr{display:flex;gap:6px;margin-bottom:12px}.fbb{flex:1;padding:7px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;text-align:center;transition:.15s}.fbb:hover{border-color:var(--border2)}.fbb.on{border-color:var(--accent);background:var(--adim);color:var(--accent2)}
 .cap-area{background:var(--bg3);border:2px dashed var(--border2);border-radius:var(--r);padding:20px;text-align:center;cursor:pointer;transition:.15s;margin-bottom:12px}.cap-area:hover{border-color:var(--accent);background:var(--adim)}.cap-icon{font-size:26px;margin-bottom:5px;opacity:.6}.cap-l{font-size:13px;color:var(--text2);font-weight:600;margin-bottom:3px}.cap-s{font-size:11px;color:var(--text2)}
 .anlz{display:none;align-items:center;gap:8px;padding:10px;background:var(--adim);border-radius:var(--r);margin-bottom:12px}.anlz.show{display:flex}.spin{width:14px;height:14px;border:2px solid rgba(108,99,255,.2);border-top-color:var(--accent2);border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}@keyframes spin{to{transform:rotate(360deg)}}.anlz-t{font-size:12px;color:var(--accent2)}
-.dm-res{display:none}.dm-res.show{display:block}.dm-ctx{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:8px;font-size:12px;color:var(--text2);line-height:1.6}
+.dm-res.show{display:block}.dm-ctx{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:8px;font-size:12px;color:var(--text2);line-height:1.6}
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:340px;gap:10px;text-align:center;padding:40px}.e-ic{font-size:36px;opacity:.4}.e-t{font-size:15px;font-weight:600}.e-s{font-size:12px;color:var(--text2);line-height:1.6;max-width:250px}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}.er,.card{animation:fadeIn var(--duration-normal) var(--ease-out)}
 .modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.55);-webkit-backdrop-filter:var(--blur-lg);backdrop-filter:var(--blur-lg);z-index:200;display:flex;align-items:center;justify-content:center;animation:modalBgIn var(--duration-normal) var(--ease-out)}
@@ -951,48 +951,48 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .auth-logout{background:none;border:1px solid var(--border);border-radius:var(--r);padding:var(--sp-2) var(--sp-4);font-size:var(--fs-caption);color:var(--text2);cursor:pointer;margin-top:var(--sp-3);transition:all var(--duration-fast) var(--ease-smooth)}
 .auth-logout:hover{border-color:var(--red);color:var(--red)}
 /* ── DM War Room ──────────────────────────────────────────── */
-#screen-dm{display:none}#screen-dm.on{display:flex;gap:0;height:calc(100vh - 50px)}
-.dm-center{flex:1;display:flex;flex-direction:column;background:var(--bg);padding:16px;overflow-y:auto;min-width:0}
-.dm-drop-wrap{margin-bottom:12px}
-.dm-drop{border:2px dashed var(--border2);border-radius:var(--r2);padding:28px 20px;text-align:center;cursor:pointer;transition:.2s}.dm-drop:hover,.dm-drop.active{border-color:var(--accent);background:var(--adim)}
-.dm-drop-icon{font-size:32px;margin-bottom:6px}.dm-drop-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px}.dm-drop-sub{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
-.dm-ocr-bar-wrap{display:none;margin-top:8px}.dm-ocr-bar-bg{height:4px;background:var(--bg4);border-radius:99px;overflow:hidden}.dm-ocr-bar-fill{height:100%;background:var(--accent);border-radius:99px;transition:width .3s}
-.dm-ocr-labels{display:flex;justify-content:space-between;margin-top:4px}.dm-ocr-step,.dm-ocr-pct{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
-.dm-gamif{display:flex;gap:6px;margin-bottom:12px}.dm-gamif-badge{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700}.dm-gb-green{background:var(--gdim);color:var(--green);border:1px solid var(--green)}.dm-gb-accent{background:var(--adim);color:var(--accent2);border:1px solid var(--accent)}
-.dm-chat{flex:1;overflow-y:auto;padding:8px 0;display:flex;flex-direction:column;gap:8px}
+
+
+
+.dm-drop:hover,.dm-drop.active{border-color:var(--accent);background:var(--adim)}
+.dm-drop-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px}.dm-drop-sub{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.dm-ocr-bar-bg{height:4px;background:var(--bg4);border-radius:99px;overflow:hidden}.dm-ocr-bar-fill{height:100%;background:var(--accent);border-radius:99px;transition:width .3s}
+.dm-ocr-step,.dm-ocr-pct{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
+.dm-gamif-badge{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700}.dm-gb-green{background:var(--gdim);color:var(--green);border:1px solid var(--green)}.dm-gb-accent{background:var(--adim);color:var(--accent2);border:1px solid var(--accent)}
+
 .dm-msg-lead,.dm-msg-op{max-width:85%}.dm-msg-lead{align-self:flex-start}.dm-msg-op{align-self:flex-end}
-.dm-msg-sender{display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text2)}
+
 .dm-msg-sender.lead span:first-child{color:var(--accent2)}.dm-msg-sender.op span:last-child{color:var(--green)}
-.dm-msg-ts{font-size:9px;color:var(--text2);font-weight:400}
-.dm-msg-bubble{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px 13px;font-size:12px;line-height:1.5;color:var(--text)}
-.dm-msg-meta{margin-top:6px;display:flex;align-items:center;gap:5px}
-.dm-signal-dot{width:6px;height:6px;border-radius:50%;display:inline-block}.dm-signal-green{background:var(--green)}.dm-signal-blue{background:var(--blue)}
-.dm-footer{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--border);margin-top:8px}
+
+
+
+.dm-signal-green{background:var(--green)}.dm-signal-blue{background:var(--blue)}
+
 .dm-footer-left,.dm-footer-right{display:flex;align-items:center;gap:8px;font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
-.dm-footer-item{opacity:.7}.dm-footer-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+.dm-footer-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.dm-right{width:340px;min-width:340px;background:var(--bg2);border-left:1px solid var(--border);overflow-y:auto;padding:0}
-.dm-right-inner{padding:14px}
-.dm-section-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
-.dm-ai-card{background:var(--bg3);border:1px solid var(--accent);border-radius:var(--r);padding:12px;margin-bottom:10px}
-.dm-ai-label{font-size:8px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
-.dm-ai-text{font-size:12px;color:var(--text);line-height:1.5;margin-bottom:8px;font-style:italic}
-.dm-ai-actions{display:flex;gap:6px}
-.dm-copy-btn{padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--accent);background:var(--adim);color:var(--accent2)}.dm-copy-btn:hover{background:var(--accent);color:#fff}
-.dm-edit-btn{padding:5px 8px;border-radius:6px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:var(--bg4);color:var(--text2)}.dm-edit-btn:hover{border-color:var(--accent2)}
-.dm-action-btns{display:flex;gap:6px;margin-bottom:14px}
-.dm-action-btn{flex:1;padding:7px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text);text-align:center}.dm-action-btn:hover{border-color:var(--accent);background:var(--adim)}
-.dm-insights-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:10px}
-.dm-panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.dm-panel-handle{font-size:11px;font-weight:700;color:var(--text)}
-.dm-enr-badge{font-size:8px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--ydim);color:var(--yellow);text-transform:uppercase;letter-spacing:.4px}
-.dm-empty-state{text-align:center;padding:16px 8px}
-.dm-empty-icon{font-size:24px;margin-bottom:6px}.dm-empty-text{font-size:11px;color:var(--text2);line-height:1.5}
-.dm-er-panel{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:10px}
-.dm-er-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.dm-er-label{font-size:9px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.5px}
-.dm-er-ref{font-size:9px;color:var(--text2)}
-.dm-request-btn{width:100%;padding:8px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--accent);background:var(--adim);color:var(--accent2);margin-top:8px}.dm-request-btn:hover{background:var(--accent);color:#fff}
+
+
+
+
+
+
+
+.dm-copy-btn:hover{background:var(--accent);color:#fff}
+.dm-edit-btn:hover{border-color:var(--accent2)}
+
+.dm-action-btn:hover{border-color:var(--accent);background:var(--adim)}
+
+
+
+
+
+.dm-empty-text{font-size:11px;color:var(--text2);line-height:1.5}
+
+
+
+
+.dm-request-btn:hover{background:var(--accent);color:#fff}
 /* ── Lead Insight blocks (DM + main) ──────────────────────── */
 .li-blk{margin-bottom:8px}.li-blk-hdr{display:flex;align-items:center;gap:6px;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border)}
 .li-blk-title{font-size:9px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
@@ -1042,17 +1042,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
     <button class="auth-logout" onclick="supabaseSignOut()">Sair e trocar de conta</button>
   </div>
 </div>
-<div id="topbar">
-  <span class="logo"><span class="logo-name">ELUCY</span><span class="logo-badge">BY G4</span></span>
-  <span style="font-size:10px;color:var(--text2);margin-left:-2px;letter-spacing:.3px">Sales Engagement</span>
-  <button class="ntab on" onclick="setScreen('home',this)">Home</button>
-  <button class="ntab" onclick="setScreen('pipeline',this)">Pipeline</button>
-  <button class="ntab" onclick="setScreen('tasks',this)">Tasks <span class="tab-count" id="task-count"></span></button>
-  <button class="ntab" onclick="setScreen('reports',this)">Reports</button>
-  <button class="ntab" onclick="setScreen('prevendas',this)">Pre-Vendas</button>
-  <button class="ntab" onclick="setScreen('intelligence',this)">Intel</button>
-  <button class="ntab" onclick="setScreen('playbooks',this)">Playbooks</button>
-  <button class="ntab" onclick="setScreen('batch',this)">Batch</button>
+<nav id="topbar" role="navigation" aria-label="Navegação principal do Cockpit">
+  <span class="logo" aria-hidden="true"><span class="logo-name">ELUCY</span><span class="logo-badge">BY G4</span></span>
+  <span style="font-size:10px;color:var(--text2);margin-left:-2px;letter-spacing:.3px" aria-hidden="true">Sales Engagement</span>
+  <button class="ntab on" onclick="setScreen('home',this)" aria-label="Tela Home" aria-current="page">Home</button>
+  <button class="ntab" onclick="setScreen('pipeline',this)" aria-label="Pipeline de deals">Pipeline</button>
+  <button class="ntab" onclick="setScreen('tasks',this)" aria-label="Fila de tarefas">Tasks <span class="tab-count" id="task-count" aria-live="polite"></span></button>
+  <button class="ntab" onclick="setScreen('reports',this)" aria-label="Relatórios">Reports</button>
+  <button class="ntab" onclick="setScreen('prevendas',this)" aria-label="Pre-Vendas Intelligence">Pre-Vendas</button>
+  <button class="ntab" onclick="setScreen('intelligence',this)" aria-label="Análise de inteligência">Intel</button>
+  <button class="ntab" onclick="setScreen('playbooks',this)" aria-label="Playbooks e frameworks">Playbooks</button>
+  <button class="ntab" onclick="setScreen('batch',this)" aria-label="Processamento em lote">Batch</button>
   <div class="tbr">
     <span class="op-pill" id="op-pill">CRM Sincronizado</span>
     <span class="streak-badge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2z"/></svg> <span id="streak-days-label">7</span> dias</span>
@@ -1098,9 +1098,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
     </div>
     <div id="notif-list"><div class="notif-empty">Nenhuma notificação ainda.</div></div>
   </div>
-</div>
-<div id="main">
-  <div id="sb">
+</nav>
+<main id="main" role="main">
+  <aside id="sb" role="complementary" aria-label="Pipeline lateral">
     <div class="sb-h">
       <div class="sb-top">
         <span class="sb-title">Meu Pipeline</span>
@@ -1308,8 +1308,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
     <div class="deal-list" id="deal-list">
       <!-- Deals carregados dinamicamente via renderLiveDeals() -->
     </div>
-  </div>
-  <div id="ct">
+  </aside>
+  <div id="ct" role="region" aria-label="Conteúdo principal">
     <!-- V3: HOME — tela inicial operacional -->
     <div class="screen on" id="screen-home">
       <div id="home-content">
@@ -1429,196 +1429,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
             Signal Engine (batch)
           </button>
         </div>
-        <div id="batch-cache-banner" style="display:none;padding:8px 12px;margin-bottom:8px;border-radius:6px;background:rgba(0,122,255,.08);border:1px solid rgba(0,122,255,.2);font-size:11px;color:var(--accent)"></div>
-        <div id="batch-status" style="font-size:12px;color:var(--text2);margin-bottom:8px"></div>
+        <div id="batch-cache-banner" role="status" aria-live="polite" style="display:none;padding:8px 12px;margin-bottom:8px;border-radius:6px;background:rgba(0,122,255,.08);border:1px solid rgba(0,122,255,.2);font-size:11px;color:var(--accent)"></div>
+        <div id="batch-status" role="status" aria-live="polite" style="font-size:12px;color:var(--text2);margin-bottom:8px"></div>
       </div>
       <div id="batch-panel" style="display:none;padding:0 20px 20px">
         <div id="batch-body"></div>
       </div>
     </div>
-<!-- ── SCREEN: DM WAR ROOM — REMOVIDO (touchpoint lógica migrada para CSE engine) -->
-<div class="screen" id="screen-dm" style="display:none!important">
-  <div class="dm-center" style="position:relative">
-    <div class="dm-drop-wrap">
-      <div class="dm-drop" id="dm-drop-zone"
-           onclick="dmStartCapture()"
-           ondragover="event.preventDefault();this.classList.add('active')"
-           ondragleave="this.classList.remove('active')"
-           ondrop="event.preventDefault();this.classList.remove('active');dmStartCapture()">
-        <div class="dm-drop-icon">&#128248;</div>
-        <div class="dm-drop-title">Soltar screenshot de DM para analisar</div>
-        <div class="dm-drop-sub" id="dm-ocr-status">OCR ENGINE: PRONTO</div>
-      </div>
-      <div class="dm-ocr-bar-wrap" id="dm-ocr-bar-wrap">
-        <div class="dm-ocr-bar-bg"><div class="dm-ocr-bar-fill" id="dm-ocr-fill"></div></div>
-        <div class="dm-ocr-labels">
-          <span class="dm-ocr-step" id="dm-ocr-step">OCR — SCANNING</span>
-          <span class="dm-ocr-pct" id="dm-ocr-pct">0%</span>
-        </div>
-      </div>
-    </div>
-    <div class="dm-gamif">
-      <div class="dm-gamif-badge dm-gb-green"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2z"/></svg> COMBO: 3 FAST</div>
-      <div class="dm-gamif-badge dm-gb-accent"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2z"/></svg> STREAK: 12H</div>
-    </div>
-    <div class="dm-chat" id="dm-chat-area">
-      <div class="dm-msg-lead">
-        <div class="dm-msg-sender lead"><span>LEAD</span><span class="dm-msg-ts">14:02</span></div>
-        <div class="dm-msg-bubble">
-          "Já tentei outras soluções mas os resultados sempre demoravam. Como sei que é diferente aqui?"
-          <div class="dm-msg-meta">
-            <span class="dm-signal-dot dm-signal-green"></span>
-            <span class="dm-signal-label" style="color:var(--green);font-size:9px">TOM: CÉTICO</span>
-          </div>
-        </div>
-      </div>
-      <div class="dm-msg-op">
-        <div class="dm-msg-sender op"><span class="dm-msg-ts">14:03</span><span>VOCÊ (OPERADOR)</span></div>
-        <div class="dm-msg-bubble">
-          "Entendo. Posso te mostrar resultados reais de clientes no mesmo perfil em 3 minutos?"
-        </div>
-      </div>
-      <div class="dm-msg-lead">
-        <div class="dm-msg-sender lead"><span>LEAD</span><span class="dm-msg-ts">14:05</span></div>
-        <div class="dm-msg-bubble" style="border-left:2px solid var(--green)">
-          "Ok. Manda. Se os dados baterem, fecho hoje."
-          <div class="dm-msg-meta">
-            <span class="dm-signal-dot dm-signal-blue"></span>
-            <span style="font-size:9px;color:var(--green);font-weight:700;text-transform:uppercase">SINAL: INTENÇÃO DE COMPRA</span>
-          </div>
-        </div>
-      </div>
-      <div id="dm-ocr-messages"></div>
-    </div>
-    <div class="dm-footer">
-      <div class="dm-footer-left">
-        <span class="dm-footer-item">ELUCY v11.0 Enterprise</span>
-        <span class="dm-footer-item">LATÊNCIA: 14MS</span>
-      </div>
-      <div class="dm-footer-right">
-        <span class="dm-footer-dot"></span>
-        AI ANALYZER ATIVO
-      </div>
-    </div>
-  </div>
-
-  <div class="dm-right">
-    <div class="dm-right-inner">
-      <div class="dm-section-title">&#129504; Próxima Melhor Ação</div>
-      <div class="dm-ai-card">
-        <div class="dm-ai-label">AI SUGGESTION</div>
-        <div class="dm-ai-text" id="dm-suggestion-text">
-          "Perfeito. Aqui está o resultado real de um cliente com perfil similar ao seu. Posso reservar uma vaga para começar essa semana."
-        </div>
-        <div class="dm-ai-actions">
-          <button class="dm-copy-btn" onclick="dmCopySuggestion()">&#128203; Copiar DM</button>
-          <button class="dm-edit-btn" onclick="dmEditSuggestion()" title="Editar">&#9999;</button>
-        </div>
-      </div>
-      <div class="dm-action-btns">
-        <button class="dm-action-btn" onclick="dmSendToCRM()">&#128506; Enviar ao CRM</button>
-        <button class="dm-action-btn">&#128197; Agendar Follow-up</button>
-      </div>
-
-      <div class="dm-insights-wrap" id="dm-insights-wrap">
-        <div class="dm-panel-header">
-          <span class="dm-panel-handle" id="dm-lead-handle">@ — Selecione um deal</span>
-          <span class="dm-enr-badge" id="dm-enr-badge">AGUARDANDO</span>
-        </div>
-        <div class="dm-empty-state" id="dm-insights-empty">
-          <div class="dm-empty-icon">&#128070;</div>
-          <div class="dm-empty-text">Selecione um deal no pipeline<br>para ver os insights do lead</div>
-        </div>
-
-        <!-- BLOCO A: PERFIL -->
-        <div class="li-blk" id="dm-bloco-a" style="display:none">
-          <div class="li-blk-hdr">
-            <span>&#128100;</span>
-            <span class="li-blk-title">PERFIL</span>
-            <span class="li-blk-src">persons_overview</span>
-          </div>
-          <div class="li-fld"><span class="li-lbl">Nome</span><span class="li-val" id="dm-li-nome">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Cargo</span><span class="li-val" id="dm-li-cargo">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Faturamento</span><span class="li-val" id="dm-li-fat">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Segmento</span><span class="li-val" id="dm-li-seg">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Perfil ICP</span><span class="li-badge li-badge-accent" id="dm-li-perfil">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Status G4</span><span class="li-badge li-badge-gray" id="dm-li-status">Prospect</span></div>
-          <div class="li-fld"><span class="li-lbl">LTV Total</span><span class="li-val-hi" id="dm-li-ltv">—</span></div>
-        </div>
-
-        <!-- BLOCO B: ECOSSISTEMA G4 -->
-        <div class="li-blk" id="dm-bloco-b" style="display:none">
-          <div class="li-blk-hdr">
-            <span>&#128230;</span>
-            <span class="li-blk-title">ECOSSISTEMA G4</span>
-            <span class="li-blk-src">persons_overview</span>
-          </div>
-          <div class="li-fld"><span class="li-lbl">1&#186; Produto</span><span class="li-val" id="dm-li-prod1">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Último</span><span class="li-val" id="dm-li-prodult">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Cluster RFM</span><span class="li-badge li-badge-gray" id="dm-li-rfm">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Scale</span><span class="li-badge li-badge-gray" id="dm-li-scale">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Club</span><span class="li-badge li-badge-gray" id="dm-li-club">—</span></div>
-        </div>
-
-        <!-- BLOCO C: DEAL ATUAL -->
-        <div class="li-blk" id="dm-bloco-c" style="display:none">
-          <div class="li-blk-hdr">
-            <span>&#128200;</span>
-            <span class="li-blk-title">DEAL ATUAL</span>
-            <span class="li-blk-src">funil_comercial</span>
-          </div>
-          <div class="li-fld"><span class="li-lbl">Fase Atual</span><span class="li-phase-pill li-phase-hot" id="dm-li-fase">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Fase Anterior</span><span class="li-val-sec" id="dm-li-fase-ant">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Tempo na Fase</span><span class="li-val" id="dm-li-delta">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Receita</span><span class="li-val-hi" id="dm-li-receita">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Produto</span><span class="li-val" id="dm-li-linha">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Origem</span><span class="li-val" id="dm-li-origem">—</span></div>
-          <div class="li-fld"><span class="li-lbl">SDR</span><span class="li-val" id="dm-li-sdr">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Closer</span><span class="li-val" id="dm-li-closer">—</span></div>
-          <div id="dm-skip-warn" class="li-skip-warn" style="display:none">&#9888; Etapa pulada — revisar jornada</div>
-        </div>
-
-        <!-- BLOCO D: HISTÓRICO -->
-        <div class="li-blk" id="dm-bloco-d" style="display:none">
-          <div class="li-blk-hdr">
-            <span>&#128336;</span>
-            <span class="li-blk-title">HISTÓRICO</span>
-            <span class="li-blk-src">aquisicao</span>
-          </div>
-          <div class="li-timeline-wrap" id="dm-timeline">
-            <span style="font-size:9px;color:var(--text4);font-style:italic">Nenhuma negociação anterior</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- ELUCI REPORT inside DM panel -->
-      <div class="dm-er-panel" id="dm-er-panel">
-        <div class="dm-er-hdr">
-          <div style="display:flex;align-items:center;gap:6px">
-            <span>&#129504;</span>
-            <span class="dm-er-label">ELUCI REPORT</span>
-            <span class="dm-er-ref" id="dm-er-ref">—</span>
-          </div>
-          <button onclick="document.getElementById('dm-er-panel').style.display='none'" style="background:none;border:none;color:var(--text3);cursor:pointer">&#10005;</button>
-        </div>
-        <div id="dm-er-content"></div>
-        <button class="dm-request-btn" onclick="dmRequestElucy()" id="dm-btn-request">
-          &#10024; Gerar Análise ELUCI
-        </button>
-      </div>
-
-      <!-- XP Bar -->
-      <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-          <span style="font-size:9px;font-weight:700;color:var(--accent2);text-transform:uppercase">LVL 42 OPERADOR</span>
-          <span style="font-size:9px;color:var(--text4)">750 / 1000 XP</span>
-        </div>
-        <div style="height:2px;background:var(--bg5);border-radius:99px;overflow:hidden">
-          <div style="height:100%;width:75%;background:var(--accent);box-shadow:0 0 6px rgba(99,102,241,.4)"></div>
-        </div>
-      </div>
-    </div>
-  </div>
+<!-- screen-dm removed (v12.1) — DM War Room dead code eliminated. Touchpoints migrated to CSE engine. -->
+<div id="screen-dm" style="display:none!important">
 </div><!-- /screen-dm -->
   </div><!-- /ct -->
   <div id="rp">
@@ -1641,7 +1460,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
   <div class="rps"><div class="rps-t">Badges</div><div class="bg-grid"><div class="bgi on"><div class="bgi-ic"><svg viewBox="0 0 24 24"><path d="M7 11V7a5 5 0 0 1 10 0v4"/><rect x="3" y="11" width="18" height="11" rx="2"/><circle cx="12" cy="16" r="1.5" fill="currentColor" stroke="none"/></svg></div><div class="bgi-n">Handoff</div></div><div class="bgi on"><div class="bgi-ic"><svg viewBox="0 0 24 24"><path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2z"/></svg></div><div class="bgi-n">Streak 7</div></div><div class="bgi on"><div class="bgi-ic"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div><div class="bgi-n">Qualifier</div></div><div class="bgi off"><div class="bgi-ic"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div class="bgi-n">50 FUPs</div></div><div class="bgi off"><div class="bgi-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/></svg></div><div class="bgi-n">Closer</div></div><div class="bgi off"><div class="bgi-ic"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="bgi-n">Iron Dome</div></div></div></div>
   <div class="rps"><div class="rps-t">Hoje</div><div class="tr"><span class="tr-l">FUPs</span><span class="tr-v" id="hoje-fups">12</span></div><div class="tr"><span class="tr-l">Deals</span><span class="tr-v" id="hoje-deals">5</span></div><div class="tr"><span class="tr-l">Qualif.</span><span class="tr-v" id="hoje-qual">2</span></div><div class="tr"><span class="tr-l">Handoffs</span><span class="tr-v" id="hoje-hand">1</span></div></div>
 </div>
-</div>
+</main>
 <script>
 
 // Channel mapping constants (hoisted to top to avoid TDZ issues)
@@ -6825,86 +6644,13 @@ function fmtRevLine(k){
 
 
 // ── DM WAR ROOM FUNCTIONS ──────────────────────────────────────
-function dmStartCapture(){
-  const status=document.getElementById('dm-ocr-status');
-  if(status) status.textContent='OCR ENGINE: AGUARDANDO IMAGEM...';
-  // File input for screenshot
-  const input=document.createElement('input');input.type='file';input.accept='image/*';
-  input.onchange=async(e)=>{
-    const file=e.target.files[0];if(!file)return;
-    if(status) status.textContent='OCR ENGINE: PROCESSANDO...';
-    const wrap=document.getElementById('dm-ocr-bar-wrap');if(wrap) wrap.style.display='block';
-    // Simulate OCR progress (real OCR would use Tesseract.js)
-    let pct=0;
-    const fill=document.getElementById('dm-ocr-fill');
-    const pctEl=document.getElementById('dm-ocr-pct');
-    const step=document.getElementById('dm-ocr-step');
-    const interval=setInterval(()=>{
-      pct+=10;
-      if(fill) fill.style.width=pct+'%';
-      if(pctEl) pctEl.textContent=pct+'%';
-      if(pct>=100){
-        clearInterval(interval);
-        if(step) step.textContent='OCR — COMPLETO';
-        if(status) status.textContent='OCR ENGINE: PRONTO';
-        // Add message to chat
-        const msgs=document.getElementById('dm-ocr-messages');
-        if(msgs) msgs.innerHTML+='<div class="dm-msg-lead"><div class="dm-msg-sender lead"><span>SCREENSHOT</span><span class="dm-msg-ts">'+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'</span></div><div class="dm-msg-bubble">[Imagem recebida — OCR completo]</div></div>';
-      }
-    },200);
-  };
-  input.click();
-}
-function dmCopySuggestion(){
-  const text=document.getElementById('dm-suggestion-text');
-  if(text) navigator.clipboard.writeText(text.textContent.trim()).then(()=>{if(window.showSyncToast) showSyncToast('ok','DM copiada!');});
-  if(window.logActivity) logActivity('dm_copied');
-}
-function dmEditSuggestion(){
-  const text=document.getElementById('dm-suggestion-text');
-  if(!text)return;
-  text.contentEditable=text.contentEditable==='true'?'false':'true';
-  text.focus();
-  text.style.border=text.contentEditable==='true'?'1px dashed var(--accent)':'none';
-}
-function dmSendToCRM(){
-  const text=document.getElementById('dm-suggestion-text');
-  if(!text)return;
-  if(window.logActivity) logActivity('note_crm_copied',null,{source:'dm_war_room'});
-  if(window.showSyncToast) showSyncToast('ok','Nota enviada ao CRM');
-}
-function dmRequestElucy(){
-  const btn=document.getElementById('dm-btn-request');
-  if(btn) btn.disabled=true;
-  if(window.showSyncToast) showSyncToast('ok','Analise ELUCI solicitada...');
-  // Use cockpit_requests via engine
-  const sb=window.getSB?window.getSB():null;
-  if(sb&&window.getOperatorId){
-    sb.from('cockpit_requests').insert({
-      operator_id:window.getOperatorId(),deal_id:'dm-session-'+Date.now(),
-      request_type:'analyze',deal_data:{source:'dm_war_room'},status:'pending'
-    }).then(()=>{if(btn) btn.disabled=false;});
-  }
-}
+function dmStartCapture(){/* removed v12.1 */}
+function dmCopySuggestion(){/* removed v12.1 */}
+function dmEditSuggestion(){/* removed v12.1 */}
+function dmSendToCRM(){/* removed v12.1 */}
+function dmRequestElucy(){/* removed v12.1 */}
 // Populate DM insights when a deal is selected from pipeline
-function dmLoadDealInsights(d){
-  if(!d)return;
-  ['dm-bloco-a','dm-bloco-b','dm-bloco-c','dm-bloco-d'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='block';});
-  document.getElementById('dm-insights-empty')&&(document.getElementById('dm-insights-empty').style.display='none');
-  const handle=document.getElementById('dm-lead-handle');if(handle) handle.textContent='@ '+(d.contact_name||d.nome||'Lead');
-  const badge=document.getElementById('dm-enr-badge');if(badge){badge.textContent='CARREGADO';badge.style.background='var(--gdim)';badge.style.color='var(--green)';}
-  // Populate fields
-  const set=(id,v)=>{const el=document.getElementById(id);if(el) el.textContent=v||'—';};
-  set('dm-li-nome',d.contact_name||d.nome);set('dm-li-cargo',d.cargo);set('dm-li-fat',d.faixa_de_faturamento);
-  set('dm-li-seg',d.p_segmento);set('dm-li-perfil',d.perfil);set('dm-li-ltv',d.p_receita_total?'R$ '+Number(d.p_receita_total).toLocaleString('pt-BR'):'—');
-  set('dm-li-prod1',d.p_primeiro_produto);set('dm-li-prodult',d.p_ultimo_produto);set('dm-li-rfm',d.p_cluster_rfm);
-  set('dm-li-scale',d.p_comprou_scale==='true'?'SIM':'NAO');set('dm-li-club',d.p_comprou_club==='true'?'SIM':'NAO');
-  set('dm-li-fase',d.fase_atual_no_processo);set('dm-li-delta',d.delta_t?d.delta_t+'d':'—');
-  set('dm-li-receita',d.revenue?'R$ '+Number(d.revenue).toLocaleString('pt-BR'):'—');
-  set('dm-li-linha',typeof _fmtLinha==='function'?_fmtLinha(d.linha_de_receita_vigente||''):d.linha_de_receita_vigente);set('dm-li-origem',d.origem_do_deal||d.canal_de_marketing);
-  set('dm-li-sdr',d.qualificador_name);set('dm-li-closer',d.proprietario_name);
-  const skip=document.getElementById('dm-skip-warn');if(skip) skip.style.display=(d.event_skipped&&d.event_skipped!=='false')?'block':'none';
-}
+function dmLoadDealInsights(){/* removed v12.1 */}
 window.dmLoadDealInsights=dmLoadDealInsights;
 
 function showSyncToast(type,msg){
