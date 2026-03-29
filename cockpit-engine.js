@@ -350,6 +350,8 @@ function enrichDealContext(deal){
   deal._framework = resolveFramework(deal.tier||deal._tier);
   // Timeline Intelligence — métricas temporais completas
   deal._timeline = calcTimelineIntelligence(deal);
+  // Enterprise Value (L23)
+  if(!deal._enterprise && typeof calcEnterpriseValueV23 === 'function') deal._enterprise = calcEnterpriseValueV23(deal);
   // Next best action
   deal._nextAction = deriveNextAction(deal);
   return deal;
@@ -388,7 +390,9 @@ var TASK_TYPES = {
   dvl_review:      { label:'DVL Review',       icon:'check',  color:'accent' },
   framework_gap_fill:{ label:'Framework Gap',  icon:'target', color:'yellow' },
   authority_confirmation:{ label:'Authority Check', icon:'user', color:'accent' },
-  pain_quantification:{ label:'Pain Quantify', icon:'alert',  color:'red' }
+  pain_quantification:{ label:'Pain Quantify', icon:'alert',  color:'red' },
+  advisor_coaching:   { label:'Advisor Coach',  icon:'user',   color:'yellow' },
+  enterprise_review:  { label:'Enterprise 5M+', icon:'target', color:'green' }
 };
 window.TASK_TYPES = TASK_TYPES;
 
@@ -1859,6 +1863,58 @@ async function renderHome(){
   }
   html += '</div>';
 
+  // BLOCO 5 — Strategic Intelligence (L25)
+  var stratIntel = calcStrategicIntelligenceV25();
+  var rq = stratIntel.revenue_quality;
+  var eq = stratIntel.experience_quality;
+  html += '<div class="home-block">'
+    + '<div class="home-block-title">Inteligencia Estrategica <span class="home-count">L25</span></div>'
+    + '<div class="home-strat-grid">'
+    + '<div class="home-strat-card"><div class="home-strat-label">SAL 5M+</div><div class="home-strat-value" style="color:var(--accent2)">'+rq.sal_5m_count+'</div><div class="home-strat-sub">de '+rq.total_deals+' deals ativos</div></div>'
+    + '<div class="home-strat-card"><div class="home-strat-label">Pipeline 5M+</div><div class="home-strat-value" style="color:var(--green)">'+fmtBRL(rq.pipeline_5m_value)+'</div><div class="home-strat-sub">receita potencial</div></div>'
+    + '<div class="home-strat-card"><div class="home-strat-label">Enterprise Score</div><div class="home-strat-value">'+(rq.avg_enterprise_score||0)+'/100</div><div class="home-strat-sub">media do portfolio</div></div>'
+    + '<div class="home-strat-card"><div class="home-strat-label">Framework Coverage</div><div class="home-strat-value" style="color:'+(eq.framework_coverage_pct>=60?'var(--green)':eq.framework_coverage_pct>=30?'var(--yellow)':'var(--red)')+'">'+eq.framework_coverage_pct+'%</div><div class="home-strat-sub">deals com framework >30%</div></div>'
+    + '</div>'
+    + '<div style="display:flex;gap:10px">'
+    + '<div style="flex:1;font-size:11px;color:var(--text2)">Personas: <b style="color:var(--red)">'+rq.by_persona.titan+' Titan</b> · <b style="color:var(--accent2)">'+rq.by_persona.builder+' Builder</b> · <b style="color:var(--yellow)">'+rq.by_persona.executor+' Executor</b></div>'
+    + '<div style="font-size:11px">Iron Dome: <b style="color:'+(eq.iron_dome_count>0?'var(--red)':'var(--green)')+'">'+eq.iron_dome_count+'</b> · Handoff Ready: <b style="color:var(--green)">'+eq.handoff_ready_count+'</b></div>'
+    + '</div></div>';
+
+  // BLOCO 6 — Trusted Advisor Score (L24)
+  var advisorData = calcTrustedAdvisorV24(null, null);
+  if(advisorData){
+    var taScore = Math.round(advisorData.trusted_advisor_score*100);
+    var taColor = taScore>=70?'var(--green)':taScore>=50?'var(--yellow)':'var(--red)';
+    var bandLabel = advisorData.band==='trusted'?'Trusted Advisor':advisorData.band==='developing'?'Em Desenvolvimento':'Precisa Atencao';
+    var gapLabels = {credibility:'Credibilidade',availability:'Disponibilidade',intimacy:'Intimidade',selfishness:'Egoismo (reduzir)'};
+    var gapLabel = gapLabels[advisorData.biggest_gap]||advisorData.biggest_gap;
+    // SVG ring
+    var circumference = 2 * Math.PI * 26;
+    var dashOffset = circumference - (circumference * taScore / 100);
+    html += '<div class="home-block">'
+      + '<div class="home-block-title">Trusted Advisor Score <span class="home-count">L24</span>'+(advisorData.needs_coaching?'<span style="margin-left:8px;font-size:10px;color:var(--red);font-weight:600">Coaching necessario</span>':'')+'</div>'
+      + '<div class="home-advisor-gauge">'
+      + '<div class="home-advisor-ring"><svg width="64" height="64"><circle cx="32" cy="32" r="26" stroke="var(--bg4)" stroke-width="5" fill="none"/><circle cx="32" cy="32" r="26" stroke="'+taColor+'" stroke-width="5" fill="none" stroke-dasharray="'+circumference+'" stroke-dashoffset="'+dashOffset+'" stroke-linecap="round"/></svg><span class="home-advisor-ring-val" style="color:'+taColor+'">'+taScore+'</span></div>'
+      + '<div class="home-advisor-info"><div class="home-advisor-band" style="color:'+taColor+'">'+bandLabel+'</div><div class="home-advisor-gap">Maior gap: '+gapLabel+'</div></div>'
+      + '</div>'
+      + '<div class="home-advisor-bars">';
+    var bars = [
+      {label:'Credibilidade',val:advisorData.credibility_score,w:0.30,color:'var(--accent2)'},
+      {label:'Disponibilidade',val:advisorData.availability_score,w:0.20,color:'var(--green)'},
+      {label:'Intimidade',val:advisorData.intimacy_score,w:0.30,color:'var(--clay)'},
+      {label:'Anti-Egoismo',val:1-advisorData.selfishness_score,w:0.20,color:'var(--yellow)'}
+    ];
+    bars.forEach(function(b){
+      var pct = Math.round(b.val*100);
+      html += '<div class="home-advisor-bar">'
+        + '<div class="home-advisor-bar-label">'+b.label+' ('+Math.round(b.w*100)+'%)</div>'
+        + '<div class="home-advisor-bar-bg"><div class="home-advisor-bar-fill" style="width:'+pct+'%;background:'+b.color+'"></div></div>'
+        + '<div class="home-advisor-bar-val" style="color:'+b.color+'">'+pct+'%</div>'
+        + '</div>';
+    });
+    html += '</div></div>';
+  }
+
   wrap.innerHTML = html;
 
   // Async: load gamification for score/streak + V9 score breakdown
@@ -2872,6 +2928,46 @@ buildTaskQueue = function(filterType, filterRevLine){
 };
 window.buildTaskQueue = buildTaskQueue;
 
+// Inject enterprise tasks (5M+ review + advisor coaching)
+var _entBuildTaskQueue = buildTaskQueue;
+buildTaskQueue = function(filterType, filterRevLine){
+  var tasks = _entBuildTaskQueue(filterType, filterRevLine);
+  if(filterType && filterType!=='enterprise_review' && filterType!=='advisor_coaching') return tasks;
+  var map = window._COCKPIT_DEAL_MAP||{};
+  Object.values(map).forEach(function(d){
+    if(!d._enterprise || !d._enterprise.is_5m_plus) return;
+    var f=(d.fase||d.fase_atual_no_processo||'').toLowerCase();
+    if(f!=='sal' && f!=='conectado') return;
+    tasks.push({
+      id: (d.deal_id||d.nome)+'_ent_review',
+      deal: d,
+      taskType: 'enterprise_review',
+      label: 'Deal 5M+ (score '+d._enterprise.enterprise_value_score+') — priorizar qualificacao',
+      sortPriority: 1,
+      urgency: 90
+    });
+  });
+  // Advisor coaching: add one task if score < 0.6
+  var advisor = typeof calcTrustedAdvisorV24==='function' ? calcTrustedAdvisorV24(null,null) : null;
+  if(advisor && advisor.needs_coaching){
+    var gapLabels={credibility:'Credibilidade',availability:'Disponibilidade',intimacy:'Intimidade',selfishness:'Egoismo'};
+    tasks.push({
+      id: 'advisor_coaching_'+new Date().toISOString().slice(0,10),
+      deal: {nome:'Desenvolvimento Pessoal'},
+      taskType: 'advisor_coaching',
+      label: 'Trusted Advisor Score '+Math.round(advisor.trusted_advisor_score*100)+'% — melhorar '+(gapLabels[advisor.biggest_gap]||''),
+      sortPriority: 3,
+      urgency: 60
+    });
+  }
+  tasks.sort(function(a,b){
+    if(a.sortPriority !== b.sortPriority) return a.sortPriority - b.sortPriority;
+    return (b.urgency||0) - (a.urgency||0);
+  });
+  return tasks;
+};
+window.buildTaskQueue = buildTaskQueue;
+
 // Render cadence enrollment modal for a deal
 function renderCadenceModal(dealId){
   var deal=(window._COCKPIT_DEAL_MAP||{})[dealId];
@@ -3010,13 +3106,17 @@ function _dealToRuntime(id, d, email){
     last_touch_type: null,
     next_best_action: nba.type || null,
     nba_reason: nba.label || null,
+    enterprise_value_score: d._enterprise ? d._enterprise.enterprise_value_score : null,
+    is_5m_plus: d._enterprise ? d._enterprise.is_5m_plus : false,
+    enterprise_band: d._enterprise ? d._enterprise.band : null,
     runtime_payload: JSON.stringify({
       oppBreakdown: d._oppBreakdown || null,
       timeline: d._timeline || null,
       tier: d.tier || d._tier || null,
       contact_name: d.contact_name || d.nome || null,
       empresa: d.empresa || null,
-      statusDeal: d.statusDeal || null
+      statusDeal: d.statusDeal || null,
+      enterprise: d._enterprise || null
     })
   };
 }
@@ -4084,6 +4184,23 @@ async function syncOperatorEfficiency(periodType, periodKey){
       speed: { aging_avg:perf.aging_avg, touch_delay:perf.touch_delay_avg, sla_risk:perf.sla_risk_rate, inactive:perf.inactive_rate }
     }),
     pipeline_hygiene_score: perf.pipeline_hygiene_score,
+    // Trusted Advisor (L24)
+    trusted_advisor_score: (function(){
+      var ta = calcTrustedAdvisorV24(perf);
+      return ta ? ta.trusted_advisor_score : null;
+    })(),
+    advisor_band: (function(){
+      var ta = calcTrustedAdvisorV24(perf);
+      return ta ? ta.band : null;
+    })(),
+    advisor_json: (function(){
+      var ta = calcTrustedAdvisorV24(perf);
+      return ta ? JSON.stringify({
+        credibility:ta.credibility_score, availability:ta.availability_score,
+        intimacy:ta.intimacy_score, selfishness:ta.selfishness_score,
+        band:ta.band, gap:ta.biggest_gap, coaching:ta.needs_coaching
+      }) : null;
+    })(),
     scores_json: JSON.stringify({
       volume:perf.volume_score, conversion:perf.conversion_score, speed:perf.speed_score,
       discipline:perf.discipline_score, dqi:perf.dqi, forecast:perf.forecast_quality_score,
@@ -6546,13 +6663,409 @@ async function runIntelligenceDAG(){
     console.log('[DAG] Phase 7: L22 Attribution...');
     await syncAttributionRuntimeV22();
 
-    console.log('[DAG] 22-Layer DAG completed in ' + (Date.now() - t0) + 'ms');
+    // Phase 8: Enterprise (L23) — depends on enriched deals
+    console.log('[DAG] Phase 8: L23 Enterprise Qualification...');
+    await syncEnterpriseRuntimeV23();
+
+    // Phase 9: Strategic Snapshot (L25) — depends on L23 + L24
+    console.log('[DAG] Phase 9: L25 Strategic Snapshot...');
+    await syncStrategicSnapshotV25();
+
+    console.log('[DAG] 25-Layer DAG completed in ' + (Date.now() - t0) + 'ms');
   } catch(err){
     console.error('[DAG] Error:', err);
   }
 }
 window.runIntelligenceDAG = runIntelligenceDAG;
 
-console.log('[cockpit-engine v10.0] 22-Layer Architecture loaded — L19 Data Quality + L20 Transition Rules + L21 Portfolio Priority + L22 Attribution');
+// ==================================================================
+// LAYER 23 — ENTERPRISE QUALIFICATION ENGINE
+// Separar deals de alto valor (5M+) e priorizar automaticamente
+// ==================================================================
+
+var ENTERPRISE_TIERS = {
+  'diamond': { revenue_proxy: 0.95, icp_boost: 1.0 },
+  'gold':    { revenue_proxy: 0.75, icp_boost: 0.85 },
+  'silver':  { revenue_proxy: 0.50, icp_boost: 0.60 },
+  'bronze':  { revenue_proxy: 0.25, icp_boost: 0.40 }
+};
+
+var HIGH_VALUE_CARGOS = ['ceo','fundador','socio','co-fundador','presidente','coo','cfo','vp','diretor','diretora','partner','managing','c-level'];
+var EXPANSION_PRODUCTS = ['imersao presencial','gestao empresarial','g4 scale','harvard','consulting'];
+
+function calcEnterpriseValueV23(deal){
+  // 1. Company Revenue Score (0-1) from faixa_de_faturamento or tier
+  var faixa = (deal.faixa_de_faturamento||'').toLowerCase();
+  var companyRevScore = 0.3; // default
+  if(faixa.includes('acima de 500')|| faixa.includes('>500')|| faixa.includes('500m')) companyRevScore = 1.0;
+  else if(faixa.includes('100')|| faixa.includes('200')|| faixa.includes('300')|| faixa.includes('400')) companyRevScore = 0.85;
+  else if(faixa.includes('50')) companyRevScore = 0.70;
+  else if(faixa.includes('20')|| faixa.includes('30')) companyRevScore = 0.55;
+  else if(faixa.includes('10')) companyRevScore = 0.40;
+  else if(faixa.includes('5')) companyRevScore = 0.30;
+  else {
+    var tierData = ENTERPRISE_TIERS[(deal.tier||deal._tier||'').toLowerCase()];
+    if(tierData) companyRevScore = tierData.revenue_proxy;
+  }
+
+  // 2. Founder Seniority Score (0-1) from cargo
+  var cargo = (deal.cargo||'').toLowerCase();
+  var founderScore = 0.3;
+  for(var i=0; i<HIGH_VALUE_CARGOS.length; i++){
+    if(cargo.includes(HIGH_VALUE_CARGOS[i])){ founderScore = 0.9; break; }
+  }
+  if(cargo.includes('gerente')||cargo.includes('head')||cargo.includes('coordenador')) founderScore = 0.6;
+  if(cargo.includes('analista')||cargo.includes('assistente')) founderScore = 0.2;
+
+  // 3. Decision Complexity (0-1) — proxy from tier + product
+  var linha = (deal.linhaReceita||deal.linha_de_receita_vigente||deal._revLine||'').toLowerCase();
+  var complexityScore = 0.4;
+  if(linha.includes('imersao')||linha.includes('presencial')) complexityScore = 0.9;
+  else if(linha.includes('scale')||linha.includes('harvard')||linha.includes('consulting')) complexityScore = 0.75;
+  else if(linha.includes('gestao')) complexityScore = 0.6;
+  else if(linha.includes('club')) complexityScore = 0.35;
+
+  // 4. Expansion Potential (0-1) — based on product + tier + recompra signals
+  var expansionScore = 0.3;
+  var isExpansionProduct = false;
+  for(var j=0; j<EXPANSION_PRODUCTS.length; j++){
+    if(linha.includes(EXPANSION_PRODUCTS[j].toLowerCase())){ isExpansionProduct = true; break; }
+  }
+  if(isExpansionProduct && companyRevScore > 0.6) expansionScore = 0.85;
+  else if(companyRevScore > 0.7) expansionScore = 0.65;
+  else if(companyRevScore > 0.5) expansionScore = 0.45;
+
+  // 5. ICP Fit (0-1)
+  var tierData2 = ENTERPRISE_TIERS[(deal.tier||deal._tier||'').toLowerCase()];
+  var icpFit = tierData2 ? tierData2.icp_boost : 0.5;
+  if(companyRevScore >= 0.7 && founderScore >= 0.6) icpFit = Math.min(1, icpFit + 0.15);
+
+  // 6. Urgency (0-1) from aging + signal
+  var aging = deal._delta || deal.delta || 0;
+  var urgencyScore = aging <= 3 ? 0.9 : aging <= 7 ? 0.7 : aging <= 14 ? 0.5 : 0.3;
+  if(deal._signal === 'HOT') urgencyScore = Math.min(1, urgencyScore + 0.2);
+
+  // Final Enterprise Value Score
+  var evs = (
+    companyRevScore   * 0.25 +
+    founderScore       * 0.15 +
+    complexityScore    * 0.15 +
+    expansionScore     * 0.20 +
+    icpFit             * 0.15 +
+    urgencyScore       * 0.10
+  );
+
+  var score100 = Math.round(evs * 100);
+  var is5MPlus = companyRevScore >= 0.70 && founderScore >= 0.6;
+  var band = score100 >= 75 ? 'enterprise' : score100 >= 50 ? 'mid_market' : 'standard';
+
+  return {
+    enterprise_value_score: score100,
+    company_revenue_score: Math.round(companyRevScore * 100),
+    founder_seniority_score: Math.round(founderScore * 100),
+    decision_complexity_score: Math.round(complexityScore * 100),
+    expansion_potential_score: Math.round(expansionScore * 100),
+    icp_fit_score: Math.round(icpFit * 100),
+    urgency_score: Math.round(urgencyScore * 100),
+    is_5m_plus: is5MPlus,
+    band: band,
+    priority_boost: score100 >= 75 ? 30 : score100 >= 50 ? 10 : 0
+  };
+}
+
+window.calcEnterpriseValueV23 = calcEnterpriseValueV23;
+
+async function syncEnterpriseRuntimeV23(){
+  var sb = _sb(); if(!sb) return;
+  var email = getOperatorId(); if(!email) return;
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var rows = [];
+  Object.keys(map).forEach(function(id){
+    var d = map[id];
+    if((d.statusDeal||'').toLowerCase()==='perdido'||(d.statusDeal||'').toLowerCase()==='ganho') return;
+    var ev = calcEnterpriseValueV23(d);
+    d._enterprise = ev; // attach to deal
+    rows.push({
+      deal_id: id,
+      operator_email: email,
+      enterprise_value_score: ev.enterprise_value_score,
+      company_revenue_score: ev.company_revenue_score,
+      founder_seniority_score: ev.founder_seniority_score,
+      decision_complexity_score: ev.decision_complexity_score,
+      expansion_potential_score: ev.expansion_potential_score,
+      icp_fit_score: ev.icp_fit_score,
+      urgency_score: ev.urgency_score,
+      is_5m_plus: ev.is_5m_plus,
+      band: ev.band,
+      priority_boost: ev.priority_boost,
+      computed_at: new Date().toISOString()
+    });
+  });
+  if(!rows.length) return;
+  var res = await sb.from('deal_enterprise_runtime').upsert(rows, {onConflict:'deal_id,operator_email'});
+  if(res.error) console.warn('[L23] sync error:', res.error.message);
+  else console.log('[L23] Enterprise runtime synced: ' + rows.length + ' deals');
+}
+window.syncEnterpriseRuntimeV23 = syncEnterpriseRuntimeV23;
+
+// ==================================================================
+// LAYER 24 — TRUSTED ADVISOR SCORE
+// Mede qualidade da relacao SDR-lead baseado na equacao G4:
+// Confianca = (Credibilidade + Disponibilidade + Intimidade) / Egoismo
+// ==================================================================
+
+function calcTrustedAdvisorV24(operatorData, deals){
+  deals = deals || Object.values(window._COCKPIT_DEAL_MAP||{}).filter(function(d){
+    return (d.statusDeal||'').toLowerCase()!=='perdido' && (d.statusDeal||'').toLowerCase()!=='ganho';
+  });
+  if(!deals.length) return null;
+
+  // ── CREDIBILITY (0.30) ──
+  // framework_usage: quanto dos frameworks estao preenchidos
+  var fwCoverageSum = 0, fwCount = 0;
+  deals.forEach(function(d){
+    if(d._frameworkRuntime && d._frameworkRuntime.coverage !== undefined){
+      fwCoverageSum += d._frameworkRuntime.coverage;
+      fwCount++;
+    }
+  });
+  var framework_usage = fwCount > 0 ? fwCoverageSum / fwCount : 0.2;
+
+  // insight_quality: proxy from notes with substance (>100 chars) + analyses generated
+  var notesDeep = 0, notesTotal = 0;
+  if(operatorData){
+    notesDeep = operatorData.notes_count || 0;
+    notesTotal = Math.max(operatorData.deals_trabalhados || 1, 1);
+  }
+  var insight_quality = Math.min(1, (notesDeep / notesTotal) * 1.2);
+
+  // business_context: proxy from personalized copies vs generic
+  var copiesGen = operatorData ? (operatorData.copies_generated||0) : 0;
+  var analysesGen = operatorData ? (operatorData.analyses_generated||0) : 0;
+  var contextActions = copiesGen + analysesGen;
+  var business_context = Math.min(1, contextActions / Math.max(deals.length, 1));
+
+  var credibility = insight_quality * 0.40 + framework_usage * 0.30 + business_context * 0.30;
+
+  // ── AVAILABILITY (0.20) ──
+  // response_time: how fast SDR acts after receiving deal
+  var avgAging = 0;
+  deals.forEach(function(d){ avgAging += (d._delta || d.delta || 0); });
+  avgAging = deals.length ? avgAging / deals.length : 10;
+  var response_time = avgAging <= 2 ? 0.95 : avgAging <= 5 ? 0.75 : avgAging <= 10 ? 0.50 : 0.25;
+
+  // follow_up_consistency: tasks completed on time
+  var tasksCompleted = operatorData ? (operatorData.fups_count||0) + (operatorData.dms_count||0) : 0;
+  var followup_consistency = Math.min(1, tasksCompleted / Math.max(deals.length * 2, 1));
+
+  // touchpoint_frequency
+  var totalTouchpoints = operatorData ? (operatorData.fups_count||0) + (operatorData.dms_count||0) + (operatorData.calls_count||0) + (operatorData.notes_count||0) : 0;
+  var tpPerDeal = totalTouchpoints / Math.max(deals.length, 1);
+  var touchpoint_freq = Math.min(1, tpPerDeal / 5); // 5 tp/deal = max
+
+  var availability = response_time * 0.40 + followup_consistency * 0.30 + touchpoint_freq * 0.30;
+
+  // ── INTIMACY (0.30) — most critical ──
+  // pain_depth: deals with SPICED P+I filled or Challenger reframe done
+  var painDeepCount = 0;
+  deals.forEach(function(d){
+    if(d._frameworkRuntime){
+      var fr = d._frameworkRuntime;
+      if((fr.spiced_pain||0) > 0.5 || (fr.challenger_reframe||0) > 0.5 || (fr.spin_problem||0) > 0.5){
+        painDeepCount++;
+      }
+    }
+  });
+  var pain_depth = deals.length ? painDeepCount / deals.length : 0.2;
+
+  // context_memory: interaction diversity (multiple channels, multiple types)
+  var channelDiversity = 0;
+  deals.forEach(function(d){
+    var channels = {};
+    if(d._dmRuntime && d._dmRuntime.touchpoint_count > 0) channels.dm = 1;
+    if(d.canal) channels[d.canal] = 1;
+    channelDiversity += Math.min(1, Object.keys(channels).length / 3);
+  });
+  var context_memory = deals.length ? channelDiversity / deals.length : 0.2;
+
+  // personalization: copies generated vs deals (more = more personalized)
+  var personalization = Math.min(1, copiesGen / Math.max(deals.length * 0.5, 1));
+
+  // emotional_signal: notes that capture pain/urgency (proxy)
+  var emotional_detection = operatorData ? Math.min(1, (operatorData.pain_clarity_pct||0) / 100) : 0.2;
+
+  var intimacy = pain_depth * 0.35 + context_memory * 0.25 + personalization * 0.25 + emotional_detection * 0.15;
+
+  // ── SELFISHNESS (0.20, negativo) ──
+  // pitch_ratio: deals where copy was sent without prior note/analysis
+  var noCopyWithoutContext = 0;
+  deals.forEach(function(d){
+    // Deal has copy but no framework/note/analysis = selfish
+    if(d._interactions){
+      var hasCopy = d._interactions.some(function(i){return i.interaction_type==='copy';});
+      var hasContext = d._interactions.some(function(i){return ['analysis','note_crm','enrichment','briefing'].indexOf(i.interaction_type) >= 0;});
+      if(hasCopy && !hasContext) noCopyWithoutContext++;
+    }
+  });
+  var pitch_ratio = deals.length ? noCopyWithoutContext / deals.length : 0.3;
+
+  // generic_copy_rate: proxy — low framework coverage = generic approach
+  var genericRate = framework_usage < 0.3 ? 0.7 : framework_usage < 0.5 ? 0.4 : 0.15;
+
+  // low_context_actions: actions without prior research
+  var lowContextRate = operatorData ? (operatorData.no_context_rate||0.3) : 0.3;
+
+  var selfishness = pitch_ratio * 0.40 + genericRate * 0.30 + lowContextRate * 0.30;
+
+  // ── FINAL SCORE ──
+  var trusted_advisor = credibility * 0.30 + availability * 0.20 + intimacy * 0.30 + (1 - selfishness) * 0.20;
+  trusted_advisor = Math.max(0, Math.min(1, trusted_advisor));
+
+  var band = trusted_advisor >= 0.80 ? 'exemplar' : trusted_advisor >= 0.65 ? 'trusted' : trusted_advisor >= 0.50 ? 'developing' : 'at_risk';
+  var needsCoaching = trusted_advisor < 0.60;
+  var biggestGap = 'credibility';
+  var minComponent = credibility;
+  if(availability < minComponent){ minComponent = availability; biggestGap = 'availability'; }
+  if(intimacy < minComponent){ minComponent = intimacy; biggestGap = 'intimacy'; }
+  if((1 - selfishness) < minComponent){ biggestGap = 'selfishness'; }
+
+  return {
+    trusted_advisor_score: Math.round(trusted_advisor * 100) / 100,
+    credibility_score: Math.round(credibility * 100) / 100,
+    availability_score: Math.round(availability * 100) / 100,
+    intimacy_score: Math.round(intimacy * 100) / 100,
+    selfishness_score: Math.round(selfishness * 100) / 100,
+    band: band,
+    needs_coaching: needsCoaching,
+    biggest_gap: biggestGap,
+    components: {
+      insight_quality: Math.round(insight_quality*100)/100,
+      framework_usage: Math.round(framework_usage*100)/100,
+      business_context: Math.round(business_context*100)/100,
+      response_time: Math.round(response_time*100)/100,
+      followup_consistency: Math.round(followup_consistency*100)/100,
+      touchpoint_freq: Math.round(touchpoint_freq*100)/100,
+      pain_depth: Math.round(pain_depth*100)/100,
+      context_memory: Math.round(context_memory*100)/100,
+      personalization: Math.round(personalization*100)/100,
+      emotional_detection: Math.round(emotional_detection*100)/100,
+      pitch_ratio: Math.round(pitch_ratio*100)/100,
+      generic_copy_rate: Math.round(genericRate*100)/100,
+      low_context_rate: Math.round(lowContextRate*100)/100
+    }
+  };
+}
+
+window.calcTrustedAdvisorV24 = calcTrustedAdvisorV24;
+
+// ==================================================================
+// LAYER 25 — STRATEGIC INTELLIGENCE LAYER
+// Conecta cockpit -> KPIs estrategicos G4
+// ==================================================================
+
+function calcStrategicIntelligenceV25(){
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var deals = Object.values(map).filter(function(d){
+    return (d.statusDeal||'').toLowerCase()!=='perdido' && (d.statusDeal||'').toLowerCase()!=='ganho';
+  });
+
+  // Revenue Quality
+  var sal5mCount = 0, pipeline5mValue = 0, totalEnterpriseScore = 0;
+  var expansionPotential = 0, dealCount = 0;
+  deals.forEach(function(d){
+    var ev = d._enterprise || calcEnterpriseValueV23(d);
+    d._enterprise = ev;
+    if(ev.is_5m_plus){
+      sal5mCount++;
+      pipeline5mValue += (d._oppValue || d.elucyValor || 0);
+    }
+    totalEnterpriseScore += ev.enterprise_value_score;
+    expansionPotential += ev.expansion_potential_score;
+    dealCount++;
+  });
+  var avgEnterpriseScore = dealCount ? Math.round(totalEnterpriseScore / dealCount) : 0;
+  var avgExpansion = dealCount ? Math.round(expansionPotential / dealCount) : 0;
+
+  // Framework coverage
+  var fwCoveredCount = 0;
+  var titanCount=0, builderCount=0, executorCount=0;
+  deals.forEach(function(d){
+    var p = d._persona || '';
+    if(p==='Titan') titanCount++;
+    else if(p==='Builder') builderCount++;
+    else if(p==='Executor') executorCount++;
+    if(d._frameworkRuntime && d._frameworkRuntime.coverage > 0.3) fwCoveredCount++;
+  });
+  var fwCoveragePct = dealCount ? Math.round((fwCoveredCount/dealCount)*100) : 0;
+
+  // Experience quality
+  var totalAging = 0;
+  deals.forEach(function(d){ totalAging += (d._delta||d.delta||0); });
+  var avgTouchesToResponse = dealCount ? Math.round((totalAging / dealCount) * 10) / 10 : 0;
+
+  // Iron Dome count
+  var ironDomeCount = deals.filter(function(d){ return d._signal==='DOME'||(d.delta||0)>10; }).length;
+  // Handoff ready
+  var handoffReady = deals.filter(function(d){
+    var f=(d.fase||'').toLowerCase();
+    return f==='oportunidade'||f==='sal';
+  }).length;
+
+  return {
+    revenue_quality: {
+      sal_5m_count: sal5mCount,
+      pipeline_5m_value: Math.round(pipeline5mValue),
+      avg_enterprise_score: avgEnterpriseScore,
+      avg_expansion_potential: avgExpansion,
+      total_deals: dealCount,
+      by_persona: { titan: titanCount, builder: builderCount, executor: executorCount }
+    },
+    experience_quality: {
+      avg_touches_to_response: avgTouchesToResponse,
+      framework_coverage_pct: fwCoveragePct,
+      iron_dome_count: ironDomeCount,
+      handoff_ready_count: handoffReady
+    }
+  };
+}
+
+window.calcStrategicIntelligenceV25 = calcStrategicIntelligenceV25;
+
+async function syncStrategicSnapshotV25(){
+  var sb = _sb(); if(!sb) return;
+  var email = getOperatorId(); if(!email) return;
+  var intel = calcStrategicIntelligenceV25();
+  var advisor = calcTrustedAdvisorV24(null, null);
+  var today = new Date().toISOString().slice(0,10);
+
+  var row = {
+    snapshot_date: today,
+    operator_email: email,
+    sal_5m_count: intel.revenue_quality.sal_5m_count,
+    pipeline_5m_value: intel.revenue_quality.pipeline_5m_value,
+    avg_enterprise_score: intel.revenue_quality.avg_enterprise_score,
+    total_deals: intel.revenue_quality.total_deals,
+    titan_count: intel.revenue_quality.by_persona.titan,
+    builder_count: intel.revenue_quality.by_persona.builder,
+    executor_count: intel.revenue_quality.by_persona.executor,
+    framework_coverage_pct: intel.experience_quality.framework_coverage_pct,
+    iron_dome_count: intel.experience_quality.iron_dome_count,
+    handoff_ready_count: intel.experience_quality.handoff_ready_count,
+    trusted_advisor_score: advisor ? advisor.trusted_advisor_score : null,
+    credibility_score: advisor ? advisor.credibility_score : null,
+    availability_score: advisor ? advisor.availability_score : null,
+    intimacy_score: advisor ? advisor.intimacy_score : null,
+    selfishness_score: advisor ? advisor.selfishness_score : null,
+    advisor_band: advisor ? advisor.band : null,
+    computed_at: new Date().toISOString()
+  };
+
+  var res = await sb.from('strategic_snapshots').upsert([row], {onConflict:'snapshot_date,operator_email'});
+  if(res.error) console.warn('[L25] strategic snapshot error:', res.error.message);
+  else console.log('[L25] Strategic snapshot saved for ' + today);
+}
+window.syncStrategicSnapshotV25 = syncStrategicSnapshotV25;
+
+console.log('[cockpit-engine v11.0] 25-Layer Architecture loaded — L23 Enterprise + L24 Trusted Advisor + L25 Strategic Intelligence');
 
 })();

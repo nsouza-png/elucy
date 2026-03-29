@@ -207,7 +207,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .home-fm-icon{font-size:16px}
 .home-fm-btn{padding:4px 10px;border-radius:6px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.12s}
 .home-fm-btn:hover{border-color:var(--accent);color:var(--accent2)}
-.home-meta-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.home-meta-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
 .home-meta{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px}
 .home-meta-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;font-weight:var(--fw-bold)}
 .home-meta-value{font-size:var(--fs-body-sm);font-weight:var(--fw-bold);margin-bottom:5px;line-height:var(--lh-tight)}
@@ -229,6 +229,41 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .home-insight-bad{background:var(--rdim);border:1px solid var(--red);color:var(--red)}
 .home-insight-msg{font-weight:600;margin-bottom:2px}
 .home-insight-sug{font-size:11px;opacity:.8}
+/* V11: Enterprise Home blocks */
+.home-strat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.home-strat-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px}
+.home-strat-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;font-weight:700}
+.home-strat-value{font-size:16px;font-weight:800;line-height:1.2}
+.home-strat-sub{font-size:10px;color:var(--text2);margin-top:2px}
+.home-advisor-gauge{display:flex;align-items:center;gap:16px;margin-bottom:12px}
+.home-advisor-ring{width:64px;height:64px;border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.home-advisor-ring-val{font-size:16px;font-weight:800;z-index:1}
+.home-advisor-ring svg{position:absolute;top:0;left:0;transform:rotate(-90deg)}
+.home-advisor-info{flex:1}
+.home-advisor-band{font-size:13px;font-weight:700;margin-bottom:2px}
+.home-advisor-gap{font-size:11px;color:var(--text2)}
+.home-advisor-bars{display:flex;flex-direction:column;gap:6px}
+.home-advisor-bar{display:flex;align-items:center;gap:8px}
+.home-advisor-bar-label{font-size:10px;color:var(--text2);width:80px;text-align:right;flex-shrink:0}
+.home-advisor-bar-bg{flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden}
+.home-advisor-bar-fill{height:100%;border-radius:3px;transition:width .3s}
+.home-advisor-bar-val{font-size:10px;font-weight:700;width:28px;flex-shrink:0}
+/* V11: 5M+ badge on deal cards */
+.tag-5m{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px;animation:pulse5m 2s ease-in-out infinite}
+@keyframes pulse5m{0%,100%{opacity:1}50%{opacity:.7}}
+/* V11: Enterprise Profile card in deal detail */
+.ent-profile{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:14px;margin:10px 0}
+.ent-profile-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.ent-profile-score{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.ent-profile-big{font-size:28px;font-weight:800;line-height:1}
+.ent-profile-band{font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px}
+.ent-band-enterprise{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff}
+.ent-band-mid_market{background:var(--adim);color:var(--accent2);border:1px solid var(--accent)}
+.ent-band-standard{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+.ent-profile-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.ent-profile-item{background:var(--bg3);border-radius:var(--r);padding:8px;text-align:center}
+.ent-profile-item-val{font-size:14px;font-weight:700}
+.ent-profile-item-lbl{font-size:9px;color:var(--text2);margin-top:2px;text-transform:uppercase}
 /* V3: Task Runner */
 .task-empty{padding:40px;text-align:center;font-size:13px;color:var(--text2)}
 .task-stats{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
@@ -5690,6 +5725,7 @@ function selectLiveDeal(id,d){
             ${(d.fase||d.fase_atual_no_processo)?`<span class="tag t-acc">${d.fase||d.fase_atual_no_processo}</span>`:''}
             ${d._signal==='BUY'?'<span class="tag t-buy">BUY</span>':d._signal==='RISK'?'<span class="tag t-risk">RISK</span>':d._signal==='STALL'?'<span class="tag t-stall">STALL</span>':d._signal==='CHAMP'?'<span class="tag t-champ">CHAMP</span>':d._signal==='DOME'?'<span class="tag t-stall">IRON DOME</span>':''}
             ${(d._urgency||0)>=60?'<span class="tag t-risk">SLA RISCO</span>':''}
+            ${d._enterprise&&d._enterprise.is_5m_plus?'<span class="tag-5m">5M+</span>':d._enterprise&&d._enterprise.band==='mid_market'?'<span class="tag t-gray" style="border-color:var(--accent);color:var(--accent2)">MID-MARKET</span>':''}
           </div>
         </div>
       </div>
@@ -5715,6 +5751,25 @@ function selectLiveDeal(id,d){
         <div class="ic"><div class="ic-l">Valor G4 Dados</div><div class="ic-v" style="color:var(--green)">${fmtBRL(d.revenueRaw)}</div><div class="ic-s">Time de dados</div></div>
         <div class="ic"><div class="ic-l">Valor ELUCY</div><div class="ic-v" style="color:var(--accent2)">${fmtBRL(d.elucyValor)}</div><div class="ic-s">${d.forecastDelta!=null?(d.forecastDelta>=0?'▲ +'+fmtBRL(d.forecastDelta):'▼ '+fmtBRL(d.forecastDelta))+' vs G4 Dados':'Sem ref. dados'}</div></div>
       </div>
+      ${d._enterprise&&d._enterprise.enterprise_value_score>0?`
+      <div class="ent-profile">
+        <div class="ent-profile-title">${d._enterprise.is_5m_plus?'<span class="tag-5m" style="animation:none">5M+</span>':''} Perfil Enterprise</div>
+        <div class="ent-profile-score">
+          <div class="ent-profile-big" style="color:${d._enterprise.enterprise_value_score>=75?'var(--green)':d._enterprise.enterprise_value_score>=45?'var(--accent2)':'var(--text2)'}">${d._enterprise.enterprise_value_score}</div>
+          <div>
+            <div class="ent-profile-band ent-band-${d._enterprise.band}">${d._enterprise.band==='enterprise'?'Enterprise':d._enterprise.band==='mid_market'?'Mid-Market':'Standard'}</div>
+            ${d._enterprise.priority_boost>0?'<div style="font-size:10px;color:var(--green);margin-top:3px">+'+d._enterprise.priority_boost+' priority boost</div>':''}
+          </div>
+        </div>
+        <div class="ent-profile-grid">
+          <div class="ent-profile-item"><div class="ent-profile-item-val">${d._enterprise.company_revenue_score||0}</div><div class="ent-profile-item-lbl">Faturamento</div></div>
+          <div class="ent-profile-item"><div class="ent-profile-item-val">${d._enterprise.founder_seniority_score||0}</div><div class="ent-profile-item-lbl">Senioridade</div></div>
+          <div class="ent-profile-item"><div class="ent-profile-item-val">${d._enterprise.decision_complexity_score||0}</div><div class="ent-profile-item-lbl">Complexidade</div></div>
+          <div class="ent-profile-item"><div class="ent-profile-item-val">${d._enterprise.expansion_potential_score||0}</div><div class="ent-profile-item-lbl">Expansao</div></div>
+          <div class="ent-profile-item"><div class="ent-profile-item-val">${d._enterprise.icp_fit_score||0}</div><div class="ent-profile-item-lbl">ICP Fit</div></div>
+          <div class="ent-profile-item"><div class="ent-profile-item-val">${d._enterprise.urgency_score||0}</div><div class="ent-profile-item-lbl">Urgencia</div></div>
+        </div>
+      </div>`:''}
       <div class="ig-toggle" onclick="this.nextElementSibling.classList.toggle('collapsed');this.querySelector('.tgl-arrow').classList.toggle('up')">
         <span class="ig-toggle-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2z"/></svg> Sinais do Deal</span>
         <span class="tgl-arrow">▾</span>
