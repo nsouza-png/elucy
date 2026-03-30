@@ -16,20 +16,9 @@
   function _today() { return new Date().toISOString().slice(0, 10); }
   function _monthStart() { var d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10); }
 
-  // --- Cache localStorage 15min ---
-  var CACHE_TTL = 15 * 60 * 1000;
-  function _cacheGet(key) {
-    try {
-      var raw = localStorage.getItem('rv4_' + key);
-      if (!raw) return null;
-      var obj = JSON.parse(raw);
-      if (Date.now() - obj.ts > CACHE_TTL) { localStorage.removeItem('rv4_' + key); return null; }
-      return obj.data;
-    } catch (e) { return null; }
-  }
-  function _cacheSet(key, data) {
-    try { localStorage.setItem('rv4_' + key, JSON.stringify({ ts: Date.now(), data: data })); } catch (e) { }
-  }
+  // Sem cache — dados sempre frescos do Supabase em tempo real
+  function _cacheGet(key) { return null; }
+  function _cacheSet(key, data) { }
 
   // ============================================================================
   // DATA LAYER — busca dados direto do Supabase (não depende de _COCKPIT_DEAL_MAP)
@@ -495,7 +484,7 @@
     // Header
     html += '<div style="margin-bottom:16px;display:flex;align-items:flex-end;justify-content:space-between">';
     html += '<div><div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:3px">Pre-Vendas Intelligence</div>';
-    html += '<div style="font-size:12px;color:var(--text2)">Databricks → Supabase · ' + deals.length + ' deals · ' + lastSync + '</div></div>';
+    html += '<div style="font-size:12px;color:var(--text2)">Tempo real · Databricks → Supabase · ' + deals.length + ' deals · ' + lastSync + '</div></div>';
     if (dtRuntime) {
       var stallPct = dtRuntime.total ? Math.round(dtRuntime.stall_count / dtRuntime.total * 100) : 0;
       html += '<div style="font-size:11px;color:var(--text2);text-align:right">';
