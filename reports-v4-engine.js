@@ -410,14 +410,14 @@
     var monthStart = _monthStart();
     var byDay = {};
 
+    // Volume diário = todos os deals que entraram no mês, independente de fase
+    // (fase pode estar vazia para leads em D1-D6 que ainda não foram qualificados)
     deals.forEach(function (d) {
       var created = (d.created_at_crm || '').slice(0, 10);
       if (!created || created < monthStart) return;
-      var mapped = _mapStage(d.fase_atual_no_processo);
-      if (mapped === null) return; // ignora deals sem fase definida
-      if (!byDay[created]) byDay[created] = { mql: 0, sal: 0, opp: 0, won: 0 };
+      if (!byDay[created]) byDay[created] = { entrada: 0, sal: 0, opp: 0, won: 0 };
+      byDay[created].entrada++;
       var fase = (d.fase_atual_no_processo || '').toLowerCase();
-      byDay[created].mql++;
       if (fase.indexOf('sal') !== -1 || fase.indexOf('conectad') !== -1 || fase.indexOf('agendament') !== -1 ||
         fase.indexOf('oportunidade') !== -1 || fase.indexOf('negociac') !== -1 || fase.indexOf('ganho') !== -1)
         byDay[created].sal++;
@@ -427,7 +427,7 @@
     });
 
     var days = Object.keys(byDay).sort().map(function (d) {
-      return { date: d, label: d.slice(8, 10) + '/' + d.slice(5, 7), mql: byDay[d].mql, sal: byDay[d].sal, opp: byDay[d].opp, won: byDay[d].won };
+      return { date: d, label: d.slice(8, 10) + '/' + d.slice(5, 7), mql: byDay[d].entrada, sal: byDay[d].sal, opp: byDay[d].opp, won: byDay[d].won };
     });
     return { days: days, monthStart: monthStart };
   }
