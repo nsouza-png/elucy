@@ -1157,7 +1157,6 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
   <button class="ntab on" onclick="setScreen('home',this)">Home</button>
   <button class="ntab" onclick="setScreen('pipeline',this)">Pipeline</button>
   <button class="ntab" onclick="setScreen('tasks',this)">Tasks <span class="tab-count" id="task-count"></span></button>
-  <button class="ntab" onclick="setScreen('reports',this)">Reports</button>
   <button class="ntab" onclick="setScreen('prevendas',this)">Pre-Vendas</button>
   <button class="ntab" onclick="setScreen('intelligence',this)">Intel</button>
   <button class="ntab" onclick="setScreen('playbooks',this)">Playbooks</button>
@@ -1799,7 +1798,7 @@ function setScreen(n,el,skipHash){
   document.querySelectorAll('#ct > .screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
   var ct=document.getElementById('ct'); if(ct) ct.scrollTop=0;
-  const screenMap={home:'screen-home',pipeline:'screen-pipeline',tasks:'screen-tasks',reports:'screen-reports',prevendas:'screen-prevendas',intelligence:'screen-intelligence',playbooks:'screen-playbooks',dm:'screen-dm'};
+  const screenMap={home:'screen-home',pipeline:'screen-pipeline',tasks:'screen-tasks',prevendas:'screen-prevendas',intelligence:'screen-intelligence',playbooks:'screen-playbooks',dm:'screen-dm'};
   const validScreens=Object.keys(screenMap);
   const name=validScreens.includes(n)?n:'home';
   const target=document.getElementById(screenMap[name]);
@@ -1807,7 +1806,7 @@ function setScreen(n,el,skipHash){
   if(el){ el.classList.add('on'); }
   else {
     const tabs=document.querySelectorAll('.ntab');
-    const tabMap={home:0,pipeline:1,tasks:2,reports:3,prevendas:4,intelligence:5,playbooks:6};
+    const tabMap={home:0,pipeline:1,tasks:2,prevendas:3,intelligence:4,playbooks:5};
     const idx=tabMap[name]!=null?tabMap[name]:0;
     if(tabs[idx]) tabs[idx].classList.add('on');
   }
@@ -1815,19 +1814,17 @@ function setScreen(n,el,skipHash){
   if(name==='home' && window.renderHome) window.renderHome();
   if(name==='tasks' && window.renderTaskRunner) window.renderTaskRunner();
   if(name==='intelligence'){
-    // Inicializa L1 overview na primeira visita (ou re-ativa tab atual)
     var l1El=document.querySelector('.intel-l1-tab.on');
     if(!l1El){ var firstL1=document.querySelector('.intel-l1-tab'); if(firstL1) window._intelL1('overview',firstL1); }
     else renderIntelligence();
   }
-  if(name==='reports') loadReportsScreen();
   if(name==='prevendas' && window.ReportsV4) window.ReportsV4.renderReportsV4('screen-reports-v4');
   if(name==='playbooks') renderPlaybooks();
 }
 // Hash routing — abre a seção correta ao carregar URL direta ou navegar pelo histórico
 function _routeFromHash(){
   const hash=(location.hash||'').replace('#','').toLowerCase().trim();
-  const valid=['home','pipeline','tasks','reports','prevendas','intelligence','playbooks','dm'];
+  const valid=['home','pipeline','tasks','prevendas','intelligence','playbooks','dm'];
   setScreen(valid.includes(hash)?hash:'home',null,true);
 }
 window.addEventListener('hashchange',_routeFromHash);
@@ -6231,20 +6228,27 @@ var _intelCurrentL1 = 'overview';
 var _intelCurrentDim = 'global'; // legacy compat
 
 var _INTEL_SUBTABS = {
-  overview:    [],  // no subtabs — single view
-  performance: [],  // no subtabs — single Performance V3 view
+  // Overview: visão única — hero + KPIs + gargalos + próxima ação
+  overview:    [],
+  // Performance: métricas do operador — score, metas, conversão, velocidade, DQI
+  performance: [
+    { id:'performance', label:'Resumo V3' },
+    { id:'operator',    label:'Score Operador' }
+  ],
+  // Pipeline: estrutura do pipe — 4 dimensões MECE (linha / etapa / canal / valor)
   pipeline:    [
     { id:'line',    label:'Linha' },
     { id:'stage',   label:'Etapa' },
     { id:'channel', label:'Canal' },
-    { id:'value',   label:'Valor' }
+    { id:'value',   label:'Valor' },
+    { id:'task',    label:'Tasks' }
   ],
+  // Engines: como o motor decide — forecast, framework, signals V8
   engines: [
     { id:'forecast',  label:'Forecast' },
-    { id:'framework', label:'Framework' },
-    { id:'task',      label:'Signals' },
-    { id:'operator',  label:'Data Quality' }
+    { id:'framework', label:'Framework' }
   ],
+  // Strategic: leitura estratégica — enterprise, RFV, trusted advisor, audit
   strategic: [
     { id:'enterprise', label:'Enterprise' },
     { id:'advisor',    label:'Trusted Advisor' },
@@ -6254,7 +6258,7 @@ var _INTEL_SUBTABS = {
   ]
 };
 
-// Default sub-dim for each L1
+// Default sub-dim for each L1 (first subtab or single view)
 var _INTEL_L1_DEFAULT = {
   overview:    'global',
   performance: 'performance',
