@@ -1106,7 +1106,8 @@ function renderTaskCard(deal, idx){
     signalBadge = '<span class="tag is-buy" style="font-size:9px">Sinal de Compra</span>';
   }
 
-  return '<div class="task-card" data-task-idx="'+idx+'" data-id="'+_escHtml(String(deal.id||deal.contact_id||deal.deal_id||''))+'" style="cursor:pointer" onclick="window.texOpen('+idx+')">'
+  var dealId = _escHtml(String(deal.id||deal.contact_id||deal.deal_id||idx));
+  return '<div class="task-card" data-task-idx="'+idx+'" data-id="'+dealId+'" style="cursor:pointer" onclick="window.texOpen(\''+dealId+'\')">'
     + '<div class="task-card-main">'
       + '<div class="task-card-top">'
         + '<span class="task-type-badge '+taskColor+'">'+taskLabel+'</span>'
@@ -1124,9 +1125,9 @@ function renderTaskCard(deal, idx){
       + '</div>'
       + '<div class="task-card-nba">→ '+_escHtml(nba)+'</div>'
       + '<div class="task-actions">'
-        + '<button class="task-btn is-primary" onclick="event.stopPropagation();window.texOpen('+idx+')">Executar →</button>'
-        + '<button class="task-btn" onclick="event.stopPropagation();window.taskQuickAction&&window.taskQuickAction(\''+_escHtml(String(deal.id||deal.contact_id||deal.deal_id||''))+'\',\'fup\')">Gerar FUP</button>'
-        + '<button class="task-btn" onclick="event.stopPropagation();window.taskQuickAction&&window.taskQuickAction(\''+_escHtml(String(deal.id||deal.contact_id||deal.deal_id||''))+'\',\'analyze\')">Analisar</button>'
+        + '<button class="task-btn is-primary" onclick="event.stopPropagation();window.texOpen(\''+dealId+'\')">Executar →</button>'
+        + '<button class="task-btn" onclick="event.stopPropagation();window.taskQuickAction&&window.taskQuickAction(\''+dealId+'\',\'fup\')">Gerar FUP</button>'
+        + '<button class="task-btn" onclick="event.stopPropagation();window.taskQuickAction&&window.taskQuickAction(\''+dealId+'\',\'analyze\')">Analisar</button>'
       + '</div>'
       + (fw>0?'<div class="task-chip-row"><span class="tag" style="font-size:9px">FW '+Math.round(fw*100)+'%</span></div>':'')
     + '</div>'
@@ -1142,21 +1143,22 @@ function renderTaskList(deals){
   if(!el) return;
   if(!deals||!deals.length){
     el.innerHTML = '<div class="task-empty">Nenhuma tarefa para o modo e fila selecionados.</div>';
+    // Limpa fila para evitar stale
+    window._texV2Queue = null;
     return;
   }
-  // Expõe a fila filtrada para texOpen — converte deals em formato que _texQueue espera
-  window._texV2Queue = deals.map(function(d){
-    var tasks = d._tasks||[];
-    var firstTask = tasks[0]||{type:'follow_up'};
-    return {
-      id: d.id||d.contact_id||d.deal_id||'',
-      taskType: firstTask.type||'follow_up',
-      label: d._nextAction||'Realizar FUP',
-      priority: d.tier_da_oportunidade||'medium',
-      deal: d,
-      aging: {isAtRisk:(d._aging||0)>20, riskLevel:(d._aging||0)>40?'critical':(d._aging||0)>20?'high':'medium', riskLabel:'D'+(d._aging||0)}
-    };
+  // Monta a fila via buildTaskQueue() — garante o mesmo formato enriquecido que texOpen/texUpdateUI esperam
+  // Filtra para conter apenas os deals visíveis (mesmo conjunto de getFilteredTaskDeals)
+  var visibleIds = {};
+  deals.forEach(function(d){ visibleIds[d.id||d.contact_id||d.deal_id||''] = true; });
+  var fullQueue = buildTaskQueue(null, null, null, null, null);
+  window._texV2Queue = fullQueue.filter(function(t){
+    var id = t.id||'';
+    var dealId = (t.deal&&(t.deal.id||t.deal.contact_id||t.deal.deal_id))||'';
+    return visibleIds[id] || visibleIds[dealId];
   });
+  // Se não filtrou nada (ids sem match), usa a fila completa como fallback
+  if(!window._texV2Queue.length) window._texV2Queue = fullQueue;
   el.innerHTML = deals.map(function(deal, idx){ return renderTaskCard(deal, idx); }).join('');
 }
 
@@ -1489,9 +1491,9 @@ function _texStopTimer(){
   if(_texTimer){ clearInterval(_texTimer); _texTimer=null; }
 }
 
-// Open execution mode at given task index
-window.texOpen = function(idx){
-  // Tasks V2: usa a fila já filtrada e enriquecida pelo renderTaskList
+// Open execution mode — aceita idx (numérico) ou dealId (string)
+window.texOpen = function(idxOrId){
+  // Tasks V2: usa a fila enriquecida montada pelo renderTaskList
   if(window._texV2Queue && window._texV2Queue.length){
     _texQueue = window._texV2Queue;
   } else {
@@ -1503,7 +1505,23 @@ window.texOpen = function(idx){
     _texQueue = buildTaskQueue(filterType, filterRevLine);
   }
   if(!_texQueue.length) return;
-  _texIdx = Math.min(idx, _texQueue.length - 1);
+
+  var targetIdx = 0;
+  if(typeof idxOrId === 'number'){
+    // idx numérico — posição direta na fila
+    targetIdx = Math.min(idxOrId, _texQueue.length - 1);
+  } else {
+    // string dealId — buscar pela id na fila
+    var found = -1;
+    for(var i=0;i<_texQueue.length;i++){
+      var t=_texQueue[i];
+      var tid = t.id||(t.deal&&(t.deal.id||t.deal.contact_id||t.deal.deal_id))||'';
+      if(String(tid)===String(idxOrId)){ found=i; break; }
+    }
+    targetIdx = found>=0 ? found : 0;
+  }
+
+  _texIdx = targetIdx;
   document.getElementById('tex-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
   _texUpdateUI();
