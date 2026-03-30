@@ -7187,9 +7187,12 @@ var _obStep = 0;
 var _obOverlay = null;
 var _obSpotlight = null;
 var _obTooltip = null;
+var _obStarted = false; // guard contra dupla execucao
 
 // Verifica Supabase se o tour foi completado — obrigatorio para TODOS
 async function _obCheckAndStart(email){
+  if(_obStarted) return; // ja foi chamado, ignora segunda chamada
+  _obStarted = true;
   console.log('[OB] _obCheckAndStart called, email:', email);
   var sb = getSB();
   if(sb && email){
@@ -7317,8 +7320,11 @@ function _obEnd(){
   }
 }
 
-// Expor para trigger manual
-window._obStart = _obStart;
+// Expor para trigger manual (reseta guard para permitir restart)
+window._obStart = function(){
+  _obStarted = true;
+  _obStart();
+};
 </script>
 <!-- ── TASK EXECUTION OVERLAY ────────────────────────────────────── -->
 <div class="tex-overlay" id="tex-overlay">
