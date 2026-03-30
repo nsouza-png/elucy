@@ -6816,7 +6816,7 @@ async function persistSignals(dealId, signals, scoreData, operatorEmail){
   runtimeRow.explain_json = JSON.stringify(scoreData.explain_json||{});
 
   var rtRes = await sb.from('deal_signal_runtime').upsert(runtimeRow, { onConflict:'deal_id' });
-  if(rtRes.error){ _syncErr('signals', rtRes.error); }
+  if(rtRes.error && !(rtRes.error.message||'').includes('Could not find the table')){ _syncErr('signals', rtRes.error); }
 
   // Insert individual signals (append-only)
   var rows = signals.map(function(s){
@@ -6837,7 +6837,7 @@ async function persistSignals(dealId, signals, scoreData, operatorEmail){
 
   if(rows.length){
     var insRes = await sb.from('deal_signals').insert(rows);
-    if(insRes.error){ _syncErr('signals', insRes.error); }
+    if(insRes.error && !(insRes.error.message||'').includes('Could not find the table')){ _syncErr('signals', insRes.error); }
   }
 }
 window.persistSignals = persistSignals;
@@ -7005,6 +7005,7 @@ async function loadSignalIntelligence(){
   var res = await sb.from('deal_signal_runtime')
     .select('deal_id,signal_total,risk_level,behavioral_score,framework_score,pipeline_score,quality_score,forecast_score,positive_count,negative_count,signal_count,top_negative_signals,updated_at')
     .eq('operator_email', email);
+  if(res.error && (res.error.message||'').includes('Could not find the table')){ return { total:0, rows:[] }; }
   var rows = res.data || [];
   if(!rows.length) return { total:0, rows:[] };
 
