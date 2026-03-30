@@ -899,7 +899,8 @@ var TASK_FOCUS_MODES = [
 // Queue definitions
 var TASK_QUEUES = [
   { slug:'all',              label:'Todas as Filas',    color:'' },
-  { slug:'follow_up',        label:'FUP',               color:'var(--accent2)' },
+  { slug:'cadencia',         label:'Cadência Ativa',    color:'var(--accent2)' },
+  { slug:'follow_up',        label:'FUP',               color:'var(--text)' },
   { slug:'social_dm',        label:'DM',                color:'#a78bfa' },
   { slug:'handoff_prep',     label:'Handoff',           color:'var(--green)' },
   { slug:'reativacao',       label:'Reativação',        color:'var(--yellow)' },
@@ -911,21 +912,15 @@ function buildQueueCounts(){
   var counts = {};
   TASK_QUEUES.forEach(function(q){ counts[q.slug]=0; });
   counts.all=0;
-  var map = window._COCKPIT_DEAL_MAP;
-  if(!map) return counts;
-  Object.values(map).forEach(function(d){
-    var tasks = (d._tasks||[]);
-    tasks.forEach(function(t){
-      var type = t.type||'follow_up';
-      counts.all++;
-      if(counts[type]!==undefined) counts[type]++;
-      else counts[type]=1;
-    });
-    // If no explicit tasks but deal has next action, count as follow_up
-    if(!tasks.length && d._nextAction){
-      counts.all++;
-      counts.follow_up++;
-    }
+  // Usa buildTaskQueue() — fonte única e com enriquecimento correto
+  var queue = buildTaskQueue(null, null, null, null, null);
+  queue.forEach(function(t){
+    var type = t.taskType||'follow_up';
+    counts.all++;
+    if(counts[type]!==undefined) counts[type]++;
+    else counts[type]=1;
+    // Conta cadência separadamente se deal tem enrollment ativo
+    if(t.cadence) counts.cadencia = (counts.cadencia||0)+1;
   });
   return counts;
 }
@@ -949,11 +944,14 @@ function matchFocusMode(deal, mode){
 
 function matchQueue(deal, queue){
   if(!queue||queue==='all') return true;
-  var tasks = (deal._tasks||[]);
-  if(tasks.some(function(t){return t.type===queue;})) return true;
-  // fallback: if no tasks, treat as follow_up
-  if(!tasks.length && queue==='follow_up') return true;
-  return false;
+  var dealId = deal.id||deal.contact_id||deal.deal_id||'';
+  // Cadência: verifica enrollment ativo diretamente
+  if(queue==='cadencia'){
+    return !!(window._cadenceEnrollments && window._cadenceEnrollments[dealId] &&
+      !window._cadenceEnrollments[dealId].paused &&
+      !window._cadenceEnrollments[dealId].completed);
+  }
+  return false; // outros slugs — buildTaskQueue já filtra por filterType
 }
 
 function getFilteredTaskDeals(){
@@ -1230,8 +1228,15 @@ function renderTasksV2(){
   var filterTier  = (document.getElementById('tf-tier')||{}).value||null;
 
   // Monta fila via buildTaskQueue — mesmo formato que texOpen usa
-  var filterType = ELUCY_TASKS_STATE.queue !== 'all' ? ELUCY_TASKS_STATE.queue : null;
+  // 'cadencia' não é um taskType — passa null e filtra depois
+  var queueSlug = ELUCY_TASKS_STATE.queue;
+  var filterType = (queueSlug !== 'all' && queueSlug !== 'cadencia') ? queueSlug : null;
   var queue = buildTaskQueue(filterType, null, filterFase||null, filterCiclo||null, null);
+
+  // Filtro fila cadência — mantém só deals com enrollment ativo
+  if(queueSlug === 'cadencia'){
+    queue = queue.filter(function(t){ return !!t.cadence; });
+  }
 
   // Filtro de tier (não suportado nativamente pelo buildTaskQueue)
   if(filterTier){
@@ -1855,6 +1860,7 @@ window.CADENCE_TEMPLATES = CADENCE_TEMPLATES;
 // In-memory enrollment state: { dealId: { template, startDate, currentStep, paused, completedSteps:[] } }
 var _cadenceEnrollments = {};
 var _cadenceLoaded = false;
+window._cadenceEnrollments = _cadenceEnrollments; // expõe para matchQueue e UI
 
 // Load enrollments from Supabase elucy_cache
 async function cadenceLoadAll(){

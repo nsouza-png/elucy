@@ -2623,6 +2623,8 @@ function showCockpit(user){
     loadDealsFromSupabase(user.email);
   }
   initSlackAlerts();
+  // Cadência: carrega enrollments do Supabase antes de renderizar tasks
+  if(window.cadenceLoadAll) window.cadenceLoadAll();
   // Hash routing — abre seção da URL (ex: /elucy/#tasks) ou home por padrão
   _routeFromHash();
   // Onboarding tour — verifica no Supabase se operador ja fez o tour
