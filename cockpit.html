@@ -2743,8 +2743,6 @@ async function loadDealsFromSupabase(email){
     if(k==='email_lead') return row.email_lead||row.email||'';
     return row[k]!=null?String(row[k]):'';
   }));
-  // Busca métricas de eficiência do cache (Databricks)
-  loadEfficiencyMetrics(sb,email);
   renderLiveDeals(rows,cols);
   showSyncToast('ok',`Pipeline carregado — ${rows.length} deals.`);
 
@@ -2752,16 +2750,17 @@ async function loadDealsFromSupabase(email){
   (async function(){
     if(window._syncStatus) window._syncStatus('syncing');
     try {
+      // 1. initOperatorContext: carrega meta do Supabase e deriva meta_diaria
       if(window.initOperatorContext) await window.initOperatorContext();
-      // Re-aplica meta do Supabase após initOperatorContext (engine pode ter sobrescrito com defaults)
-      if(window._OPERATOR_META) _applyMetaToCtx(window._OPERATOR_META);
+      // 2. loadEfficiencyMetrics: AWAITED — carrega métricas e re-aplica meta (fonte de verdade final)
+      await loadEfficiencyMetrics(sb,email);
       if(window.loadTaxonomy) await window.loadTaxonomy();
       if(window.syncDealRuntime) await window.syncDealRuntime();
       if(window.syncForecastRuntime) await window.syncForecastRuntime();
       if(window.syncDailySnapshot) await window.syncDailySnapshot();
       if(window.syncOperatorEfficiency) await window.syncOperatorEfficiency();
       if(window._syncStatus) window._syncStatus('ok');
-      // Renderiza Home com valores corretos de meta após boot completo
+      // Renderiza Home com valores definitivos de meta após boot completo
       try{ if(window.renderHome) window.renderHome(); }catch(e){}
       console.log('[boot] V7 engine layers initialized');
     } catch(e){
@@ -2777,14 +2776,18 @@ function _applyMetaToCtx(mm){
   if(!mm) return;
   try{
     var ctx = window.getOperatorCtx ? window.getOperatorCtx() : null;
-    if(ctx){
-      Object.assign(ctx.meta_mensal, mm);
-      ctx.meta_diaria.fups          = Math.ceil(mm.fups/22);
-      ctx.meta_diaria.qualificacoes = Math.ceil(mm.qualificacoes/22);
-      ctx.meta_diaria.handoffs      = Math.ceil(mm.handoffs/22);
+    if(!ctx){ console.warn('[_applyMetaToCtx] engine ctx não disponível'); return; }
+    Object.assign(ctx.meta_mensal, mm);
+    window._OPERATOR_META = Object.assign({}, ctx.meta_mensal);
+    // Usa _deriveMetaDiaria do engine se disponível, senão calcula inline
+    if(window._deriveMetaDiaria){ window._deriveMetaDiaria(ctx.meta_mensal); }
+    else{
+      ctx.meta_diaria.fups          = Math.ceil((mm.fups||300)/22);
+      ctx.meta_diaria.qualificacoes = Math.ceil((mm.qualificacoes||100)/22);
+      ctx.meta_diaria.handoffs      = Math.ceil((mm.handoffs||40)/22);
       ctx.meta_diaria.opp           = Math.ceil((mm.opp||15)/22);
     }
-  }catch(e){}
+  }catch(e){ console.warn('[_applyMetaToCtx] erro:', e); }
 }
 
 async function loadEfficiencyMetrics(sb,email){
@@ -3483,8 +3486,7 @@ function closeSettings(){
   }
 }
 
-function saveOperator(){
-  // Governança: no modo remoto, email vem do auth — não pode ser editado
+async function saveOperator(){
   const emailSource = window.IS_REMOTE && _currentUser ? _currentUser.email : null;
   const input=document.getElementById('op-email-input');
   const email=emailSource || (input?input.value:'').trim();
@@ -3492,28 +3494,19 @@ function saveOperator(){
     showModalStatus('err','E-mail inválido. Use o formato nome@domínio.com');
     return;
   }
-  // Salvar token Databricks se preenchido
+
+  // localStorage (síncrono — sem risco de race)
   const tokenInput=document.getElementById('op-token-input');
   const token=(tokenInput?tokenInput.value:'').trim();
   if(token) localStorage.setItem('elucy_db_token',token);
-  // Salvar config do Motor LLM (modelo e toggle — key é centralizada)
   const apiModelInput=document.getElementById('op-api-model');
   const apiEnabledInput=document.getElementById('op-api-enabled');
-  if(apiModelInput){
-    const model=apiModelInput.value;
-    localStorage.setItem('elucy_api_model',model); window.ELUCY_API_MODEL=model;
-  }
-  if(apiEnabledInput){
-    const enabled=apiEnabledInput.checked;
-    localStorage.setItem('elucy_api_enabled',enabled?'true':'false');
-    window.ELUCY_API_ENABLED=enabled;
-  }
-  // Salvar automações (Auto-Draft, Auto Focus)
+  if(apiModelInput){ const m=apiModelInput.value; localStorage.setItem('elucy_api_model',m); window.ELUCY_API_MODEL=m; }
+  if(apiEnabledInput){ const e=apiEnabledInput.checked; localStorage.setItem('elucy_api_enabled',e?'true':'false'); window.ELUCY_API_ENABLED=e; }
   const autoDraftInput=document.getElementById('op-auto-draft');
   if(autoDraftInput) localStorage.setItem('elucy_auto_draft',autoDraftInput.checked?'1':'0');
   const autoFocusInput=document.getElementById('op-auto-focus');
   if(autoFocusInput) localStorage.setItem('elucy_auto_focus',autoFocusInput.checked?'1':'0');
-  // Salvar alertas
   const alertStall=document.getElementById('op-alert-stall');
   if(alertStall) localStorage.setItem('elucy_alert_stall',alertStall.checked?'1':'0');
   const alertSignals=document.getElementById('op-alert-signals');
@@ -3522,33 +3515,43 @@ function saveOperator(){
   if(alertDaily) localStorage.setItem('elucy_alert_daily',alertDaily.checked?'1':'0');
   const slackWebhook=document.getElementById('op-slack-webhook');
   if(slackWebhook&&slackWebhook.value.trim()) localStorage.setItem('elucy_slack_webhook',slackWebhook.value.trim());
-  // Salvar metas mensais
+
+  // Coleta metas
   const metaFups=parseInt(document.getElementById('op-meta-fups')?.value)||300;
   const metaQual=parseInt(document.getElementById('op-meta-qual')?.value)||100;
   const metaHandoffs=parseInt(document.getElementById('op-meta-handoffs')?.value)||40;
   const metaOpp=parseInt(document.getElementById('op-meta-opp')?.value)||15;
-  window.saveOperatorSettings({meta_mensal:{fups:metaFups,qualificacoes:metaQual,handoffs:metaHandoffs,opp:metaOpp}});
-  // Persist preferences to Supabase (cross-device sync)
-  const prefs = {
-    voice_mode: localStorage.getItem('elucy_voice_mode')||'standard',
-    challenger_tension: localStorage.getItem('elucy_challenger_tension')||'equilibrado',
-    auto_draft: localStorage.getItem('elucy_auto_draft')==='1',
-    auto_focus: localStorage.getItem('elucy_auto_focus')==='1',
-    alert_stall: localStorage.getItem('elucy_alert_stall')!=='0',
-    alert_signals: localStorage.getItem('elucy_alert_signals')!=='0',
-    alert_daily: localStorage.getItem('elucy_alert_daily')==='1',
-    slack_webhook: localStorage.getItem('elucy_slack_webhook')||''
+  const prefs={
+    voice_mode:localStorage.getItem('elucy_voice_mode')||'standard',
+    challenger_tension:localStorage.getItem('elucy_challenger_tension')||'equilibrado',
+    auto_draft:localStorage.getItem('elucy_auto_draft')==='1',
+    auto_focus:localStorage.getItem('elucy_auto_focus')==='1',
+    alert_stall:localStorage.getItem('elucy_alert_stall')!=='0',
+    alert_signals:localStorage.getItem('elucy_alert_signals')!=='0',
+    alert_daily:localStorage.getItem('elucy_alert_daily')==='1',
+    slack_webhook:localStorage.getItem('elucy_slack_webhook')||''
   };
-  if(window.saveOperatorSettings) window.saveOperatorSettings({preferences: prefs});
-  // Limpa cache de nome se o email mudou (força novo lookup)
+
+  showModalStatus('load','Salvando…');
+
+  // Uma única chamada atômica com meta + prefs juntas
+  const result = await window.saveOperatorSettings({
+    meta_mensal:{fups:metaFups,qualificacoes:metaQual,handoffs:metaHandoffs,opp:metaOpp},
+    preferences:prefs
+  });
+
+  if(!result||!result.ok){
+    showModalStatus('err','Erro ao salvar. Verifique a conexão e tente novamente.');
+    return;
+  }
+
+  // Email
   const prev=localStorage.getItem('elucy_operator_email');
   if(prev!==email) localStorage.removeItem('elucy_qualificador_name');
   applyOperator(email);
-  showModalStatus('ok','Configurações salvas. Sincronizando pipeline...');
-  setTimeout(()=>{
-    closeSettings();
-    refreshPipeline();
-  },900);
+
+  showModalStatus('ok','Configurações salvas com sucesso.');
+  setTimeout(()=>{ closeSettings(); refreshPipeline(); }, 400);
 }
 
 function showModalStatus(type,msg){

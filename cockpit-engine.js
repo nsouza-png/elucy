@@ -192,53 +192,77 @@ async function initOperatorContext(){
       }catch(e){}
     }
   }
-  _operatorCtx.meta_diaria.fups=Math.ceil(_operatorCtx.meta_mensal.fups/22);
-  _operatorCtx.meta_diaria.qualificacoes=Math.ceil(_operatorCtx.meta_mensal.qualificacoes/22);
-  _operatorCtx.meta_diaria.handoffs=Math.ceil(_operatorCtx.meta_mensal.handoffs/22);
-  _operatorCtx.meta_diaria.opp=Math.ceil((_operatorCtx.meta_mensal.opp||15)/22);
+  _deriveMetaDiaria(_operatorCtx.meta_mensal);
   _operatorCtx.initialized=true;
   // Load cadence enrollments after operator context is ready
   cadenceLoadAll();
 }
 window.initOperatorContext = initOperatorContext;
 
+// ── _deriveMetaDiaria: única fonte de verdade para o cálculo diário ─────────
+function _deriveMetaDiaria(mm){
+  _operatorCtx.meta_diaria.fups          = Math.ceil((mm.fups||300)/22);
+  _operatorCtx.meta_diaria.qualificacoes = Math.ceil((mm.qualificacoes||100)/22);
+  _operatorCtx.meta_diaria.handoffs      = Math.ceil((mm.handoffs||40)/22);
+  _operatorCtx.meta_diaria.opp           = Math.ceil((mm.opp||15)/22);
+}
+window._deriveMetaDiaria = _deriveMetaDiaria;
+
+// ── saveOperatorSettings: write-through atômico ───────────────────────────
+// Retorna {ok: true} ou {ok: false, error}
 async function saveOperatorSettings(settings){
-  const sb=_sb(); if(!sb) return;
-  const email=getOperatorId(); if(!email) return;
+  const sb=_sb();
+  const email=getOperatorId();
+  if(!sb||!email){ console.warn('[saveOp] missing sb or email'); return {ok:false,error:'no_sb_or_email'}; }
+
   const update={};
-  if(settings.focus_mode){ update.focus_mode=settings.focus_mode; _operatorCtx.focus_mode=settings.focus_mode; }
+
+  // 1. focus_mode
+  if(settings.focus_mode){
+    update.focus_mode=settings.focus_mode;
+    _operatorCtx.focus_mode=settings.focus_mode;
+  }
+
+  // 2. meta_mensal — aplica em memória imediatamente, depois persiste
   if(settings.meta_mensal){
-    update.meta_mensal=settings.meta_mensal; // JSONB nativo — não serializar como string
-    Object.assign(_operatorCtx.meta_mensal,settings.meta_mensal);
-    // Persiste em window._OPERATOR_META para sobreviver ao próximo boot sem F5 extra
-    window._OPERATOR_META = Object.assign({}, _operatorCtx.meta_mensal);
-    _operatorCtx.meta_diaria.fups=Math.ceil(_operatorCtx.meta_mensal.fups/22);
-    _operatorCtx.meta_diaria.qualificacoes=Math.ceil(_operatorCtx.meta_mensal.qualificacoes/22);
-    _operatorCtx.meta_diaria.handoffs=Math.ceil(_operatorCtx.meta_mensal.handoffs/22);
-    _operatorCtx.meta_diaria.opp=Math.ceil((_operatorCtx.meta_mensal.opp||15)/22);
-    // Persist goal history
-    var pk=new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
+    Object.assign(_operatorCtx.meta_mensal, settings.meta_mensal);
+    _deriveMetaDiaria(_operatorCtx.meta_mensal);
+    window._OPERATOR_META = Object.assign({}, _operatorCtx.meta_mensal); // cache cross-boot
+    update.meta_mensal = Object.assign({}, _operatorCtx.meta_mensal);    // JSONB nativo
+
+    // Histórico de metas (não bloqueia o save principal)
+    var pk = new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
     sb.from('operator_goals').upsert({
       operator_email:email, period_key:pk,
-      fups:_operatorCtx.meta_mensal.fups, qualificacoes:_operatorCtx.meta_mensal.qualificacoes,
-      handoffs:_operatorCtx.meta_mensal.handoffs, opp:_operatorCtx.meta_mensal.opp||15,
+      fups:_operatorCtx.meta_mensal.fups,
+      qualificacoes:_operatorCtx.meta_mensal.qualificacoes,
+      handoffs:_operatorCtx.meta_mensal.handoffs,
+      opp:_operatorCtx.meta_mensal.opp||15,
       updated_at:new Date().toISOString()
-    },{onConflict:'operator_email,period_key'}).then(function(){});
+    },{onConflict:'operator_email,period_key'})
+    .then(function(r){ if(r.error) console.warn('[saveOp] goals upsert:', r.error); });
   }
+
+  // 3. preferences — merge incremental (campo é text/json no Supabase — serializar como string)
   if(settings.preferences){
-    const existing = _operatorCtx.preferences || {};
-    const merged = Object.assign({}, existing, settings.preferences);
+    const merged = Object.assign({}, _operatorCtx.preferences||{}, settings.preferences);
     _operatorCtx.preferences = merged;
     update.preferences = JSON.stringify(merged);
   }
+
+  // 4. Persiste no Supabase — única escritura, atômica
+  if(Object.keys(update).length===0) return {ok:true}; // nada a salvar
   try{
     const {error} = await sb.from('operators').update(update).eq('email',email);
-    if(error) console.error('[saveOperatorSettings] Supabase error:', error);
-  }catch(e){ console.error('[saveOperatorSettings] Exception:', e); }
-  // Re-render Home se meta mudou para atualizar barras imediatamente
-  if(settings.meta_mensal || settings.focus_mode){
+    if(error){ console.error('[saveOp] Supabase error:', error); return {ok:false,error}; }
+  }catch(e){ console.error('[saveOp] Exception:', e); return {ok:false,error:e}; }
+
+  // 5. Re-renderiza Home se meta ou modo mudaram
+  if(settings.meta_mensal||settings.focus_mode){
     try{ if(window.renderHome) window.renderHome(); }catch(e){}
   }
+
+  return {ok:true};
 }
 window.saveOperatorSettings = saveOperatorSettings;
 
