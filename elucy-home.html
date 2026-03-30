@@ -16,7 +16,7 @@
   --bg:#000;--bg2:#0a0a0a;--bg3:#1c1c1e;--bg4:#2c2c2e;
   --surface:rgba(28,28,30,.65);--surface-elevated:rgba(44,44,46,.55);
   --border:rgba(255,255,255,.06);--border2:rgba(255,255,255,.12);--border-focus:rgba(10,132,255,.5);
-  --accent:#0a84ff;--accent2:#5ac8fa;--accent-glow:rgba(10,132,255,.12);
+  --accent:#f59e0b;--accent2:#fbbf24;--accent-glow:rgba(245,158,11,.12);
   --green:#30d158;--yellow:#ffd60a;--red:#ff453a;
   --text:#f5f5f7;--text2:#86868b;--text3:#48484a;
   --r:14px;--r2:18px;--r3:24px;--r-pill:100px;
@@ -35,12 +35,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
 
 /* ── AMBIENT BACKGROUND ──────────────────────────────────── */
 .bg-mesh{position:fixed;inset:0;z-index:0;overflow:hidden}
-.bg-orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.3;pointer-events:none;will-change:transform;animation:orbFloat 20s ease-in-out infinite alternate}
-.bg-orb-1{width:700px;height:700px;background:radial-gradient(circle,rgba(10,132,255,.2),transparent 70%);top:-15%;left:45%;animation-delay:0s}
-.bg-orb-2{width:500px;height:500px;background:radial-gradient(circle,rgba(90,200,250,.1),transparent 70%);bottom:-10%;right:5%;animation-delay:-7s}
-.bg-orb-3{width:350px;height:350px;background:radial-gradient(circle,rgba(48,209,88,.07),transparent 70%);bottom:15%;left:3%;animation-delay:-14s}
-@keyframes orbFloat{0%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-20px) scale(1.05)}100%{transform:translate(-20px,15px) scale(.97)}}
-.bg-noise{position:fixed;inset:0;z-index:0;opacity:.018;pointer-events:none;
+
+/* Dot grid — Elucy amber theme */
+.bg-dots{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:radial-gradient(circle,rgba(245,158,11,.18) 1px,transparent 1px);
+  background-size:28px 28px;
+  mask-image:radial-gradient(ellipse 85% 85% at 50% 50%,rgba(0,0,0,.5) 0%,transparent 100%);
+  -webkit-mask-image:radial-gradient(ellipse 85% 85% at 50% 50%,rgba(0,0,0,.5) 0%,transparent 100%)}
+
+.bg-orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.25;pointer-events:none;will-change:transform;animation:orbFloat 22s ease-in-out infinite alternate}
+.bg-orb-1{width:700px;height:700px;background:radial-gradient(circle,rgba(245,158,11,.2),transparent 70%);top:-15%;left:40%;animation-delay:0s}
+.bg-orb-2{width:500px;height:500px;background:radial-gradient(circle,rgba(251,191,36,.1),transparent 70%);bottom:-10%;right:5%;animation-delay:-8s}
+.bg-orb-3{width:350px;height:350px;background:radial-gradient(circle,rgba(252,211,77,.06),transparent 70%);bottom:20%;left:3%;animation-delay:-15s}
+@keyframes orbFloat{0%{transform:translate(0,0) scale(1)}50%{transform:translate(25px,-18px) scale(1.04)}100%{transform:translate(-18px,12px) scale(.97)}}
+
+.bg-noise{position:fixed;inset:0;z-index:0;opacity:.015;pointer-events:none;
   background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size:128px}
 
@@ -171,6 +180,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
 </head>
 <body>
 
+<div class="bg-dots"></div>
 <div class="bg-mesh">
   <div class="bg-orb bg-orb-1"></div>
   <div class="bg-orb bg-orb-2"></div>
