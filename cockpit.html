@@ -4540,12 +4540,7 @@ async function requestElucyCopy(deal_id, dealData, targetId, canal){
             ? apiResult.intelligence
             : (apiResult.intelligence.suggestedApproach || JSON.stringify(apiResult.intelligence));
           const parsed = parseCopyOutput(output);
-          const waEl = document.getElementById('ct-'+targetId+'-wa');
-          if(waEl) waEl.innerText = parsed.wa;
-          const crmEl = document.getElementById('ct-'+targetId+'-crm');
-          if(crmEl) crmEl.innerText = parsed.crm;
-          const coEl = document.getElementById('co-'+targetId);
-          if(coEl) coEl.style.display='block';
+          injectElucyCopy(targetId, parsed.wa||output, parsed.crm||'');
           logActivity('copy_generated', deal_id, {canal: canal||'WhatsApp'});
           saveAPIResponse(deal_id, 'copy', output);
           logDealInteraction(deal_id, 'copy', output, {canal: canal||'WhatsApp'});
@@ -4788,12 +4783,7 @@ async function loadDealCache(dealId, targetId){
     }
     if(latest.copy && latest.copy.content){
       const parsed=parseCopyOutput(latest.copy.content);
-      const waEl=document.getElementById('ct-'+targetId+'-wa');
-      const crmEl=document.getElementById('ct-'+targetId+'-crm');
-      const coEl=document.getElementById('co-'+targetId);
-      if(waEl) waEl.innerText=parsed.wa;
-      if(crmEl) crmEl.innerText=parsed.crm;
-      if(coEl) coEl.style.display='block';
+      injectElucyCopy(targetId, parsed.wa||latest.copy.content, parsed.crm||'');
     }
     if(latest.business_analysis && latest.business_analysis.content){
       injectBusinessAnalysis(targetId, latest.business_analysis.content);
@@ -6101,10 +6091,12 @@ function selectLiveDeal(id,d){
     </div>`;
   document.getElementById('screen-pipeline').appendChild(dealCard);
   setScreen('pipeline',null);
-  // Carrega histórico do deal
+  // Restaura copy do cache in-memory (imediato, antes do Supabase)
+  if(d._cachedCopyWA) injectElucyCopy(id, d._cachedCopyWA, d._cachedCopyCRM||'');
+  // Carrega histórico e cache do Supabase (async)
   if(d.deal_id && window.IS_REMOTE){
     loadDealHistory(d.deal_id, id);
-    loadDealCache(d.deal_id, id);
+    if(!d._cachedCopyWA) loadDealCache(d.deal_id, id); // evita dupla renderização
   }
   // Renderiza painel de sinais (Layer 18)
   if(window.renderSignalPanel){
@@ -6116,7 +6108,7 @@ function selectLiveDeal(id,d){
 function openWhatsApp(id, phone){
   // Pega o texto da copy atual
   const el=document.getElementById('ct-'+id+'-wa');
-  const text=el?el.textContent||el.innerText:'';
+  const text=el?(el.dataset.copyText||el.textContent||el.innerText):'';
   // Normalizar telefone: deal map primeiro (mais confiável), depois param
   const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
   let raw=(deal&&(deal.telefone||deal.p_telefone))||phone||'';
