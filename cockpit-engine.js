@@ -167,7 +167,13 @@ async function initOperatorContext(){
     _operatorCtx.role=data.role||'sdr';
     _operatorCtx.squad=data.squad||'';
     _operatorCtx.focus_mode=data.focus_mode||'velocidade';
-    if(data.meta_mensal) try{ Object.assign(_operatorCtx.meta_mensal,JSON.parse(data.meta_mensal)); }catch(e){}
+    if(data.meta_mensal){
+      try{
+        // Supabase pode retornar JSONB (objeto) ou TEXT (string) — tratar ambos
+        var mm = typeof data.meta_mensal==='string' ? JSON.parse(data.meta_mensal) : data.meta_mensal;
+        Object.assign(_operatorCtx.meta_mensal, mm);
+      }catch(e){ console.warn('[operator] meta_mensal parse error:', e); }
+    }
     _operatorCtx.permissions.can_view_team=data.role==='leader'||data.role==='manager';
     _operatorCtx.permissions.can_approve=data.role==='leader'||data.role==='manager';
     _operatorCtx.permissions.is_leader=data.role==='leader';
@@ -202,7 +208,7 @@ async function saveOperatorSettings(settings){
   const update={};
   if(settings.focus_mode){ update.focus_mode=settings.focus_mode; _operatorCtx.focus_mode=settings.focus_mode; }
   if(settings.meta_mensal){
-    update.meta_mensal=JSON.stringify(settings.meta_mensal);
+    update.meta_mensal=settings.meta_mensal; // JSONB nativo — não serializar como string
     Object.assign(_operatorCtx.meta_mensal,settings.meta_mensal);
     _operatorCtx.meta_diaria.fups=Math.ceil(_operatorCtx.meta_mensal.fups/22);
     _operatorCtx.meta_diaria.qualificacoes=Math.ceil(_operatorCtx.meta_mensal.qualificacoes/22);
