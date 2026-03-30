@@ -356,22 +356,25 @@ window.KILL_SWITCHES = KILL_SWITCHES;
 // HIERARQUIA: (1) grupo_de_receita → (2) linha_de_receita_vigente → (3) utm_medium (último recurso)
 // linha_de_receita_vigente é a propriedade-mãe que diz de onde o dinheiro vem
 // utm/canal_de_marketing só entra quando linha_de_receita_vigente está vazia
+// Normaliza string para comparação — remove acentos, lowercase, trim
+function _normStr(s){ return (s||'').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+
 function resolveRevenueLine(deal){
-  var lr=(deal.linhaReceita||deal.linha_de_receita_vigente||'').toLowerCase().trim();
-  var gr=(deal.grupo_de_receita||deal.grupoReceita||'').toLowerCase().trim();
+  var lr=_normStr(deal.linhaReceita||deal.linha_de_receita_vigente||'');
+  var gr=_normStr(deal.grupo_de_receita||deal.grupoReceita||'');
   var utm=(deal.utm_medium||'').toLowerCase().trim();
 
   // REGRA 1 — grupo_de_receita direto do Databricks (fonte da verdade)
-  if(gr && gr!=='não definido' && gr!=='nao definido') {
-    if(gr==='funil de marketing')          return 'funil_marketing';
-    if(gr==='turmas')                      return 'turmas';
-    if(gr==='projetos e eventos')          return 'projetos_eventos';
-    if(gr==='selfcheckout')                return 'selfcheckout';
-    if(gr==='expansão'||gr==='expansao')   return 'expansao';
-    if(gr==='renovação'||gr==='renovacao') return 'renovacao';
-    if(gr==='time de vendas - field sales') return 'field_sales';
-    if(gr==='time de vendas - aquisição'||gr==='time de vendas - aquisicao') return 'aquisicao';
-    if(gr==='g4 tools')                    return 'g4_tools';
+  if(gr && gr!=='nao definido' && gr!=='nao_definido') {
+    if(gr==='funil de marketing')                    return 'funil_marketing';
+    if(gr==='turmas')                                return 'turmas';
+    if(gr==='projetos e eventos')                    return 'projetos_eventos';
+    if(gr==='selfcheckout')                          return 'selfcheckout';
+    if(gr==='expansao')                              return 'expansao';
+    if(gr==='renovacao')                             return 'renovacao';
+    if(gr==='time de vendas - field sales')          return 'field_sales';
+    if(gr==='time de vendas - aquisicao'||gr==='aquisicao') return 'aquisicao';
+    if(gr==='g4 tools')                              return 'g4_tools';
   }
 
   // REGRA 2 — linha_de_receita_vigente (propriedade-mãe: de onde o dinheiro vem)
@@ -392,21 +395,21 @@ function resolveRevenueLine(deal){
       return 'funil_marketing';
     // Turmas (produtos online e imersões)
     if(lr.includes('[on]') && !lr.includes('customer success'))  return 'turmas';
-    if(lr.includes('gestão e estratégia')||lr.includes('gestao e estrategia')) return 'turmas';
+    if(lr.includes('gestao e estrategia')) return 'turmas';
     if(lr.includes('g4 traction')||lr.includes('g4 sales')||lr.includes('g4 frontier')||lr.includes('g4 scale')) return 'turmas';
     if(lr.match(/^im-/)) return 'turmas'; // turmas especificas: IM-GE-xxx, IM-TRA-xxx
     if(lr.includes('relançamento-tra')||lr.includes('relançamento-ge')||lr.includes('masterclass')) return 'turmas';
     // Expansão
-    if(lr.includes('farmer')||lr.includes('cs corp')||lr.includes('[on] customer success')||lr.includes('[skl] expansão')||lr.includes('[skl] expansao')||lr.includes('[im] customer success'))
+    if(lr.includes('farmer')||lr.includes('cs corp')||lr.includes('[on] customer success')||lr.includes('[skl] expansao')||lr.includes('[im] customer success'))
       return 'expansao';
     // Renovação
-    if(lr.includes('renovaç')||lr.includes('renovac')||lr.includes('g4 club')) return 'renovacao';
+    if(lr.includes('renovac')||lr.includes('g4 club')) return 'renovacao';
     // G4 Tools
-    if(lr.includes('g4 tools')||lr.includes('finders fee')||lr.includes('g4 capital')||lr.includes('serviços')) return 'g4_tools';
+    if(lr.includes('g4 tools')||lr.includes('finders fee')||lr.includes('g4 capital')||lr.includes('servicos')) return 'g4_tools';
     // Projetos e Eventos
-    if(lr.includes('aniversário')||lr.includes('aniversario')||lr.includes('valley')||lr.includes('blackfriday')||lr.includes('black friday')||lr.includes('g4 pelo brasil')||lr.includes('frontier')||lr.includes('eventos'))
+    if(lr.includes('aniversario')||lr.includes('valley')||lr.includes('blackfriday')||lr.includes('black friday')||lr.includes('g4 pelo brasil')||lr.includes('frontier')||lr.includes('eventos'))
       return 'projetos_eventos';
-    if(lr.includes('parceria')||lr.includes('patrocín')||lr.includes('indica')||lr.includes('scale experience')||lr.includes('g4 alumni'))
+    if(lr.includes('parceria')||lr.includes('patrocin')||lr.includes('indica')||lr.includes('scale experience')||lr.includes('g4 alumni'))
       return 'projetos_eventos';
     // SKL genérico (sem classificação mais específica)
     if(lr.includes('[skl]'))        return 'nao_definido';
@@ -471,15 +474,24 @@ function calcConversionByLine(allDeals){
   allDeals.forEach(function(d){
     var line=d._revLine||resolveRevenueLine(d);
     if(!byLine[line]) byLine[line]={mql:0,sal:0,opp:0,won:0,lost:0,total_value:0};
-    var s=byLine[line]; var status=(d.statusDeal||'').toLowerCase(); var fase=(d._fase||d.fase||'').toLowerCase();
+    var s=byLine[line];
+    // Status canônico: statusDeal (COCKPIT_DEAL_MAP) ou status_do_deal (query direta)
+    var status=_normStr(d.statusDeal||d.status_do_deal||'');
+    var fase=_normStr(d._fase||d.fase_atual_no_processo||d.fase||'');
     s.mql++;
-    if(status==='ganho'){ s.sal++;s.opp++;s.won++;s.total_value+=(d.revenueRaw||0); }
-    else if(status==='perdido'||fase==='perdido'){
-      var m=(d.motivoLost||d.motivo_lost||'').toLowerCase();
+    if(status==='ganho'){
+      s.sal++; s.opp++; s.won++;
+      s.total_value+=(d.revenueRaw||d.revenue||0);
+    } else if(status==='perdido'){
+      var m=_normStr(d.motivoLost||d.motivo_lost||'');
       if(m.indexOf('[validacao]')!==0) s.sal++;
-      if(m.indexOf('[negociacao]')===0||m.indexOf('[im]')===0) s.opp++;
+      if(m.indexOf('[negociacao]')===0||m.indexOf('[im]')===0||m.indexOf('[neg]')===0) s.opp++;
       s.lost++;
-    } else { if(fase!=='mql') s.sal++; if(fase==='oportunidade'||fase==='negociacao') s.opp++; }
+    } else {
+      // Deal ativo: SAL = saiu do MQL; OPP = chegou em Oportunidade/Agendado/Negociação
+      if(fase!=='mql') s.sal++;
+      if(fase==='oportunidade'||fase==='agendado'||fase==='negociacao') s.opp++;
+    }
   });
   Object.keys(byLine).forEach(function(k){ var s=byLine[k];
     s.cr_mql_sal=s.mql>0?Math.round(s.sal/s.mql*1000)/10:0;
@@ -522,10 +534,19 @@ window.calcEfficiencyByChannel = calcEfficiencyByChannel;
 // ==================================================================
 
 function enrichDealContext(deal){
+  // Normalizar statusDeal — campo canônico para uso interno.
+  // Fonte: statusDeal (do COCKPIT_DEAL_MAP) ou status_do_deal (query Supabase direta).
+  if(!deal.statusDeal && deal.status_do_deal) deal.statusDeal = deal.status_do_deal;
+  if(!deal.status_do_deal && deal.statusDeal) deal.status_do_deal = deal.statusDeal;
+  // Normalizar fase/etapa — campos canônicos para uso interno (ambos os nomes usados no codebase)
+  if(!deal._fase) deal._fase = deal.fase_atual_no_processo || deal.fase || '';
+  if(!deal.fase) deal.fase = deal._fase;
+  if(!deal._etapa) deal._etapa = deal.etapa_atual_no_pipeline || deal.etapa || '';
+  if(!deal.etapa) deal.etapa = deal._etapa;
   if(!deal._revLine) deal._revLine = resolveRevenueLine(deal);
-  // Resolve delta real antes de aging/opp (usa created_at como fallback)
-  if(!deal._delta&&!deal.delta) deal._delta = resolveRealDelta(deal);
-  deal.delta = deal._delta || deal.delta || 0;
+  // Resolve delta real antes de aging/opp (usa created_at_crm → created_at → fallback 0)
+  if(!deal._delta && !deal.delta) deal._delta = resolveRealDelta(deal);
+  deal.delta = Math.max(0, deal._delta || deal.delta || 0);
   if(!deal._aging) deal._aging = calcAgingRisk(deal);
   if(!deal._oppValue){
     var ov = calcOpportunityValue(deal);
@@ -635,18 +656,17 @@ function buildTaskQueue(filterType, filterRevLine, filterFase, filterCiclo, filt
 
     // DIM 1: Fase de conversão (CQL/SAL/SQL/stall)
     if(filterFase && filterFase !== 'all'){
-      var fase = (d.fase_atual_no_processo||d.fase||'').toLowerCase();
+      // _normStr remove acentos — Negociação == negociacao, etc.
+      var fase = _normStr(d._fase||d.fase_atual_no_processo||d.fase||'');
       var aging = d._aging||{};
       var delta = d.delta||0;
       if(filterFase==='CQL'){
-        // MQL ou Lead/Novo — ainda não qualificado
         if(!fase.includes('mql')&&!fase.includes('lead')&&!fase.includes('novo')) return;
       } else if(filterFase==='SAL'){
         if(!fase.includes('sal')&&!fase.includes('conectado')) return;
       } else if(filterFase==='SQL'){
-        if(!fase.includes('oportunidade')&&!fase.includes('negociacao')&&!fase.includes('sql')) return;
+        if(!fase.includes('oportunidade')&&!fase.includes('negociacao')&&!fase.includes('agendado')&&!fase.includes('sql')) return;
       } else if(filterFase==='stall'){
-        // Stall: aging crítico ou sem ação há mais de 10 dias
         var isStall = (aging.riskLevel==='critical')||(delta>10&&(d.tc==='tc'||d.tc==='tf'));
         if(!isStall) return;
       }
@@ -2159,8 +2179,9 @@ async function calcOperatorScore(periodDays){
   var c5=Math.min(1,dqiRaw/Math.max(metrics.unique_deals,1));
 
   // C6 — Forecast Confidence V7 (média de confiança dos deals scorados)
+  // Default 0 (não 0.5) — sem deals scorados = sem evidência de qualidade de forecast
   var scoredDeals=active.filter(function(d){return d._forecastV6&&d._forecastV6.confidence!=null;});
-  var c6=scoredDeals.length>0?Math.min(1,scoredDeals.reduce(function(s,d){return s+d._forecastV6.confidence;},0)/scoredDeals.length):0.5;
+  var c6=scoredDeals.length>0?Math.min(1,scoredDeals.reduce(function(s,d){return s+d._forecastV6.confidence;},0)/scoredDeals.length):0;
 
   // C7 — Framework Coverage (deals com extração vs deals ativos)
   var fwDeals=active.filter(function(d){return d._frameworkRuntime&&d._frameworkRuntime.qualitative_score!=null;}).length;
@@ -2587,14 +2608,14 @@ async function renderHome(){
   var metaMensal = _operatorCtx.meta_mensal || {};
   var oppTarget = metaMensal.opp || 15;
   var oppActual = (typeof window._OPP_MENSAL_COUNT === 'number') ? window._OPP_MENSAL_COUNT : 0;
-  // Fallback local se async ainda não completou: conta deals ativos em fases OPP
+  // Fallback local se async ainda não completou (event stream não carregou):
+  // Conta apenas deals em fase OPP real — Oportunidade, Agendado, Negociação
+  // NÃO inclui 'agendamento' (etapa operacional SDR, não é OPP ainda)
   if(!window._OPP_MENSAL_LOADED){
-    var OPP_ETAPAS_FB = ['agendamento','reagendamento','entrevista agendada','negociação','negociacao','oportunidade','ganho'];
+    var OPP_FASES_FB = ['oportunidade','agendado','negociacao'];
     oppActual = allDeals.filter(function(d){
-      var etapa = (d.etapa || d.etapa_atual_no_pipeline || '').toLowerCase();
-      var fase  = (d._fase || d.fase || d.fase_atual_no_processo || '').toLowerCase();
-      return OPP_ETAPAS_FB.some(function(e){ return etapa===e || etapa.includes(e); })
-          || OPP_ETAPAS_FB.some(function(e){ return fase===e || fase.includes(e); });
+      var fase = _normStr(d._fase||d.fase_atual_no_processo||d.fase||'');
+      return OPP_FASES_FB.indexOf(fase) !== -1;
     }).length;
   }
   var oppPct = oppTarget > 0 ? Math.min(100, Math.round(oppActual / oppTarget * 100)) : 0;
@@ -4733,14 +4754,15 @@ async function calcOperatorPerformance(periodType, periodKey){
   // ==================================================
   var funnel = { mql:0, sal:0, conectado:0, agendamento:0, show:0, opp:0, won:0, lost:0 };
   allDeals.forEach(function(d){
-    var fase = (d.fase_atual_no_processo || '').toLowerCase();
-    var etapa = (d.etapa_atual_no_pipeline || '').toLowerCase();
-    var status = (d.status_do_deal || '').toLowerCase();
+    // Normalizar sem acentos para comparação consistente
+    var fase = _normStr(d.fase_atual_no_processo || d.fase || '');
+    var etapa = _normStr(d.etapa_atual_no_pipeline || d.etapa || '');
+    var status = _normStr(d.status_do_deal || d.statusDeal || '');
     funnel.mql++;
     if(fase !== 'mql') funnel.sal++;
     if(etapa === 'conectados' || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('oportunidade') || etapa.includes('negociacao')) funnel.conectado++;
     if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('oportunidade') || etapa.includes('negociacao')) funnel.agendamento++;
-    if(status === 'ganho' || etapa.includes('oportunidade') || etapa.includes('negociacao')) funnel.opp++;
+    if(status === 'ganho' || etapa.includes('oportunidade') || etapa.includes('negociacao') || fase === 'oportunidade' || fase === 'agendado' || fase === 'negociacao') funnel.opp++;
     if(status === 'ganho') funnel.won++;
     if(status === 'perdido') funnel.lost++;
   });
@@ -4771,13 +4793,20 @@ async function calcOperatorPerformance(periodType, periodKey){
   // ==================================================
   // BLOCO 3: VELOCIDADE / DISCIPLINA
   // ==================================================
+  // Índice de deals por deal_id para cruzar revLine com deal_runtime
+  var dealById = {};
+  allDeals.forEach(function(d){ dealById[d.deal_id] = d; });
+  var allDealsMap = window._COCKPIT_DEAL_MAP || {};
+
   var agingSum = 0, agingCount = 0, slaRisk = 0, inactive = 0;
   var touchDelaySum = 0, touchDelayCount = 0;
   runtimeDeals.forEach(function(r){
     if(!r.aging_days && r.aging_days !== 0) return;
     agingSum += r.aging_days; agingCount++;
-    var revLine = 'nao_definido'; // default
-    var riskAfter = (REVENUE_LINES[revLine] || {}).risk_after || 3;
+    // Usar revLine real do deal (não hardcoded)
+    var dealRef = dealById[r.deal_id] || allDealsMap[r.deal_id];
+    var revLine = (dealRef && dealRef._revLine) ? dealRef._revLine : resolveRevenueLine(dealRef || {});
+    var riskAfter = (REVENUE_LINES[revLine] || REVENUE_LINES.nao_definido || {}).risk_after || 3;
     if(r.aging_days > riskAfter * 2) slaRisk++;
     if(!r.last_touch_at) inactive++;
     else {
