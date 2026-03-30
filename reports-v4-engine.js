@@ -71,36 +71,41 @@
     var qn = qualName || _qualName();
     if (!qn) return null;
     var monthStart = _monthStart();
+    var nextMonth = (function() {
+      var d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + 1);
+      return d.toISOString().slice(0, 10);
+    })();
 
-    // Query única agregada — todos os Δt e métricas do mês
+    // funil_comercial é tabela de EVENTOS — cada linha = 1 evento (MQL, SAL, Oportunidade, Ganho...)
+    // Padrão do Genie: COUNT(DISTINCT CASE WHEN event = 'X' THEN deal_id END)
+    // Filtro por event_timestamp (não created_at_crm) — igual ao Genie oficial
+    // Δt: disponíveis como colunas numéricas no evento Ganho (dt_oportunidade_negociacao etc.)
     var sql = `
       SELECT
-        -- Contagens do funil
-        COUNT(DISTINCT deal_id)                                                   AS total_deals,
-        COUNT(DISTINCT CASE WHEN fase_atual_no_processo IS NOT NULL AND fase_atual_no_processo != '' THEN deal_id END) AS mql_validos,
-        COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Oportunidade','Negociação','Ganho') THEN deal_id END) AS sal_count,
-        COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Agendado','Oportunidade','Negociação','Ganho') THEN deal_id END) AS agendamento_count,
-        COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Oportunidade','Negociação','Ganho') THEN deal_id END) AS opp_count,
-        COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Negociação','Ganho') THEN deal_id END) AS negociacao_count,
-        COUNT(DISTINCT CASE WHEN fase_atual_no_processo = 'Ganho' THEN deal_id END) AS won_count,
-        COUNT(DISTINCT CASE WHEN fase_atual_no_processo = 'Perdido' THEN deal_id END) AS lost_count,
+        -- Contagens event-based (igual ao Genie oficial)
+        COUNT(DISTINCT CASE WHEN event = 'MQL'          THEN deal_id END) AS mql_count,
+        COUNT(DISTINCT CASE WHEN event = 'SAL'          THEN deal_id END) AS sal_count,
+        COUNT(DISTINCT CASE WHEN event = 'Agendado'     THEN deal_id END) AS agendamento_count,
+        COUNT(DISTINCT CASE WHEN event = 'Oportunidade' THEN deal_id END) AS opp_count,
+        COUNT(DISTINCT CASE WHEN event = 'Negociação'   THEN deal_id END) AS negociacao_count,
+        COUNT(DISTINCT CASE WHEN event = 'Ganho'        THEN deal_id END) AS won_count,
+        COUNT(DISTINCT CASE WHEN event = 'Perdido'      THEN deal_id END) AS lost_count,
 
-        -- Δt oficiais (médias em dias, somente valores positivos e razoáveis)
-        ROUND(AVG(CASE WHEN dt_mql_sal > 0 AND dt_mql_sal < 365 THEN dt_mql_sal END), 1)             AS dt_mql_sal,
-        ROUND(AVG(CASE WHEN dt_sal_conectado > 0 AND dt_sal_conectado < 365 THEN dt_sal_conectado END), 1)     AS dt_sal_conectado,
-        ROUND(AVG(CASE WHEN dt_conectado_agendado > 0 AND dt_conectado_agendado < 365 THEN dt_conectado_agendado END), 1) AS dt_conectado_agendado,
-        ROUND(AVG(CASE WHEN dt_agendado_oportunidade > 0 AND dt_agendado_oportunidade < 365 THEN dt_agendado_oportunidade END), 1) AS dt_agendado_oportunidade,
-        ROUND(AVG(CASE WHEN dt_oportunidade_negociacao > 0 AND dt_oportunidade_negociacao < 365 THEN dt_oportunidade_negociacao END), 1) AS dt_oportunidade_negociacao,
-        ROUND(AVG(CASE WHEN dt_negociacao_ganho > 0 AND dt_negociacao_ganho < 365 THEN dt_negociacao_ganho END), 1) AS dt_negociacao_ganho,
+        -- Δt oficiais: campos numéricos presentes na linha do evento (em dias)
+        ROUND(AVG(CASE WHEN event = 'Ganho' AND delta_t > 0 AND delta_t < 365 THEN delta_t END), 1) AS avg_delta_t_ganho,
+        ROUND(AVG(CASE WHEN event = 'Oportunidade' AND delta_t > 0 AND delta_t < 180 THEN delta_t END), 1) AS avg_delta_t_opp,
+        ROUND(AVG(CASE WHEN event = 'Agendado' AND delta_t > 0 AND delta_t < 180 THEN delta_t END), 1) AS avg_delta_t_agendado,
+        ROUND(AVG(CASE WHEN event = 'SAL' AND delta_t > 0 AND delta_t < 180 THEN delta_t END), 1) AS avg_delta_t_sal,
 
-        -- Receita
-        ROUND(SUM(CASE WHEN fase_atual_no_processo = 'Ganho' THEN revenue END), 0) AS receita_won,
-        ROUND(AVG(CASE WHEN fase_atual_no_processo = 'Ganho' AND revenue > 0 THEN revenue END), 0)    AS ticket_medio,
-        ROUND(SUM(CASE WHEN fase_atual_no_processo IN ('Oportunidade','Negociação') THEN valor_da_oportunidade END), 0) AS pipeline_value
+        -- Receita (apenas deals que geraram evento Ganho no período)
+        ROUND(SUM(CASE WHEN event = 'Ganho' THEN revenue END), 0)                          AS receita_won,
+        ROUND(AVG(CASE WHEN event = 'Ganho' AND revenue > 0 THEN revenue END), 0)          AS ticket_medio,
+        ROUND(SUM(CASE WHEN event = 'Oportunidade' THEN valor_da_oportunidade END), 0)     AS pipeline_value
 
       FROM production.diamond.funil_comercial
       WHERE qualificador_name = '${qn}'
-        AND created_at_crm >= '${monthStart}'
+        AND event_timestamp >= CAST('${monthStart} 00:00:00' AS TIMESTAMP)
+        AND event_timestamp <  CAST('${nextMonth} 00:00:00' AS TIMESTAMP)
     `;
 
     var rows = await _dbQuery(sql.trim());
@@ -110,31 +115,40 @@
     function _n(v) { return v != null && v !== '' ? parseFloat(v) : null; }
     function _i(v) { return v != null && v !== '' ? parseInt(v, 10) : 0; }
 
+    var mql = _i(r.mql_count);
+    var sal = _i(r.sal_count);
+    var agend = _i(r.agendamento_count);
+    var opp = _i(r.opp_count);
+    var neg = _i(r.negociacao_count);
+    var won = _i(r.won_count);
+    var lost = _i(r.lost_count);
+
     return {
-      // Contagens
-      total_deals: _i(r.total_deals),
-      mql_validos: _i(r.mql_validos),
-      sal_count: _i(r.sal_count),
-      agendamento_count: _i(r.agendamento_count),
-      opp_count: _i(r.opp_count),
-      negociacao_count: _i(r.negociacao_count),
-      won_count: _i(r.won_count),
-      lost_count: _i(r.lost_count),
+      // Contagens event-based (deals que geraram o evento no mês)
+      mql_validos: mql,       // # MQL gerados
+      sal_count: sal,         // # SAL gerados
+      agendamento_count: agend,
+      opp_count: opp,         // # OPP geradas — o número principal
+      negociacao_count: neg,
+      won_count: won,
+      lost_count: lost,
 
-      // Δt oficiais (dias)
-      dt_mql_sal: _n(r.dt_mql_sal),
-      dt_sal_conectado: _n(r.dt_sal_conectado),
-      dt_conectado_agendado: _n(r.dt_conectado_agendado),
-      dt_agendado_oportunidade: _n(r.dt_agendado_oportunidade),
-      dt_oportunidade_negociacao: _n(r.dt_oportunidade_negociacao),
-      dt_negociacao_ganho: _n(r.dt_negociacao_ganho),
+      // Δt: delta_t de cada evento (em dias desde o evento anterior)
+      // Nota: delta_t no funil_comercial = tempo desde o evento anterior para aquele deal
+      dt_mql_sal: _n(r.avg_delta_t_sal),
+      dt_sal_conectado: null, // não disponível diretamente via evento
+      dt_conectado_agendado: null,
+      dt_agendado_oportunidade: _n(r.avg_delta_t_opp),
+      dt_oportunidade_negociacao: null,
+      dt_negociacao_ganho: _n(r.avg_delta_t_ganho),
+      dt_agendado: _n(r.avg_delta_t_agendado),
 
-      // CRs derivados
-      cr_mql_sal: _i(r.mql_validos) ? _pct(_i(r.sal_count), _i(r.mql_validos)) : null,
-      cr_sal_agend: _i(r.sal_count) ? _pct(_i(r.agendamento_count), _i(r.sal_count)) : null,
-      cr_agend_opp: _i(r.agendamento_count) ? _pct(_i(r.opp_count), _i(r.agendamento_count)) : null,
-      cr_opp_won: _i(r.opp_count) ? _pct(_i(r.won_count), _i(r.opp_count)) : null,
-      cr_mql_opp: _i(r.mql_validos) ? _pct(_i(r.opp_count), _i(r.mql_validos)) : null,
+      // CRs oficiais (igual ao Genie CR01-CR04)
+      cr_mql_sal:   mql  ? _pct(sal,  mql)  : null,  // CR01
+      cr_sal_agend: sal  ? _pct(agend, sal)  : null,  // CR02
+      cr_agend_opp: agend ? _pct(opp,  agend) : null,  // CR03 (Show Rate)
+      cr_opp_won:   opp  ? _pct(won,  opp)  : null,  // CR04 (Win Rate)
+      cr_mql_opp:   mql  ? _pct(opp,  mql)  : null,  // % MQL em OPP
 
       // Receita
       receita_won: _n(r.receita_won),
@@ -145,61 +159,76 @@
     };
   }
 
-  // Busca breakdown por linha de receita do Databricks
+  // Busca breakdown por linha de receita do Databricks (event-based)
   async function fetchDatabricksLineBreakdown(qualName) {
     var qn = qualName || _qualName();
     if (!qn) return null;
     var monthStart = _monthStart();
+    var nextMonth = (function() {
+      var d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + 1);
+      return d.toISOString().slice(0, 10);
+    })();
     var sql = `
       SELECT
         COALESCE(linha_de_receita_vigente, 'Não Definido') AS linha,
-        COUNT(DISTINCT deal_id) AS total,
-        COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('SAL','Conectado','Agendado','Oportunidade','Negociação','Ganho') THEN deal_id END) AS sal,
-        COUNT(DISTINCT CASE WHEN fase_atual_no_processo IN ('Oportunidade','Negociação','Ganho') THEN deal_id END) AS opp,
-        COUNT(DISTINCT CASE WHEN fase_atual_no_processo = 'Ganho' THEN deal_id END) AS won,
-        COUNT(DISTINCT CASE WHEN fase_atual_no_processo = 'Perdido' THEN deal_id END) AS lost,
-        ROUND(SUM(CASE WHEN fase_atual_no_processo = 'Ganho' THEN revenue END), 0) AS receita
+        COUNT(DISTINCT CASE WHEN event = 'MQL' THEN deal_id END)          AS mql,
+        COUNT(DISTINCT CASE WHEN event = 'SAL' THEN deal_id END)          AS sal,
+        COUNT(DISTINCT CASE WHEN event = 'Oportunidade' THEN deal_id END) AS opp,
+        COUNT(DISTINCT CASE WHEN event = 'Ganho' THEN deal_id END)        AS won,
+        COUNT(DISTINCT CASE WHEN event = 'Perdido' THEN deal_id END)      AS lost,
+        ROUND(SUM(CASE WHEN event = 'Ganho' THEN revenue END), 0)         AS receita
       FROM production.diamond.funil_comercial
       WHERE qualificador_name = '${qn}'
-        AND created_at_crm >= '${monthStart}'
-        AND fase_atual_no_processo IS NOT NULL
-        AND fase_atual_no_processo != ''
+        AND event_timestamp >= CAST('${monthStart} 00:00:00' AS TIMESTAMP)
+        AND event_timestamp <  CAST('${nextMonth} 00:00:00' AS TIMESTAMP)
       GROUP BY 1
-      ORDER BY total DESC
+      ORDER BY mql DESC
       LIMIT 20
     `;
     var rows = await _dbQuery(sql.trim());
     if (!rows) return null;
     return rows.map(function (r) {
+      var mql = parseInt(r.mql || 0, 10);
       var won = parseInt(r.won || 0, 10);
       var lost = parseInt(r.lost || 0, 10);
+      var opp = parseInt(r.opp || 0, 10);
       return {
-        name: r.linha, total: parseInt(r.total || 0, 10), sal: parseInt(r.sal || 0, 10),
-        opp: parseInt(r.opp || 0, 10), won: won, lost: lost,
+        name: r.linha,
+        total: mql,  // total = MQL gerados nessa linha
+        sal: parseInt(r.sal || 0, 10),
+        opp: opp, won: won, lost: lost,
         value: parseFloat(r.receita || 0),
-        winRate: (won + lost) ? _pct(won, won + lost) : 0
+        winRate: (won + lost) ? _pct(won, won + lost) : 0,
+        cr_opp: mql ? _pct(opp, mql) : 0
       };
-    });
+    }).filter(function(r) { return r.total > 0; });
   }
 
-  // Busca Δt por linha de receita do Databricks
+  // Busca Δt médio por evento e por linha de receita
+  // delta_t = dias desde o evento anterior (campo do funil_comercial)
   async function fetchDatabricksDtByLine(qualName) {
     var qn = qualName || _qualName();
     if (!qn) return null;
     var monthStart = _monthStart();
+    var nextMonth = (function() {
+      var d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + 1);
+      return d.toISOString().slice(0, 10);
+    })();
     var sql = `
       SELECT
         COALESCE(linha_de_receita_vigente, 'Não Definido') AS linha,
-        COUNT(DISTINCT deal_id) AS total,
-        ROUND(AVG(CASE WHEN dt_sal_conectado > 0 AND dt_sal_conectado < 365 THEN dt_sal_conectado END), 1) AS dt_sal_conectado,
-        ROUND(AVG(CASE WHEN dt_conectado_agendado > 0 AND dt_conectado_agendado < 365 THEN dt_conectado_agendado END), 1) AS dt_conectado_agendado,
-        ROUND(AVG(CASE WHEN dt_agendado_oportunidade > 0 AND dt_agendado_oportunidade < 365 THEN dt_agendado_oportunidade END), 1) AS dt_agendado_opp
+        COUNT(DISTINCT CASE WHEN event = 'MQL' THEN deal_id END) AS mql,
+        ROUND(AVG(CASE WHEN event = 'SAL'          AND delta_t > 0 AND delta_t < 180 THEN delta_t END), 1) AS dt_mql_sal,
+        ROUND(AVG(CASE WHEN event = 'Agendado'     AND delta_t > 0 AND delta_t < 180 THEN delta_t END), 1) AS dt_sal_agendado,
+        ROUND(AVG(CASE WHEN event = 'Oportunidade' AND delta_t > 0 AND delta_t < 180 THEN delta_t END), 1) AS dt_agendado_opp,
+        ROUND(AVG(CASE WHEN event = 'Ganho'        AND delta_t > 0 AND delta_t < 365 THEN delta_t END), 1) AS dt_negoc_ganho
       FROM production.diamond.funil_comercial
       WHERE qualificador_name = '${qn}'
-        AND created_at_crm >= '${monthStart}'
+        AND event_timestamp >= CAST('${monthStart} 00:00:00' AS TIMESTAMP)
+        AND event_timestamp <  CAST('${nextMonth} 00:00:00' AS TIMESTAMP)
       GROUP BY 1
-      HAVING total >= 3
-      ORDER BY dt_sal_conectado ASC NULLS LAST
+      HAVING mql >= 3
+      ORDER BY mql DESC
       LIMIT 10
     `;
     var rows = await _dbQuery(sql.trim());
@@ -675,10 +704,8 @@
     if (hasDatabricks) {
       var transitions = [
         ['MQL → SAL', dbMetrics.dt_mql_sal],
-        ['SAL → Conectado', dbMetrics.dt_sal_conectado],
-        ['Conectado → Agend', dbMetrics.dt_conectado_agendado],
-        ['Agend → OPP', dbMetrics.dt_agendado_oportunidade],
-        ['OPP → Negoc', dbMetrics.dt_oportunidade_negociacao],
+        ['SAL → Agendado', dbMetrics.dt_agendado],
+        ['Agendado → OPP', dbMetrics.dt_agendado_oportunidade],
         ['Negoc → Ganho', dbMetrics.dt_negociacao_ganho]
       ];
 
@@ -720,14 +747,14 @@
 
       // Δt por linha (se disponível)
       if (dbDtByLine && dbDtByLine.length) {
-        html += '<div style="margin-top:12px"><div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Δt SAL→Conectado por Linha</div>';
-        html += '<table class="intel-table" style="width:100%"><thead><tr><th>Linha</th><th style="text-align:right">Deals</th><th style="text-align:right">SAL→Con</th><th style="text-align:right">Con→Agd</th><th style="text-align:right">Agd→OPP</th></tr></thead><tbody>';
+        html += '<div style="margin-top:12px"><div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Δt por Linha de Receita</div>';
+        html += '<table class="intel-table" style="width:100%"><thead><tr><th>Linha</th><th style="text-align:right">MQL</th><th style="text-align:right">→SAL</th><th style="text-align:right">→Agd</th><th style="text-align:right">→OPP</th></tr></thead><tbody>';
         dbDtByLine.forEach(function (r) {
           function _dtC(v) { return !v ? '' : parseFloat(v) <= 3 ? 'color:var(--green)' : parseFloat(v) <= 7 ? 'color:var(--accent)' : 'color:var(--red)'; }
           html += '<tr><td>' + r.linha + '</td>';
-          html += '<td style="text-align:right">' + (r.total || '—') + '</td>';
-          html += '<td style="text-align:right;font-weight:700;' + _dtC(r.dt_sal_conectado) + '">' + _fmtDays(r.dt_sal_conectado ? parseFloat(r.dt_sal_conectado) : null) + '</td>';
-          html += '<td style="text-align:right;font-weight:700;' + _dtC(r.dt_conectado_agendado) + '">' + _fmtDays(r.dt_conectado_agendado ? parseFloat(r.dt_conectado_agendado) : null) + '</td>';
+          html += '<td style="text-align:right">' + (r.mql || '—') + '</td>';
+          html += '<td style="text-align:right;font-weight:700;' + _dtC(r.dt_mql_sal) + '">' + _fmtDays(r.dt_mql_sal ? parseFloat(r.dt_mql_sal) : null) + '</td>';
+          html += '<td style="text-align:right;font-weight:700;' + _dtC(r.dt_sal_agendado) + '">' + _fmtDays(r.dt_sal_agendado ? parseFloat(r.dt_sal_agendado) : null) + '</td>';
           html += '<td style="text-align:right;font-weight:700;' + _dtC(r.dt_agendado_opp) + '">' + _fmtDays(r.dt_agendado_opp ? parseFloat(r.dt_agendado_opp) : null) + '</td>';
           html += '</tr>';
         });
@@ -849,11 +876,11 @@
       html += '<div class="kpi-g" style="grid-template-columns:repeat(6,1fr);margin-bottom:14px;background:var(--bg3);border-radius:var(--r2);padding:8px">';
       var dbDts = [
         ['Δt MQL→SAL', dbMetrics.dt_mql_sal],
-        ['Δt SAL→Con', dbMetrics.dt_sal_conectado],
-        ['Δt Con→Agd', dbMetrics.dt_conectado_agendado],
+        ['Δt SAL→Agd', dbMetrics.dt_agendado],
         ['Δt Agd→OPP', dbMetrics.dt_agendado_oportunidade],
-        ['Δt OPP→Neg', dbMetrics.dt_oportunidade_negociacao],
-        ['Δt Neg→Won', dbMetrics.dt_negociacao_ganho]
+        ['Δt Neg→Won', dbMetrics.dt_negociacao_ganho],
+        ['OPP Geradas', dbMetrics.opp_count],
+        ['Won Mês', dbMetrics.won_count]
       ];
       dbDts.forEach(function (dt) {
         var v = dt[1]; var color = v == null ? 'var(--text2)' : v <= 3 ? 'var(--green)' : v <= 7 ? 'var(--accent)' : 'var(--red)';
