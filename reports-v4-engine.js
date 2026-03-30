@@ -47,12 +47,8 @@
     } catch (e) { return []; }
   }
 
-  // Conta OPP geradas no mês via deal_stage_history (source=databricks)
+  // Conta OPP geradas no mês via deal_stage_history (source=databricks, event-based)
   async function fetchOppEventsThisMonth(operatorEmail) {
-    var cacheKey = 'opp_events_' + (operatorEmail || 'all');
-    var cached = _cacheGet(cacheKey);
-    if (cached != null) return cached;
-
     try {
       var sb = _sb();
       if (!sb) return null;
@@ -65,7 +61,24 @@
       if (operatorEmail) q = q.eq('changed_by', operatorEmail);
       var res = await q;
       if (res.error) return null;
-      _cacheSet(cacheKey, res.count);
+      return res.count;
+    } catch (e) { return null; }
+  }
+
+  // Conta Ganhos no mês via deal_stage_history (event-based, igual ao OPP Geradas)
+  async function fetchWonEventsThisMonth(operatorEmail) {
+    try {
+      var sb = _sb();
+      if (!sb) return null;
+      var monthStart = _monthStart();
+      var q = sb.from('deal_stage_history')
+        .select('deal_id', { count: 'exact', head: true })
+        .eq('to_stage', 'Ganho')
+        .eq('source', 'databricks')
+        .gte('changed_at', monthStart);
+      if (operatorEmail) q = q.eq('changed_by', operatorEmail);
+      var res = await q;
+      if (res.error) return null;
       return res.count;
     } catch (e) { return null; }
   }
@@ -137,28 +150,45 @@
 
   function _mapStage(fase) {
     var f = (fase || '').toLowerCase().trim();
+    if (!f) return null; // fase vazia = deal sem qualificação, NÃO conta no funil
     if (STAGE_MAP[f]) return STAGE_MAP[f];
     for (var k in STAGE_MAP) { if (f.indexOf(k) !== -1) return STAGE_MAP[k]; }
-    return 'MQL';
+    return null; // fase desconhecida = também não conta
   }
 
+  // calcFunnel: conta apenas deals COM fase definida
+  // MQL = total deals com fase válida (excluindo "" e desconhecidos)
+  // SAL/Agend/OPP/Ganho = deals na fase atual (estado atual, não cumulativo)
+  // Perdido = deals com fase=Perdido
   function calcFunnel(deals) {
     var counts = {};
     STAGES.forEach(function (s) { counts[s] = 0; });
     counts['Perdido'] = 0;
+    var oppAtivas = 0; // deals ATUALMENTE em OPP ou Negociacao
 
     deals.forEach(function (d) {
       var mapped = _mapStage(d.fase_atual_no_processo);
-      var order = STAGE_ORDER[mapped] != null ? STAGE_ORDER[mapped] : 0;
-      STAGES.forEach(function (s) { if (STAGE_ORDER[s] <= order) counts[s]++; });
-      if (mapped === 'Perdido') counts['Perdido']++;
+      if (mapped === null) return; // ignora deals sem fase definida
+      if (mapped === 'Perdido') { counts['Perdido']++; return; }
+      // MQL = qualquer deal com fase válida (exceto Perdido)
+      counts['MQL']++;
+      // SAL+ = deals que passaram de MQL (estado atual)
+      if (['SAL', 'Agendamento', 'Oportunidade', 'Negociacao', 'Ganho'].indexOf(mapped) !== -1) counts['SAL']++;
+      if (['Agendamento', 'Oportunidade', 'Negociacao', 'Ganho'].indexOf(mapped) !== -1) counts['Agendamento']++;
+      // OPP Ativas = estado atual OPP ou Negociação (não inclui Ganho — esses já fecharam)
+      if (mapped === 'Oportunidade' || mapped === 'Negociacao') {
+        counts['Oportunidade']++;
+        oppAtivas++;
+      }
+      if (mapped === 'Negociacao') counts['Negociacao']++;
+      if (mapped === 'Ganho') counts['Ganho']++;
     });
 
     var crs = [];
     for (var i = 1; i < STAGES.length; i++) {
       crs.push({ from: STAGES[i - 1], to: STAGES[i], rate: _pct(counts[STAGES[i]], counts[STAGES[i - 1]]) });
     }
-    return { stages: STAGES, counts: counts, conversions: crs, total: deals.length, lost: counts['Perdido'] };
+    return { stages: STAGES, counts: counts, conversions: crs, total: deals.length, lost: counts['Perdido'], oppAtivas: oppAtivas };
   }
 
   function calcDailyVolume(deals) {
@@ -168,6 +198,8 @@
     deals.forEach(function (d) {
       var created = (d.created_at_crm || '').slice(0, 10);
       if (!created || created < monthStart) return;
+      var mapped = _mapStage(d.fase_atual_no_processo);
+      if (mapped === null) return; // ignora deals sem fase definida
       if (!byDay[created]) byDay[created] = { mql: 0, sal: 0, opp: 0, won: 0 };
       var fase = (d.fase_atual_no_processo || '').toLowerCase();
       byDay[created].mql++;
@@ -188,6 +220,7 @@
   function calcEfficiencyByQualifier(deals) {
     var byQ = {};
     deals.forEach(function (d) {
+      if (_mapStage(d.fase_atual_no_processo) === null) return; // ignora sem fase
       var qName = d.qualificador_name || 'Sem Qualificador';
       if (!byQ[qName]) byQ[qName] = { mql: 0, sal: 0, opp: 0, won: 0, lost: 0, revenue: 0 };
       var q = byQ[qName];
@@ -219,7 +252,8 @@
   function calcPipelineByLine(deals) {
     var byLine = {};
     deals.forEach(function (d) {
-      var line = d.linha_de_receita_vigente || d.grupo_de_receita || 'nao_definido';
+      if (_mapStage(d.fase_atual_no_processo) === null) return; // ignora sem fase
+      var line = d.linha_de_receita_vigente || d.grupo_de_receita || 'Não Definido';
       if (!byLine[line]) byLine[line] = { total: 0, sal: 0, opp: 0, won: 0, lost: 0, value: 0 };
       var bl = byLine[line];
       var fase = (d.fase_atual_no_processo || '').toLowerCase();
@@ -259,6 +293,7 @@
   function calcChannelForecast(deals) {
     var byCh = {};
     deals.forEach(function (d) {
+      if (_mapStage(d.fase_atual_no_processo) === null) return; // ignora sem fase
       var ch = d.canal_de_marketing || d.utm_medium || 'Outro';
       if (!byCh[ch]) byCh[ch] = { total: 0, opp: 0, won: 0, value: 0, oppValue: 0 };
       var bc = byCh[ch];
@@ -454,12 +489,14 @@
     var results = await Promise.all([
       fetchDeals(email),
       fetchOppEventsThisMonth(email),
-      fetchDeltaTRuntime(email)
+      fetchDeltaTRuntime(email),
+      fetchWonEventsThisMonth(email)
     ]);
 
     var deals = results[0];
     var oppGeradas = results[1];
     var dtRuntime = results[2];
+    var wonGerados = results[3]; // Ganhos no mês (event-based, igual ao OPP Geradas)
 
     if (!deals || !deals.length) {
       el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text2)">'
@@ -495,14 +532,23 @@
     html += '</div>';
 
     // KPI Row: 7 KPIs
-    var oppGeradasVal = oppGeradas != null ? oppGeradas : funnel.counts['Oportunidade'];
+    // oppGeradas = event-based (deal_stage_history → to_stage=Oportunidade, mês atual)
+    // oppAtivas  = estado atual (deals COM fase=OPP ou Negociação agora)
+    // wonGerados = event-based (deal_stage_history → to_stage=Ganho, mês atual)
+    // MQL        = deals com fase definida (exclui "" e desconhecidos)
+    // CR         = oppGeradas / MQL (denominador limpo)
+    var oppGeradasVal = oppGeradas != null ? oppGeradas : funnel.oppAtivas;
+    var oppAtivasVal  = funnel.oppAtivas;
+    var wonVal        = wonGerados != null ? wonGerados : funnel.counts['Ganho'];
+    var mqlBase       = funnel.counts['MQL']; // apenas deals com fase definida
+
     html += '<div class="kpi-g" style="grid-template-columns:repeat(7,1fr);margin-bottom:14px">';
-    html += '<div class="kpi"><div class="kpi-l">MQL</div><div class="kpi-v">' + _fmt(funnel.counts['MQL']) + '</div></div>';
-    html += '<div class="kpi"><div class="kpi-l">SAL</div><div class="kpi-v">' + _fmt(funnel.counts['SAL']) + '</div></div>';
-    html += '<div class="kpi" title="OPP geradas no mês — eventos Databricks"><div class="kpi-l">OPP Geradas</div><div class="kpi-v" style="color:var(--accent)">' + _fmt(oppGeradasVal) + '</div></div>';
-    html += '<div class="kpi" title="Deals em fase OPP/Negoc agora"><div class="kpi-l">OPP Ativas</div><div class="kpi-v">' + _fmt(funnel.counts['Oportunidade']) + '</div></div>';
-    html += '<div class="kpi"><div class="kpi-l">Won</div><div class="kpi-v">' + _fmt(funnel.counts['Ganho']) + '</div></div>';
-    html += '<div class="kpi"><div class="kpi-l">CR MQL→OPP</div><div class="kpi-v">' + _pct(oppGeradasVal, funnel.counts['MQL']) + '%</div></div>';
+    html += '<div class="kpi" title="Deals com fase definida no Databricks (exclui leads sem qualificação)"><div class="kpi-l">MQL Válidos</div><div class="kpi-v">' + _fmt(mqlBase) + '</div></div>';
+    html += '<div class="kpi" title="Deals em SAL ou acima (estado atual)"><div class="kpi-l">SAL</div><div class="kpi-v">' + _fmt(funnel.counts['SAL']) + '</div></div>';
+    html += '<div class="kpi" title="OPP geradas no mês — eventos Databricks (event-based, não estado)"><div class="kpi-l">OPP Geradas</div><div class="kpi-v" style="color:var(--accent)">' + _fmt(oppGeradasVal) + '</div></div>';
+    html += '<div class="kpi" title="Deals ATUALMENTE em fase OPP ou Negociação"><div class="kpi-l">OPP Ativas</div><div class="kpi-v">' + _fmt(oppAtivasVal) + '</div></div>';
+    html += '<div class="kpi" title="Ganhos no mês — eventos Databricks (event-based)"><div class="kpi-l">Won Mês</div><div class="kpi-v" style="color:var(--green)">' + _fmt(wonVal) + '</div></div>';
+    html += '<div class="kpi" title="OPP Geradas ÷ MQL Válidos"><div class="kpi-l">CR MQL→OPP</div><div class="kpi-v">' + _pct(oppGeradasVal, mqlBase || 1) + '%</div></div>';
     html += '<div class="kpi"><div class="kpi-l">Perdidos</div><div class="kpi-v" style="color:var(--red)">' + _fmt(funnel.lost) + '</div></div>';
     html += '</div>';
 
@@ -562,6 +608,7 @@
     renderReportsV4: renderReportsV4,
     fetchDeals: fetchDeals,
     fetchOppEventsThisMonth: fetchOppEventsThisMonth,
+    fetchWonEventsThisMonth: fetchWonEventsThisMonth,
     fetchDeltaTRuntime: fetchDeltaTRuntime,
     calcFunnel: calcFunnel,
     calcDailyVolume: calcDailyVolume,
