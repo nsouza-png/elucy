@@ -2753,12 +2753,16 @@ async function loadDealsFromSupabase(email){
     if(window._syncStatus) window._syncStatus('syncing');
     try {
       if(window.initOperatorContext) await window.initOperatorContext();
+      // Re-aplica meta do Supabase após initOperatorContext (engine pode ter sobrescrito com defaults)
+      if(window._OPERATOR_META) _applyMetaToCtx(window._OPERATOR_META);
       if(window.loadTaxonomy) await window.loadTaxonomy();
       if(window.syncDealRuntime) await window.syncDealRuntime();
       if(window.syncForecastRuntime) await window.syncForecastRuntime();
       if(window.syncDailySnapshot) await window.syncDailySnapshot();
       if(window.syncOperatorEfficiency) await window.syncOperatorEfficiency();
       if(window._syncStatus) window._syncStatus('ok');
+      // Renderiza Home com valores corretos de meta após boot completo
+      try{ if(window.renderHome) window.renderHome(); }catch(e){}
       console.log('[boot] V7 engine layers initialized');
     } catch(e){
       console.warn('[boot] engine init error:', e.message);
@@ -2766,6 +2770,21 @@ async function loadDealsFromSupabase(email){
       if(window._toast) window._toast('Erro ao inicializar motor', e.message, null, 'error');
     }
   })();
+}
+
+// Aplica meta_mensal no _operatorCtx sem salvar no Supabase
+function _applyMetaToCtx(mm){
+  if(!mm) return;
+  try{
+    var ctx = window.getOperatorCtx ? window.getOperatorCtx() : null;
+    if(ctx){
+      Object.assign(ctx.meta_mensal, mm);
+      ctx.meta_diaria.fups          = Math.ceil(mm.fups/22);
+      ctx.meta_diaria.qualificacoes = Math.ceil(mm.qualificacoes/22);
+      ctx.meta_diaria.handoffs      = Math.ceil(mm.handoffs/22);
+      ctx.meta_diaria.opp           = Math.ceil((mm.opp||15)/22);
+    }
+  }catch(e){}
 }
 
 async function loadEfficiencyMetrics(sb,email){
@@ -2788,17 +2807,8 @@ async function loadEfficiencyMetrics(sb,email){
     if(op&&op.meta_mensal){
       var mm = typeof op.meta_mensal==='string' ? JSON.parse(op.meta_mensal) : op.meta_mensal;
       window._OPERATOR_META = mm;
-      // Sincroniza com _operatorCtx do engine para que renderHome() use valores corretos
-      if(window.saveOperatorSettings){
-        window.saveOperatorSettings({meta_mensal: mm});
-      } else if(window.getOperatorCtx){
-        var ctx = window.getOperatorCtx();
-        Object.assign(ctx.meta_mensal, mm);
-        ctx.meta_diaria.fups = Math.ceil(mm.fups/22);
-        ctx.meta_diaria.qualificacoes = Math.ceil(mm.qualificacoes/22);
-        ctx.meta_diaria.handoffs = Math.ceil(mm.handoffs/22);
-        ctx.meta_diaria.opp = Math.ceil((mm.opp||15)/22);
-      }
+      // Sincroniza em memória com _operatorCtx — SEM salvar de volta no Supabase
+      _applyMetaToCtx(mm);
     }
   }catch(e){/* meta not available */}
 }

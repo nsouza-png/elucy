@@ -210,6 +210,8 @@ async function saveOperatorSettings(settings){
   if(settings.meta_mensal){
     update.meta_mensal=settings.meta_mensal; // JSONB nativo — não serializar como string
     Object.assign(_operatorCtx.meta_mensal,settings.meta_mensal);
+    // Persiste em window._OPERATOR_META para sobreviver ao próximo boot sem F5 extra
+    window._OPERATOR_META = Object.assign({}, _operatorCtx.meta_mensal);
     _operatorCtx.meta_diaria.fups=Math.ceil(_operatorCtx.meta_mensal.fups/22);
     _operatorCtx.meta_diaria.qualificacoes=Math.ceil(_operatorCtx.meta_mensal.qualificacoes/22);
     _operatorCtx.meta_diaria.handoffs=Math.ceil(_operatorCtx.meta_mensal.handoffs/22);
