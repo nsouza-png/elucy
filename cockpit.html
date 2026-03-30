@@ -7229,8 +7229,9 @@ async function _obCheckAndStart(email){
 }
 
 function _obStart(){
+  // Remove qualquer instancia anterior antes de criar nova
+  document.querySelectorAll('.ob-overlay,.ob-spotlight,.ob-tooltip').forEach(function(el){ el.remove(); });
   _obStep = 0;
-  // Create overlay elements
   _obOverlay = document.createElement('div');
   _obOverlay.className = 'ob-overlay';
   _obSpotlight = document.createElement('div');
