@@ -66,7 +66,6 @@
   }
 
   // Busca métricas agregadas do mês do funil_comercial para o qualificador
-  // Retorna: Δt oficiais, CRs, contagens, receita
   async function fetchDatabricksMetrics(qualName) {
     var qn = qualName || _qualName();
     if (!qn) return null;
@@ -76,13 +75,8 @@
       return d.toISOString().slice(0, 10);
     })();
 
-    // funil_comercial é tabela de EVENTOS — cada linha = 1 evento (MQL, SAL, Oportunidade, Ganho...)
-    // Padrão do Genie: COUNT(DISTINCT CASE WHEN event = 'X' THEN deal_id END)
-    // Filtro por event_timestamp (não created_at_crm) — igual ao Genie oficial
-    // Δt: disponíveis como colunas numéricas no evento Ganho (dt_oportunidade_negociacao etc.)
     var sql = `
       SELECT
-        -- Contagens event-based (igual ao Genie oficial)
         COUNT(DISTINCT CASE WHEN event = 'MQL'          THEN deal_id END) AS mql_count,
         COUNT(DISTINCT CASE WHEN event = 'SAL'          THEN deal_id END) AS sal_count,
         COUNT(DISTINCT CASE WHEN event = 'Agendado'     THEN deal_id END) AS agendamento_count,
@@ -90,18 +84,13 @@
         COUNT(DISTINCT CASE WHEN event = 'Negociação'   THEN deal_id END) AS negociacao_count,
         COUNT(DISTINCT CASE WHEN event = 'Ganho'        THEN deal_id END) AS won_count,
         COUNT(DISTINCT CASE WHEN event = 'Perdido'      THEN deal_id END) AS lost_count,
-
-        -- Δt oficiais: campos numéricos presentes na linha do evento (em dias)
         ROUND(AVG(CASE WHEN event = 'Ganho' AND delta_t > 0 AND delta_t < 365 THEN delta_t END), 1) AS avg_delta_t_ganho,
         ROUND(AVG(CASE WHEN event = 'Oportunidade' AND delta_t > 0 AND delta_t < 180 THEN delta_t END), 1) AS avg_delta_t_opp,
         ROUND(AVG(CASE WHEN event = 'Agendado' AND delta_t > 0 AND delta_t < 180 THEN delta_t END), 1) AS avg_delta_t_agendado,
         ROUND(AVG(CASE WHEN event = 'SAL' AND delta_t > 0 AND delta_t < 180 THEN delta_t END), 1) AS avg_delta_t_sal,
-
-        -- Receita (apenas deals que geraram evento Ganho no período)
         ROUND(SUM(CASE WHEN event = 'Ganho' THEN revenue END), 0)                          AS receita_won,
         ROUND(AVG(CASE WHEN event = 'Ganho' AND revenue > 0 THEN revenue END), 0)          AS ticket_medio,
         ROUND(SUM(CASE WHEN event = 'Oportunidade' THEN valor_da_oportunidade END), 0)     AS pipeline_value
-
       FROM production.diamond.funil_comercial
       WHERE qualificador_name = '${qn}'
         AND event_timestamp >= CAST('${monthStart} 00:00:00' AS TIMESTAMP)
@@ -124,42 +113,32 @@
     var lost = _i(r.lost_count);
 
     return {
-      // Contagens event-based (deals que geraram o evento no mês)
-      mql_validos: mql,       // # MQL gerados
-      sal_count: sal,         // # SAL gerados
+      mql_validos: mql,
+      sal_count: sal,
       agendamento_count: agend,
-      opp_count: opp,         // # OPP geradas — o número principal
+      opp_count: opp,
       negociacao_count: neg,
       won_count: won,
       lost_count: lost,
-
-      // Δt: delta_t de cada evento (em dias desde o evento anterior)
-      // Nota: delta_t no funil_comercial = tempo desde o evento anterior para aquele deal
       dt_mql_sal: _n(r.avg_delta_t_sal),
-      dt_sal_conectado: null, // não disponível diretamente via evento
+      dt_sal_conectado: null,
       dt_conectado_agendado: null,
       dt_agendado_oportunidade: _n(r.avg_delta_t_opp),
       dt_oportunidade_negociacao: null,
       dt_negociacao_ganho: _n(r.avg_delta_t_ganho),
       dt_agendado: _n(r.avg_delta_t_agendado),
-
-      // CRs oficiais (igual ao Genie CR01-CR04)
-      cr_mql_sal:   mql  ? _pct(sal,  mql)  : null,  // CR01
-      cr_sal_agend: sal  ? _pct(agend, sal)  : null,  // CR02
-      cr_agend_opp: agend ? _pct(opp,  agend) : null,  // CR03 (Show Rate)
-      cr_opp_won:   opp  ? _pct(won,  opp)  : null,  // CR04 (Win Rate)
-      cr_mql_opp:   mql  ? _pct(opp,  mql)  : null,  // % MQL em OPP
-
-      // Receita
+      cr_mql_sal:   mql  ? _pct(sal,  mql)  : null,
+      cr_sal_agend: sal  ? _pct(agend, sal)  : null,
+      cr_agend_opp: agend ? _pct(opp,  agend) : null,
+      cr_opp_won:   opp  ? _pct(won,  opp)  : null,
+      cr_mql_opp:   mql  ? _pct(opp,  mql)  : null,
       receita_won: _n(r.receita_won),
       ticket_medio: _n(r.ticket_medio),
       pipeline_value: _n(r.pipeline_value),
-
       _source: 'databricks'
     };
   }
 
-  // Busca breakdown por linha de receita do Databricks (event-based)
   async function fetchDatabricksLineBreakdown(qualName) {
     var qn = qualName || _qualName();
     if (!qn) return null;
@@ -194,7 +173,7 @@
       var opp = parseInt(r.opp || 0, 10);
       return {
         name: r.linha,
-        total: mql,  // total = MQL gerados nessa linha
+        total: mql,
         sal: parseInt(r.sal || 0, 10),
         opp: opp, won: won, lost: lost,
         value: parseFloat(r.receita || 0),
@@ -204,8 +183,6 @@
     }).filter(function(r) { return r.total > 0; });
   }
 
-  // Busca Δt médio por evento e por linha de receita
-  // delta_t = dias desde o evento anterior (campo do funil_comercial)
   async function fetchDatabricksDtByLine(qualName) {
     var qn = qualName || _qualName();
     if (!qn) return null;
@@ -236,10 +213,10 @@
   }
 
   // ============================================================================
-  // DATA LAYER — busca dados direto do Supabase (não depende de _COCKPIT_DEAL_MAP)
+  // DATA LAYER — Supabase
+  // created_at_crm pode ser nulo — usa synced_at como fallback de data de entrada
   // ============================================================================
 
-  // Busca todos os deals do operador direto do Supabase (inclui Ganho/Perdido do mês)
   async function fetchDeals(operatorEmail) {
     var cached = _cacheGet('deals_' + (operatorEmail || 'all'));
     if (cached) return cached;
@@ -250,19 +227,22 @@
       var q = sb.from('deals').select(
         'deal_id,fase_atual_no_processo,etapa_atual_no_pipeline,tier_da_oportunidade,' +
         'delta_t,qualificador_name,proprietario_name,linha_de_receita_vigente,' +
-        'grupo_de_receita,created_at_crm,canal_de_marketing,utm_medium,' +
+        'grupo_de_receita,created_at_crm,synced_at,canal_de_marketing,utm_medium,' +
         'revenue,valor_da_oportunidade,cargo,p_segmento,perfil,' +
         'faixa_de_faturamento,faixa_de_funcionarios,operator_email'
       ).limit(2000);
       if (operatorEmail) q = q.eq('operator_email', operatorEmail);
       var res = await q;
-      var data = res.data || [];
+      var data = (res.data || []).map(function(d) {
+        // Normaliza data de entrada: created_at_crm preferido, synced_at como fallback
+        d._entry_date = (d.created_at_crm || d.synced_at || '').slice(0, 10);
+        return d;
+      });
       _cacheSet('deals_' + (operatorEmail || 'all'), data);
       return data;
     } catch (e) { return []; }
   }
 
-  // Conta OPP geradas no mês via deal_stage_history (source=databricks, event-based)
   async function fetchOppEventsThisMonth(operatorEmail) {
     try {
       var sb = _sb();
@@ -280,7 +260,6 @@
     } catch (e) { return null; }
   }
 
-  // Conta Ganhos no mês via deal_stage_history (event-based, igual ao OPP Geradas)
   async function fetchWonEventsThisMonth(operatorEmail) {
     try {
       var sb = _sb();
@@ -298,12 +277,7 @@
     } catch (e) { return null; }
   }
 
-  // Busca Δt médios de deal_runtime (calculados pelo PS1 do Databricks)
   async function fetchDeltaTRuntime(operatorEmail) {
-    var cacheKey = 'dt_runtime_' + (operatorEmail || 'all');
-    var cached = _cacheGet(cacheKey);
-    if (cached) return cached;
-
     try {
       var sb = _sb();
       if (!sb) return null;
@@ -320,7 +294,7 @@
         return vals.length ? Math.round(vals.reduce(function (a, b) { return a + b; }, 0) / vals.length * 10) / 10 : null;
       }
 
-      var result = {
+      return {
         dt_sal_conectado: _avgField('dt_sal_conectado'),
         dt_conectado_agendado: _avgField('dt_conectado_agendado'),
         dt_agendado_opp: _avgField('dt_agendado_opp'),
@@ -331,24 +305,11 @@
         total: res.data.length,
         byLine: {}
       };
-
-      // Agrupa Δt médio por linha de receita
-      res.data.forEach(function (r) {
-        var line = r.linha_de_receita_vigente || 'nao_definido';
-        if (!result.byLine[line]) result.byLine[line] = { dt_vals: [], samples: 0, stalled: 0 };
-        var dt = parseFloat(r.dt_sal_conectado);
-        if (!isNaN(dt) && dt > 0) result.byLine[line].dt_vals.push(dt);
-        result.byLine[line].samples++;
-        if (r.stall_flag === true) result.byLine[line].stalled++;
-      });
-
-      _cacheSet(cacheKey, result);
-      return result;
     } catch (e) { return null; }
   }
 
   // ============================================================================
-  // CALC LAYER — processa os dados brutos
+  // CALC LAYER
   // ============================================================================
 
   var STAGE_MAP = {
@@ -365,32 +326,25 @@
 
   function _mapStage(fase) {
     var f = (fase || '').toLowerCase().trim();
-    if (!f) return null; // fase vazia = deal sem qualificação, NÃO conta no funil
+    if (!f) return null;
     if (STAGE_MAP[f]) return STAGE_MAP[f];
     for (var k in STAGE_MAP) { if (f.indexOf(k) !== -1) return STAGE_MAP[k]; }
-    return null; // fase desconhecida = também não conta
+    return null;
   }
 
-  // calcFunnel: conta apenas deals COM fase definida
-  // MQL = total deals com fase válida (excluindo "" e desconhecidos)
-  // SAL/Agend/OPP/Ganho = deals na fase atual (estado atual, não cumulativo)
-  // Perdido = deals com fase=Perdido
   function calcFunnel(deals) {
     var counts = {};
     STAGES.forEach(function (s) { counts[s] = 0; });
     counts['Perdido'] = 0;
-    var oppAtivas = 0; // deals ATUALMENTE em OPP ou Negociacao
+    var oppAtivas = 0;
 
     deals.forEach(function (d) {
       var mapped = _mapStage(d.fase_atual_no_processo);
-      if (mapped === null) return; // ignora deals sem fase definida
+      if (mapped === null) return;
       if (mapped === 'Perdido') { counts['Perdido']++; return; }
-      // MQL = qualquer deal com fase válida (exceto Perdido)
       counts['MQL']++;
-      // SAL+ = deals que passaram de MQL (estado atual)
       if (['SAL', 'Agendamento', 'Oportunidade', 'Negociacao', 'Ganho'].indexOf(mapped) !== -1) counts['SAL']++;
       if (['Agendamento', 'Oportunidade', 'Negociacao', 'Ganho'].indexOf(mapped) !== -1) counts['Agendamento']++;
-      // OPP Ativas = estado atual OPP ou Negociação (não inclui Ganho — esses já fecharam)
       if (mapped === 'Oportunidade' || mapped === 'Negociacao') {
         counts['Oportunidade']++;
         oppAtivas++;
@@ -411,9 +365,9 @@
     var byDay = {};
 
     // Volume diário = todos os deals que entraram no mês, independente de fase
-    // (fase pode estar vazia para leads em D1-D6 que ainda não foram qualificados)
+    // created_at_crm pode ser nulo — usa _entry_date (synced_at como fallback)
     deals.forEach(function (d) {
-      var created = (d.created_at_crm || '').slice(0, 10);
+      var created = d._entry_date || (d.created_at_crm || d.synced_at || '').slice(0, 10);
       if (!created || created < monthStart) return;
       if (!byDay[created]) byDay[created] = { entrada: 0, sal: 0, opp: 0, won: 0 };
       byDay[created].entrada++;
@@ -435,7 +389,7 @@
   function calcEfficiencyByQualifier(deals) {
     var byQ = {};
     deals.forEach(function (d) {
-      if (_mapStage(d.fase_atual_no_processo) === null) return; // ignora sem fase
+      if (_mapStage(d.fase_atual_no_processo) === null) return;
       var qName = d.qualificador_name || 'Sem Qualificador';
       if (!byQ[qName]) byQ[qName] = { mql: 0, sal: 0, opp: 0, won: 0, lost: 0, revenue: 0 };
       var q = byQ[qName];
@@ -467,7 +421,7 @@
   function calcPipelineByLine(deals) {
     var byLine = {};
     deals.forEach(function (d) {
-      if (_mapStage(d.fase_atual_no_processo) === null) return; // ignora sem fase
+      if (_mapStage(d.fase_atual_no_processo) === null) return;
       var line = d.linha_de_receita_vigente || d.grupo_de_receita || 'Não Definido';
       if (!byLine[line]) byLine[line] = { total: 0, sal: 0, opp: 0, won: 0, lost: 0, value: 0 };
       var bl = byLine[line];
@@ -508,7 +462,7 @@
   function calcChannelForecast(deals) {
     var byCh = {};
     deals.forEach(function (d) {
-      if (_mapStage(d.fase_atual_no_processo) === null) return; // ignora sem fase
+      if (_mapStage(d.fase_atual_no_processo) === null) return;
       var ch = d.canal_de_marketing || d.utm_medium || 'Outro';
       if (!byCh[ch]) byCh[ch] = { total: 0, opp: 0, won: 0, value: 0, oppValue: 0 };
       var bc = byCh[ch];
@@ -561,13 +515,13 @@
       html += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0">';
       html += '<div style="font-size:9px;color:var(--text2);font-weight:700">' + d.mql + '</div>';
       html += '<div style="display:flex;gap:1px;width:100%;align-items:flex-end;height:100px">';
-      html += '<div style="flex:1;height:' + hMql + 'px;background:var(--accent);border-radius:2px 2px 0 0;min-height:2px" title="MQL:' + d.mql + '"></div>';
+      html += '<div style="flex:1;height:' + hMql + 'px;background:var(--accent);border-radius:2px 2px 0 0;min-height:2px" title="Entrada:' + d.mql + '"></div>';
       html += '<div style="flex:1;height:' + hSal + 'px;background:var(--accent2);border-radius:2px 2px 0 0;min-height:2px" title="SAL:' + d.sal + '"></div>';
       html += '<div style="flex:1;height:' + hOpp + 'px;background:var(--green);border-radius:2px 2px 0 0;min-height:2px" title="OPP:' + d.opp + '"></div>';
       html += '</div><div style="font-size:8px;color:var(--text2)">' + d.label + '</div></div>';
     });
     html += '</div><div style="display:flex;gap:12px;justify-content:center;margin-top:4px">';
-    html += '<span style="font-size:9px;color:var(--text2)"><span style="display:inline-block;width:8px;height:8px;background:var(--accent);border-radius:2px;margin-right:3px"></span>MQL</span>';
+    html += '<span style="font-size:9px;color:var(--text2)"><span style="display:inline-block;width:8px;height:8px;background:var(--accent);border-radius:2px;margin-right:3px"></span>Entrada</span>';
     html += '<span style="font-size:9px;color:var(--text2)"><span style="display:inline-block;width:8px;height:8px;background:var(--accent2);border-radius:2px;margin-right:3px"></span>SAL</span>';
     html += '<span style="font-size:9px;color:var(--text2)"><span style="display:inline-block;width:8px;height:8px;background:var(--green);border-radius:2px;margin-right:3px"></span>OPP</span>';
     html += '</div>';
@@ -612,20 +566,6 @@
     return html;
   }
 
-  function renderLineTable(data) {
-    if (!data || !data.rows || !data.rows.length) return '<div style="color:var(--text2);font-size:11px">Sem dados</div>';
-    var maxTotal = Math.max.apply(null, data.rows.map(function (r) { return r.total; })) || 1;
-    var html = '';
-    data.rows.forEach(function (r) {
-      var pct = Math.round((r.total / maxTotal) * 100);
-      html += '<div class="fr"><div class="fl" style="width:160px">' + r.name + '</div>';
-      html += '<div class="fb-bg"><div class="fb-f" style="width:' + Math.max(pct, 3) + '%">';
-      html += '<span class="fb-v">' + r.total + '</span></div></div>';
-      html += '<span class="fp" style="width:60px">' + r.winRate + '% WR</span></div>';
-    });
-    return html;
-  }
-
   function renderClientProfile(data) {
     if (!data || !data.wonDeals) return '<div style="color:var(--text2);font-size:11px">Sem dados de conversão</div>';
     function _renderDim(title, items, total) {
@@ -666,12 +606,6 @@
       html += '<tr><td>' + t[0] + '</td><td style="text-align:right;font-weight:700;' + _dtColor(t[1]) + '">' + _dtFmt(t[1]) + '</td></tr>';
     });
     html += '</tbody></table>';
-    if (dt.avg_velocity_score != null) {
-      var vs = Math.round(dt.avg_velocity_score * 100);
-      var vsColor = vs >= 60 ? 'var(--green)' : vs >= 30 ? 'var(--accent)' : 'var(--red)';
-      html += '<div style="margin-top:8px;font-size:11px;color:var(--text2)">Velocity Score médio: <strong style="color:' + vsColor + '">' + vs + '%</strong>';
-      html += ' · <span style="color:var(--red)">' + dt.stall_count + ' stalled</span> / ' + dt.total + ' deals</div>';
-    }
     return html;
   }
 
@@ -689,14 +623,10 @@
     return html;
   }
 
-  // ============================================================================
-  // RENDER: Velocity Δt — usa Databricks se disponível, senão deal_runtime
-  // ============================================================================
   function renderVelocitySection(dbMetrics, dtRuntime, dbDtByLine) {
     var hasDatabricks = dbMetrics && dbMetrics._source === 'databricks';
     var html = '';
 
-    // Fonte badge
     var sourceBadge = hasDatabricks
       ? '<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--accent);color:#000;margin-left:6px">Databricks</span>'
       : '<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--border);color:var(--text2);margin-left:6px">Supabase Runtime</span>';
@@ -718,7 +648,6 @@
       });
       html += '</tbody></table>';
 
-      // CRs do Databricks
       html += '<div style="margin-top:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px">';
       var crItems = [
         ['CR01 MQL→SAL', dbMetrics.cr_mql_sal],
@@ -736,7 +665,6 @@
       });
       html += '</div>';
 
-      // Receita
       if (dbMetrics.receita_won != null || dbMetrics.ticket_medio != null) {
         html += '<div style="margin-top:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:6px">';
         html += '<div style="background:var(--bg3);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--text2);margin-bottom:3px">Receita Won</div><div style="font-size:13px;font-weight:800;color:var(--green)">' + _fmtBRL(dbMetrics.receita_won) + '</div></div>';
@@ -745,7 +673,6 @@
         html += '</div>';
       }
 
-      // Δt por linha (se disponível)
       if (dbDtByLine && dbDtByLine.length) {
         html += '<div style="margin-top:12px"><div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Δt por Linha de Receita</div>';
         html += '<table class="intel-table" style="width:100%"><thead><tr><th>Linha</th><th style="text-align:right">MQL</th><th style="text-align:right">→SAL</th><th style="text-align:right">→Agd</th><th style="text-align:right">→OPP</th></tr></thead><tbody>';
@@ -761,7 +688,6 @@
         html += '</tbody></table></div>';
       }
     } else {
-      // Fallback: deal_runtime do Supabase (todos nulos por enquanto)
       html += '<div class="ch-t">Velocidade (Δt) por Transição' + sourceBadge + '</div>';
       if (!dtRuntime) {
         html += '<div style="color:var(--text2);font-size:11px;padding:12px 0">Token Databricks não configurado. Configure em Configurações → Conexões para ver os Δt oficiais.</div>';
@@ -774,10 +700,6 @@
 
   // ============================================================================
   // MASTER RENDER
-  // Arquitetura de fontes:
-  //   Databricks = source of truth analítica (MQL, SAL, OPP, Won, Lost, CRs, Δt, Receita)
-  //   Supabase deals = Perfil de cliente (cargo/segmento/perfil Won) + Volume diário entrada
-  //   Supabase deal_stage_history = OPP Geradas event-based (validação cruzada)
   // ============================================================================
   async function renderReportsV4(containerId) {
     var el = document.getElementById(containerId || 'screen-reports-v4');
@@ -785,28 +707,26 @@
 
     var hasDbToken = !!_dbToken();
     el.innerHTML = '<div style="font-size:12px;color:var(--text2);padding:40px;text-align:center">Carregando dados'
-      + (hasDbToken ? ' do Databricks...' : ' do Supabase (configure Databricks para métricas completas)...') + '</div>';
+      + (hasDbToken ? ' do Databricks...' : '...') + '</div>';
 
     var email = _opEmail();
     var qualName = _qualName();
     var lastSync = new Date().toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
 
-    // Busca tudo em paralelo
     var results = await Promise.all([
       hasDbToken ? fetchDatabricksMetrics(qualName) : Promise.resolve(null),
       hasDbToken ? fetchDatabricksLineBreakdown(qualName) : Promise.resolve(null),
       hasDbToken ? fetchDatabricksDtByLine(qualName) : Promise.resolve(null),
-      fetchOppEventsThisMonth(email),   // validação cruzada OPP
-      fetchDeals(email)                 // perfil de cliente + volume diário
+      fetchOppEventsThisMonth(email),
+      fetchDeals(email)
     ]);
 
     var dbMetrics  = results[0];
     var dbLines    = results[1];
     var dbDtByLine = results[2];
-    var oppSB      = results[3]; // OPP event-based do Supabase (cross-check)
-    var deals      = results[4]; // Supabase deals — só para perfil/volume
+    var oppSB      = results[3];
+    var deals      = results[4];
 
-    // Se sem token Databricks e sem deals Supabase → sem dados
     if (!dbMetrics && (!deals || !deals.length)) {
       el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text2)">'
         + '<div style="font-size:16px;margin-bottom:8px">Configure o Databricks para ver as métricas</div>'
@@ -815,7 +735,6 @@
       return;
     }
 
-    // Perfil de cliente e volume diário vêm do Supabase (única coisa que ele faz bem aqui)
     var profile = deals && deals.length ? calcClientProfile(deals) : null;
     var daily   = deals && deals.length ? calcDailyVolume(deals)   : null;
 
@@ -838,11 +757,10 @@
       // ── KPI ROW — 100% Databricks event-based ──
       var mql  = dbMetrics.mql_validos;
       var sal  = dbMetrics.sal_count;
-      var opp  = dbMetrics.opp_count;   // # OPP Geradas no mês (event)
+      var opp  = dbMetrics.opp_count;
       var won  = dbMetrics.won_count;
       var lost = dbMetrics.lost_count;
       var agend = dbMetrics.agendamento_count;
-      // OPP Geradas: usa Supabase deal_stage_history se disponível (mais granular), senão Databricks
       var oppGeradasVal = (oppSB != null && oppSB > 0) ? oppSB : opp;
       var crMqlOpp = mql ? _pct(oppGeradasVal, mql) : 0;
 
@@ -856,7 +774,7 @@
       html += '<div class="kpi" title="Perdidos no mês — Databricks"><div class="kpi-l">Perdidos</div><div class="kpi-v" style="color:var(--red)">' + _fmt(lost) + '</div></div>';
       html += '</div>';
 
-      // ── CRs OFICIAIS (CR01–CR04) ──
+      // ── CRs OFICIAIS ──
       html += '<div class="kpi-g" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px;background:var(--bg3);border-radius:var(--r2);padding:10px">';
       var crItems = [
         ['CR01 MQL→SAL', dbMetrics.cr_mql_sal],
@@ -891,10 +809,8 @@
         html += '</div>';
       }
 
-      // ── ROW 1: Pipeline por Linha (Databricks) + Velocity ──
+      // ── Pipeline por Linha + Velocity ──
       html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">';
-
-      // Pipeline por linha — Databricks event-based
       if (dbLines && dbLines.length) {
         var maxMql = Math.max.apply(null, dbLines.map(function(r) { return r.total; })) || 1;
         var lineHtml = '';
@@ -910,12 +826,11 @@
       } else {
         html += '<div class="ch"><div class="ch-t">Pipeline por Linha</div><div style="color:var(--text2);font-size:11px">Sem dados</div></div>';
       }
-
       html += '<div class="ch">' + renderVelocitySection(dbMetrics, null, dbDtByLine) + '</div>';
       html += '</div>';
 
     } else {
-      // ── SEM DATABRICKS — aviso com OPP do Supabase ──
+      // ── SEM DATABRICKS ──
       html += '<div style="padding:16px;background:var(--bg3);border-radius:var(--r2);margin-bottom:14px;border:1px solid var(--border)">';
       html += '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">Token Databricks não configurado</div>';
       html += '<div style="font-size:11px;color:var(--text2)">Configure em Configurações → Conexões para ver MQL, SAL, CRs, Δt e receita do mês.</div>';
@@ -925,14 +840,14 @@
       html += '</div>';
     }
 
-    // ── Volume Diário (Supabase — entrada de leads) ──
+    // ── Volume Diário (Supabase — entrada de leads por data de sync) ──
     if (daily && daily.days && daily.days.length) {
-      html += '<div style="display:grid;grid-template-columns:' + (dbMetrics ? '1fr' : '1fr') + ';gap:12px;margin-bottom:12px">';
-      html += '<div class="ch"><div class="ch-t">Volume de Entrada — Mês Atual <span style="font-size:9px;color:var(--text2)">(Supabase)</span></div>' + renderDailyChart(daily) + '</div>';
+      html += '<div style="margin-bottom:12px">';
+      html += '<div class="ch"><div class="ch-t">Volume de Entrada — Mês Atual <span style="font-size:9px;color:var(--text2)">(data sync)</span></div>' + renderDailyChart(daily) + '</div>';
       html += '</div>';
     }
 
-    // ── Perfil de Cliente (Supabase — quem está Won hoje) ──
+    // ── Perfil de Cliente (Supabase) ──
     if (profile && profile.wonDeals > 0) {
       html += '<div class="ch" style="margin-bottom:12px"><div class="ch-t">Perfil de Cliente — Quem Converteu <span style="font-size:9px;color:var(--text2)">(Supabase)</span></div>' + renderClientProfile(profile) + '</div>';
     }
@@ -945,16 +860,13 @@
   // ============================================================================
   window.ReportsV4 = {
     renderReportsV4: renderReportsV4,
-    // Supabase
     fetchDeals: fetchDeals,
     fetchOppEventsThisMonth: fetchOppEventsThisMonth,
     fetchWonEventsThisMonth: fetchWonEventsThisMonth,
     fetchDeltaTRuntime: fetchDeltaTRuntime,
-    // Databricks
     fetchDatabricksMetrics: fetchDatabricksMetrics,
     fetchDatabricksLineBreakdown: fetchDatabricksLineBreakdown,
     fetchDatabricksDtByLine: fetchDatabricksDtByLine,
-    // Calc
     calcFunnel: calcFunnel,
     calcDailyVolume: calcDailyVolume,
     calcEfficiencyByQualifier: calcEfficiencyByQualifier,
