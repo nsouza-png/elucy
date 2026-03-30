@@ -2746,29 +2746,33 @@ async function loadDealsFromSupabase(email){
   renderLiveDeals(rows,cols);
   showSyncToast('ok',`Pipeline carregado — ${rows.length} deals.`);
 
-  // V5/V6 Engine Boot — roda apos deals carregados
+  // V11 Engine Boot — roda apos deals carregados
   (async function(){
     if(window._syncStatus) window._syncStatus('syncing');
     try {
-      // 1. initOperatorContext: carrega meta do Supabase e deriva meta_diaria
+      // Fase 1 — contexto e meta (dependências base, sequencial)
       if(window.initOperatorContext) await window.initOperatorContext();
-      // 2. loadEfficiencyMetrics: AWAITED — carrega métricas e re-aplica meta (fonte de verdade final)
       await loadEfficiencyMetrics(sb,email);
       if(window.loadTaxonomy) await window.loadTaxonomy();
-      if(window.syncDealRuntime) await window.syncDealRuntime();
-      if(window.syncForecastRuntime) await window.syncForecastRuntime();
-      if(window.syncDailySnapshot) await window.syncDailySnapshot();
-      if(window.syncOperatorEfficiency) await window.syncOperatorEfficiency();
-      // Carrega count real de OPPs do mês (inclui Ganho/Perdido que saíram do pipeline ativo)
-      if(window.calcOppMensal) await window.calcOppMensal();
+
+      // Fase 2 — syncs paralelos (independentes) + OPP count real
+      await Promise.all([
+        window.syncDealRuntime ? window.syncDealRuntime() : Promise.resolve(),
+        window.syncForecastRuntime ? window.syncForecastRuntime() : Promise.resolve(),
+        window.calcOppMensal ? window.calcOppMensal() : Promise.resolve(),
+      ]);
+
       if(window._syncStatus) window._syncStatus('ok');
-      // Renderiza Home com valores definitivos de meta após boot completo
+      // Renderiza Home com OPP count real já carregado
       try{ if(window.renderHome) window.renderHome(); }catch(e){}
-      console.log('[boot] V7 engine layers initialized');
+      console.log('[boot] V11 engine OK — OPP mensal:', window._OPP_MENSAL_COUNT, '(', window._OPP_MENSAL_SOURCE, ')');
+
+      // Fase 3 — fire-and-forget (não bloqueiam UI nem causam erro visível)
+      if(window.syncDailySnapshot) window.syncDailySnapshot().catch(function(e){ console.warn('[boot] snapshot:', e.message); });
+      if(window.syncOperatorEfficiency) window.syncOperatorEfficiency().catch(function(e){ console.warn('[boot] efficiency:', e.message); });
     } catch(e){
       console.warn('[boot] engine init error:', e.message);
       if(window._syncStatus) window._syncStatus('error');
-      if(window._toast) window._toast('Erro ao inicializar motor', e.message, null, 'error');
     }
   })();
 }
