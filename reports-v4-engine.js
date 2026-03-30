@@ -701,6 +701,25 @@
   // ============================================================================
   // MASTER RENDER
   // ============================================================================
+  // Resolve qualificador_name via Databricks lookup quando não está em cache
+  async function _resolveQualName(email) {
+    var cached = _qualName();
+    if (cached) return cached;
+    if (!_dbToken() || !email) return null;
+    var prefix = email.split('@')[0].toLowerCase();
+    var segments = prefix.replace(/[._]/g, ' ').trim().split(' ').filter(function(s) { return s.length >= 4; });
+    if (!segments.length) return null;
+    var likeParts = segments.map(function(s) { return "LOWER(qualificador_name) LIKE '%" + s + "%'"; }).join(' OR ');
+    var sql = "SELECT DISTINCT qualificador_name FROM production.diamond.funil_comercial WHERE (" + likeParts + ") AND qualificador_name IS NOT NULL LIMIT 5";
+    var rows = await _dbQuery(sql);
+    if (!rows || !rows.length) return null;
+    var nome = rows[0].qualificador_name;
+    if (nome) {
+      try { localStorage.setItem('elucy_qualificador_name', nome); } catch(e) {}
+    }
+    return nome || null;
+  }
+
   async function renderReportsV4(containerId) {
     var el = document.getElementById(containerId || 'screen-reports-v4');
     if (!el) return;
@@ -710,7 +729,8 @@
       + (hasDbToken ? ' do Databricks...' : '...') + '</div>';
 
     var email = _opEmail();
-    var qualName = _qualName();
+    // Se token existe mas qualName não está em cache, faz lookup automático
+    var qualName = hasDbToken ? (await _resolveQualName(email)) : null;
     var lastSync = new Date().toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
 
     var results = await Promise.all([
