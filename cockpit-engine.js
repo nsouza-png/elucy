@@ -547,6 +547,20 @@ function enrichDealContext(deal){
   // Resolve delta real antes de aging/opp (usa created_at_crm → created_at → fallback 0)
   if(!deal._delta && !deal.delta) deal._delta = resolveRealDelta(deal);
   deal.delta = Math.max(0, deal._delta || deal.delta || 0);
+  // Velocity metrics from deal_runtime (populated by PS1 v8 Query D)
+  if(deal._runtime){
+    var rt = deal._runtime;
+    if(rt.velocity_score != null) deal._velocityScore = rt.velocity_score;
+    if(rt.stall_flag != null)     deal._stallFlag    = rt.stall_flag;
+    if(rt.last_event != null)     deal._lastEvent    = rt.last_event;
+    if(rt.last_event_at != null)  deal._lastEventAt  = rt.last_event_at;
+    if(rt.total_events != null)   deal._totalEvents  = rt.total_events;
+    if(rt.dt_sal_conectado != null)     deal._dtSalConectado     = rt.dt_sal_conectado;
+    if(rt.dt_conectado_agendado != null) deal._dtConectadoAgendado = rt.dt_conectado_agendado;
+    if(rt.dt_agendado_opp != null)      deal._dtAgendadoOpp      = rt.dt_agendado_opp;
+    if(rt.dt_opp_negociacao != null)    deal._dtOppNegociacao    = rt.dt_opp_negociacao;
+    if(rt.dt_negociacao_ganho != null)  deal._dtNegociacaoGanho  = rt.dt_negociacao_ganho;
+  }
   if(!deal._aging) deal._aging = calcAgingRisk(deal);
   if(!deal._oppValue){
     var ov = calcOpportunityValue(deal);
@@ -3413,14 +3427,27 @@ function calcTimelineIntelligence(deal){
   var ageBucket=ageDays<=3?'fresh':ageDays<=7?'active':ageDays<=14?'warm':ageDays<=21?'cooling':'stale';
 
   // ── VELOCIDADE DE PROGRESSÃO ──
-  // Mapa de ordem de etapas do SDR
-  var ETAPA_ORDER={'novo lead':1,'dia 01':2,'dia 02':3,'dia 03':4,'dia 04':5,'dia 05':6,'dia 06':7,'conectados':8,'agendamento':9,'reagendamento':10,'entrevista agendada':11};
-  var currentStageOrder=ETAPA_ORDER[etapa]||0;
-  // Velocidade: etapas avançadas / dias. Mais alto = mais rápido
-  var velocity=ageDays>0&&currentStageOrder>0?Math.round(currentStageOrder/ageDays*100)/100:0;
-  // Benchmark médio: ~1 etapa a cada 2 dias = 0.5
-  var velocityLabel=velocity>=1.0?'Acelerado':velocity>=0.5?'Normal':velocity>=0.2?'Lento':'Parado';
-  var velocityScore=velocity>=1.0?100:velocity>=0.5?75:velocity>=0.2?50:velocity>0?25:0;
+  // Prefer Databricks velocity_score (0-1) from deal_runtime when available
+  var velocityScore, velocityLabel;
+  if(deal._velocityScore != null){
+    velocityScore = Math.round(deal._velocityScore * 100);
+    velocityLabel = velocityScore>=80?'Acelerado':velocityScore>=55?'Normal':velocityScore>=30?'Lento':'Parado';
+  } else {
+    var ETAPA_ORDER={'novo lead':1,'dia 01':2,'dia 02':3,'dia 03':4,'dia 04':5,'dia 05':6,'dia 06':7,'conectados':8,'agendamento':9,'reagendamento':10,'entrevista agendada':11};
+    var currentStageOrder=ETAPA_ORDER[etapa]||0;
+    var velocity=ageDays>0&&currentStageOrder>0?Math.round(currentStageOrder/ageDays*100)/100:0;
+    velocityLabel=velocity>=1.0?'Acelerado':velocity>=0.5?'Normal':velocity>=0.2?'Lento':'Parado';
+    velocityScore=velocity>=1.0?100:velocity>=0.5?75:velocity>=0.2?50:velocity>0?25:0;
+  }
+  // Δt breakdown from Databricks (dias por transição)
+  var dtBreakdown = {
+    salConectado:    deal._dtSalConectado     || null,
+    conectadoAgendado: deal._dtConectadoAgendado || null,
+    agendadoOpp:     deal._dtAgendadoOpp      || null,
+    oppNegociacao:   deal._dtOppNegociacao    || null,
+    negociacaoGanho: deal._dtNegociacaoGanho  || null
+  };
+  var stallFlag = deal._stallFlag || false;
 
   // ── SLA E RISCO TEMPORAL ──
   var riskAfter=lc.risk_after||3;
@@ -3469,8 +3496,10 @@ function calcTimelineIntelligence(deal){
 
   // ── PREVISÃO DE FECHAMENTO (se deal aberto) ──
   // Baseado na velocidade atual + etapas restantes até Entrevista Agendada
-  var etapasRestantes=Math.max(0,11-currentStageOrder); // 11 = Entrevista Agendada
-  var estimatedDaysToClose=velocity>0?Math.round(etapasRestantes/velocity):etapasRestantes*3;
+  var _stageOrder = typeof currentStageOrder !== 'undefined' ? currentStageOrder : 0;
+  var _velRaw     = typeof velocity !== 'undefined' ? velocity : 0;
+  var etapasRestantes=Math.max(0,11-_stageOrder); // 11 = Entrevista Agendada
+  var estimatedDaysToClose=_velRaw>0?Math.round(etapasRestantes/_velRaw):etapasRestantes*3;
   var estimatedCloseDate='';
   if(status!=='perdido'&&status!=='ganho'&&createdMs){
     var ecd=new Date(now+estimatedDaysToClose*86400000);
@@ -3537,8 +3566,8 @@ function calcTimelineIntelligence(deal){
     // Idade
     ageDays:ageDays, ageWeeks:ageWeeks, ageBucket:ageBucket,
     // Velocidade
-    velocity:velocity, velocityLabel:velocityLabel, velocityScore:velocityScore,
-    currentStageOrder:currentStageOrder,
+    velocity:_velRaw, velocityLabel:velocityLabel, velocityScore:velocityScore,
+    currentStageOrder:_stageOrder,
     // SLA
     riskAfter:riskAfter, daysOverSLA:daysOverSLA, daysToSLA:daysToSLA,
     slaStatus:slaStatus, slaLabel:slaLabel,
@@ -3560,7 +3589,9 @@ function calcTimelineIntelligence(deal){
     // V10: Response Propensity
     responsePropensity:response_propensity,
     // Ação
-    nextActionTemporal:nextActionTemporal
+    nextActionTemporal:nextActionTemporal,
+    // Databricks Velocity (Δt breakdown por transição de fase)
+    dtBreakdown:dtBreakdown, stallFlag:stallFlag
   };
 }
 window.calcTimelineIntelligence = calcTimelineIntelligence;
