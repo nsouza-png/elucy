@@ -4079,8 +4079,17 @@ function handleElucyResponse(row, pending){
       injectElucyCopy(targetId, parsed.copy_wa||parsed.copy||row.output, parsed.copy_crm||'');
       pushNotification('Copy pronta','Deal '+deal_id,'clipboard',parsed.copy_wa||parsed.copy||row.output,meta);
     }catch(e){
-      injectElucyCopy(targetId, row.output, '');
-      pushNotification('Copy pronta','Deal '+deal_id,'clipboard',row.output,meta);
+      // Output bruto do LLM — separar copy WA, nota CRM e contexto de geração
+      const raw=row.output;
+      const notaM=raw.match(/\*{0,2}NOTA\s*CRM[:\s*]*([\s\S]*?)(?=\*{0,2}CONTEXTO\s*DE\s*GERA|$)/i);
+      const ctxM=raw.match(/\*{0,2}CONTEXTO\s*DE\s*GERA[ÇC][ÃA]O\*{0,2}[\s\S]*/i);
+      // copy WA = tudo antes da NOTA CRM (ou antes de CONTEXTO, ou o texto todo)
+      let waText=raw;
+      const splitIdx=notaM?raw.indexOf(notaM[0]):(ctxM?raw.indexOf(ctxM[0]):-1);
+      if(splitIdx>0) waText=raw.slice(0,splitIdx).trim();
+      const crmText=notaM?notaM[1].trim():'';
+      injectElucyCopy(targetId, waText, crmText);
+      pushNotification('Copy pronta','Deal '+deal_id,'clipboard',waText,meta);
     }
   }
   logDealInteraction(deal_id, type==='analyze'?'analysis':'copy', row.output);
