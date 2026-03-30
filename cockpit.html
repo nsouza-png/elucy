@@ -2962,44 +2962,91 @@ async function callSyncDeals(){
   }
 }
 
-(function initGrowthLoop(){
-  const STALE_MINUTES=15;
-  const POLL_MS=5*60*1000;
+// ── LIVE SYNC LOOP — detecta novos dados no Databricks e atualiza automaticamente ──
+// Estratégia: query leve (MAX event_timestamp) a cada 2min.
+// Se timestamp mudou → re-fetcha pipeline completo silenciosamente.
+// Sem cache, sem batch diário — dados sempre frescos conforme chegam.
+(function initLiveSyncLoop(){
+  var POLL_MS = 2 * 60 * 1000; // 2 minutos
+  var _lastKnownTimestamp = null; // MAX(event_timestamp) do último fetch
+  var _checkInProgress = false;
 
-  function isStale(){
-    if(!_lastSyncAt) return true;
-    return (Date.now()-_lastSyncAt)/60000 > STALE_MINUTES;
+  async function checkForNewData(){
+    var token = localStorage.getItem('elucy_db_token');
+    var qualName = localStorage.getItem('elucy_qualificador_name');
+    if(!token || !qualName) return; // sem credenciais → silencioso
+    if(_checkInProgress) return;
+    _checkInProgress = true;
+    try {
+      // Query leve: apenas o timestamp mais recente do operador
+      var safeQual = qualName.replace(/'/g,"''");
+      var checkSql = "SELECT MAX(event_timestamp) as latest FROM production.diamond.funil_comercial WHERE qualificador_name='" + safeQual + "'";
+      var resp = await fetch(DB_ENDPOINT, {
+        method:'POST',
+        headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+        body: JSON.stringify({statement:checkSql, warehouse_id:DB_WAREHOUSE, wait_timeout:'20s', on_wait_timeout:'CONTINUE'})
+      });
+      if(!resp.ok){ _checkInProgress=false; return; }
+      var data = await resp.json();
+      // Poll se ainda rodando
+      var attempts=0;
+      while(data.status&&(data.status.state==='PENDING'||data.status.state==='RUNNING')&&attempts<8){
+        await new Promise(function(r){setTimeout(r,2000);});
+        var pr = await fetch(DB_ENDPOINT+'/'+data.statement_id,{headers:{'Authorization':'Bearer '+token}});
+        data = await pr.json();
+        attempts++;
+      }
+      var rows = (data.result&&data.result.data_array)||[];
+      var latest = rows.length ? rows[0][0] : null;
+      if(!latest){ _checkInProgress=false; return; }
+
+      if(_lastKnownTimestamp === null){
+        // Primeira verificação — apenas registra o timestamp, não re-fetcha
+        _lastKnownTimestamp = latest;
+        _checkInProgress=false;
+        return;
+      }
+
+      if(latest !== _lastKnownTimestamp){
+        // Dados novos detectados → re-fetcha pipeline silenciosamente
+        _lastKnownTimestamp = latest;
+        var btn = null; // silent — sem indicador de loading no botão
+        var nome = qualName;
+        _syncStatus('sync');
+        fetchPipelineByName(nome, token, btn);
+        var ts = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+        showSyncToast('ok','Pipeline atualizado — novos dados detectados às '+ts);
+      }
+    } catch(e){
+      // silencioso — falha de rede não deve perturbar o operador
+    } finally {
+      _checkInProgress=false;
+    }
   }
 
-  function requestRefresh(){
-    if(!window.IS_REMOTE) return; // modo local usa cockpit-data.js via G4OS
-    if(!isStale()) return;
-    callSyncDeals();
-  }
-
-  // Mantém compatibilidade com G4OS local (postMessage)
+  // Mantém compatibilidade com G4OS local (postMessage de /atualizar-cockpit)
   window.addEventListener('message',function(e){
     if(!e.data||e.data.type!=='g4os:skill:complete'||e.data.skill!=='atualizar-cockpit') return;
-    const old=document.querySelector('script[src^="cockpit-data.js"]');
+    var old=document.querySelector('script[src^="cockpit-data.js"]');
     if(old) old.remove();
     window.COCKPIT_DEALS=null;
     window.COCKPIT_COLS=null;
     window.COCKPIT_UPDATED_AT=null;
-    const ns=document.createElement('script');
+    var ns=document.createElement('script');
     ns.src='cockpit-data.js?t='+Date.now();
     ns.onload=function(){
       if(!window.COCKPIT_DEALS||!window.COCKPIT_DEALS.length) return;
-      const cols=(window.COCKPIT_COLS||[]).map((name,i)=>({name,position:i}));
+      var cols=(window.COCKPIT_COLS||[]).map(function(name,i){return {name:name,position:i};});
       renderLiveDeals(window.COCKPIT_DEALS,cols);
       if(window.COCKPIT_OPERATOR){
-        const nome=window.COCKPIT_OPERATOR;
-        const init=nome.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
+        var nome=window.COCKPIT_OPERATOR;
+        var init=nome.split(' ').map(function(p){return p[0];}).join('').slice(0,2).toUpperCase();
         document.getElementById('chip-name').textContent=nome.split(' ')[0];
         document.getElementById('av-init').textContent=init;
         document.getElementById('op-pill').classList.add('show');
       }
       if(window.COCKPIT_UPDATED_AT){
-        const sb2=document.getElementById('sbdate');
+        var sb2=document.getElementById('sbdate');
         if(sb2) sb2.textContent='Atualizado: '+window.COCKPIT_UPDATED_AT;
       }
       showSyncToast('ok','Pipeline atualizado — '+window.COCKPIT_DEALS.length+' deals');
@@ -3007,8 +3054,12 @@ async function callSyncDeals(){
     document.head.appendChild(ns);
   });
 
-  setTimeout(requestRefresh,3000);
-  setInterval(requestRefresh,POLL_MS);
+  // Inicia o loop — primeira verificação após 10s (deixa o boot completar)
+  setTimeout(checkForNewData, 10000);
+  setInterval(checkForNewData, POLL_MS);
+
+  // Expõe para debug
+  window._liveSyncCheck = checkForNewData;
 })();
 
 // Cmd+, (Mac) / Ctrl+, (Win) → abrir Settings
