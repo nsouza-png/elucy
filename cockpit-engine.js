@@ -2256,46 +2256,67 @@ async function loadTodayStats(){
 }
 window.loadTodayStats = loadTodayStats;
 
-// Conta OPPs reais geradas no mês corrente consultando a tabela deals no Supabase.
-// Estratégia: busca TODOS os deals do operador (sem filtro de data) que estão em etapa/fase OPP.
-// O sync PS1 já traz: ativos + Ganho/Perdido criados no mês. Deals criados antes do mês mas
-// que chegaram a OPP em março também entram via etapa_atual_no_pipeline.
+// Conta OPPs reais geradas no mês corrente.
+// Fonte primária: deal_stage_history WHERE source='databricks' — timestamps reais do HubSpot
+// (populado pelo sync PS1 v6 com event stream granular).
+// Fallback: tabela deals (snapshot atual) quando event stream ainda não foi sincronizado.
 // Resultado cacheado em window._OPP_MENSAL_COUNT para uso imediato em renderHome().
 async function calcOppMensal(){
   var sb=_sb(); if(!sb) return 0;
   var email=getOperatorId(); if(!email) return 0;
-  // Fases que indicam que um deal chegou a nível OPP
-  var FASES_OPP=['Oportunidade','Agendado','Negociação','Negociacao'];
-  // Etapas operacionais OPP (o campo confiável — preenchido em 100% dos deals)
-  var ETAPAS_OPP=['agendamento','reagendamento','entrevista agendada','negociação','negociacao','nova oportunidade','ganho'];
+  var now=new Date();
+  var mesInicio=new Date(now.getFullYear(),now.getMonth(),1).toISOString();
+  // Fases OPP-level no funil_comercial (source of truth: Databricks)
+  var OPP_TO_STAGES=['Oportunidade','Agendado','Negociação','Negociacao'];
 
   try{
-    // Busca todos os deals do operador — sync já filtra por mês no PS1
+    // --- Fonte primária: event stream real do Databricks ---
+    var rEvt=await sb.from('deal_stage_history')
+      .select('deal_id,to_stage,changed_at')
+      .eq('changed_by',email)
+      .eq('source','databricks')
+      .gte('changed_at',mesInicio)
+      .in('to_stage',OPP_TO_STAGES)
+      .limit(500);
+
+    var evtData=rEvt.data||[];
+
+    if(evtData.length>0){
+      // Event stream disponível — count exato por deal_id único
+      var idsOpp=new Set(evtData.map(function(e){return e.deal_id;}));
+      var count=idsOpp.size;
+      window._OPP_MENSAL_COUNT=count;
+      window._OPP_MENSAL_LOADED=true;
+      window._OPP_MENSAL_SOURCE='databricks_events';
+      return count;
+    }
+
+    // --- Fallback: tabela deals (snapshot) ---
+    // Usado enquanto o PS1 v6 ainda não rodou ou o event stream está vazio
+    var FASES_OPP_FB=['Oportunidade','Agendado','Negociação','Negociacao'];
+    var ETAPAS_OPP_FB=['agendamento','reagendamento','entrevista agendada','negociação','negociacao','nova oportunidade','ganho'];
+
     var r=await sb.from('deals')
       .select('deal_id,fase_atual_no_processo,etapa_atual_no_pipeline,status_do_deal,fase_anterior_no_processo')
       .eq('operator_email',email)
       .limit(500);
 
-    var idsOpp=new Set();
+    var idsOppFb=new Set();
     (r.data||[]).forEach(function(d){
       var fase=(d.fase_atual_no_processo||'').toLowerCase();
       var faseAnt=(d.fase_anterior_no_processo||'').toLowerCase();
       var etapa=(d.etapa_atual_no_pipeline||'').toLowerCase();
-
-      // Critério 1: fase atual é OPP-level
-      var faseOpp=FASES_OPP.some(function(f){return fase===f.toLowerCase();});
-      // Critério 2: etapa atual é OPP-level (campo 100% preenchido)
-      var etapaOpp=ETAPAS_OPP.some(function(e){return etapa===e||etapa.includes(e);});
-      // Critério 3: deal fechado que tinha fase anterior OPP (veio de reunião/negociação)
-      var faseAntOpp=FASES_OPP.some(function(f){return faseAnt===f.toLowerCase();});
-
-      if(faseOpp||etapaOpp||faseAntOpp) idsOpp.add(d.deal_id);
+      var faseOpp=FASES_OPP_FB.some(function(f){return fase===f.toLowerCase();});
+      var etapaOpp=ETAPAS_OPP_FB.some(function(e){return etapa===e||etapa.includes(e);});
+      var faseAntOpp=FASES_OPP_FB.some(function(f){return faseAnt===f.toLowerCase();});
+      if(faseOpp||etapaOpp||faseAntOpp) idsOppFb.add(d.deal_id);
     });
 
-    var count=idsOpp.size;
-    window._OPP_MENSAL_COUNT=count;
+    var countFb=idsOppFb.size;
+    window._OPP_MENSAL_COUNT=countFb;
     window._OPP_MENSAL_LOADED=true;
-    return count;
+    window._OPP_MENSAL_SOURCE='deals_snapshot';
+    return countFb;
   }catch(e){
     console.warn('[calcOppMensal] error:',e);
     window._OPP_MENSAL_LOADED=false;
@@ -2680,9 +2701,11 @@ async function renderHome(){
     else if(semanas>0) ritmoLabel=Math.ceil(ritmoNecessario/semanas)+' OPP/semana para bater a meta';
     else ritmoLabel=ritmoNecessario+' OPP restantes';
 
+    var oppSrc=window._OPP_MENSAL_SOURCE||'deals_snapshot';
+    var oppSrcLabel=oppSrc==='databricks_events'?'<span style="font-size:9px;color:#22c55e;margin-left:6px">● event stream</span>':'<span style="font-size:9px;color:var(--text2);margin-left:6px">● snapshot</span>';
     html += '<div class="home-block" id="home-opp-block">'
       + '<div class="home-block-title" style="display:flex;justify-content:space-between;align-items:center">'
-      + '<span>OPPs Geradas no Mês</span>'
+      + '<span>OPPs Geradas no Mês'+oppSrcLabel+'</span>'
       + '<button class="home-fm-btn" onclick="window.toggleOppList(this)">Detalhar ▾</button>'
       + '</div>'
       + '<div style="display:flex;align-items:baseline;gap:10px;margin:8px 0 4px">'
@@ -2763,32 +2786,60 @@ window.toggleOppList = async function(btn){
   var email=getOperatorId(); if(!email) return;
   var now=new Date();
   var mesInicio=new Date(now.getFullYear(),now.getMonth(),1).toISOString();
+  var OPP_TO_STAGES=['Oportunidade','Agendado','Negociação','Negociacao'];
   var FASES_OPP=['Oportunidade','Agendado','Negociação','Negociacao'];
   var ETAPAS_OPP=['Agendamento','Reagendamento','Entrevista Agendada','Negociação','Negociacao','Ganho'];
 
   try{
-    // Busca todos os deals do mês que são ou foram OPP
-    var r=await sb.from('deals')
-      .select('deal_id,contact_name,email_lead,linha_de_receita_vigente,fase_atual_no_processo,etapa_atual_no_pipeline,status_do_deal,fase_anterior_no_processo,tier_da_oportunidade,valor_da_oportunidade,created_at_crm')
-      .eq('operator_email',email)
-      .gte('created_at_crm',mesInicio)
-      .order('created_at_crm',{ascending:false})
-      .limit(200);
+    // Tenta fonte primária: event stream Databricks (PS1 v6)
+    var rEvt=await sb.from('deal_stage_history')
+      .select('deal_id,to_stage,changed_at')
+      .eq('changed_by',email)
+      .eq('source','databricks')
+      .gte('changed_at',mesInicio)
+      .in('to_stage',OPP_TO_STAGES)
+      .limit(500);
 
-    var allRows=(r.data||[]);
-    // Filtra apenas os deals OPP
-    var oppRows=allRows.filter(function(d){
-      var fase=(d.fase_atual_no_processo||'').toLowerCase();
-      var faseAnt=(d.fase_anterior_no_processo||'').toLowerCase();
-      var etapa=(d.etapa_atual_no_pipeline||'').toLowerCase();
-      var status=(d.status_do_deal||'').toLowerCase();
-      var isActiveOpp=FASES_OPP.some(function(f){return fase.includes(f.toLowerCase());});
-      var isClosedOpp=(status==='ganho'||status==='perdido')&&(
-        FASES_OPP.some(function(f){return faseAnt.includes(f.toLowerCase());})||
-        ETAPAS_OPP.some(function(e){return etapa.includes(e.toLowerCase());})
-      );
-      return isActiveOpp||isClosedOpp;
-    });
+    var evtData=rEvt.data||[];
+    var oppDealIds=new Set(evtData.map(function(e){return e.deal_id;}));
+
+    var oppRows=[];
+    if(oppDealIds.size>0){
+      // Busca detalhes dos deals identificados pelo event stream
+      var idList=Array.from(oppDealIds).slice(0,200);
+      var rD=await sb.from('deals')
+        .select('deal_id,contact_name,email_lead,linha_de_receita_vigente,fase_atual_no_processo,etapa_atual_no_pipeline,status_do_deal,tier_da_oportunidade,valor_da_oportunidade')
+        .eq('operator_email',email)
+        .in('deal_id',idList);
+      oppRows=rD.data||[];
+      // Para deals não encontrados em deals (já saíram do pipeline ativo), mostra só deal_id
+      oppDealIds.forEach(function(id){
+        if(!oppRows.find(function(d){return d.deal_id===id;})){
+          oppRows.push({deal_id:id,contact_name:'',email_lead:'',linha_de_receita_vigente:'',fase_atual_no_processo:'',etapa_atual_no_pipeline:'',status_do_deal:'Fechado',tier_da_oportunidade:'',valor_da_oportunidade:0});
+        }
+      });
+    } else {
+      // Fallback: tabela deals (snapshot)
+      var r=await sb.from('deals')
+        .select('deal_id,contact_name,email_lead,linha_de_receita_vigente,fase_atual_no_processo,etapa_atual_no_pipeline,status_do_deal,fase_anterior_no_processo,tier_da_oportunidade,valor_da_oportunidade,created_at_crm')
+        .eq('operator_email',email)
+        .gte('created_at_crm',mesInicio)
+        .order('created_at_crm',{ascending:false})
+        .limit(200);
+      var allRows=(r.data||[]);
+      oppRows=allRows.filter(function(d){
+        var fase=(d.fase_atual_no_processo||'').toLowerCase();
+        var faseAnt=(d.fase_anterior_no_processo||'').toLowerCase();
+        var etapa=(d.etapa_atual_no_pipeline||'').toLowerCase();
+        var status=(d.status_do_deal||'').toLowerCase();
+        var isActiveOpp=FASES_OPP.some(function(f){return fase.includes(f.toLowerCase());});
+        var isClosedOpp=(status==='ganho'||status==='perdido')&&(
+          FASES_OPP.some(function(f){return faseAnt.includes(f.toLowerCase());})||
+          ETAPAS_OPP.some(function(e){return etapa.includes(e.toLowerCase());})
+        );
+        return isActiveOpp||isClosedOpp;
+      });
+    }
 
     if(!oppRows.length){
       listEl.innerHTML='<div style="color:var(--text2);font-size:12px;padding:6px 0">Nenhuma OPP encontrada neste mês. Dados sincronizados do CRM.</div>';
