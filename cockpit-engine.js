@@ -1068,6 +1068,72 @@ function renderTaskRecommendation(deals){
   }).join('');
 }
 
+function renderTaskCardFromItem(t, idx){
+  var d = t.deal;
+  var taskType = t.taskType||'follow_up';
+  var nba      = t.label||d._nextAction&&(d._nextAction.label||d._nextAction)||'Realizar FUP';
+  var aging    = d.delta||0;
+  var ks       = d._transitionRuntime&&d._transitionRuntime.hard_blocks&&d._transitionRuntime.hard_blocks.length>0;
+
+  var taskTypeLabels = {
+    follow_up:'FUP', social_dm:'DM', handoff_prep:'Handoff',
+    reativacao:'Reativação', no_show_recovery:'No-Show',
+    framework_gap:'Framework Gap', authority_confirmation:'Autoridade',
+    pain_quantification:'Quantificar Dor', cadence:'Cadência'
+  };
+  var taskLabel = taskTypeLabels[taskType]||taskType;
+  var taskColor = taskType==='follow_up'?'task-c-accent':taskType==='social_dm'?'task-c-text2':taskType==='handoff_prep'?'task-c-green':taskType==='reativacao'?'task-c-yellow':taskType==='no_show_recovery'?'task-c-red':'task-c-text2';
+  var agingClass = aging>40?'task-aging-critical':aging>20?'task-aging-high':'task-aging-medium';
+  var deltaColor = aging>=40?'var(--red)':aging>=20?'var(--yellow)':'var(--text2)';
+
+  var tier  = (d.tier_da_oportunidade||d.tier||'').toLowerCase();
+  var tierColor = tier==='diamond'?'var(--green)':tier==='gold'?'var(--accent2)':tier==='silver'?'var(--text2)':'var(--clay)';
+
+  var fmtBRL = window.fmtBRL||function(v){return v?'R$'+Math.round(v/1000)+'k':'—';};
+  var oppVal = d._oppValue||d.revenueRaw||0;
+  var valStr = oppVal>0 ? fmtBRL(oppVal) : '—';
+  var linha  = d.linhaReceita||d.linha_de_receita_vigente||d._revLine||'—';
+  var empresa = d.empresa||d.company||'';
+  var cargo   = d.cargo||d.title||'';
+  var nome    = d.nome||d.name||d.person_name||d.emailLead||'Lead';
+  var etapa   = d.etapa||d.etapa_atual_no_pipeline||'';
+  var fase    = d.fase||d.fase_atual_no_processo||'';
+
+  // id para texOpen — usa a chave do map (t.id)
+  var queueId = _escHtml(String(t.id||idx));
+
+  var cadBadge = t.cadence ? '<span class="tag" style="font-size:9px;color:var(--accent2)">⚡ '+_escHtml(t.cadence.templateName||'Cadência')+'</span>' : '';
+
+  return '<div class="task-card" data-task-idx="'+idx+'" data-qid="'+queueId+'" style="cursor:pointer" onclick="window.texOpen('+idx+')">'
+    + '<div class="task-card-main">'
+      + '<div class="task-card-top">'
+        + '<span class="task-type-badge '+taskColor+'">'+taskLabel+'</span>'
+        + (ks?'<span class="tag is-risk" style="font-size:9px">Kill Switch</span>':'')
+        + cadBadge
+        + (tier?'<span class="tag" style="color:'+tierColor+';font-size:9px">'+tier.toUpperCase()+'</span>':'')
+        + '<span class="task-aging '+agingClass+'">D'+aging+'</span>'
+      + '</div>'
+      + '<h3 class="task-card-title">'+_escHtml(nome)+'</h3>'
+      + '<div class="task-card-sub">'+_escHtml(empresa+(cargo?' · '+cargo:''))+'</div>'
+      + '<div style="display:flex;gap:10px;font-size:11px;color:var(--text2);margin:4px 0 8px">'
+        + (etapa?'<span>'+_escHtml(_fmtEtapa(etapa))+'</span>':'')
+        + (fase?'<span>'+_escHtml(fase)+'</span>':'')
+        + '<span style="color:'+deltaColor+'">'+aging+'d</span>'
+      + '</div>'
+      + '<div class="task-card-nba">→ '+_escHtml(String(nba))+'</div>'
+      + '<div class="task-actions">'
+        + '<button class="task-btn is-primary" onclick="event.stopPropagation();window.texOpen('+idx+')">Executar →</button>'
+        + '<button class="task-btn" onclick="event.stopPropagation();window.taskQuickAction&&window.taskQuickAction(\''+queueId+'\',\'fup\')">Gerar FUP</button>'
+        + '<button class="task-btn" onclick="event.stopPropagation();window.taskQuickAction&&window.taskQuickAction(\''+queueId+'\',\'analyze\')">Analisar</button>'
+      + '</div>'
+    + '</div>'
+    + '<div class="task-card-side">'
+      + '<div class="kpi" style="padding:10px"><div class="kpi-l">Valor</div><div class="kpi-v" style="font-size:18px">'+valStr+'</div></div>'
+      + '<div class="kpi" style="padding:10px"><div class="kpi-l">Linha</div><div class="kpi-v" style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_escHtml(_fmtLinha(linha))+'</div></div>'
+    + '</div>'
+  + '</div>';
+}
+
 function renderTaskCard(deal, idx){
   var name  = deal.name||deal.person_name||deal.nome||'Lead';
   var linha = deal.linha_de_receita_vigente||deal._revLine||'—';
@@ -1138,33 +1204,18 @@ function renderTaskCard(deal, idx){
   + '</div>';
 }
 
-function renderTaskList(deals){
+function renderTaskListFromQueue(queue){
   var el = document.getElementById('tasks-list');
   if(!el) return;
-  if(!deals||!deals.length){
+  if(!queue||!queue.length){
     el.innerHTML = '<div class="task-empty">Nenhuma tarefa para o modo e fila selecionados.</div>';
-    // Limpa fila para evitar stale
-    window._texV2Queue = null;
     return;
   }
-  // Monta a fila via buildTaskQueue() — garante o mesmo formato enriquecido que texOpen/texUpdateUI esperam
-  // Filtra para conter apenas os deals visíveis (mesmo conjunto de getFilteredTaskDeals)
-  var visibleIds = {};
-  deals.forEach(function(d){ visibleIds[d.id||d.contact_id||d.deal_id||''] = true; });
-  var fullQueue = buildTaskQueue(null, null, null, null, null);
-  window._texV2Queue = fullQueue.filter(function(t){
-    var id = t.id||'';
-    var dealId = (t.deal&&(t.deal.id||t.deal.contact_id||t.deal.deal_id))||'';
-    return visibleIds[id] || visibleIds[dealId];
-  });
-  // Se não filtrou nada (ids sem match), usa a fila completa como fallback
-  if(!window._texV2Queue.length) window._texV2Queue = fullQueue;
-  el.innerHTML = deals.map(function(deal, idx){ return renderTaskCard(deal, idx); }).join('');
+  el.innerHTML = queue.map(function(t, idx){ return renderTaskCardFromItem(t, idx); }).join('');
 }
 
 function renderTasksV2(){
-  // summary line
-  var sumEl = document.getElementById('tasks-summary-line');
+  var sumEl  = document.getElementById('tasks-summary-line');
   var focusEl = document.getElementById('tasks-focus-label');
   var activeMode = ELUCY_TASKS_STATE.mode;
   var focusDef = TASK_FOCUS_MODES.find(function(m){return m.slug===activeMode;})||{label:'Todos'};
@@ -1173,11 +1224,36 @@ function renderTasksV2(){
   renderTaskFocusModes();
   renderTaskQueues();
 
-  var deals = getFilteredTaskDeals();
-  if(sumEl) sumEl.textContent = deals.length + ' tarefa' + (deals.length!==1?'s':'') + ' priorizadas';
+  // Lê filtros avançados do painel
+  var filterFase  = (document.getElementById('tf-fase')||{}).value||null;
+  var filterCiclo = (document.getElementById('tf-ciclo')||{}).value||null;
+  var filterTier  = (document.getElementById('tf-tier')||{}).value||null;
 
+  // Monta fila via buildTaskQueue — mesmo formato que texOpen usa
+  var filterType = ELUCY_TASKS_STATE.queue !== 'all' ? ELUCY_TASKS_STATE.queue : null;
+  var queue = buildTaskQueue(filterType, null, filterFase||null, filterCiclo||null, null);
+
+  // Filtro de tier (não suportado nativamente pelo buildTaskQueue)
+  if(filterTier){
+    queue = queue.filter(function(t){
+      return (t.deal.tier_da_oportunidade||t.deal.tier||'').toLowerCase() === filterTier;
+    });
+  }
+
+  // Filtro de focus mode (mapeado para critérios de deal)
+  if(activeMode && activeMode !== 'all'){
+    queue = queue.filter(function(t){ return matchFocusMode(t.deal, activeMode); });
+  }
+
+  // Guarda para texOpen usar — já no formato correto
+  window._texV2Queue = queue;
+
+  if(sumEl) sumEl.textContent = queue.length + ' tarefa' + (queue.length!==1?'s':'') + ' priorizadas';
+
+  // Converte para array de deals para os renders de card/banner
+  var deals = queue.map(function(t){ return t.deal; });
   renderTaskRecommendation(deals);
-  renderTaskList(deals);
+  renderTaskListFromQueue(queue);
 }
 
 // Public controls
@@ -1491,13 +1567,13 @@ function _texStopTimer(){
   if(_texTimer){ clearInterval(_texTimer); _texTimer=null; }
 }
 
-// Open execution mode — aceita idx (numérico) ou dealId (string)
-window.texOpen = function(idxOrId){
-  // Tasks V2: usa a fila enriquecida montada pelo renderTaskList
+// Open execution mode at given task index
+window.texOpen = function(idx){
+  // Tasks V2: usa a fila já montada por renderTasksV2 (buildTaskQueue filtrado)
   if(window._texV2Queue && window._texV2Queue.length){
     _texQueue = window._texV2Queue;
   } else {
-    // Fallback legado: reconstruir pela fila bruta
+    // Fallback legado
     var filterEl = document.querySelector('.fchip.on');
     var filterType = filterEl && filterEl.dataset.tfilter !== 'all' ? filterEl.dataset.tfilter : null;
     var rlEl = document.querySelector('.task-rl-chip.on');
@@ -1505,23 +1581,7 @@ window.texOpen = function(idxOrId){
     _texQueue = buildTaskQueue(filterType, filterRevLine);
   }
   if(!_texQueue.length) return;
-
-  var targetIdx = 0;
-  if(typeof idxOrId === 'number'){
-    // idx numérico — posição direta na fila
-    targetIdx = Math.min(idxOrId, _texQueue.length - 1);
-  } else {
-    // string dealId — buscar pela id na fila
-    var found = -1;
-    for(var i=0;i<_texQueue.length;i++){
-      var t=_texQueue[i];
-      var tid = t.id||(t.deal&&(t.deal.id||t.deal.contact_id||t.deal.deal_id))||'';
-      if(String(tid)===String(idxOrId)){ found=i; break; }
-    }
-    targetIdx = found>=0 ? found : 0;
-  }
-
-  _texIdx = targetIdx;
+  _texIdx = Math.min(Number(idx)||0, _texQueue.length - 1);
   document.getElementById('tex-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
   _texUpdateUI();
