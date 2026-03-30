@@ -880,8 +880,12 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 .intel-section-title{font-family:var(--font-title);font-size:14px;font-weight:800;margin-bottom:10px;color:var(--text);display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:1px}
 .intel-section-num{background:var(--accent);color:#fff;width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0}
 .intel-empty{text-align:center;padding:40px;color:var(--text2);font-size:13px}
-.intel-dims{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
-.intel-dim{padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.15s;text-transform:uppercase;letter-spacing:.5px}
+.intel-l1{display:flex;gap:0;margin-bottom:0;border-bottom:2px solid var(--border)}
+.intel-l1-tab{padding:8px 20px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;transition:.15s;letter-spacing:.3px;border-bottom:2px solid transparent;margin-bottom:-2px;user-select:none}
+.intel-l1-tab:hover{color:var(--text)}
+.intel-l1-tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.intel-dims{display:flex;gap:4px;flex-wrap:wrap;margin-top:10px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.intel-dim{padding:4px 10px;border-radius:5px;font-size:10px;font-weight:700;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.15s;text-transform:uppercase;letter-spacing:.5px}
 .intel-dim:hover{border-color:var(--accent);color:var(--accent2)}
 .intel-dim.on{background:var(--adim);border-color:var(--accent);color:var(--accent2)}
 .intel-loading{text-align:center;padding:30px;color:var(--text2);font-size:12px}
@@ -1562,27 +1566,17 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
       </div>
     </div>
     <div class="screen" id="screen-intelligence">
-      <div style="margin-bottom:16px">
-        <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:3px">Inteligência Operacional</div>
-        <div style="font-size:12px;color:var(--text2)" id="intel-subtitle">Análise automática do pipeline — carregue deals para ativar</div>
+      <!-- L1: 5 tabs principais -->
+      <div class="intel-l1" id="intel-l1">
+        <span class="intel-l1-tab on" onclick="window._intelL1('overview',this)">Overview</span>
+        <span class="intel-l1-tab" onclick="window._intelL1('performance',this)">Performance</span>
+        <span class="intel-l1-tab" onclick="window._intelL1('pipeline',this)">Pipeline</span>
+        <span class="intel-l1-tab" onclick="window._intelL1('engines',this)">Engines</span>
+        <span class="intel-l1-tab" onclick="window._intelL1('strategic',this)">Strategic</span>
       </div>
-      <div class="intel-dims" id="intel-dims">
-        <span class="intel-dim on" onclick="window._intelDim('global',this)">Global</span>
-        <span class="intel-dim" onclick="window._intelDim('operator',this)">Operador</span>
-        <span class="intel-dim" onclick="window._intelDim('line',this)">Linha</span>
-        <span class="intel-dim" onclick="window._intelDim('stage',this)">Etapa</span>
-        <span class="intel-dim" onclick="window._intelDim('channel',this)">Canal</span>
-        <span class="intel-dim" onclick="window._intelDim('task',this)">Tasks</span>
-        <span class="intel-dim" onclick="window._intelDim('value',this)">Valor</span>
-        <span class="intel-dim" onclick="window._intelDim('forecast',this)" style="border-color:var(--accent2);color:var(--accent2)">Forecast</span>
-        <span class="intel-dim" onclick="window._intelDim('framework',this)" style="border-color:var(--clay);color:var(--clay)">Framework</span>
-        <span class="intel-dim" onclick="window._intelDim('performance',this)" style="border-color:var(--gold);color:var(--gold)">Performance V3</span>
-        <span class="intel-dim" onclick="window._intelDim('enterprise',this)" style="border-color:var(--green);color:var(--green)">Enterprise</span>
-        <span class="intel-dim" onclick="window._intelDim('rfv',this)" style="border-color:#a78bfa;color:#a78bfa">RFV</span>
-        <span class="intel-dim" onclick="window._intelDim('spin',this)" style="border-color:var(--yellow);color:var(--yellow)">SPIN Audit</span>
-        <span class="intel-dim" onclick="window._intelDim('advisor',this)" style="border-color:var(--accent2);color:var(--accent2)">Trusted Advisor</span>
-        <span class="intel-dim" onclick="window._intelDim('bowtie',this)" style="border-color:#f97316;color:#f97316">⊞ Bowtie</span>
-      </div>
+      <!-- L2: subtabs (renderizadas dinamicamente por JS) -->
+      <div class="intel-dims" id="intel-dims" style="display:none"></div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px" id="intel-subtitle"></div>
       <div id="intel-content">
         <div class="intel-empty">Carregue o pipeline para visualizar a análise de inteligência.</div>
       </div>
@@ -1820,7 +1814,12 @@ function setScreen(n,el,skipHash){
   if(!skipHash) history.replaceState(null,'','#'+name);
   if(name==='home' && window.renderHome) window.renderHome();
   if(name==='tasks' && window.renderTaskRunner) window.renderTaskRunner();
-  if(name==='intelligence') renderIntelligence();
+  if(name==='intelligence'){
+    // Inicializa L1 overview na primeira visita (ou re-ativa tab atual)
+    var l1El=document.querySelector('.intel-l1-tab.on');
+    if(!l1El){ var firstL1=document.querySelector('.intel-l1-tab'); if(firstL1) window._intelL1('overview',firstL1); }
+    else renderIntelligence();
+  }
   if(name==='reports') loadReportsScreen();
   if(name==='prevendas' && window.ReportsV4) window.ReportsV4.renderReportsV4('screen-reports-v4');
   if(name==='playbooks') renderPlaybooks();
@@ -6225,30 +6224,102 @@ function quickNote(id){
 // ── INTELLIGENCE ENGINE — Dashboard Inteligente ──────────────────────
 
 // ── INTELLIGENCE: Dimensioned Analytics (V4 Enterprise) ──────────
-var _intelCurrentDim='global';
+// ── INTEL NAV V2 — 2-level architecture ──────────────────────────────────────
+// L1: overview | performance | pipeline | engines | strategic
+// L2: subtabs per section (rendered dynamically)
+var _intelCurrentL1 = 'overview';
+var _intelCurrentDim = 'global'; // legacy compat
 
-window._intelDim=function(dim,el){
-  _intelCurrentDim=dim;
-  document.querySelectorAll('.intel-dim').forEach(function(c){c.classList.remove('on');});
+var _INTEL_SUBTABS = {
+  overview:    [],  // no subtabs — single view
+  performance: [],  // no subtabs — single Performance V3 view
+  pipeline:    [
+    { id:'line',    label:'Linha' },
+    { id:'stage',   label:'Etapa' },
+    { id:'channel', label:'Canal' },
+    { id:'value',   label:'Valor' }
+  ],
+  engines: [
+    { id:'forecast',  label:'Forecast' },
+    { id:'framework', label:'Framework' },
+    { id:'task',      label:'Signals' },
+    { id:'operator',  label:'Data Quality' }
+  ],
+  strategic: [
+    { id:'enterprise', label:'Enterprise' },
+    { id:'advisor',    label:'Trusted Advisor' },
+    { id:'rfv',        label:'RFV' },
+    { id:'spin',       label:'Audit' },
+    { id:'bowtie',     label:'Bowtie' }
+  ]
+};
+
+// Default sub-dim for each L1
+var _INTEL_L1_DEFAULT = {
+  overview:    'global',
+  performance: 'performance',
+  pipeline:    'line',
+  engines:     'forecast',
+  strategic:   'enterprise'
+};
+
+window._intelL1 = function(section, el) {
+  _intelCurrentL1 = section;
+  document.querySelectorAll('.intel-l1-tab').forEach(function(t){ t.classList.remove('on'); });
   if(el) el.classList.add('on');
-  var perfEl=document.getElementById('perf-report-v3');
-  var intelEl=document.getElementById('intel-content');
-  if(dim==='performance'){
-    if(intelEl) intelEl.style.display='none';
-    if(perfEl){ perfEl.style.display='block'; perfEl.innerHTML='<div style="padding:20px;color:var(--text2)">Calculando Performance Report...</div>'; }
-    if(window.switchPerfPeriod){
+
+  var dimsEl = document.getElementById('intel-dims');
+  var subtabs = _INTEL_SUBTABS[section] || [];
+
+  if(subtabs.length) {
+    dimsEl.style.display = 'flex';
+    dimsEl.innerHTML = subtabs.map(function(s){
+      return '<span class="intel-dim" onclick="window._intelDim(\''+s.id+'\',this)">'+s.label+'</span>';
+    }).join('');
+    // activate first subtab
+    var firstTab = dimsEl.querySelector('.intel-dim');
+    if(firstTab) firstTab.classList.add('on');
+    _intelCurrentDim = _INTEL_L1_DEFAULT[section];
+  } else {
+    dimsEl.style.display = 'none';
+    dimsEl.innerHTML = '';
+    _intelCurrentDim = _INTEL_L1_DEFAULT[section];
+  }
+
+  _intelRenderCurrent();
+};
+
+window._intelDim = function(dim, el) {
+  _intelCurrentDim = dim;
+  document.querySelectorAll('.intel-dim').forEach(function(c){ c.classList.remove('on'); });
+  if(el) el.classList.add('on');
+  _intelRenderCurrent();
+};
+
+function _intelRenderCurrent() {
+  var dim = _intelCurrentDim;
+  var perfEl = document.getElementById('perf-report-v3');
+  var intelEl = document.getElementById('intel-content');
+
+  if(dim === 'performance') {
+    if(intelEl) intelEl.style.display = 'none';
+    if(perfEl) {
+      perfEl.style.display = 'block';
+      perfEl.innerHTML = '<div style="padding:20px;color:var(--text2)">Calculando Performance Report...</div>';
+    }
+    if(window.switchPerfPeriod) {
       window.switchPerfPeriod('month');
-    } else if(window.calcPerformanceReportV3){
+    } else if(window.calcPerformanceReportV3) {
       window.calcPerformanceReportV3().then(function(report){
         if(report && window.renderPerformanceReportV3) window.renderPerformanceReportV3(report);
       });
     }
     return;
   }
-  if(intelEl) intelEl.style.display='block';
-  if(perfEl) perfEl.style.display='none';
+  if(intelEl) intelEl.style.display = 'block';
+  if(perfEl) perfEl.style.display = 'none';
   renderIntelligence();
-};
+}
 
 function renderIntelligence(){
   const map=window._COCKPIT_DEAL_MAP;
@@ -6263,7 +6334,8 @@ function renderIntelligence(){
   const AE=window.AnalyticsEngine;
   if(!AE){ct.innerHTML='<div class="intel-empty">Analytics Engine não carregado.</div>';return;}
   const deals=allDeals.filter(d=>{const s=(d.statusDeal||'').toLowerCase();return s!=='perdido'&&s!=='ganho'&&s!=='desqualificado';});
-  if(sub) sub.textContent=deals.length+' deals ativos — '+new Date().toLocaleDateString('pt-BR')+' — dim: '+_intelCurrentDim.toUpperCase();
+  var _l1Labels = {overview:'Overview',performance:'Performance',pipeline:'Pipeline',engines:'Engines',strategic:'Strategic'};
+  if(sub) sub.textContent=deals.length+' deals ativos · '+new Date().toLocaleDateString('pt-BR')+(_intelCurrentL1 && _intelCurrentL1!=='overview' ? ' · '+(_l1Labels[_intelCurrentL1]||'') : '');
 
   ct.innerHTML='<div class="intel-loading">Calculando...</div>';
   var dim=_intelCurrentDim;
