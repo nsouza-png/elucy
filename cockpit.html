@@ -7149,51 +7149,57 @@ function initSlackAlerts(){
 // ══════════════════════════════════════════════════════════════
 var _OB_STEPS = [
   {
-    target: '.ntab:nth-child(1)',  // Home tab
+    target: '[onclick*="setScreen(\'home"]',
     title: 'Bem-vindo ao Elucy',
-    desc: 'Este é seu cockpit de vendas inteligente. A Home mostra seus OKRs conectados ao funil real, foco do dia e performance — tudo com dados do Databricks em tempo real.',
+    desc: 'Seu cockpit de Revenue Intelligence. A Home mostra o foco do dia, métricas de hoje, performance e os 5 deals que precisam de ação imediata — tudo sincronizado com o Databricks.',
     pos: 'bottom'
   },
   {
-    target: '#deal-list',  // Sidebar deal list
-    title: 'Sidebar de Deals',
-    desc: 'Todos os seus deals ativos ficam aqui. Use os filtros por fase, etapa, tier, linha de receita, aging, canal e sinais para encontrar rapidamente o que precisa.',
+    target: '#deal-list',
+    title: 'Seus Deals Ativos',
+    desc: 'Todos os seus deals ficam aqui. Filtre por fase, tier, aging e sinais para encontrar o que precisa. Clique em qualquer deal para abrir o painel completo de inteligência.',
     pos: 'bottom'
   },
   {
-    target: '.ntab:nth-child(2)',  // Pipeline tab
+    target: '[onclick*="setScreen(\'pipeline"]',
     title: 'Pipeline',
-    desc: 'Visualize seus deals com todos os detalhes: temperatura, sinais, forecast e aging. Clique em qualquer deal para ver o painel completo de inteligência e gerar copy.',
+    desc: 'Visão completa dos seus deals com temperatura, forecast V7, sinais de risco e aging. Clique em um deal para gerar copy calibrada, análise SPICED e next action.',
     pos: 'bottom'
   },
   {
-    target: '.ntab:nth-child(3)',  // Tasks tab
-    title: 'Task Runner',
-    desc: 'Suas tarefas priorizadas pelo DAG de 25 camadas. O Elucy analisa cada deal e gera a próxima ação exata — follow-up, qualificação, agendamento, handoff.',
+    target: '[onclick*="setScreen(\'tasks"]',
+    title: 'Mesa de Execução',
+    desc: 'Suas tarefas priorizadas pelo DAG de 25 camadas. O Elucy define a próxima ação exata — follow-up, qualificação, agendamento, handoff — ordenadas por valor × urgência.',
     pos: 'bottom'
   },
   {
-    target: '.ntab:nth-child(4)',  // DM tab
-    title: 'DM War Room',
-    desc: 'Cadências de social selling no Instagram e LinkedIn. Pipeline visual de DMs com sequências automatizadas e deep link direto pro WhatsApp.',
-    pos: 'bottom'
-  },
-  {
-    target: '.ntab:nth-child(5)',  // Reports tab
+    target: '[onclick*="setScreen(\'reports"]',
     title: 'Reports',
-    desc: 'Seu relatório de performance: conversão por linha de receita, taxa de handoff, DQI e score de operador. Filtrado automaticamente pelo seu qualificador.',
+    desc: 'Seu relatório de performance: conversão por linha de receita, taxa de handoff, DQI, score de operador e XP acumulado. Filtrado automaticamente pelo seu qualificador.',
     pos: 'bottom'
   },
   {
-    target: '.ntab:nth-child(6)',  // Intel tab
+    target: '[onclick*="setScreen(\'prevendas"]',
+    title: 'Pre-Vendas',
+    desc: 'Gestão de leads em fase de prospecção e qualificação. Acompanhe o pipeline de entrada e leads em processo de conexão antes do agendamento.',
+    pos: 'bottom'
+  },
+  {
+    target: '[onclick*="setScreen(\'intelligence"]',
     title: 'Intelligence',
-    desc: 'Analytics completo do pipeline: Score V9, sinais de risco, distribuição por canal, forecast agregado e Data Quality Index. Dados reais, zero achismo.',
+    desc: 'Analytics completo: Score V9, conversão por canal e linha de receita, sinais de risco, forecast agregado e Data Quality Index. Dados reais, zero achismo.',
     pos: 'bottom'
   },
   {
-    target: '#op-pill',  // User chip / operator pill
+    target: '[onclick*="setScreen(\'playbooks"]',
+    title: 'Playbooks',
+    desc: 'Guias de abordagem por persona e framework: Challenger para Titan, SPICED para Builder, SPIN para Executor. Consulte antes de cada call para calibrar o tom certo.',
+    pos: 'bottom'
+  },
+  {
+    target: '.chip',
     title: 'Seu Perfil',
-    desc: 'Aqui fica seu nível, XP e streak. O Elucy gamifica sua operação — cada tarefa executada, cada deal qualificado e cada handoff gera pontos. Agora é só operar!',
+    desc: 'Seu nível, XP e streak ficam aqui. Cada tarefa executada, deal qualificado e handoff gera pontos. Clique para configurações e ajustar seu modo de foco.',
     pos: 'left',
     last: true
   }
