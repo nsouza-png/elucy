@@ -2499,12 +2499,16 @@ async function renderHome(){
   var fupPct = meta.fups>0 ? Math.min(100,Math.round((todayStats.fups||0)/meta.fups*100)) : 0;
   var qualPct = meta.qualificacoes>0 ? Math.min(100,Math.round((todayStats.qualificacoes||0)/meta.qualificacoes*100)) : 0;
   var handPct = meta.handoffs>0 ? Math.min(100,Math.round((todayStats.handoffs||0)/meta.handoffs*100)) : 0;
-  // OPP mensal — conta deals em fase oportunidade/negociacao no pipe atual
+  // OPP mensal — deals que chegaram a etapa de handoff (agendamento/negociação/reunião)
+  // Usa etapa_atual_no_pipeline pois fase_atual_no_processo fica vazia em ~80% dos deals no Supabase
   var metaMensal = _operatorCtx.meta_mensal || {};
   var oppTarget = metaMensal.opp || 15;
+  var OPP_ETAPAS = ['agendamento','reagendamento','entrevista agendada','negociação','negociacao','oportunidade','ganho'];
   var oppActual = allDeals.filter(function(d){
-    var fase = (d._fase || d.fase || d.fase_atual_no_processo || '').toLowerCase();
-    return fase === 'oportunidade' || fase.includes('negoc');
+    var etapa = (d.etapa || d.etapa_atual_no_pipeline || '').toLowerCase();
+    var fase  = (d._fase || d.fase || d.fase_atual_no_processo || '').toLowerCase();
+    return OPP_ETAPAS.some(function(e){ return etapa===e || etapa.includes(e); })
+        || OPP_ETAPAS.some(function(e){ return fase===e || fase.includes(e); });
   }).length;
   var oppPct = oppTarget > 0 ? Math.min(100, Math.round(oppActual / oppTarget * 100)) : 0;
 
