@@ -2258,65 +2258,53 @@ window.loadTodayStats = loadTodayStats;
 
 // Conta OPPs reais geradas no mês corrente.
 // Fonte primária: deal_stage_history WHERE source='databricks' — timestamps reais do HubSpot
-// (populado pelo sync PS1 v6 com event stream granular).
-// Fallback: tabela deals (snapshot atual) quando event stream ainda não foi sincronizado.
+// Fonte de verdade: deal_stage_history com source='databricks' e to_stage='Oportunidade'
+// Populado pelo sync diário com event=Oportunidade do funil_comercial (COUNT DISTINCT deal_id).
 // Resultado cacheado em window._OPP_MENSAL_COUNT para uso imediato em renderHome().
 async function calcOppMensal(){
   var sb=_sb(); if(!sb) return 0;
   var email=getOperatorId(); if(!email) return 0;
   var now=new Date();
   var mesInicio=new Date(now.getFullYear(),now.getMonth(),1).toISOString();
-  // Fases OPP-level no funil_comercial (source of truth: Databricks)
-  var OPP_TO_STAGES=['Oportunidade','Agendado','Negociação','Negociacao'];
 
   try{
-    // --- Fonte primária: event stream real do Databricks ---
+    // Fonte primária: eventos Oportunidade do Databricks (event=Oportunidade no funil_comercial)
     var rEvt=await sb.from('deal_stage_history')
-      .select('deal_id,to_stage,changed_at')
+      .select('deal_id')
       .eq('changed_by',email)
       .eq('source','databricks')
+      .eq('to_stage','Oportunidade')
       .gte('changed_at',mesInicio)
-      .in('to_stage',OPP_TO_STAGES)
       .limit(500);
 
     var evtData=rEvt.data||[];
-
     if(evtData.length>0){
-      // Event stream disponível — count exato por deal_id único
-      var idsOpp=new Set(evtData.map(function(e){return e.deal_id;}));
-      var count=idsOpp.size;
+      var count=new Set(evtData.map(function(e){return e.deal_id;})).size;
       window._OPP_MENSAL_COUNT=count;
       window._OPP_MENSAL_LOADED=true;
       window._OPP_MENSAL_SOURCE='databricks_events';
       return count;
     }
 
-    // --- Fallback: tabela deals (snapshot) ---
-    // Usado enquanto o PS1 v6 ainda não rodou ou o event stream está vazio
-    var FASES_OPP_FB=['Oportunidade','Agendado','Negociação','Negociacao'];
-    var ETAPAS_OPP_FB=['agendamento','reagendamento','entrevista agendada','negociação','negociacao','nova oportunidade','ganho'];
-
+    // Fallback: deals snapshot (enquanto sync não rodou)
     var r=await sb.from('deals')
-      .select('deal_id,fase_atual_no_processo,etapa_atual_no_pipeline,status_do_deal,fase_anterior_no_processo')
+      .select('deal_id,etapa_atual_no_pipeline,fase_atual_no_processo')
       .eq('operator_email',email)
       .limit(500);
 
-    var idsOppFb=new Set();
+    var OPP_ETAPAS=['agendamento','reagendamento','entrevista agendada','negociação','negociacao','nova oportunidade','ganho'];
+    var OPP_FASES=['oportunidade','agendado','negociação','negociacao'];
+    var ids=new Set();
     (r.data||[]).forEach(function(d){
-      var fase=(d.fase_atual_no_processo||'').toLowerCase();
-      var faseAnt=(d.fase_anterior_no_processo||'').toLowerCase();
       var etapa=(d.etapa_atual_no_pipeline||'').toLowerCase();
-      var faseOpp=FASES_OPP_FB.some(function(f){return fase===f.toLowerCase();});
-      var etapaOpp=ETAPAS_OPP_FB.some(function(e){return etapa===e||etapa.includes(e);});
-      var faseAntOpp=FASES_OPP_FB.some(function(f){return faseAnt===f.toLowerCase();});
-      if(faseOpp||etapaOpp||faseAntOpp) idsOppFb.add(d.deal_id);
+      var fase=(d.fase_atual_no_processo||'').toLowerCase();
+      if(OPP_ETAPAS.some(function(e){return etapa.includes(e);})||OPP_FASES.includes(fase)) ids.add(d.deal_id);
     });
 
-    var countFb=idsOppFb.size;
-    window._OPP_MENSAL_COUNT=countFb;
+    window._OPP_MENSAL_COUNT=ids.size;
     window._OPP_MENSAL_LOADED=true;
     window._OPP_MENSAL_SOURCE='deals_snapshot';
-    return countFb;
+    return ids.size;
   }catch(e){
     console.warn('[calcOppMensal] error:',e);
     window._OPP_MENSAL_LOADED=false;
