@@ -229,7 +229,14 @@ async function saveOperatorSettings(settings){
     _operatorCtx.preferences = merged;
     update.preferences = JSON.stringify(merged);
   }
-  await sb.from('operators').update(update).eq('email',email);
+  try{
+    const {error} = await sb.from('operators').update(update).eq('email',email);
+    if(error) console.error('[saveOperatorSettings] Supabase error:', error);
+  }catch(e){ console.error('[saveOperatorSettings] Exception:', e); }
+  // Re-render Home se meta mudou para atualizar barras imediatamente
+  if(settings.meta_mensal || settings.focus_mode){
+    try{ if(window.renderHome) window.renderHome(); }catch(e){}
+  }
 }
 window.saveOperatorSettings = saveOperatorSettings;
 

@@ -2785,7 +2785,21 @@ async function loadEfficiencyMetrics(sb,email){
       .select('meta_mensal')
       .eq('email',email)
       .maybeSingle();
-    if(op&&op.meta_mensal) window._OPERATOR_META=op.meta_mensal;
+    if(op&&op.meta_mensal){
+      var mm = typeof op.meta_mensal==='string' ? JSON.parse(op.meta_mensal) : op.meta_mensal;
+      window._OPERATOR_META = mm;
+      // Sincroniza com _operatorCtx do engine para que renderHome() use valores corretos
+      if(window.saveOperatorSettings){
+        window.saveOperatorSettings({meta_mensal: mm});
+      } else if(window.getOperatorCtx){
+        var ctx = window.getOperatorCtx();
+        Object.assign(ctx.meta_mensal, mm);
+        ctx.meta_diaria.fups = Math.ceil(mm.fups/22);
+        ctx.meta_diaria.qualificacoes = Math.ceil(mm.qualificacoes/22);
+        ctx.meta_diaria.handoffs = Math.ceil(mm.handoffs/22);
+        ctx.meta_diaria.opp = Math.ceil((mm.opp||15)/22);
+      }
+    }
   }catch(e){/* meta not available */}
 }
 
