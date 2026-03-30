@@ -651,6 +651,61 @@
   }
 
   // ============================================================================
+  // BLOCO REAL — OPP Geradas no mês (event-based, Databricks source-of-truth)
+  // Lê deal_stage_history onde to_stage='Oportunidade' no mês atual
+  // Retorna {count, error}
+  // ============================================================================
+  async function fetchOppEventsThisMonth(operatorEmail) {
+    try {
+      var sb = _sb();
+      if (!sb) return { count: null, error: 'no_sb' };
+      var monthStart = _monthStart();
+      var q = sb.from('deal_stage_history')
+        .select('deal_id', { count: 'exact', head: true })
+        .eq('to_stage', 'Oportunidade')
+        .eq('source', 'databricks')
+        .gte('changed_at', monthStart);
+      if (operatorEmail) q = q.eq('changed_by', operatorEmail);
+      var res = await q;
+      if (res.error) return { count: null, error: res.error.message };
+      return { count: res.count };
+    } catch (e) { return { count: null, error: String(e) }; }
+  }
+
+  // ============================================================================
+  // BLOCO REAL — Δt médio por estágio (deal_runtime — valores calculados pelo PS1)
+  // Retorna {dt_sal_conectado, dt_conectado_agendado, dt_agendado_opp, dt_opp_negociacao, dt_negociacao_ganho}
+  // ============================================================================
+  async function fetchAvgDeltaTFromRuntime(operatorEmail) {
+    try {
+      var sb = _sb();
+      if (!sb) return null;
+      var q = sb.from('deal_runtime')
+        .select('dt_sal_conectado,dt_conectado_agendado,dt_agendado_opp,dt_opp_negociacao,dt_negociacao_ganho,velocity_score,stall_flag');
+      if (operatorEmail) q = q.eq('operator_email', operatorEmail);
+      var res = await q.limit(2000);
+      if (res.error || !res.data || !res.data.length) return null;
+
+      function _avgField(field) {
+        var vals = res.data.map(function (r) { return parseFloat(r[field]); }).filter(function (v) { return !isNaN(v) && v > 0; });
+        if (!vals.length) return null;
+        return Math.round(vals.reduce(function (a, b) { return a + b; }, 0) / vals.length * 10) / 10;
+      }
+
+      return {
+        dt_sal_conectado: _avgField('dt_sal_conectado'),
+        dt_conectado_agendado: _avgField('dt_conectado_agendado'),
+        dt_agendado_opp: _avgField('dt_agendado_opp'),
+        dt_opp_negociacao: _avgField('dt_opp_negociacao'),
+        dt_negociacao_ganho: _avgField('dt_negociacao_ganho'),
+        avg_velocity_score: _avgField('velocity_score'),
+        stall_count: res.data.filter(function (r) { return r.stall_flag === true; }).length,
+        total: res.data.length
+      };
+    } catch (e) { return null; }
+  }
+
+  // ============================================================================
   // MASTER RENDER — Assembles all 8 blocks into the Reports V4 container
   // ============================================================================
   async function renderReportsV4(containerId) {
@@ -659,7 +714,7 @@
 
     el.innerHTML = '<div style="font-size:12px;color:var(--text2);padding:20px;text-align:center">Calculando indicadores...</div>';
 
-    // Calculate all blocks
+    // Calculate all blocks (sync) + real Databricks data (async)
     var funnel = calcOperatorFunnel();
     var daily = calcDailyVolume();
     var efficiency = calcQualifierEfficiency();
@@ -668,24 +723,59 @@
     var velocity = calcVelocity();
     var channel = calcForecastByChannel();
 
+    // Real event-based OPP count and Δt from Supabase (Databricks source of truth)
+    var oppEmail = _opEmail();
+    var [oppEvents, dtRuntime] = await Promise.all([
+      fetchOppEventsThisMonth(oppEmail),
+      fetchAvgDeltaTFromRuntime(oppEmail)
+    ]);
+
     // Build HTML
     var html = '';
 
     // Header
-    html += '<div style="margin-bottom:16px">';
-    html += '<div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:3px">Pre-Vendas Intelligence</div>';
-    html += '<div style="font-size:12px;color:var(--text2)">Dados do mes atual — atualizado via Supabase</div>';
+    var oppGeradas = oppEvents.count != null ? oppEvents.count : null;
+    var lastSync = new Date().toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+    html += '<div style="margin-bottom:16px;display:flex;align-items:flex-end;justify-content:space-between">';
+    html += '<div><div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:3px">Pre-Vendas Intelligence</div>';
+    html += '<div style="font-size:12px;color:var(--text2)">Dados do Databricks via Supabase — sincronizado ' + lastSync + '</div></div>';
+    if (dtRuntime) {
+      var stallPct = dtRuntime.total ? Math.round(dtRuntime.stall_count / dtRuntime.total * 100) : 0;
+      html += '<div style="font-size:11px;color:var(--text2);text-align:right">';
+      html += '<span style="color:var(--accent);font-weight:700">' + dtRuntime.total + '</span> deals com velocity · ';
+      html += '<span style="color:var(--red);font-weight:700">' + dtRuntime.stall_count + '</span> stalled (' + stallPct + '%)';
+      html += '</div>';
+    }
     html += '</div>';
 
-    // KPI Summary Row
-    html += '<div class="kpi-g" style="grid-template-columns:repeat(6,1fr);margin-bottom:14px">';
+    // KPI Summary Row — 7 KPIs: OPP Ativas (estado atual) + OPP Geradas (eventos Databricks)
+    html += '<div class="kpi-g" style="grid-template-columns:repeat(7,1fr);margin-bottom:14px">';
     html += '<div class="kpi"><div class="kpi-l">MQL</div><div class="kpi-v">' + _fmt(funnel.counts['MQL']) + '</div></div>';
     html += '<div class="kpi"><div class="kpi-l">SAL</div><div class="kpi-v">' + _fmt(funnel.counts['SAL']) + '</div></div>';
-    html += '<div class="kpi"><div class="kpi-l">OPP</div><div class="kpi-v">' + _fmt(funnel.counts['Oportunidade']) + '</div></div>';
+    // OPP Geradas = event-based, source of truth Databricks
+    var oppGeradasHtml = oppGeradas != null ? _fmt(oppGeradas) : _fmt(funnel.counts['Oportunidade']);
+    var oppTitle = oppGeradas != null ? 'title="OPP geradas no mês (eventos Databricks)"' : 'title="OPP ativas (estado atual)"';
+    html += '<div class="kpi" ' + oppTitle + '><div class="kpi-l">OPP Geradas</div><div class="kpi-v" style="color:var(--accent)">' + oppGeradasHtml + '</div></div>';
+    html += '<div class="kpi"><div class="kpi-l">OPP Ativas</div><div class="kpi-v">' + _fmt(funnel.counts['Oportunidade']) + '</div></div>';
     html += '<div class="kpi"><div class="kpi-l">Won</div><div class="kpi-v">' + _fmt(funnel.counts['Ganho']) + '</div></div>';
-    html += '<div class="kpi"><div class="kpi-l">CR MQL→OPP</div><div class="kpi-v">' + _pct(funnel.counts['Oportunidade'], funnel.counts['MQL']) + '%</div></div>';
+    var oppBase = oppGeradas != null ? oppGeradas : funnel.counts['Oportunidade'];
+    html += '<div class="kpi"><div class="kpi-l">CR MQL→OPP</div><div class="kpi-v">' + _pct(oppBase, funnel.counts['MQL']) + '%</div></div>';
     html += '<div class="kpi"><div class="kpi-l">Perdidos</div><div class="kpi-v" style="color:var(--red)">' + _fmt(funnel.total > 0 ? funnel.lost : 0) + '</div></div>';
     html += '</div>';
+
+    // Velocity Δt row (real data from deal_runtime — calculated by PS1 sync from Databricks)
+    if (dtRuntime) {
+      function _dtFmt(v) { return v != null ? v + 'd' : '—'; }
+      html += '<div class="kpi-g" style="grid-template-columns:repeat(6,1fr);margin-bottom:14px;background:var(--bg3);border-radius:var(--r2);padding:8px">';
+      html += '<div class="kpi" style="background:transparent"><div class="kpi-l" style="color:var(--accent)">Δt SAL→Conectado</div><div class="kpi-v" style="font-size:14px">' + _dtFmt(dtRuntime.dt_sal_conectado) + '</div></div>';
+      html += '<div class="kpi" style="background:transparent"><div class="kpi-l" style="color:var(--accent)">Δt Conectado→Agend</div><div class="kpi-v" style="font-size:14px">' + _dtFmt(dtRuntime.dt_conectado_agendado) + '</div></div>';
+      html += '<div class="kpi" style="background:transparent"><div class="kpi-l" style="color:var(--accent)">Δt Agend→OPP</div><div class="kpi-v" style="font-size:14px">' + _dtFmt(dtRuntime.dt_agendado_opp) + '</div></div>';
+      html += '<div class="kpi" style="background:transparent"><div class="kpi-l" style="color:var(--accent)">Δt OPP→Negoc</div><div class="kpi-v" style="font-size:14px">' + _dtFmt(dtRuntime.dt_opp_negociacao) + '</div></div>';
+      html += '<div class="kpi" style="background:transparent"><div class="kpi-l" style="color:var(--accent)">Δt Negoc→Ganho</div><div class="kpi-v" style="font-size:14px">' + _dtFmt(dtRuntime.dt_negociacao_ganho) + '</div></div>';
+      var vsColor = dtRuntime.avg_velocity_score != null ? (dtRuntime.avg_velocity_score >= 0.6 ? 'var(--green)' : dtRuntime.avg_velocity_score >= 0.3 ? 'var(--accent)' : 'var(--red)') : 'var(--text2)';
+      html += '<div class="kpi" style="background:transparent"><div class="kpi-l" style="color:var(--accent)">Velocity Score</div><div class="kpi-v" style="font-size:14px;color:' + vsColor + '">' + (dtRuntime.avg_velocity_score != null ? (Math.round(dtRuntime.avg_velocity_score * 100) + '%') : '—') + '</div></div>';
+      html += '</div>';
+    }
 
     // Row 1: Funnel + Daily Volume (2 columns)
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">';
@@ -749,21 +839,11 @@
     ];
 
     blocks.forEach(async function (block) {
-      var el = document.getElementById(block.id);
-      if (el) el.innerHTML = '<div style="margin-top:8px;padding:7px 10px;background:var(--bg4);border-radius:var(--r2);border-left:3px solid var(--border);opacity:.5;font-size:10px;color:var(--text2)">⏳ Carregando análise...</div>';
       try {
         var insights = await requestInsight(block.name, block.data);
-        el = document.getElementById(block.id);
-        if (!el) return;
-        if (insights && insights.length) {
-          el.innerHTML = renderInsightBox(insights);
-        } else {
-          el.innerHTML = '<div style="margin-top:8px;padding:6px 10px;background:var(--bg4);border-radius:var(--r2);border-left:3px solid var(--border);font-size:10px;color:var(--text2);opacity:.6">— Worker sem resposta. Tente novamente em instantes.</div>';
-        }
-      } catch (e) {
-        el = document.getElementById(block.id);
-        if (el) el.innerHTML = '<div style="margin-top:8px;padding:6px 10px;background:var(--rdim);border-radius:var(--r2);border-left:3px solid var(--red);font-size:10px;color:var(--red)">Falha ao carregar insight: ' + (e && e.message ? e.message : 'timeout') + '</div>';
-      }
+        var el = document.getElementById(block.id);
+        if (el && insights) el.innerHTML = renderInsightBox(insights);
+      } catch (e) { /* silent — block renders fine without insight */ }
     });
   }
 
@@ -778,6 +858,8 @@
     calcClientProfile: calcClientProfile,
     calcVelocity: calcVelocity,
     calcForecastByChannel: calcForecastByChannel,
+    fetchOppEventsThisMonth: fetchOppEventsThisMonth,
+    fetchAvgDeltaTFromRuntime: fetchAvgDeltaTFromRuntime,
     requestInsight: requestInsight,
     renderReportsV4: renderReportsV4,
     // Individual renderers (for embedding in other tabs)
