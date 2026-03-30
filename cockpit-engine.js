@@ -2257,56 +2257,39 @@ async function loadTodayStats(){
 window.loadTodayStats = loadTodayStats;
 
 // Conta OPPs reais geradas no mês corrente consultando a tabela deals no Supabase.
-// Inclui: deals ativos em fase OPP + deals Ganho/Perdido do mês que passaram por OPP.
+// Estratégia: busca TODOS os deals do operador (sem filtro de data) que estão em etapa/fase OPP.
+// O sync PS1 já traz: ativos + Ganho/Perdido criados no mês. Deals criados antes do mês mas
+// que chegaram a OPP em março também entram via etapa_atual_no_pipeline.
 // Resultado cacheado em window._OPP_MENSAL_COUNT para uso imediato em renderHome().
 async function calcOppMensal(){
   var sb=_sb(); if(!sb) return 0;
   var email=getOperatorId(); if(!email) return 0;
-  // Primeiro dia do mês corrente (UTC)
-  var now=new Date();
-  var mesInicio=new Date(now.getFullYear(),now.getMonth(),1).toISOString();
   // Fases que indicam que um deal chegou a nível OPP
   var FASES_OPP=['Oportunidade','Agendado','Negociação','Negociacao'];
-  // Etapas operacionais equivalentes
-  var ETAPAS_OPP=['Agendamento','Reagendamento','Entrevista Agendada','Negociação','Negociacao','Ganho'];
+  // Etapas operacionais OPP (o campo confiável — preenchido em 100% dos deals)
+  var ETAPAS_OPP=['agendamento','reagendamento','entrevista agendada','negociação','negociacao','nova oportunidade','ganho'];
 
   try{
-    // Query 1: deals ativos no mês em fase/etapa OPP
-    var r1=await sb.from('deals')
+    // Busca todos os deals do operador — sync já filtra por mês no PS1
+    var r=await sb.from('deals')
       .select('deal_id,fase_atual_no_processo,etapa_atual_no_pipeline,status_do_deal,fase_anterior_no_processo')
       .eq('operator_email',email)
-      .gte('created_at_crm',mesInicio)
-      .in('fase_atual_no_processo',FASES_OPP);
-    var idsOpp=new Set((r1.data||[]).map(function(d){return d.deal_id;}));
+      .limit(500);
 
-    // Query 2: deals Ganho/Perdido do mês (já passaram por OPP antes de fechar)
-    var r2=await sb.from('deals')
-      .select('deal_id,fase_atual_no_processo,etapa_atual_no_pipeline,status_do_deal,fase_anterior_no_processo')
-      .eq('operator_email',email)
-      .gte('created_at_crm',mesInicio)
-      .in('status_do_deal',['Ganho','Perdido']);
-    // Inclui apenas os que tinham fase anterior OPP ou etapa OPP (vieram do pipeline comercial)
-    (r2.data||[]).forEach(function(d){
+    var idsOpp=new Set();
+    (r.data||[]).forEach(function(d){
+      var fase=(d.fase_atual_no_processo||'').toLowerCase();
       var faseAnt=(d.fase_anterior_no_processo||'').toLowerCase();
       var etapa=(d.etapa_atual_no_pipeline||'').toLowerCase();
-      var fase=(d.fase_atual_no_processo||'').toLowerCase();
-      var isOpp=FASES_OPP.some(function(f){return faseAnt.includes(f.toLowerCase());})
-             ||ETAPAS_OPP.some(function(e){return etapa.includes(e.toLowerCase());})
-             ||FASES_OPP.some(function(f){return fase.includes(f.toLowerCase());});
-      if(isOpp) idsOpp.add(d.deal_id);
-    });
 
-    // Query 3: deals fechados do mês sem fase_anterior definida mas com etapa OPP
-    var r3=await sb.from('deals')
-      .select('deal_id,etapa_atual_no_pipeline,status_do_deal')
-      .eq('operator_email',email)
-      .gte('created_at_crm',mesInicio)
-      .in('status_do_deal',['Ganho','Perdido']);
-    (r3.data||[]).forEach(function(d){
-      var etapa=(d.etapa_atual_no_pipeline||'').toLowerCase();
-      if(ETAPAS_OPP.some(function(e){return etapa.includes(e.toLowerCase());})){
-        idsOpp.add(d.deal_id);
-      }
+      // Critério 1: fase atual é OPP-level
+      var faseOpp=FASES_OPP.some(function(f){return fase===f.toLowerCase();});
+      // Critério 2: etapa atual é OPP-level (campo 100% preenchido)
+      var etapaOpp=ETAPAS_OPP.some(function(e){return etapa===e||etapa.includes(e);});
+      // Critério 3: deal fechado que tinha fase anterior OPP (veio de reunião/negociação)
+      var faseAntOpp=FASES_OPP.some(function(f){return faseAnt===f.toLowerCase();});
+
+      if(faseOpp||etapaOpp||faseAntOpp) idsOpp.add(d.deal_id);
     });
 
     var count=idsOpp.size;
