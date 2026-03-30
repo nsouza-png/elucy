@@ -2256,6 +2256,71 @@ async function loadTodayStats(){
 }
 window.loadTodayStats = loadTodayStats;
 
+// Conta OPPs reais geradas no mês corrente consultando a tabela deals no Supabase.
+// Inclui: deals ativos em fase OPP + deals Ganho/Perdido do mês que passaram por OPP.
+// Resultado cacheado em window._OPP_MENSAL_COUNT para uso imediato em renderHome().
+async function calcOppMensal(){
+  var sb=_sb(); if(!sb) return 0;
+  var email=getOperatorId(); if(!email) return 0;
+  // Primeiro dia do mês corrente (UTC)
+  var now=new Date();
+  var mesInicio=new Date(now.getFullYear(),now.getMonth(),1).toISOString();
+  // Fases que indicam que um deal chegou a nível OPP
+  var FASES_OPP=['Oportunidade','Agendado','Negociação','Negociacao'];
+  // Etapas operacionais equivalentes
+  var ETAPAS_OPP=['Agendamento','Reagendamento','Entrevista Agendada','Negociação','Negociacao','Ganho'];
+
+  try{
+    // Query 1: deals ativos no mês em fase/etapa OPP
+    var r1=await sb.from('deals')
+      .select('deal_id,fase_atual_no_processo,etapa_atual_no_pipeline,status_do_deal,fase_anterior_no_processo')
+      .eq('operator_email',email)
+      .gte('created_at_crm',mesInicio)
+      .in('fase_atual_no_processo',FASES_OPP);
+    var idsOpp=new Set((r1.data||[]).map(function(d){return d.deal_id;}));
+
+    // Query 2: deals Ganho/Perdido do mês (já passaram por OPP antes de fechar)
+    var r2=await sb.from('deals')
+      .select('deal_id,fase_atual_no_processo,etapa_atual_no_pipeline,status_do_deal,fase_anterior_no_processo')
+      .eq('operator_email',email)
+      .gte('created_at_crm',mesInicio)
+      .in('status_do_deal',['Ganho','Perdido']);
+    // Inclui apenas os que tinham fase anterior OPP ou etapa OPP (vieram do pipeline comercial)
+    (r2.data||[]).forEach(function(d){
+      var faseAnt=(d.fase_anterior_no_processo||'').toLowerCase();
+      var etapa=(d.etapa_atual_no_pipeline||'').toLowerCase();
+      var fase=(d.fase_atual_no_processo||'').toLowerCase();
+      var isOpp=FASES_OPP.some(function(f){return faseAnt.includes(f.toLowerCase());})
+             ||ETAPAS_OPP.some(function(e){return etapa.includes(e.toLowerCase());})
+             ||FASES_OPP.some(function(f){return fase.includes(f.toLowerCase());});
+      if(isOpp) idsOpp.add(d.deal_id);
+    });
+
+    // Query 3: deals fechados do mês sem fase_anterior definida mas com etapa OPP
+    var r3=await sb.from('deals')
+      .select('deal_id,etapa_atual_no_pipeline,status_do_deal')
+      .eq('operator_email',email)
+      .gte('created_at_crm',mesInicio)
+      .in('status_do_deal',['Ganho','Perdido']);
+    (r3.data||[]).forEach(function(d){
+      var etapa=(d.etapa_atual_no_pipeline||'').toLowerCase();
+      if(ETAPAS_OPP.some(function(e){return etapa.includes(e.toLowerCase());})){
+        idsOpp.add(d.deal_id);
+      }
+    });
+
+    var count=idsOpp.size;
+    window._OPP_MENSAL_COUNT=count;
+    window._OPP_MENSAL_LOADED=true;
+    return count;
+  }catch(e){
+    console.warn('[calcOppMensal] error:',e);
+    window._OPP_MENSAL_LOADED=false;
+    return 0;
+  }
+}
+window.calcOppMensal=calcOppMensal;
+
 // ==================================================================
 // LAYER 6 — UI STATE
 // Persistencia de estado por modulo. Nenhuma expansao depende so de DOM.
@@ -2525,17 +2590,21 @@ async function renderHome(){
   var fupPct = meta.fups>0 ? Math.min(100,Math.round((todayStats.fups||0)/meta.fups*100)) : 0;
   var qualPct = meta.qualificacoes>0 ? Math.min(100,Math.round((todayStats.qualificacoes||0)/meta.qualificacoes*100)) : 0;
   var handPct = meta.handoffs>0 ? Math.min(100,Math.round((todayStats.handoffs||0)/meta.handoffs*100)) : 0;
-  // OPP mensal — deals que chegaram a etapa de handoff (agendamento/negociação/reunião)
-  // Usa etapa_atual_no_pipeline pois fase_atual_no_processo fica vazia em ~80% dos deals no Supabase
+  // OPP mensal — conta TODOS os deals que viraram OPP este mês via Supabase (inclui Ganho/Perdido)
+  // Fonte: tabela deals (PS1 sync: ativos + Ganho/Perdido do mês corrente)
   var metaMensal = _operatorCtx.meta_mensal || {};
   var oppTarget = metaMensal.opp || 15;
-  var OPP_ETAPAS = ['agendamento','reagendamento','entrevista agendada','negociação','negociacao','oportunidade','ganho'];
-  var oppActual = allDeals.filter(function(d){
-    var etapa = (d.etapa || d.etapa_atual_no_pipeline || '').toLowerCase();
-    var fase  = (d._fase || d.fase || d.fase_atual_no_processo || '').toLowerCase();
-    return OPP_ETAPAS.some(function(e){ return etapa===e || etapa.includes(e); })
-        || OPP_ETAPAS.some(function(e){ return fase===e || fase.includes(e); });
-  }).length;
+  var oppActual = (typeof window._OPP_MENSAL_COUNT === 'number') ? window._OPP_MENSAL_COUNT : 0;
+  // Fallback local se async ainda não completou: conta deals ativos em fases OPP
+  if(!window._OPP_MENSAL_LOADED){
+    var OPP_ETAPAS_FB = ['agendamento','reagendamento','entrevista agendada','negociação','negociacao','oportunidade','ganho'];
+    oppActual = allDeals.filter(function(d){
+      var etapa = (d.etapa || d.etapa_atual_no_pipeline || '').toLowerCase();
+      var fase  = (d._fase || d.fase || d.fase_atual_no_processo || '').toLowerCase();
+      return OPP_ETAPAS_FB.some(function(e){ return etapa===e || etapa.includes(e); })
+          || OPP_ETAPAS_FB.some(function(e){ return fase===e || fase.includes(e); });
+    }).length;
+  }
   var oppPct = oppTarget > 0 ? Math.min(100, Math.round(oppActual / oppTarget * 100)) : 0;
 
   var html = '';
@@ -2615,7 +2684,37 @@ async function renderHome(){
     + '<div id="home-score-breakdown" style="margin-top:8px"></div>'
     + '</div>';
 
-  // BLOCO 4 — Inteligencia
+  // BLOCO 4 — OPPs Geradas no Mês
+  (function(){
+    var oppPctBar = oppTarget>0 ? Math.min(100,Math.round(oppActual/oppTarget*100)) : 0;
+    var oppStatus = oppPctBar>=100?'#22c55e':oppPctBar>=60?'#f59e0b':'#ef4444';
+    var oppLabel  = oppPctBar>=100?'Meta atingida!':oppPctBar>=60?'No caminho certo':'Acelerar ritmo';
+    // Dias úteis restantes no mês (aprox)
+    var hoje=new Date(); var diasMes=new Date(hoje.getFullYear(),hoje.getMonth()+1,0).getDate();
+    var diasRestantes=diasMes-hoje.getDate(); var semanas=Math.ceil(diasRestantes/5);
+    var ritmoNecessario=oppTarget-oppActual; var ritmoLabel='';
+    if(ritmoNecessario<=0) ritmoLabel='Superou a meta!';
+    else if(semanas>0) ritmoLabel=Math.ceil(ritmoNecessario/semanas)+' OPP/semana para bater a meta';
+    else ritmoLabel=ritmoNecessario+' OPP restantes';
+
+    html += '<div class="home-block" id="home-opp-block">'
+      + '<div class="home-block-title" style="display:flex;justify-content:space-between;align-items:center">'
+      + '<span>OPPs Geradas no Mês</span>'
+      + '<button class="home-fm-btn" onclick="window.toggleOppList(this)">Detalhar ▾</button>'
+      + '</div>'
+      + '<div style="display:flex;align-items:baseline;gap:10px;margin:8px 0 4px">'
+      + '<span style="font-size:32px;font-weight:700;color:'+oppStatus+'">'+oppActual+'</span>'
+      + '<span style="color:var(--text2);font-size:13px">/ '+oppTarget+' meta mensal</span>'
+      + '</div>'
+      + '<div class="meta-bar-bg" style="margin-bottom:6px"><div class="meta-bar-fill'+(oppPctBar>=100?' done':'')+'" style="width:'+oppPctBar+'%;background:'+oppStatus+'"></div></div>'
+      + '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)">'
+      + '<span>'+oppLabel+'</span><span>'+ritmoLabel+'</span>'
+      + '</div>'
+      + '<div id="home-opp-list" style="display:none;margin-top:10px"></div>'
+      + '</div>';
+  })();
+
+  // BLOCO 5 — Inteligencia
   if(insights.length){
     html += '<div class="home-block">'
       + '<div class="home-block-title">Inteligencia</div>';
@@ -2662,6 +2761,100 @@ async function renderHome(){
   });
 }
 window.renderHome = renderHome;
+
+// Carrega e exibe lista de OPPs geradas no mês no bloco home
+window.toggleOppList = async function(btn){
+  var listEl=document.getElementById('home-opp-list');
+  if(!listEl) return;
+  if(listEl.style.display!=='none'){
+    listEl.style.display='none';
+    btn.textContent='Detalhar ▾';
+    return;
+  }
+  btn.textContent='Fechar ▴';
+  listEl.style.display='block';
+  if(listEl.dataset.loaded==='1') return; // já carregado
+  listEl.innerHTML='<div style="color:var(--text2);font-size:12px;padding:6px 0">Carregando...</div>';
+
+  var sb=_sb(); if(!sb){ listEl.innerHTML='<div style="color:var(--red);font-size:12px">Sem conexão</div>'; return; }
+  var email=getOperatorId(); if(!email) return;
+  var now=new Date();
+  var mesInicio=new Date(now.getFullYear(),now.getMonth(),1).toISOString();
+  var FASES_OPP=['Oportunidade','Agendado','Negociação','Negociacao'];
+  var ETAPAS_OPP=['Agendamento','Reagendamento','Entrevista Agendada','Negociação','Negociacao','Ganho'];
+
+  try{
+    // Busca todos os deals do mês que são ou foram OPP
+    var r=await sb.from('deals')
+      .select('deal_id,contact_name,email_lead,linha_de_receita_vigente,fase_atual_no_processo,etapa_atual_no_pipeline,status_do_deal,fase_anterior_no_processo,tier_da_oportunidade,valor_da_oportunidade,created_at_crm')
+      .eq('operator_email',email)
+      .gte('created_at_crm',mesInicio)
+      .order('created_at_crm',{ascending:false})
+      .limit(200);
+
+    var allRows=(r.data||[]);
+    // Filtra apenas os deals OPP
+    var oppRows=allRows.filter(function(d){
+      var fase=(d.fase_atual_no_processo||'').toLowerCase();
+      var faseAnt=(d.fase_anterior_no_processo||'').toLowerCase();
+      var etapa=(d.etapa_atual_no_pipeline||'').toLowerCase();
+      var status=(d.status_do_deal||'').toLowerCase();
+      var isActiveOpp=FASES_OPP.some(function(f){return fase.includes(f.toLowerCase());});
+      var isClosedOpp=(status==='ganho'||status==='perdido')&&(
+        FASES_OPP.some(function(f){return faseAnt.includes(f.toLowerCase());})||
+        ETAPAS_OPP.some(function(e){return etapa.includes(e.toLowerCase());})
+      );
+      return isActiveOpp||isClosedOpp;
+    });
+
+    if(!oppRows.length){
+      listEl.innerHTML='<div style="color:var(--text2);font-size:12px;padding:6px 0">Nenhuma OPP encontrada neste mês. Dados sincronizados do CRM.</div>';
+      listEl.dataset.loaded='1';
+      return;
+    }
+
+    // Agrupa por status
+    var byStatus={};
+    oppRows.forEach(function(d){
+      var s=d.status_do_deal||'Aberto';
+      if(!byStatus[s]) byStatus[s]=[];
+      byStatus[s].push(d);
+    });
+
+    var STATUS_ORDER=['Ganho','Aberto','Perdido'];
+    var STATUS_COLOR={'Ganho':'#22c55e','Aberto':'#f59e0b','Perdido':'#ef4444'};
+    var h='<div style="font-size:11px;color:var(--text2);margin-bottom:6px">'+oppRows.length+' OPP(s) geradas em '+now.toLocaleString('pt-BR',{month:'long'})+'</div>';
+
+    STATUS_ORDER.forEach(function(s){
+      var rows=byStatus[s]; if(!rows||!rows.length) return;
+      h+='<div style="margin-bottom:8px">'
+        +'<div style="font-size:10px;font-weight:600;color:'+STATUS_COLOR[s]+';margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">'+s+' ('+rows.length+')</div>';
+      rows.forEach(function(d){
+        var nome=d.contact_name||d.email_lead||d.deal_id;
+        var linha=d.linha_de_receita_vigente||d.grupo_de_receita||'—';
+        var tier=(d.tier_da_oportunidade||'').toLowerCase();
+        var val=d.valor_da_oportunidade&&d.valor_da_oportunidade>0?'R$'+Number(d.valor_da_oportunidade).toLocaleString('pt-BR'):'';
+        var tierBadge=tier?'<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(245,158,11,.15);color:#f59e0b;margin-left:4px">'+tier+'</span>':'';
+        h+='<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px">'
+          +'<div style="flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"><span style="color:var(--text1)">'+_escHtml(nome)+'</span>'+tierBadge+'</div>'
+          +'<div style="color:var(--text2);font-size:10px;white-space:nowrap">'+_escHtml(linha)+'</div>'
+          +(val?'<div style="color:#22c55e;font-size:10px;white-space:nowrap">'+val+'</div>':'')
+          +'</div>';
+      });
+      h+='</div>';
+    });
+
+    listEl.innerHTML=h;
+    listEl.dataset.loaded='1';
+
+    // Atualiza count no engine
+    window._OPP_MENSAL_COUNT=oppRows.length;
+    window._OPP_MENSAL_LOADED=true;
+
+  }catch(e){
+    listEl.innerHTML='<div style="color:var(--red);font-size:12px">Erro ao carregar: '+e.message+'</div>';
+  }
+};
 
 window.cycleFocusMode = function(){
   var modes = Object.keys(FOCUS_MODES);

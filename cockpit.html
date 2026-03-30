@@ -2759,6 +2759,8 @@ async function loadDealsFromSupabase(email){
       if(window.syncForecastRuntime) await window.syncForecastRuntime();
       if(window.syncDailySnapshot) await window.syncDailySnapshot();
       if(window.syncOperatorEfficiency) await window.syncOperatorEfficiency();
+      // Carrega count real de OPPs do mês (inclui Ganho/Perdido que saíram do pipeline ativo)
+      if(window.calcOppMensal) await window.calcOppMensal();
       if(window._syncStatus) window._syncStatus('ok');
       // Renderiza Home com valores definitivos de meta após boot completo
       try{ if(window.renderHome) window.renderHome(); }catch(e){}
