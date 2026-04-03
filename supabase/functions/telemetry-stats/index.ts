@@ -18,6 +18,39 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    // AUTH: Require X-Sync-Key header or valid operator JWT
+    const syncKey = Deno.env.get("SYNC_API_KEY");
+    const reqSyncKey = req.headers.get("x-sync-key");
+    const authHeader = req.headers.get("Authorization");
+
+    let authorized = false;
+
+    // Path 1: Scheduler/admin uses X-Sync-Key
+    if (syncKey && reqSyncKey && reqSyncKey === syncKey) {
+      authorized = true;
+    }
+
+    // Path 2: Any authenticated approved operator can read telemetry
+    if (!authorized && authHeader) {
+      const sbUser = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user } } = await sbUser.auth.getUser();
+      if (user?.email) {
+        const sbCheck = createClient(supabaseUrl, supabaseKey);
+        const { data: op } = await sbCheck.from("operators").select("approved").eq("email", user.email).maybeSingle();
+        if (op?.approved) authorized = true;
+      }
+    }
+
+    if (!authorized) {
+      return new Response(JSON.stringify({ error: "Unauthorized — requires X-Sync-Key or operator JWT" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const sb = createClient(supabaseUrl, supabaseKey);
 
     const url = new URL(req.url);
