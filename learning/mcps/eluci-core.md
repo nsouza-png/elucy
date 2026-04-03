@@ -231,9 +231,10 @@ INPUT
   → [12] APPLY_BLDE               (buzzword level)
   → [13] BEG_GOVERN               (gate decision — permissoes)
   → [14] GENERATE_BASE_RESPONSE
-  → [15] APPLY_LSM                (compressao linguistica por canal)
-  → [16] APPLY_INTERLOCUTOR_FILTER (remover termos internos — hard block)
-  → [17] DVL_SCORE                 (🆕 calcular temperatura + incrementar SDR Progress Score)
+  → [15] APPLY_HUMANIZER          (anti-AI patterns — so em FRONTSTAGE copy)
+  → [16] APPLY_LSM                (compressao linguistica por canal)
+  → [17] APPLY_INTERLOCUTOR_FILTER (remover termos internos — hard block)
+  → [18] DVL_SCORE                 (🆕 calcular temperatura + incrementar SDR Progress Score)
   → OUTPUT
 ```
 
