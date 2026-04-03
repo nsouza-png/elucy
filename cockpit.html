@@ -7104,7 +7104,8 @@ var _obStarted = false; // guard contra multiplas execucoes
 
 // Verifica Supabase se o tour foi completado — obrigatorio para TODOS
 async function _obCheckAndStart(email){
-  if(_obStarted) return; // ja foi iniciado por outro code path
+  if(_obStarted) return;
+  _obStarted = true; // guard ANTES de qualquer await (evita race condition)
   console.log('[OB] _obCheckAndStart called, email:', email);
   var sb = getSB();
   if(sb && email){
@@ -7114,6 +7115,7 @@ async function _obCheckAndStart(email){
       if(res.data && res.data.onboarding_done === true){
         localStorage.setItem('elucy_ob_done', '1');
         console.log('[OB] Tour already done, skipping');
+        _obStarted = false; // libera para re-trigger manual
         return;
       }
     } catch(e){
@@ -7124,7 +7126,6 @@ async function _obCheckAndStart(email){
   }
   // Supabase diz que nao fez — forcar tour independente do localStorage
   localStorage.removeItem('elucy_ob_done');
-  _obStarted = true; // marca antes do timeout para bloquear chamadas concorrentes
   console.log('[OB] Scheduling tour start in 3s...');
   // Aguarda mais tempo para garantir que DOM esta estavel
   setTimeout(function(){
