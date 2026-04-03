@@ -4291,7 +4291,6 @@ async function callIntelligenceAPI(dealData, requestType, extraContext){
   const history = await loadDealFullHistory(dealData.deal_id);
   const dealCtx = buildDealContext(dealData);
   const prompt = REQUEST_PROMPTS[requestType] || REQUEST_PROMPTS.analyze;
-  const userMsg = dealCtx + history + '\n\n' + prompt + (extraContext ? '\n\nCONTEXTO EXTRA: '+extraContext : '');
 
   const inferenceUrl = window.ELUCY_INFERENCE_URL || 'https://tnbbsjvzwleeoqnxtafp.supabase.co/functions/v1/elucy-inference';
   const model = window.ELUCY_API_MODEL || 'claude-sonnet-4-20250514';
@@ -4306,10 +4305,14 @@ async function callIntelligenceAPI(dealData, requestType, extraContext){
     method: 'POST',
     headers: headers,
     body: JSON.stringify({
-      requestType: requestType,
-      userMessage: userMsg,
-      model: model,
-      dealId: dealData.deal_id || null
+      request_type: requestType,
+      deal_context: dealCtx,
+      history: history,
+      prompt: prompt,
+      extra_context: extraContext || '',
+      deal_id: dealData.deal_id || '',
+      deal_data: dealData,
+      model_override: model
     })
   });
   if(!resp.ok){
