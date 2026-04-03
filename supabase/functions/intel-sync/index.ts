@@ -8,7 +8,7 @@ const DB_HOST = 'https://dbc-8acefaf9-a170.cloud.databricks.com'
 const DB_WH = 'bbae754ea44f67e0'
 
 const CORS = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': 'https://nsouza-png.github.io',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }

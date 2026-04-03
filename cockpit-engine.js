@@ -533,7 +533,11 @@ window.calcEfficiencyByChannel = calcEfficiencyByChannel;
 // Camada viva por deal. Enriquece deal com estado derivado.
 // ==================================================================
 
+// Memoization: skip re-enrichment if already done this render cycle
+var _enrichBatchId = 0;
 function enrichDealContext(deal){
+  if(deal._enrichedBatch === _enrichBatchId) return deal;
+  deal._enrichedBatch = _enrichBatchId;
   // Normalizar statusDeal — campo canônico para uso interno.
   // Fonte: statusDeal (do COCKPIT_DEAL_MAP) ou status_do_deal (query Supabase direta).
   if(!deal.statusDeal && deal.status_do_deal) deal.statusDeal = deal.status_do_deal;
@@ -647,6 +651,7 @@ var TASK_TYPES = {
 window.TASK_TYPES = TASK_TYPES;
 
 function buildTaskQueue(filterType, filterRevLine, filterFase, filterCiclo, filterSmart){
+  _enrichBatchId++; // new batch — allows re-enrichment if deal data changed
   var map = window._COCKPIT_DEAL_MAP||{};
   var tasks = [];
   var focusMode = _operatorCtx.focus_mode||'velocidade';
@@ -2599,7 +2604,8 @@ async function renderHome(){
     return s!=='perdido'&&s!=='ganho';
   });
 
-  // Enrich all deals
+  // Enrich all deals (new batch cycle — memoized per cycle)
+  _enrichBatchId++;
   allDeals.forEach(function(d){ enrichDealContext(d); });
 
   var tasks = buildTaskQueue();

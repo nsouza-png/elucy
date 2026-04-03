@@ -8,7 +8,7 @@ const DATABRICKS_HOST = 'https://dbc-8acefaf9-a170.cloud.databricks.com'
 const DATABRICKS_WAREHOUSE = 'bbae754ea44f67e0'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': 'https://nsouza-png.github.io',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
