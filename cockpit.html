@@ -2848,9 +2848,6 @@ document.addEventListener('DOMContentLoaded',()=>{
       }
       // Hash routing — modo local
       _routeFromHash();
-      // Onboarding tour — modo local usa email do localStorage
-      var localEmail = localStorage.getItem('elucy_operator_email') || '';
-      _obCheckAndStart(localEmail);
     }
   }
 });
@@ -7057,186 +7054,164 @@ function initSlackAlerts(){
 // ══════════════════════════════════════════════════════════════
 // ONBOARDING TOUR — tooltip guiado para primeiro acesso
 // ══════════════════════════════════════════════════════════════
-var _OB_STEPS = [
-  {
-    target: '.ntab:nth-child(1)',  // Home tab
-    title: 'Bem-vindo ao Elucy',
-    desc: 'Este é seu cockpit de vendas inteligente. A Home explica como o sistema funciona, mostra seus OKRs conectados ao funil real e acompanha sua performance — tudo com dados do Databricks.',
-    pos: 'bottom'
-  },
-  {
-    target: '#deal-list',  // Sidebar deal list
-    title: 'Sidebar de Deals',
-    desc: 'Todos os seus deals ativos ficam aqui. Use os filtros por fase, etapa, tier, linha de receita, aging, canal e sinais para encontrar rapidamente o que precisa.',
-    pos: 'right'
-  },
-  {
-    target: '.ntab:nth-child(2)',  // Pipeline tab
-    title: 'Pipeline',
-    desc: 'Visualize seus deals em formato de lista com todos os detalhes: temperatura, sinais, forecast, aging. Clique em qualquer deal para ver o painel completo de inteligência e gerar copy.',
-    pos: 'bottom'
-  },
-  {
-    target: '.ntab:nth-child(3)',  // Tasks tab
-    title: 'Task Runner',
-    desc: 'Suas tarefas priorizadas pelo DAG de 25 camadas. O Elucy analisa cada deal e gera a próxima ação exata — follow-up, qualificação, agendamento, handoff. Ordenadas por valor x urgência.',
-    pos: 'bottom'
-  },
-  {
-    target: '.ntab:nth-child(6)',  // Intel tab
-    title: 'Intelligence',
-    desc: 'Analytics completo do seu pipeline: Score V9, conversão por linha de receita, sinais de risco, distribuição por canal, forecast agregado e Data Quality. Dados reais, zero achismo.',
-    pos: 'bottom'
-  },
-  {
-    target: '#op-pill',  // User chip / operator pill
-    title: 'Seu Perfil',
-    desc: 'Aqui fica seu nível, XP e streak. O Elucy gamifica sua operação — cada tarefa executada, cada deal qualificado e cada handoff gera pontos. Agora é só operar!',
-    pos: 'bottom',
-    last: true
-  }
-];
-var _obStep = 0;
-var _obOverlay = null;
-var _obSpotlight = null;
-var _obTooltip = null;
-var _obStarted = false; // guard contra multiplas execucoes
+// ── ONBOARDING TOUR V2 — reescrito do zero ─────────────────────────
+// Uma unica instancia, sem race conditions, sem elementos duplicados.
+// Chamado apenas de showCockpit() após auth Supabase.
 
-// Verifica Supabase se o tour foi completado — obrigatorio para TODOS
+var _OB_STEPS = [
+  { target: '.ntab:nth-child(1)', title: 'Bem-vindo ao Elucy', desc: 'Seu cockpit de vendas inteligente. A Home mostra OKRs conectados ao funil real e acompanha performance — dados do Databricks, zero achismo.', pos: 'bottom' },
+  { target: '#deal-list', title: 'Seus Deals', desc: 'Todos os deals ativos ficam aqui. Filtre por fase, etapa, tier, linha de receita, aging, canal e sinais.', pos: 'right' },
+  { target: '.ntab:nth-child(2)', title: 'Pipeline', desc: 'Lista completa com temperatura, sinais, forecast e aging. Clique em qualquer deal para inteligência e copy.', pos: 'bottom' },
+  { target: '.ntab:nth-child(3)', title: 'Tasks', desc: 'Tarefas priorizadas pelo DAG de 25 camadas. Ação exata para cada deal — follow-up, qualificação, handoff.', pos: 'bottom' },
+  { target: '.ntab:nth-child(6)', title: 'Intelligence', desc: 'Analytics do pipeline: Score V9, conversão por linha, sinais de risco, forecast e Data Quality.', pos: 'bottom' },
+  { target: '#op-pill', title: 'Seu Perfil', desc: 'Nível, XP e streak. Cada tarefa executada, deal qualificado e handoff gera pontos. Agora é só operar!', pos: 'bottom', last: true }
+];
+
+var _ob = { step: 0, active: false, overlay: null, spotlight: null, tooltip: null };
+
 async function _obCheckAndStart(email){
-  if(_obStarted) return;
-  _obStarted = true; // guard ANTES de qualquer await (evita race condition)
-  console.log('[OB] _obCheckAndStart called, email:', email);
+  if(_ob.active) return;
+  _ob.active = true;
   var sb = getSB();
   if(sb && email){
     try {
       var res = await sb.from('operators').select('onboarding_done').eq('email',email).maybeSingle();
-      console.log('[OB] Supabase result:', JSON.stringify(res.data));
       if(res.data && res.data.onboarding_done === true){
         localStorage.setItem('elucy_ob_done', '1');
-        console.log('[OB] Tour already done, skipping');
-        _obStarted = false; // libera para re-trigger manual
+        _ob.active = false;
         return;
       }
-    } catch(e){
-      console.warn('[OB] Supabase check failed:', e);
-    }
-  } else {
-    console.log('[OB] No supabase client or email, proceeding with tour anyway');
+    } catch(e){ /* fallthrough — mostra tour */ }
   }
-  // Supabase diz que nao fez — forcar tour independente do localStorage
   localStorage.removeItem('elucy_ob_done');
-  console.log('[OB] Scheduling tour start in 3s...');
-  // Aguarda mais tempo para garantir que DOM esta estavel
-  setTimeout(function(){
-    // Verifica se o primeiro target existe antes de iniciar
-    var firstTarget = document.querySelector(_OB_STEPS[0].target);
-    console.log('[OB] First target check:', _OB_STEPS[0].target, '→', firstTarget ? 'FOUND' : 'NOT FOUND');
-    if(!firstTarget){
-      // Tenta novamente em mais 3s
-      console.log('[OB] Retrying in 3s...');
-      setTimeout(function(){ _obStart(); }, 3000);
-      return;
+  // Aguarda DOM estabilizar, max 2 tentativas
+  var tries = 0;
+  var wait = setInterval(function(){
+    tries++;
+    if(document.querySelector(_OB_STEPS[0].target) || tries >= 4){
+      clearInterval(wait);
+      _obInit();
     }
-    _obStart();
-  }, 3000);
+  }, 1500);
 }
 
-function _obStart(){
-  _obStep = 0;
-  // Create overlay elements
-  _obOverlay = document.createElement('div');
-  _obOverlay.className = 'ob-overlay';
-  _obSpotlight = document.createElement('div');
-  _obSpotlight.className = 'ob-spotlight';
-  _obTooltip = document.createElement('div');
-  _obTooltip.className = 'ob-tooltip';
-  document.body.appendChild(_obOverlay);
-  document.body.appendChild(_obSpotlight);
-  document.body.appendChild(_obTooltip);
-  _obRender();
+function _obInit(){
+  // Remove qualquer instancia anterior (safety)
+  _obCleanup();
+  _ob.step = 0;
+  // Overlay escuro que bloqueia clicks fora do tooltip
+  _ob.overlay = document.createElement('div');
+  _ob.overlay.className = 'ob-overlay';
+  _ob.overlay.onclick = function(e){ e.stopPropagation(); };
+  // Spotlight (buraco no overlay)
+  _ob.spotlight = document.createElement('div');
+  _ob.spotlight.className = 'ob-spotlight';
+  // Tooltip unico
+  _ob.tooltip = document.createElement('div');
+  _ob.tooltip.className = 'ob-tooltip';
+  document.body.appendChild(_ob.overlay);
+  document.body.appendChild(_ob.spotlight);
+  document.body.appendChild(_ob.tooltip);
+  _obShow();
 }
 
-function _obRender(){
-  if(_obStep >= _OB_STEPS.length){ _obEnd(); return; }
-  var s = _OB_STEPS[_obStep];
+function _obShow(){
+  if(_ob.step >= _OB_STEPS.length){ _obEnd(); return; }
+  var s = _OB_STEPS[_ob.step];
   var el = document.querySelector(s.target);
-  if(!el){ _obStep++; _obRender(); return; }
+  // Skip targets que nao existem no DOM
+  if(!el){ _ob.step++; _obShow(); return; }
 
-  // Position spotlight
   var r = el.getBoundingClientRect();
-  var pad = 6;
-  _obSpotlight.style.top = (r.top - pad) + 'px';
-  _obSpotlight.style.left = (r.left - pad) + 'px';
-  _obSpotlight.style.width = (r.width + pad*2) + 'px';
-  _obSpotlight.style.height = (r.height + pad*2) + 'px';
+  var pad = 8;
 
-  // Build tooltip content
+  // Spotlight position
+  _ob.spotlight.style.top = (r.top - pad + window.scrollY) + 'px';
+  _ob.spotlight.style.left = (r.left - pad) + 'px';
+  _ob.spotlight.style.width = (r.width + pad * 2) + 'px';
+  _ob.spotlight.style.height = (r.height + pad * 2) + 'px';
+
+  // Tooltip content
+  var total = _OB_STEPS.length;
   var dots = '';
-  for(var i=0; i<_OB_STEPS.length; i++){
-    dots += '<div class="ob-dot'+(i===_obStep?' on':'')+'"></div>';
-  }
-  var btnLabel = s.last ? 'Começar!' : 'Próximo';
-  _obTooltip.setAttribute('data-pos', s.pos);
-  _obTooltip.innerHTML =
+  for(var i = 0; i < total; i++) dots += '<div class="ob-dot' + (i === _ob.step ? ' on' : '') + '"></div>';
+  var btn = s.last ? 'Começar!' : 'Próximo';
+
+  _ob.tooltip.setAttribute('data-pos', s.pos);
+  _ob.tooltip.innerHTML =
     '<button class="ob-close" onclick="_obEnd()">&times;</button>' +
-    '<div class="ob-title">'+s.title+'</div>' +
-    '<div class="ob-desc">'+s.desc+'</div>' +
+    '<div class="ob-title">' + s.title + '</div>' +
+    '<div class="ob-desc">' + s.desc + '</div>' +
     '<div class="ob-footer">' +
-      '<div class="ob-dots">'+dots+'</div>' +
-      '<span class="ob-step">'+(_obStep+1)+' de '+_OB_STEPS.length+'</span>' +
+      '<div class="ob-dots">' + dots + '</div>' +
+      '<span class="ob-step">' + (_ob.step + 1) + ' de ' + total + '</span>' +
       '<span class="ob-skip" onclick="_obEnd()">Pular tour</span>' +
-      '<button class="ob-next" onclick="_obNext()">'+btnLabel+'</button>' +
+      '<button class="ob-next" onclick="_obNext()">' + btn + '</button>' +
     '</div>';
 
-  // Position tooltip relative to target
-  var tw = 340;
+  // Position tooltip — mede o tooltip apos inserir conteudo
   var gap = 14;
+  _ob.tooltip.style.top = '0px';
+  _ob.tooltip.style.left = '0px';
+  _ob.tooltip.style.right = 'auto';
+  _ob.tooltip.style.visibility = 'hidden';
+
+  // Força reflow para medir tamanho real
+  var th = _ob.tooltip.offsetHeight;
+  var tw = _ob.tooltip.offsetWidth;
+  _ob.tooltip.style.visibility = '';
+
   if(s.pos === 'bottom'){
-    _obTooltip.style.top = (r.bottom + gap) + 'px';
-    _obTooltip.style.left = Math.max(8, r.left - 10) + 'px';
-    _obTooltip.style.right = 'auto';
+    _ob.tooltip.style.top = (r.bottom + gap) + 'px';
+    _ob.tooltip.style.left = Math.max(8, Math.min(r.left, window.innerWidth - tw - 16)) + 'px';
   } else if(s.pos === 'top'){
-    _obTooltip.style.top = (r.top - gap - 180) + 'px';
-    _obTooltip.style.left = Math.max(8, r.left - 10) + 'px';
-    _obTooltip.style.right = 'auto';
+    _ob.tooltip.style.top = Math.max(8, r.top - gap - th) + 'px';
+    _ob.tooltip.style.left = Math.max(8, Math.min(r.left, window.innerWidth - tw - 16)) + 'px';
   } else if(s.pos === 'right'){
-    _obTooltip.style.top = r.top + 'px';
-    _obTooltip.style.left = (r.right + gap) + 'px';
-    _obTooltip.style.right = 'auto';
+    _ob.tooltip.style.top = Math.max(8, r.top) + 'px';
+    _ob.tooltip.style.left = (r.right + gap) + 'px';
   } else if(s.pos === 'left'){
-    _obTooltip.style.top = r.top + 'px';
-    _obTooltip.style.left = 'auto';
-    _obTooltip.style.right = (window.innerWidth - r.left + gap) + 'px';
+    _ob.tooltip.style.top = Math.max(8, r.top) + 'px';
+    _ob.tooltip.style.left = 'auto';
+    _ob.tooltip.style.right = (window.innerWidth - r.left + gap) + 'px';
   }
-  // Re-trigger animation
-  _obTooltip.style.animation = 'none';
-  _obTooltip.offsetHeight; // reflow
-  _obTooltip.style.animation = '';
+
+  // Animate in
+  _ob.tooltip.style.animation = 'none';
+  _ob.tooltip.offsetHeight;
+  _ob.tooltip.style.animation = '';
 }
 
 function _obNext(){
-  _obStep++;
-  _obRender();
+  _ob.step++;
+  _obShow();
+}
+
+function _obCleanup(){
+  if(_ob.overlay){ _ob.overlay.remove(); _ob.overlay = null; }
+  if(_ob.spotlight){ _ob.spotlight.remove(); _ob.spotlight = null; }
+  if(_ob.tooltip){ _ob.tooltip.remove(); _ob.tooltip = null; }
+  // Remove quaisquer elementos orfaos de runs anteriores
+  document.querySelectorAll('.ob-overlay,.ob-spotlight,.ob-tooltip').forEach(function(el){ el.remove(); });
 }
 
 function _obEnd(){
-  if(_obOverlay) _obOverlay.remove();
-  if(_obSpotlight) _obSpotlight.remove();
-  if(_obTooltip) _obTooltip.remove();
-  _obOverlay = _obSpotlight = _obTooltip = null;
-  _obStarted = false; // permite re-trigger manual
+  _obCleanup();
+  _ob.active = false;
   localStorage.setItem('elucy_ob_done', '1');
-  // Persist no Supabase
   var sb = getSB();
   var email = window._currentUserEmail;
   if(sb && email){
-    sb.from('operators').update({onboarding_done:true}).eq('email',email).then(function(){});
+    sb.from('operators').update({ onboarding_done: true }).eq('email', email).then(function(){});
   }
 }
 
-// Expor para trigger manual
-window._obStart = _obStart;
+// Expor para trigger manual (ex: settings → "Refazer tour")
+window._obStart = function(){
+  _ob.active = false; // reset guard
+  localStorage.removeItem('elucy_ob_done');
+  _obInit();
+};
 </script>
 <!-- ── TASK EXECUTION OVERLAY ────────────────────────────────────── -->
 <div class="tex-overlay" id="tex-overlay">
