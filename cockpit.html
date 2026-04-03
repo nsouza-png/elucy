@@ -4,16 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ELUCY — Revenue Intelligence</title>
-<link rel="icon" type="image/svg+xml" href="favicon-e.svg?v=4">
-<link rel="shortcut icon" href="favicon-e.svg?v=4">
-<link rel="apple-touch-icon" href="favicon-e.svg?v=4">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="apple-touch-icon" href="favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Supabase JS SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <!-- cockpit-data.js carregado após auth, apenas em ambiente local G4 OS -->
 <script>
-// Detecta se está rodando em GitHub Pages ou localmente
-window.IS_REMOTE = location.hostname !== '' && !location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1') && location.protocol !== 'file:';
+// G4 OS worker DESABILITADO — sempre usa Edge Function (LLM API direto)
+window.IS_REMOTE = true;
 
 // ── CLAUDE API CONFIG (Motor LLM do Elucy Webapp) ───────────────────
 // API key REMOVIDA do frontend — chamadas via Edge Function (elucy-inference)
@@ -24,12 +23,8 @@ window.ELUCY_API_MODEL = localStorage.getItem('elucy_api_model') || 'claude-sonn
 window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false';
 </script>
 <script>
-// Só carrega cockpit-data.js em ambiente local (G4 OS)
-if(!window.IS_REMOTE){
-  const s=document.createElement('script');
-  s.src='cockpit-data.js';
-  document.head.appendChild(s);
-}
+// cockpit-data.js local DESABILITADO — dados sempre via Supabase
+// if(!window.IS_REMOTE){ const s=document.createElement('script'); s.src='cockpit-data.js'; document.head.appendChild(s); }
 </script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -42,25 +37,7 @@ if(!window.IS_REMOTE){
 --pad-card:12px;--pad-card-lg:16px;--pad-section:14px;--pad-section-lg:18px;
 /* ── LINE HEIGHT SYSTEM v1 ──────────────────────────────────────── */
 --lh-tight:1.2;--lh-normal:1.4;--lh-body:1.6;}
-body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:var(--fs-body);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-
-/* ── AMBIENT BACKGROUND LAYERS ─────────────────────────────── */
-/* Dot grid amber */
-body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
-  background-image:radial-gradient(circle,rgba(245,158,11,.14) 1px,transparent 1px);
-  background-size:26px 26px;
-  mask-image:radial-gradient(ellipse 90% 90% at 50% 40%,rgba(0,0,0,.45) 0%,transparent 100%);
-  -webkit-mask-image:radial-gradient(ellipse 90% 90% at 50% 40%,rgba(0,0,0,.45) 0%,transparent 100%)}
-/* Noise texture */
-body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.016;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size:128px}
-/* Orbs flutuantes */
-.bg-orb{position:fixed;border-radius:50%;filter:blur(90px);pointer-events:none;z-index:0;will-change:transform;animation:cockpitOrb 24s ease-in-out infinite alternate}
-.bg-orb-1{width:650px;height:650px;opacity:.18;background:radial-gradient(circle,rgba(245,158,11,.3),transparent 70%);top:-20%;left:35%;animation-delay:0s}
-.bg-orb-2{width:450px;height:450px;opacity:.12;background:radial-gradient(circle,rgba(251,191,36,.2),transparent 70%);bottom:-15%;right:2%;animation-delay:-9s}
-.bg-orb-3{width:300px;height:300px;opacity:.09;background:radial-gradient(circle,rgba(14,165,233,.15),transparent 70%);bottom:25%;left:1%;animation-delay:-17s}
-@keyframes cockpitOrb{0%{transform:translate(0,0) scale(1)}50%{transform:translate(20px,-15px) scale(1.04)}100%{transform:translate(-15px,10px) scale(.97)}}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:var(--fs-body);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;background-image:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(245,158,11,.06) 0%,transparent 70%),radial-gradient(ellipse 40% 30% at 90% 90%,rgba(14,165,233,.04) 0%,transparent 60%)}
 /* ── TYPOGRAPHY CLASSES v1 ──────────────────────────────────────── */
 .t-display{font-size:var(--fs-display);font-weight:var(--fw-xbold);line-height:var(--lh-tight)}
 .t-h1{font-size:var(--fs-h1);font-weight:var(--fw-xbold);line-height:var(--lh-tight)}
@@ -92,24 +69,24 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 #sb-toggle{display:none;background:none;border:none;cursor:pointer;padding:6px;color:var(--text);flex-shrink:0}
 #sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
 /* ── TOPBAR ───────────────────────────────────────────────────── */
-#topbar{height:52px;background:rgba(4,8,15,.6);-webkit-backdrop-filter:saturate(200%) blur(32px);backdrop-filter:saturate(200%) blur(32px);border-bottom:1px solid rgba(245,158,11,.12);box-shadow:0 1px 0 rgba(245,158,11,.06),0 4px 24px rgba(0,0,0,.4);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0;z-index:10;position:relative}
+#topbar{height:52px;background:rgba(4,8,15,.85);-webkit-backdrop-filter:saturate(180%) blur(24px);backdrop-filter:saturate(180%) blur(24px);border-bottom:1px solid var(--aborder);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0;z-index:10}
 .logo{display:flex;align-items:center;gap:8px;margin-right:12px}.logo-name{font-family:var(--font-title);font-size:var(--fs-h3);font-weight:var(--fw-xbold);color:#fff;text-transform:uppercase;letter-spacing:1.5px}.logo-badge{background:var(--accent);color:#000;font-size:8px;font-weight:var(--fw-bold);padding:2px 6px;border-radius:4px;letter-spacing:1px;text-transform:uppercase;line-height:var(--lh-tight)}.logo-badge-ent{border:1.5px solid var(--accent);color:var(--accent);background:transparent;font-size:9px;font-weight:800;padding:2px 8px;border-radius:5px;letter-spacing:1.2px;text-transform:uppercase;line-height:1.4;font-family:var(--font-title)}
 .ntab{padding:6px 14px;border-radius:20px;font-size:var(--fs-body-sm);color:var(--text2);cursor:pointer;transition:.2s;border:1px solid transparent;background:none;font-family:inherit;font-weight:var(--fw-medium)}.ntab:hover{color:var(--text);background:rgba(255,255,255,.06)}.ntab.on{color:#fff;background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.18);font-weight:var(--fw-semibold)}
 .tbr{margin-left:auto;display:flex;align-items:center;gap:10px}
 .chip{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:3px 12px 3px 5px;font-size:12px}.av{width:24px;height:24px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}.chip-name{font-weight:600;color:#fff}.chip-lvl{color:var(--text2);font-size:11px}
 .streak-badge{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--text2);font-weight:600;display:inline-flex;align-items:center;gap:4px}
-#main{display:flex;flex:1;overflow:hidden;position:relative;z-index:1}
-#sb{width:292px;min-width:292px;background:rgba(4,8,15,.5);-webkit-backdrop-filter:saturate(200%) blur(28px);backdrop-filter:saturate(200%) blur(28px);border-right:1px solid rgba(255,255,255,.06);box-shadow:inset -1px 0 0 rgba(245,158,11,.05);display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:1}
+#main{display:flex;flex:1;overflow:hidden}
+#sb{width:292px;min-width:292px;background:rgba(4,8,15,.7);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
 .sb-h{padding:12px 14px 8px;border-bottom:1px solid var(--border);flex-shrink:0}.sb-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}.sb-title{font-family:var(--font-title);font-size:var(--fs-caption);font-weight:var(--fw-bold);text-transform:uppercase;letter-spacing:1px}.sb-date{font-size:var(--fs-caption);color:var(--text2)}
 .sb-stats{display:flex;gap:5px}.sbs{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 7px;text-align:center}.sbs-n{font-family:var(--font-body);font-size:var(--fs-h3);font-weight:var(--fw-xbold)}.sbs-l{font-size:10px;color:var(--text2)}
 .sb-search{padding:8px 14px;border-bottom:1px solid var(--border);flex-shrink:0}.srch{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--text);outline:none;font-family:inherit}.srch::placeholder{color:var(--text2)}.srch:focus{border-color:var(--border2)}
 .deal-list{flex:1;overflow-y:auto;padding:8px}
-.di{background:rgba(13,21,32,.55);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.06);border-radius:var(--r2);padding:12px 14px;margin-bottom:6px;cursor:pointer;transition:.2s;border-left:3px solid transparent;box-shadow:0 2px 8px rgba(0,0,0,.25)}.di:hover{border-color:rgba(255,255,255,.12);background:rgba(19,29,43,.7);transform:scale(1.01);box-shadow:0 4px 16px rgba(0,0,0,.35)}.di.on{border-color:var(--accent)!important;background:rgba(245,158,11,.07)}.di.sla{border-left-color:var(--red)}.di.dome{border-left-color:var(--yellow)}
+.di{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;margin-bottom:6px;cursor:pointer;transition:.2s;border-left:3px solid transparent}.di:hover{border-color:var(--border2);background:var(--bg4);transform:scale(1.01)}.di.on{border-color:var(--accent)!important;background:rgba(245,158,11,.08)}.di.sla{border-left-color:var(--red)}.di.dome{border-left-color:var(--yellow)}
 .di-name{font-size:var(--fs-body);font-weight:var(--fw-semibold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;color:#fff}.di-co{font-size:var(--fs-caption);color:var(--text2);margin-bottom:6px}.di-meta{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .tb{display:inline-flex;align-items:center;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700}.th{background:var(--gdim);color:var(--green);border:1px solid var(--green)}.tw{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}.tc{background:var(--rdim);color:var(--red);border:1px solid var(--red)}
 .fc{background:var(--bg4);border:1px solid var(--border);border-radius:4px;padding:2px 5px;font-size:10px;color:var(--text2)}.fc-fase{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);color:var(--accent2)}.fc-linha{background:rgba(48,209,88,.06);border:1px solid rgba(48,209,88,.18);color:var(--green);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle}.cc{font-size:10px;padding:2px 5px;border-radius:4px;font-weight:600}.cwa{background:rgba(37,211,102,.12);color:#25d366;border:1px solid #25d366}.cig{background:rgba(225,48,108,.12);color:#e1306c;border:1px solid #e1306c}.ccl{background:var(--bdim);color:var(--blue);border:1px solid var(--blue)}.di-day{font-size:10px;color:var(--text2);margin-left:auto}
 #ct{flex:1;overflow-y:auto;padding:18px 20px}.screen{display:none}.screen.on{display:block}
-.card{background:rgba(8,14,24,.55);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border:1px solid rgba(255,255,255,.07);border-radius:var(--r2);padding:18px;margin-bottom:14px;box-shadow:0 4px 24px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.04)}
+.card{background:rgba(28,28,30,.8);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--r2);padding:18px;margin-bottom:14px}
 .sec-t{font-family:var(--font-body);font-size:var(--fs-body);font-weight:var(--fw-bold);color:#fff;letter-spacing:.2px}
 .btn{padding:8px 15px;border-radius:var(--r);font-size:var(--fs-body-sm);font-weight:var(--fw-semibold);cursor:pointer;border:none;transition:.2s;display:inline-flex;align-items:center;gap:5px;font-family:inherit;text-decoration:none}
 .bp{background:var(--accent);color:#fff;box-shadow:none}.bp:hover{background:#d97706;box-shadow:0 2px 12px rgba(245,158,11,.3)}.bs{background:var(--bg3);color:var(--text);border:1px solid var(--border)}.bs:hover{border-color:var(--border2);background:var(--bg4)}.bsuc{background:var(--gdim);color:var(--green);border:1px solid var(--green)}.bsuc:hover{background:var(--green);color:#fff}.bwrn{background:var(--ydim);color:var(--yellow);border:1px solid var(--yellow)}.bwa{background:rgba(37,211,102,.15);color:#25d366;border:1px solid #25d366}.bwa:hover{background:#25d366;color:#fff}.big2{background:rgba(225,48,108,.15);color:#e1306c;border:1px solid #e1306c}.big2:hover{background:#e1306c;color:#fff}.btn-sm{padding:5px 9px;font-size:11px}
@@ -146,31 +123,6 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 .er-b{padding:12px 17px;border-bottom:1px solid var(--border)}.er-b:last-child{border-bottom:none}.er-bl{font-size:10px;font-weight:var(--fw-bold);color:var(--accent2);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;display:flex;align-items:center;gap:5px}.er-bl::before{content:"";width:3px;height:10px;background:var(--accent);border-radius:2px;display:inline-block;flex-shrink:0}.er-bt{font-size:var(--fs-body-sm);line-height:var(--lh-body)}.er-bt p{margin-bottom:4px}.er-bt p:last-child{margin-bottom:0}
 .ef{display:inline-flex;align-items:center;border-radius:4px;padding:2px 6px;font-size:11px;font-weight:600;margin:2px 2px 2px 0}.ef-w{background:var(--ydim);border:1px solid var(--yellow);color:var(--yellow)}.ef-g{background:var(--gdim);border:1px solid var(--green);color:var(--green)}.ef-r{background:var(--rdim);border:1px solid var(--red);color:var(--red)}
 .er-v{background:var(--bg3);padding:13px 17px;display:flex;align-items:center;gap:13px}.ev-s{font-size:var(--fs-display);font-weight:var(--fw-black);color:var(--accent2)}.ev-t{font-size:var(--fs-body-sm);line-height:var(--lh-body)}
-/* ── ELUCY STRUCTURED OUTPUT ── */
-.elucy-output{display:flex;flex-direction:column;gap:14px;max-width:780px}
-.elucy-head{display:flex;flex-direction:column;gap:8px;padding-bottom:2px}
-.elucy-title{font-size:15px;font-weight:800;letter-spacing:-.3px;color:var(--text)}
-.elucy-chips{display:flex;gap:5px;flex-wrap:wrap}
-.elucy-chip{font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;background:var(--bg4);border:1px solid var(--border2);color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
-.elucy-chip.chip-persona{border-color:rgba(245,158,11,.3);color:var(--amber2)}
-.elucy-chip.chip-tier{border-color:rgba(14,165,233,.3);color:var(--blue2)}
-.elucy-chip.chip-state{border-color:rgba(239,68,68,.3);color:var(--red)}
-.elucy-chip.chip-fw{border-color:rgba(139,92,246,.3);color:var(--purple)}
-.elucy-chip.chip-dqi{border-color:rgba(16,185,129,.3);color:var(--green)}
-.elucy-section{display:flex;flex-direction:column;gap:6px;padding:10px 13px;border-radius:8px;background:var(--bg3);border:1px solid var(--border)}
-.elucy-sec-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--accent2);display:flex;align-items:center;gap:5px}
-.elucy-sec-label::before{content:"";width:3px;height:10px;background:var(--accent);border-radius:2px;display:inline-block;flex-shrink:0}
-.elucy-list{margin:0;padding-left:16px;color:var(--text);line-height:1.65;font-size:12.5px}
-.elucy-list li+li{margin-top:4px}
-.elucy-body{font-size:12.5px;line-height:1.65;color:var(--text)}
-.elucy-cta-box{background:linear-gradient(180deg,rgba(245,158,11,.07),rgba(245,158,11,.02));border:1px solid rgba(245,158,11,.18);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
-.elucy-cta-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--amber2)}
-.elucy-cta-text{font-size:13px;line-height:1.7;color:var(--text);white-space:pre-wrap;font-style:italic}
-.elucy-gov{background:rgba(239,68,68,.04);border:1px solid rgba(239,68,68,.14);border-radius:8px;padding:10px 13px;display:flex;flex-direction:column;gap:6px}
-.elucy-gov .elucy-sec-label{color:var(--red)}.elucy-gov .elucy-sec-label::before{background:var(--red)}
-.elucy-gov .elucy-list{color:var(--text2)}
-/* copy area — structured mode */
-.co-rich{padding:2px 0;font-size:13px;line-height:1.7}
 .mo{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;margin-bottom:7px;cursor:pointer;transition:.15s}.mo:hover{border-color:var(--border2);background:var(--bg3)}.mo.on{border-color:var(--accent);background:var(--adim)}.mo.rec{border-color:var(--green)}.mo-top{display:flex;align-items:center;gap:6px;margin-bottom:3px}.mo-rb{background:var(--gdim);color:var(--green);border:1px solid var(--green);font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px}.mo-t{font-size:12px;font-weight:700}.mo-d{font-size:11px;color:var(--text2)}
 .bl-sec{margin-top:10px}.bl-l{font-size:11px;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}.bli{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;opacity:.45}.bli-n{font-size:12px;color:var(--text2)}.bli-w{font-size:10px;color:var(--text2);background:var(--bg4);padding:2px 6px;border-radius:4px}
 .dvl{background:var(--bg3);border:1px solid rgba(255,214,10,.15);border-radius:var(--r2);padding:16px;margin-bottom:14px}.dvl-t{font-size:13px;font-weight:700;color:var(--yellow);margin-bottom:3px}.dvl-s{font-size:11px;color:var(--text2);margin-bottom:12px}.dvl-g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}.dvl-f{display:flex;flex-direction:column;gap:3px}.dvl-l{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}.dvl-i{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 9px;font-size:12px;color:var(--text);outline:none;width:100%;font-family:inherit}.dvl-i:focus{border-color:var(--accent)}
@@ -880,12 +832,8 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 .intel-section-title{font-family:var(--font-title);font-size:14px;font-weight:800;margin-bottom:10px;color:var(--text);display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:1px}
 .intel-section-num{background:var(--accent);color:#fff;width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0}
 .intel-empty{text-align:center;padding:40px;color:var(--text2);font-size:13px}
-.intel-l1{display:flex;gap:0;margin-bottom:0;border-bottom:2px solid var(--border)}
-.intel-l1-tab{padding:8px 20px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;transition:.15s;letter-spacing:.3px;border-bottom:2px solid transparent;margin-bottom:-2px;user-select:none}
-.intel-l1-tab:hover{color:var(--text)}
-.intel-l1-tab.on{color:var(--accent);border-bottom-color:var(--accent)}
-.intel-dims{display:flex;gap:4px;flex-wrap:wrap;margin-top:10px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)}
-.intel-dim{padding:4px 10px;border-radius:5px;font-size:10px;font-weight:700;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.15s;text-transform:uppercase;letter-spacing:.5px}
+.intel-dims{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.intel-dim{padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.15s;text-transform:uppercase;letter-spacing:.5px}
 .intel-dim:hover{border-color:var(--accent);color:var(--accent2)}
 .intel-dim.on{background:var(--adim);border-color:var(--accent);color:var(--accent2)}
 .intel-loading{text-align:center;padding:30px;color:var(--text2);font-size:12px}
@@ -1060,27 +1008,26 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
 .li-timeline-wrap{padding:4px 0}
 
 /* ── ONBOARDING TOUR ─────────────────────────────────────── */
-.ob-overlay{position:fixed;inset:0;z-index:9998;pointer-events:all;background:transparent}
-.ob-spotlight{position:fixed;z-index:9999;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.6);pointer-events:none;transition:top .3s ease,left .3s ease,width .3s ease,height .3s ease}
-.ob-tooltip{position:fixed;z-index:10000;background:#0d1520;border:1.5px solid var(--accent,#f59e0b);border-radius:14px;padding:20px 22px 16px;max-width:340px;min-width:280px;width:340px;box-shadow:0 12px 40px rgba(0,0,0,.6),0 0 0 1px rgba(245,158,11,.1);animation:ob-in .25s ease}
-@keyframes ob-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-.ob-tooltip::before{content:'';position:absolute;width:12px;height:12px;background:#0d1520;border:1.5px solid var(--accent,#f59e0b);transform:rotate(45deg)}
-.ob-tooltip[data-pos="bottom"]::before{top:-7px;left:28px;border-right:none;border-bottom:none}
-.ob-tooltip[data-pos="top"]::before{bottom:-7px;left:28px;border-left:none;border-top:none}
-.ob-tooltip[data-pos="left"]::before{right:-7px;top:18px;border-left:none;border-bottom:none}
-.ob-tooltip[data-pos="right"]::before{left:-7px;top:18px;border-right:none;border-top:none}
-.ob-title{font-size:14px;font-weight:700;color:#f0f4ff;margin-bottom:6px;padding-right:20px}
-.ob-desc{font-size:12px;color:#8899aa;line-height:1.55;margin-bottom:14px}
-.ob-footer{display:flex;align-items:center;gap:8px}
-.ob-step{font-size:11px;color:#445566;white-space:nowrap}
-.ob-next{padding:6px 16px;border-radius:8px;border:none;background:var(--accent,#f59e0b);color:#000;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .15s;margin-left:auto}
-.ob-next:hover{opacity:.85}
-.ob-skip{font-size:11px;color:#445566;cursor:pointer;text-decoration:underline;white-space:nowrap}
-.ob-close{position:absolute;top:10px;right:12px;background:none;border:none;color:#445566;font-size:18px;cursor:pointer;line-height:1;transition:color .15s}
-.ob-close:hover{color:#f0f4ff}
-.ob-dots{display:flex;gap:4px;align-items:center}
-.ob-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.15);transition:background .2s,transform .2s}
-.ob-dot.on{background:var(--accent,#f59e0b);transform:scale(1.3)}
+.ob-overlay{position:fixed;inset:0;z-index:9998;pointer-events:none}
+.ob-spotlight{position:fixed;z-index:9999;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.55);pointer-events:none;transition:all .35s cubic-bezier(.4,0,.2,1)}
+.ob-tooltip{position:fixed;z-index:10000;background:var(--bg2,#1a1a2e);border:1.5px solid var(--accent,#6366f1);border-radius:14px;padding:22px 24px 18px;max-width:340px;min-width:260px;box-shadow:0 8px 32px rgba(0,0,0,.4);animation:ob-in .3s ease}
+@keyframes ob-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.ob-tooltip::before{content:'';position:absolute;width:14px;height:14px;background:var(--bg2,#1a1a2e);border:1.5px solid var(--accent,#6366f1);transform:rotate(45deg)}
+.ob-tooltip[data-pos="bottom"]::before{top:-8px;left:32px;border-right:none;border-bottom:none}
+.ob-tooltip[data-pos="top"]::before{bottom:-8px;left:32px;border-left:none;border-top:none}
+.ob-tooltip[data-pos="left"]::before{right:-8px;top:20px;border-left:none;border-top:none}
+.ob-tooltip[data-pos="right"]::before{left:-8px;top:20px;border-right:none;border-bottom:none}
+.ob-title{font-size:15px;font-weight:700;color:var(--text,#fff);margin-bottom:6px}
+.ob-desc{font-size:12.5px;color:var(--text2,#a1a1aa);line-height:1.5;margin-bottom:16px}
+.ob-footer{display:flex;align-items:center;justify-content:space-between}
+.ob-step{font-size:11px;color:var(--text3,#71717a)}
+.ob-next{padding:7px 18px;border-radius:8px;border:none;background:var(--accent,#6366f1);color:#fff;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s}
+.ob-next:hover{background:var(--accent2,#818cf8)}
+.ob-skip{font-size:11px;color:var(--text3,#71717a);cursor:pointer;text-decoration:underline;margin-right:12px}
+.ob-close{position:absolute;top:10px;right:12px;background:none;border:none;color:var(--text3,#71717a);font-size:16px;cursor:pointer;line-height:1}
+.ob-dots{display:flex;gap:5px;margin-right:auto;margin-left:4px}
+.ob-dot{width:6px;height:6px;border-radius:50%;background:var(--bg4,#333);transition:background .2s}
+.ob-dot.on{background:var(--accent,#6366f1)}
 /* Batch Intelligence */
 .batch-table{width:100%;border-collapse:collapse;font-size:12px}
 .batch-table th{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border2);color:var(--text2);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
@@ -1144,9 +1091,6 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
     <button class="auth-logout" onclick="supabaseSignOut()">Sair e trocar de conta</button>
   </div>
 </div>
-<div class="bg-orb bg-orb-1"></div>
-<div class="bg-orb bg-orb-2"></div>
-<div class="bg-orb bg-orb-3"></div>
 <div id="sb-overlay" onclick="window.toggleSidebar&&window.toggleSidebar(false)"></div>
 <div id="elucy-toast"></div>
 <div id="topbar">
@@ -1157,6 +1101,7 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
   <button class="ntab on" onclick="setScreen('home',this)">Home</button>
   <button class="ntab" onclick="setScreen('pipeline',this)">Pipeline</button>
   <button class="ntab" onclick="setScreen('tasks',this)">Tasks <span class="tab-count" id="task-count"></span></button>
+  <button class="ntab" onclick="setScreen('reports',this)">Reports</button>
   <button class="ntab" onclick="setScreen('prevendas',this)">Pre-Vendas</button>
   <button class="ntab" onclick="setScreen('intelligence',this)">Intel</button>
   <button class="ntab" onclick="setScreen('playbooks',this)">Playbooks</button>
@@ -1565,17 +1510,27 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
       </div>
     </div>
     <div class="screen" id="screen-intelligence">
-      <!-- L1: 5 tabs principais -->
-      <div class="intel-l1" id="intel-l1">
-        <span class="intel-l1-tab on" onclick="window._intelL1('overview',this)">Overview</span>
-        <span class="intel-l1-tab" onclick="window._intelL1('performance',this)">Performance</span>
-        <span class="intel-l1-tab" onclick="window._intelL1('pipeline',this)">Pipeline</span>
-        <span class="intel-l1-tab" onclick="window._intelL1('engines',this)">Engines</span>
-        <span class="intel-l1-tab" onclick="window._intelL1('strategic',this)">Strategic</span>
+      <div style="margin-bottom:16px">
+        <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:3px">Inteligência Operacional</div>
+        <div style="font-size:12px;color:var(--text2)" id="intel-subtitle">Análise automática do pipeline — carregue deals para ativar</div>
       </div>
-      <!-- L2: subtabs (renderizadas dinamicamente por JS) -->
-      <div class="intel-dims" id="intel-dims" style="display:none"></div>
-      <div style="font-size:11px;color:var(--text2);margin-bottom:10px" id="intel-subtitle"></div>
+      <div class="intel-dims" id="intel-dims">
+        <span class="intel-dim on" onclick="window._intelDim('global',this)">Global</span>
+        <span class="intel-dim" onclick="window._intelDim('operator',this)">Operador</span>
+        <span class="intel-dim" onclick="window._intelDim('line',this)">Linha</span>
+        <span class="intel-dim" onclick="window._intelDim('stage',this)">Etapa</span>
+        <span class="intel-dim" onclick="window._intelDim('channel',this)">Canal</span>
+        <span class="intel-dim" onclick="window._intelDim('task',this)">Tasks</span>
+        <span class="intel-dim" onclick="window._intelDim('value',this)">Valor</span>
+        <span class="intel-dim" onclick="window._intelDim('forecast',this)" style="border-color:var(--accent2);color:var(--accent2)">Forecast</span>
+        <span class="intel-dim" onclick="window._intelDim('framework',this)" style="border-color:var(--clay);color:var(--clay)">Framework</span>
+        <span class="intel-dim" onclick="window._intelDim('performance',this)" style="border-color:var(--gold);color:var(--gold)">Performance V3</span>
+        <span class="intel-dim" onclick="window._intelDim('enterprise',this)" style="border-color:var(--green);color:var(--green)">Enterprise</span>
+        <span class="intel-dim" onclick="window._intelDim('rfv',this)" style="border-color:#a78bfa;color:#a78bfa">RFV</span>
+        <span class="intel-dim" onclick="window._intelDim('spin',this)" style="border-color:var(--yellow);color:var(--yellow)">SPIN Audit</span>
+        <span class="intel-dim" onclick="window._intelDim('advisor',this)" style="border-color:var(--accent2);color:var(--accent2)">Trusted Advisor</span>
+        <span class="intel-dim" onclick="window._intelDim('bowtie',this)" style="border-color:#f97316;color:#f97316">⊞ Bowtie</span>
+      </div>
       <div id="intel-content">
         <div class="intel-empty">Carregue o pipeline para visualizar a análise de inteligência.</div>
       </div>
@@ -1798,7 +1753,7 @@ function setScreen(n,el,skipHash){
   document.querySelectorAll('#ct > .screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
   var ct=document.getElementById('ct'); if(ct) ct.scrollTop=0;
-  const screenMap={home:'screen-home',pipeline:'screen-pipeline',tasks:'screen-tasks',prevendas:'screen-prevendas',intelligence:'screen-intelligence',playbooks:'screen-playbooks',dm:'screen-dm'};
+  const screenMap={home:'screen-home',pipeline:'screen-pipeline',tasks:'screen-tasks',reports:'screen-reports',prevendas:'screen-prevendas',intelligence:'screen-intelligence',playbooks:'screen-playbooks',dm:'screen-dm'};
   const validScreens=Object.keys(screenMap);
   const name=validScreens.includes(n)?n:'home';
   const target=document.getElementById(screenMap[name]);
@@ -1806,25 +1761,22 @@ function setScreen(n,el,skipHash){
   if(el){ el.classList.add('on'); }
   else {
     const tabs=document.querySelectorAll('.ntab');
-    const tabMap={home:0,pipeline:1,tasks:2,prevendas:3,intelligence:4,playbooks:5};
+    const tabMap={home:0,pipeline:1,tasks:2,reports:3,prevendas:4,intelligence:5,playbooks:6};
     const idx=tabMap[name]!=null?tabMap[name]:0;
     if(tabs[idx]) tabs[idx].classList.add('on');
   }
   if(!skipHash) history.replaceState(null,'','#'+name);
   if(name==='home' && window.renderHome) window.renderHome();
   if(name==='tasks' && window.renderTaskRunner) window.renderTaskRunner();
-  if(name==='intelligence'){
-    var l1El=document.querySelector('.intel-l1-tab.on');
-    if(!l1El){ var firstL1=document.querySelector('.intel-l1-tab'); if(firstL1) window._intelL1('overview',firstL1); }
-    else renderIntelligence();
-  }
+  if(name==='intelligence') renderIntelligence();
+  if(name==='reports') loadReportsScreen();
   if(name==='prevendas' && window.ReportsV4) window.ReportsV4.renderReportsV4('screen-reports-v4');
   if(name==='playbooks') renderPlaybooks();
 }
 // Hash routing — abre a seção correta ao carregar URL direta ou navegar pelo histórico
 function _routeFromHash(){
   const hash=(location.hash||'').replace('#','').toLowerCase().trim();
-  const valid=['home','pipeline','tasks','prevendas','intelligence','playbooks','dm'];
+  const valid=['home','pipeline','tasks','reports','prevendas','intelligence','playbooks','dm'];
   setScreen(valid.includes(hash)?hash:'home',null,true);
 }
 window.addEventListener('hashchange',_routeFromHash);
@@ -2222,9 +2174,7 @@ function swTab(id,ch,el){
 function clip(elId){
   const el=document.getElementById(elId);
   if(!el) return;
-  // Se o elemento tem copyText salvo (modo rich render), usar ele — evita copiar HTML
-  const text = el.dataset.copyText || el.textContent || el.innerText;
-  navigator.clipboard.writeText(text).then(()=>{
+  navigator.clipboard.writeText(el.textContent||el.innerText).then(()=>{
     const ob=el.style.borderColor;
     el.style.borderColor='var(--green)';
     setTimeout(()=>el.style.borderColor=ob,1200);
@@ -2739,6 +2689,8 @@ async function loadDealsFromSupabase(email){
     if(k==='email_lead') return row.email_lead||row.email||'';
     return row[k]!=null?String(row[k]):'';
   }));
+  // Busca métricas de eficiência do cache (Databricks)
+  loadEfficiencyMetrics(sb,email);
   renderLiveDeals(rows,cols);
   showSyncToast('ok',`Pipeline carregado — ${rows.length} deals.`);
 
@@ -2746,50 +2698,35 @@ async function loadDealsFromSupabase(email){
   (async function(){
     if(window._syncStatus) window._syncStatus('syncing');
     try {
-      // Fase 1 — contexto e meta (dependências base, sequencial)
+      // Fase 1 — contexto e taxonomia (dependências base)
       if(window.initOperatorContext) await window.initOperatorContext();
-      await loadEfficiencyMetrics(sb,email);
       if(window.loadTaxonomy) await window.loadTaxonomy();
 
-      // Fase 2 — syncs paralelos (independentes) + OPP count real
+      // Fase 2 — syncs paralelos (independentes entre si)
       await Promise.all([
         window.syncDealRuntime ? window.syncDealRuntime() : Promise.resolve(),
         window.syncForecastRuntime ? window.syncForecastRuntime() : Promise.resolve(),
         window.calcOppMensal ? window.calcOppMensal() : Promise.resolve(),
       ]);
 
-      if(window._syncStatus) window._syncStatus('ok');
-      // Renderiza Home com OPP count real já carregado
-      try{ if(window.renderHome) window.renderHome(); }catch(e){}
-      console.log('[boot] V11 engine OK — OPP mensal:', window._OPP_MENSAL_COUNT, '(', window._OPP_MENSAL_SOURCE, ')');
-
-      // Fase 3 — fire-and-forget (não bloqueiam UI nem causam erro visível)
+      // Fase 3 — snapshot diário (fire-and-forget, não bloqueia UI)
       if(window.syncDailySnapshot) window.syncDailySnapshot().catch(function(e){ console.warn('[boot] snapshot:', e.message); });
+
+      // Fase 4 — operator efficiency (fire-and-forget, falha silenciosa)
       if(window.syncOperatorEfficiency) window.syncOperatorEfficiency().catch(function(e){ console.warn('[boot] efficiency:', e.message); });
+
+      if(window._syncStatus) window._syncStatus('ok');
+      // Atualiza Home com OPP count real já carregado
+      if(window.renderHome){
+        var sh=document.getElementById('screen-home');
+        if(sh&&sh.classList.contains('on')) window.renderHome();
+      }
+      console.log('[boot] V11 engine boot OK — OPP mensal:', window._OPP_MENSAL_COUNT, '(', window._OPP_MENSAL_SOURCE, ')');
     } catch(e){
       console.warn('[boot] engine init error:', e.message);
       if(window._syncStatus) window._syncStatus('error');
     }
   })();
-}
-
-// Aplica meta_mensal no _operatorCtx sem salvar no Supabase
-function _applyMetaToCtx(mm){
-  if(!mm) return;
-  try{
-    var ctx = window.getOperatorCtx ? window.getOperatorCtx() : null;
-    if(!ctx){ console.warn('[_applyMetaToCtx] engine ctx não disponível'); return; }
-    Object.assign(ctx.meta_mensal, mm);
-    window._OPERATOR_META = Object.assign({}, ctx.meta_mensal);
-    // Usa _deriveMetaDiaria do engine se disponível, senão calcula inline
-    if(window._deriveMetaDiaria){ window._deriveMetaDiaria(ctx.meta_mensal); }
-    else{
-      ctx.meta_diaria.fups          = Math.ceil((mm.fups||300)/22);
-      ctx.meta_diaria.qualificacoes = Math.ceil((mm.qualificacoes||100)/22);
-      ctx.meta_diaria.handoffs      = Math.ceil((mm.handoffs||40)/22);
-      ctx.meta_diaria.opp           = Math.ceil((mm.opp||15)/22);
-    }
-  }catch(e){ console.warn('[_applyMetaToCtx] erro:', e); }
 }
 
 async function loadEfficiencyMetrics(sb,email){
@@ -2809,12 +2746,7 @@ async function loadEfficiencyMetrics(sb,email){
       .select('meta_mensal')
       .eq('email',email)
       .maybeSingle();
-    if(op&&op.meta_mensal){
-      var mm = typeof op.meta_mensal==='string' ? JSON.parse(op.meta_mensal) : op.meta_mensal;
-      window._OPERATOR_META = mm;
-      // Sincroniza em memória com _operatorCtx — SEM salvar de volta no Supabase
-      _applyMetaToCtx(mm);
-    }
+    if(op&&op.meta_mensal) window._OPERATOR_META=op.meta_mensal;
   }catch(e){/* meta not available */}
 }
 
@@ -2889,15 +2821,13 @@ document.addEventListener('DOMContentLoaded',()=>{
     });
 
     // Checa sessão atual
-    var _authHandled = false;
     sb.auth.getSession().then(({data:{session}})=>{
-      if(session&&session.user){ _authHandled=true; checkApproval(session.user); }
+      if(session&&session.user) checkApproval(session.user);
       else showAuthScreen();
     });
-    // Ouve mudanças de auth — ignora se getSession ja processou
+    // Ouve mudanças de auth
     sb.auth.onAuthStateChange((_event,session)=>{
-      if(session&&session.user&&!_authHandled){ _authHandled=true; checkApproval(session.user); }
-      else if(!session&&_event==='SIGNED_OUT'){ _authHandled=false; showAuthScreen(); }
+      if(session&&session.user) checkApproval(session.user);
     });
   } else {
     // Modo local (G4 OS): carrega cockpit-data.js diretamente
@@ -2962,104 +2892,26 @@ async function callSyncDeals(){
   }
 }
 
-// ── LIVE SYNC LOOP — detecta novos dados no Databricks e atualiza automaticamente ──
-// Estratégia: query leve (MAX event_timestamp) a cada 2min.
-// Se timestamp mudou → re-fetcha pipeline completo silenciosamente.
-// Sem cache, sem batch diário — dados sempre frescos conforme chegam.
-(function initLiveSyncLoop(){
-  var POLL_MS = 2 * 60 * 1000; // 2 minutos
-  var _lastKnownTimestamp = null; // MAX(event_timestamp) do último fetch
-  var _checkInProgress = false;
+(function initGrowthLoop(){
+  const STALE_MINUTES=15;
+  const POLL_MS=5*60*1000;
 
-  async function checkForNewData(){
-    var token = localStorage.getItem('elucy_db_token');
-    var qualName = localStorage.getItem('elucy_qualificador_name');
-    if(!token || !qualName) return; // sem credenciais → silencioso
-    if(_checkInProgress) return;
-    _checkInProgress = true;
-    try {
-      // Query leve: apenas o timestamp mais recente do operador
-      var safeQual = qualName.replace(/'/g,"''");
-      var checkSql = "SELECT MAX(event_timestamp) as latest FROM production.diamond.funil_comercial WHERE qualificador_name='" + safeQual + "'";
-      var resp = await fetch(DB_ENDPOINT, {
-        method:'POST',
-        headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
-        body: JSON.stringify({statement:checkSql, warehouse_id:DB_WAREHOUSE, wait_timeout:'20s', on_wait_timeout:'CONTINUE'})
-      });
-      if(!resp.ok){ _checkInProgress=false; return; }
-      var data = await resp.json();
-      // Poll se ainda rodando
-      var attempts=0;
-      while(data.status&&(data.status.state==='PENDING'||data.status.state==='RUNNING')&&attempts<8){
-        await new Promise(function(r){setTimeout(r,2000);});
-        var pr = await fetch(DB_ENDPOINT+'/'+data.statement_id,{headers:{'Authorization':'Bearer '+token}});
-        data = await pr.json();
-        attempts++;
-      }
-      var rows = (data.result&&data.result.data_array)||[];
-      var latest = rows.length ? rows[0][0] : null;
-      if(!latest){ _checkInProgress=false; return; }
-
-      if(_lastKnownTimestamp === null){
-        // Primeira verificação — apenas registra o timestamp, não re-fetcha
-        _lastKnownTimestamp = latest;
-        _checkInProgress=false;
-        return;
-      }
-
-      if(latest !== _lastKnownTimestamp){
-        // Dados novos detectados → re-fetcha pipeline silenciosamente
-        _lastKnownTimestamp = latest;
-        var btn = null; // silent — sem indicador de loading no botão
-        var nome = qualName;
-        _syncStatus('sync');
-        fetchPipelineByName(nome, token, btn);
-        var ts = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-        showSyncToast('ok','Pipeline atualizado — novos dados detectados às '+ts);
-      }
-    } catch(e){
-      // silencioso — falha de rede não deve perturbar o operador
-    } finally {
-      _checkInProgress=false;
-    }
+  function isStale(){
+    if(!_lastSyncAt) return true;
+    return (Date.now()-_lastSyncAt)/60000 > STALE_MINUTES;
   }
 
-  // Mantém compatibilidade com G4OS local (postMessage de /atualizar-cockpit)
-  window.addEventListener('message',function(e){
-    if(!e.data||e.data.type!=='g4os:skill:complete'||e.data.skill!=='atualizar-cockpit') return;
-    var old=document.querySelector('script[src^="cockpit-data.js"]');
-    if(old) old.remove();
-    window.COCKPIT_DEALS=null;
-    window.COCKPIT_COLS=null;
-    window.COCKPIT_UPDATED_AT=null;
-    var ns=document.createElement('script');
-    ns.src='cockpit-data.js?t='+Date.now();
-    ns.onload=function(){
-      if(!window.COCKPIT_DEALS||!window.COCKPIT_DEALS.length) return;
-      var cols=(window.COCKPIT_COLS||[]).map(function(name,i){return {name:name,position:i};});
-      renderLiveDeals(window.COCKPIT_DEALS,cols);
-      if(window.COCKPIT_OPERATOR){
-        var nome=window.COCKPIT_OPERATOR;
-        var init=nome.split(' ').map(function(p){return p[0];}).join('').slice(0,2).toUpperCase();
-        document.getElementById('chip-name').textContent=nome.split(' ')[0];
-        document.getElementById('av-init').textContent=init;
-        document.getElementById('op-pill').classList.add('show');
-      }
-      if(window.COCKPIT_UPDATED_AT){
-        var sb2=document.getElementById('sbdate');
-        if(sb2) sb2.textContent='Atualizado: '+window.COCKPIT_UPDATED_AT;
-      }
-      showSyncToast('ok','Pipeline atualizado — '+window.COCKPIT_DEALS.length+' deals');
-    };
-    document.head.appendChild(ns);
-  });
+  function requestRefresh(){
+    if(!window.IS_REMOTE) return; // modo local usa cockpit-data.js via G4OS
+    if(!isStale()) return;
+    callSyncDeals();
+  }
 
-  // Inicia o loop — primeira verificação após 10s (deixa o boot completar)
-  setTimeout(checkForNewData, 10000);
-  setInterval(checkForNewData, POLL_MS);
+  // G4OS postMessage listener DESABILITADO — cockpit usa apenas Edge Function
+  // window.addEventListener('message',function(e){ ... });
 
-  // Expõe para debug
-  window._liveSyncCheck = checkForNewData;
+  setTimeout(requestRefresh,3000);
+  setInterval(requestRefresh,POLL_MS);
 })();
 
 // Cmd+, (Mac) / Ctrl+, (Win) → abrir Settings
@@ -3539,7 +3391,8 @@ function closeSettings(){
   }
 }
 
-async function saveOperator(){
+function saveOperator(){
+  // Governança: no modo remoto, email vem do auth — não pode ser editado
   const emailSource = window.IS_REMOTE && _currentUser ? _currentUser.email : null;
   const input=document.getElementById('op-email-input');
   const email=emailSource || (input?input.value:'').trim();
@@ -3547,19 +3400,28 @@ async function saveOperator(){
     showModalStatus('err','E-mail inválido. Use o formato nome@domínio.com');
     return;
   }
-
-  // localStorage (síncrono — sem risco de race)
+  // Salvar token Databricks se preenchido
   const tokenInput=document.getElementById('op-token-input');
   const token=(tokenInput?tokenInput.value:'').trim();
   if(token) localStorage.setItem('elucy_db_token',token);
+  // Salvar config do Motor LLM (modelo e toggle — key é centralizada)
   const apiModelInput=document.getElementById('op-api-model');
   const apiEnabledInput=document.getElementById('op-api-enabled');
-  if(apiModelInput){ const m=apiModelInput.value; localStorage.setItem('elucy_api_model',m); window.ELUCY_API_MODEL=m; }
-  if(apiEnabledInput){ const e=apiEnabledInput.checked; localStorage.setItem('elucy_api_enabled',e?'true':'false'); window.ELUCY_API_ENABLED=e; }
+  if(apiModelInput){
+    const model=apiModelInput.value;
+    localStorage.setItem('elucy_api_model',model); window.ELUCY_API_MODEL=model;
+  }
+  if(apiEnabledInput){
+    const enabled=apiEnabledInput.checked;
+    localStorage.setItem('elucy_api_enabled',enabled?'true':'false');
+    window.ELUCY_API_ENABLED=enabled;
+  }
+  // Salvar automações (Auto-Draft, Auto Focus)
   const autoDraftInput=document.getElementById('op-auto-draft');
   if(autoDraftInput) localStorage.setItem('elucy_auto_draft',autoDraftInput.checked?'1':'0');
   const autoFocusInput=document.getElementById('op-auto-focus');
   if(autoFocusInput) localStorage.setItem('elucy_auto_focus',autoFocusInput.checked?'1':'0');
+  // Salvar alertas
   const alertStall=document.getElementById('op-alert-stall');
   if(alertStall) localStorage.setItem('elucy_alert_stall',alertStall.checked?'1':'0');
   const alertSignals=document.getElementById('op-alert-signals');
@@ -3568,43 +3430,33 @@ async function saveOperator(){
   if(alertDaily) localStorage.setItem('elucy_alert_daily',alertDaily.checked?'1':'0');
   const slackWebhook=document.getElementById('op-slack-webhook');
   if(slackWebhook&&slackWebhook.value.trim()) localStorage.setItem('elucy_slack_webhook',slackWebhook.value.trim());
-
-  // Coleta metas
+  // Salvar metas mensais
   const metaFups=parseInt(document.getElementById('op-meta-fups')?.value)||300;
   const metaQual=parseInt(document.getElementById('op-meta-qual')?.value)||100;
   const metaHandoffs=parseInt(document.getElementById('op-meta-handoffs')?.value)||40;
   const metaOpp=parseInt(document.getElementById('op-meta-opp')?.value)||15;
-  const prefs={
-    voice_mode:localStorage.getItem('elucy_voice_mode')||'standard',
-    challenger_tension:localStorage.getItem('elucy_challenger_tension')||'equilibrado',
-    auto_draft:localStorage.getItem('elucy_auto_draft')==='1',
-    auto_focus:localStorage.getItem('elucy_auto_focus')==='1',
-    alert_stall:localStorage.getItem('elucy_alert_stall')!=='0',
-    alert_signals:localStorage.getItem('elucy_alert_signals')!=='0',
-    alert_daily:localStorage.getItem('elucy_alert_daily')==='1',
-    slack_webhook:localStorage.getItem('elucy_slack_webhook')||''
+  window.saveOperatorSettings({meta_mensal:{fups:metaFups,qualificacoes:metaQual,handoffs:metaHandoffs,opp:metaOpp}});
+  // Persist preferences to Supabase (cross-device sync)
+  const prefs = {
+    voice_mode: localStorage.getItem('elucy_voice_mode')||'standard',
+    challenger_tension: localStorage.getItem('elucy_challenger_tension')||'equilibrado',
+    auto_draft: localStorage.getItem('elucy_auto_draft')==='1',
+    auto_focus: localStorage.getItem('elucy_auto_focus')==='1',
+    alert_stall: localStorage.getItem('elucy_alert_stall')!=='0',
+    alert_signals: localStorage.getItem('elucy_alert_signals')!=='0',
+    alert_daily: localStorage.getItem('elucy_alert_daily')==='1',
+    slack_webhook: localStorage.getItem('elucy_slack_webhook')||''
   };
-
-  showModalStatus('load','Salvando…');
-
-  // Uma única chamada atômica com meta + prefs juntas
-  const result = await window.saveOperatorSettings({
-    meta_mensal:{fups:metaFups,qualificacoes:metaQual,handoffs:metaHandoffs,opp:metaOpp},
-    preferences:prefs
-  });
-
-  if(!result||!result.ok){
-    showModalStatus('err','Erro ao salvar. Verifique a conexão e tente novamente.');
-    return;
-  }
-
-  // Email
+  if(window.saveOperatorSettings) window.saveOperatorSettings({preferences: prefs});
+  // Limpa cache de nome se o email mudou (força novo lookup)
   const prev=localStorage.getItem('elucy_operator_email');
   if(prev!==email) localStorage.removeItem('elucy_qualificador_name');
   applyOperator(email);
-
-  showModalStatus('ok','Configurações salvas com sucesso.');
-  setTimeout(()=>{ closeSettings(); refreshPipeline(); }, 400);
+  showModalStatus('ok','Configurações salvas. Sincronizando pipeline...');
+  setTimeout(()=>{
+    closeSettings();
+    refreshPipeline();
+  },900);
 }
 
 function showModalStatus(type,msg){
@@ -3617,12 +3469,7 @@ function showModalStatus(type,msg){
 // ── REFRESH / DATABRICKS SYNC ────────────────────────────────────────
 
 function refreshPipeline(){
-  if(window.IS_REMOTE){
-    callSyncDeals();
-  } else {
-    try{ window.parent.postMessage({type:'g4os:skill:run',skill:'atualizar-cockpit'},'*'); }catch(e){}
-    window.postMessage({type:'g4os:skill:run',skill:'atualizar-cockpit'},'*');
-  }
+  callSyncDeals();
 }
 
 function promptDbToken(email){
@@ -4159,17 +4006,8 @@ function handleElucyResponse(row, pending){
       injectElucyCopy(targetId, parsed.copy_wa||parsed.copy||row.output, parsed.copy_crm||'');
       pushNotification('Copy pronta','Deal '+deal_id,'clipboard',parsed.copy_wa||parsed.copy||row.output,meta);
     }catch(e){
-      // Output bruto do LLM — separar copy WA, nota CRM e contexto de geração
-      const raw=row.output;
-      const notaM=raw.match(/\*{0,2}NOTA\s*CRM[:\s*]*([\s\S]*?)(?=\*{0,2}CONTEXTO\s*DE\s*GERA|$)/i);
-      const ctxM=raw.match(/\*{0,2}CONTEXTO\s*DE\s*GERA[ÇC][ÃA]O\*{0,2}[\s\S]*/i);
-      // copy WA = tudo antes da NOTA CRM (ou antes de CONTEXTO, ou o texto todo)
-      let waText=raw;
-      const splitIdx=notaM?raw.indexOf(notaM[0]):(ctxM?raw.indexOf(ctxM[0]):-1);
-      if(splitIdx>0) waText=raw.slice(0,splitIdx).trim();
-      const crmText=notaM?notaM[1].trim():'';
-      injectElucyCopy(targetId, waText, crmText);
-      pushNotification('Copy pronta','Deal '+deal_id,'clipboard',waText,meta);
+      injectElucyCopy(targetId, row.output, '');
+      pushNotification('Copy pronta','Deal '+deal_id,'clipboard',row.output,meta);
     }
   }
   logDealInteraction(deal_id, type==='analyze'?'analysis':'copy', row.output);
@@ -4501,71 +4339,29 @@ async function requestElucyAnalysis(deal_id, dealData, targetId){
     reportEl.style.display='block';
   }
 
-  if(window.IS_REMOTE){
-    const sb=getSB();
-    const email=_currentUser&&_currentUser.email;
-    if(!sb||!email) return;
+  const sb=getSB();
+  const email=_currentUser&&_currentUser.email;
+  if(!sb||!email) return;
 
-    // ── FAST PATH: Intelligence API ──
-    if(window.ELUCY_API_ENABLED && window.IS_REMOTE){
-      try {
-        const apiResult = await callIntelligenceAPI(dealData, 'analyze', '');
-        if(apiResult && apiResult.intelligence){
-          const output = typeof apiResult.intelligence === 'string'
-            ? apiResult.intelligence
-            : JSON.stringify(apiResult.intelligence, null, 2);
-          ELUCY_CACHE[deal_id] = output;
-          injectElucyReport(targetId, output);
-          logActivity('analysis_generated', deal_id);
-          saveAPIResponse(deal_id, 'analyze', output);
-          logDealInteraction(deal_id, 'analysis', output);
-          return;
-        }
-      } catch(apiErr) {
-        console.warn('Intelligence API falhou, fallback para worker:', apiErr.message);
-      }
-    }
-
-    // ── FALLBACK: Supabase worker queue ──
-    initRealtimeSubscription();
-    const {data,error}=await sb.from('cockpit_requests').insert({
-      operator_id: email,
-      deal_id: deal_id,
-      request_type: 'analyze',
-      deal_data: dealData,
-      status: 'pending'
-    }).select().single();
-    if(error){
-      showSyncToast('err','Erro ao solicitar analise: '+error.message);
-      if(reportEl) reportEl.innerHTML='<div class="er-b"><div class="er-bl">ERRO</div><div class="er-bt">'+escHtml(error.message)+'</div></div>';
+  // ── Intelligence API (Edge Function) — único path ──
+  try {
+    const apiResult = await callIntelligenceAPI(dealData, 'analyze', '');
+    if(apiResult && apiResult.intelligence){
+      const output = typeof apiResult.intelligence === 'string'
+        ? apiResult.intelligence
+        : JSON.stringify(apiResult.intelligence, null, 2);
+      ELUCY_CACHE[deal_id] = output;
+      injectElucyReport(targetId, output);
+      logActivity('analysis_generated', deal_id);
+      saveAPIResponse(deal_id, 'analyze', output);
+      logDealInteraction(deal_id, 'analysis', output);
       return;
     }
-    if(data) _pendingRequests[data.id]={targetId, deal_id, type:'analyze'};
-    logActivity('analysis_generated', deal_id);
-
-    // Also check if there's a cached response in cockpit_responses
-    const {data:cached}=await sb.from('cockpit_responses')
-      .select('output')
-      .eq('deal_id',deal_id)
-      .eq('operator_id',email)
-      .eq('request_type','analyze')
-      .order('created_at',{ascending:false})
-      .limit(1)
-      .maybeSingle();
-    if(cached&&cached.output){
-      ELUCY_CACHE[deal_id]=cached.output;
-      injectElucyReport(targetId, cached.output);
-      return;
-    }
-  } else {
-    // Local mode: postMessage to G4 OS
-    const payload={
-      type:'g4os:elucy:analyze',
-      deal_id, deal_data: dealData, target_id: targetId,
-      prompt: 'analise '+deal_id
-    };
-    try{ window.parent.postMessage(payload,'*'); }catch(e){}
-    window.postMessage(payload,'*');
+    throw new Error('Resposta vazia da API');
+  } catch(apiErr) {
+    console.error('Intelligence API erro:', apiErr.message);
+    showSyncToast('err','Erro na análise: '+apiErr.message);
+    if(reportEl) reportEl.innerHTML='<div class="er-b"><div class="er-bl">ERRO</div><div class="er-bt">'+escHtml(apiErr.message)+'</div></div>';
   }
 }
 
@@ -4606,61 +4402,33 @@ async function requestElucyCopy(deal_id, dealData, targetId, canal){
     if(wa) wa.textContent='ELUCY gerando copy...';
   }
 
-  if(window.IS_REMOTE){
-    const sb=getSB();
-    const email=_currentUser&&_currentUser.email;
-    if(!sb||!email) return;
+  const sb=getSB();
+  const email=_currentUser&&_currentUser.email;
+  if(!sb||!email) return;
 
-    // ── FAST PATH: Intelligence API ──
-    if(window.ELUCY_API_ENABLED && window.IS_REMOTE){
-      try {
-        const apiResult = await callIntelligenceAPI(dealData, 'copy', 'canal:'+(canal||'WhatsApp'));
-        if(apiResult && apiResult.intelligence){
-          const output = typeof apiResult.intelligence === 'string'
-            ? apiResult.intelligence
-            : (apiResult.intelligence.suggestedApproach || JSON.stringify(apiResult.intelligence));
-          const parsed = parseCopyOutput(output);
-          injectElucyCopy(targetId, parsed.wa||output, parsed.crm||'');
-          logActivity('copy_generated', deal_id, {canal: canal||'WhatsApp'});
-          saveAPIResponse(deal_id, 'copy', output);
-          logDealInteraction(deal_id, 'copy', output, {canal: canal||'WhatsApp'});
-          return;
-        }
-      } catch(apiErr) {
-        console.warn('Intelligence API falhou, fallback para worker:', apiErr.message);
-      }
-    }
-
-    // ── FALLBACK: Supabase worker queue ──
-    // REGRA: Tom de founder SÓ se canal_de_fup == Instagram E fase <= MQL (pré-qualificação)
-    // Pós-MQL → SEMPRE WhatsApp com tom SDR, independente da origem do lead
-    const faseLower = (dealData.fase||dealData.fase_atual_no_processo||'').toLowerCase();
-    const isSocialDMPreMQL = (canal === 'Instagram') && (faseLower === 'lead' || faseLower === 'mql' || faseLower === 'novo lead' || !faseLower);
-    const copyChannel = isSocialDMPreMQL ? 'Instagram' : 'WhatsApp';
-    initRealtimeSubscription();
-    const {data,error}=await sb.from('cockpit_requests').insert({
-      operator_id: email,
-      deal_id: deal_id,
-      request_type: 'copy',
-      copy_mode: copyChannel,
-      deal_data: {...dealData, canal_origem: canal||''},
-      status: 'pending'
-    }).select().single();
-    if(error){
-      showSyncToast('err','Erro ao solicitar copy: '+error.message);
+  // ── Intelligence API (Edge Function) — único path ──
+  try {
+    const apiResult = await callIntelligenceAPI(dealData, 'copy', 'canal:'+(canal||'WhatsApp'));
+    if(apiResult && apiResult.intelligence){
+      const output = typeof apiResult.intelligence === 'string'
+        ? apiResult.intelligence
+        : (apiResult.intelligence.suggestedApproach || JSON.stringify(apiResult.intelligence));
+      const parsed = parseCopyOutput(output);
+      const waEl = document.getElementById('ct-'+targetId+'-wa');
+      if(waEl) waEl.innerText = parsed.wa;
+      const crmEl = document.getElementById('ct-'+targetId+'-crm');
+      if(crmEl) crmEl.innerText = parsed.crm;
+      const coEl = document.getElementById('co-'+targetId);
+      if(coEl) coEl.style.display='block';
+      logActivity('copy_generated', deal_id, {canal: canal||'WhatsApp'});
+      saveAPIResponse(deal_id, 'copy', output);
+      logDealInteraction(deal_id, 'copy', output, {canal: canal||'WhatsApp'});
       return;
     }
-    if(data) _pendingRequests[data.id]={targetId, deal_id, type:'copy'};
-    logActivity('copy_generated', deal_id, {canal: canal||'WhatsApp'});
-  } else {
-    const payload={
-      type:'g4os:elucy:copy',
-      deal_id, deal_data: dealData, target_id: targetId,
-      canal: canal||'WhatsApp',
-      prompt: 'proxima mensagem -- deal_id '+deal_id+' -- canal '+(canal||'WhatsApp')
-    };
-    try{ window.parent.postMessage(payload,'*'); }catch(e){}
-    window.postMessage(payload,'*');
+    throw new Error('Resposta vazia da API');
+  } catch(apiErr) {
+    console.error('Intelligence API erro:', apiErr.message);
+    showSyncToast('err','Erro ao gerar copy: '+apiErr.message);
   }
 }
 
@@ -4863,7 +4631,12 @@ async function loadDealCache(dealId, targetId){
     }
     if(latest.copy && latest.copy.content){
       const parsed=parseCopyOutput(latest.copy.content);
-      injectElucyCopy(targetId, parsed.wa||latest.copy.content, parsed.crm||'');
+      const waEl=document.getElementById('ct-'+targetId+'-wa');
+      const crmEl=document.getElementById('ct-'+targetId+'-crm');
+      const coEl=document.getElementById('co-'+targetId);
+      if(waEl) waEl.innerText=parsed.wa;
+      if(crmEl) crmEl.innerText=parsed.crm;
+      if(coEl) coEl.style.display='block';
     }
     if(latest.business_analysis && latest.business_analysis.content){
       injectBusinessAnalysis(targetId, latest.business_analysis.content);
@@ -5711,110 +5484,6 @@ async function loadConversation(id){
 // Backward compat alias
 async function loadWaConversation(id){ return loadConversation(id); }
 
-// ── ELUCY STRUCTURED RENDERER ────────────────────────────────────────
-// Converte output livre do LLM em HTML hierárquico com seções visuais
-function renderElucyStructured(raw){
-  if(!raw) return '';
-  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
-  // Chip classifiers
-  const CHIP_PERSONA=['titan','builder','executor','challenger','spiced','spin'];
-  const CHIP_TIER=['diamond','gold','silver','bronze'];
-  const CHIP_STATE=['blocked','ativo','frio','quente','morno','nurture','lost'];
-  const CHIP_FW=['spiced','challenger','spin','meddic','meddpicc'];
-  const CHIP_DQI=/DQI\s*(\d+)/i;
-
-  // ── 1. Detect chips from header tags e texto do output
-  const chips=[];
-  const rawLow=raw.toLowerCase();
-  const dqiM=raw.match(CHIP_DQI);
-  if(dqiM) chips.push({cls:'chip-dqi',lbl:'DQI '+dqiM[1]});
-  CHIP_PERSONA.forEach(p=>{if(rawLow.includes(p)&&!chips.find(c=>c.cls==='chip-persona')){chips.push({cls:'chip-persona',lbl:p.charAt(0).toUpperCase()+p.slice(1)})}});
-  CHIP_TIER.forEach(t=>{if(rawLow.includes(t)&&!chips.find(c=>c.cls==='chip-tier')){chips.push({cls:'chip-tier',lbl:t.charAt(0).toUpperCase()+t.slice(1)})}});
-  CHIP_STATE.forEach(s=>{if(rawLow.includes(s)&&!chips.find(c=>c.cls==='chip-state')){chips.push({cls:'chip-state',lbl:s.toUpperCase()})}});
-  CHIP_FW.forEach(f=>{if(rawLow.includes(f)&&!chips.find(c=>c.cls==='chip-fw')){chips.push({cls:'chip-fw',lbl:f.toUpperCase()})}});
-
-  // ── 2. Extract title (first bold line or first line)
-  const titleM = raw.match(/^\*\*(.+?)\*\*/m) || raw.match(/^#+\s*(.+)$/m) || raw.match(/^\[([A-Z][^\]]+)\]/m);
-  const title = titleM ? titleM[1].replace(/\[|\]/g,'').trim() : '';
-
-  // ── 3. Section patterns — matches headers like "DIAGNÓSTICO", "## Diagnóstico", "**DIRETRIZ**", "--- PRÓXIMA AÇÃO ---"
-  const SEC_RE = /(?:^#{1,3}\s*|^\*{1,2}|^[-─━]+\s*|\[)([A-ZÁÉÍÓÚÃÕÊÔÇÀÜ][A-ZÁÉÍÓÚÃÕÊÔÇÀÜa-záéíóúãõêôçàü\s\/]+?)(?:\*{1,2}|[-─━]+|:|\]|$)/gm;
-  const KNOWN_SECS = ['resumo','diagnóstico','diagnose','diagnostic','diagnóstico','diretriz','strategic directive','diretriz','próxima ação','next best action','next action','cta','cta sugerido','suggested cta','governança','governance','governance flags','kill switch','proibido','objetivo','tom','mensagem','copy','nota','observação','contexto','eluci context'];
-  const isCTA = s => /cta|copy sugerida|mensagem sugerida|copy aqui/i.test(s);
-  const isGov = s => /govern|proibido|kill|bloqueio|restrição/i.test(s);
-
-  // Split into sections
-  const lines = raw.split('\n');
-  const sections = [];
-  let cur_sec = {title:'', lines:[]};
-  for(const line of lines){
-    const trimmed = line.trim();
-    // Detect section header
-    const isHeader = (
-      /^#{1,3}\s+\S/.test(trimmed) ||
-      /^\*\*[A-ZÁÉÍÓÚ][^*]+\*\*\s*$/.test(trimmed) ||
-      /^[A-ZÁÉÍÓÚ][A-ZÁÉÍÓÚA-Z\s\/]{2,30}:?\s*$/.test(trimmed) ||
-      /^\[([A-Z][A-Z\s]+)\]/.test(trimmed) ||
-      /^[-─━]{3,}\s*[A-ZÁÉÍÓÚ]/.test(trimmed)
-    );
-    if(isHeader && trimmed.length < 60){
-      if(cur_sec.title||cur_sec.lines.length) sections.push({...cur_sec});
-      const clean = trimmed.replace(/^#+\s*/,'').replace(/^\*\*|\*\*$/g,'').replace(/^\[|\]$/g,'').replace(/:$/,'').trim();
-      cur_sec = {title:clean, lines:[]};
-    } else {
-      // Skip lines that are just asterisks or dashes
-      if(!/^[-─━*]+$/.test(trimmed)) cur_sec.lines.push(line);
-    }
-  }
-  if(cur_sec.title||cur_sec.lines.length) sections.push({...cur_sec});
-
-  // ── 4. Render helper: lines → ul or body
-  function renderLines(lns){
-    const items = lns.map(l=>l.replace(/^[-•*]\s*/,'').replace(/^\d+\.\s*/,'').trim()).filter(Boolean);
-    if(!items.length) return '';
-    if(items.length===1) return `<div class="elucy-body">${esc(items[0])}</div>`;
-    return `<ul class="elucy-list">${items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul>`;
-  }
-
-  // ── 5. If no sections detected, fall back to renderMd
-  const hasSections = sections.some(s=>s.title&&KNOWN_SECS.some(k=>s.title.toLowerCase().includes(k)));
-  if(!hasSections) return '<div class="elucy-output">'+renderMd(raw)+'</div>';
-
-  // ── 6. Build HTML
-  let html = '<div class="elucy-output">';
-
-  // Head: title + chips
-  if(title||chips.length){
-    html += '<div class="elucy-head">';
-    if(title) html += `<div class="elucy-title">${esc(title)}</div>`;
-    if(chips.length) html += `<div class="elucy-chips">${chips.map(c=>`<span class="elucy-chip ${c.cls}">${esc(c.lbl)}</span>`).join('')}</div>`;
-    html += '</div>';
-  }
-
-  for(const sec of sections){
-    if(!sec.title && !sec.lines.length) continue;
-    const body = renderLines(sec.lines);
-    if(!body && !sec.title) continue;
-
-    if(isCTA(sec.title)){
-      // CTA box especial
-      const ctaText = sec.lines.filter(Boolean).join('\n').replace(/^[-•*]\s*/,'');
-      html += `<div class="elucy-cta-box"><div class="elucy-cta-label">${esc(sec.title||'CTA Sugerido')}</div><div class="elucy-cta-text">${esc(ctaText.trim())}</div></div>`;
-    } else if(isGov(sec.title)){
-      html += `<div class="elucy-gov"><div class="elucy-sec-label">${esc(sec.title)}</div>${body}</div>`;
-    } else if(sec.title){
-      html += `<div class="elucy-section"><div class="elucy-sec-label">${esc(sec.title)}</div>${body}</div>`;
-    } else if(body){
-      // No title — plain body block
-      html += `<div class="elucy-body" style="padding:4px 0">${body}</div>`;
-    }
-  }
-
-  html += '</div>';
-  return html;
-}
-
 function injectElucyReport(targetId, report){
   const reportEl=document.getElementById('er-'+targetId);
   if(!reportEl) return;
@@ -5835,29 +5504,11 @@ function injectElucyReport(targetId, report){
     ${bench?`<div class="er-b" style="border-left:3px solid var(--blue)"><div class="er-bl" style="color:var(--blue)">BENCHMARK CANAL</div><div class="er-bt">${renderMd(bench)}</div></div>`:''}
     ${gov?`<div class="er-b"><div class="er-bl">GOVERNANCE FLAGS</div><div class="er-bt">${renderMd(gov)}</div></div>`:''}
     ${verdict?`<div class="er-v"><div class="ev-s">V</div><div class="ev-t"><strong>ELUCI VERDICT</strong><br>${renderMd(verdict)}</div></div>`:''}
-    ${!context&&!directive?`<div class="er-b"><div class="er-bl">ANÁLISE COMPLETA</div><div class="er-bt">${renderElucyStructured(report)}</div></div>`:''}
+    ${!context&&!directive?`<div class="er-b"><div class="er-bl">ANÁLISE COMPLETA</div><div class="er-bt">${renderMd(report)}</div></div>`:''}
   `;
   reportEl.style.display='block';
   const btn=document.getElementById('btn-er-'+targetId);
   if(btn) btn.classList.add('btn-on');
-}
-
-function _isStructuredOutput(text){
-  if(!text) return false;
-  // Tem headers de seção, blocos com dois-pontos ou colchetes de seção
-  return /^#{1,3}\s+\S|^\*\*[A-ZÁÉÍÓÚ][^*]{2,30}\*\*\s*$|^\[([A-Z][A-Z\s]+)\]|^[A-ZÁÉÍÓÚ][A-ZÁÉÍÓÚA-Z\s]{2,25}:\s*$/m.test(text);
-}
-
-function _stripMarkdown(text){
-  // Remove markdown para área copiável — preserva quebras de linha
-  return text
-    .replace(/\*\*\*(.+?)\*\*\*/g,'$1')
-    .replace(/\*\*(.+?)\*\*/g,'$1')
-    .replace(/\*([^*\n]+)\*/g,'$1')
-    .replace(/^#{1,4}\s+/gm,'')
-    .replace(/^\[([^\]]+)\]\s*/gm,'$1\n')
-    .replace(/^[-─━]{3,}\s*/gm,'')
-    .trim();
 }
 
 function injectElucyCopy(targetId, copyWA, copyCRM){
@@ -5869,54 +5520,11 @@ function injectElucyCopy(targetId, copyWA, copyCRM){
   const wa=document.getElementById('ct-'+targetId+'-wa');
   const crm=document.getElementById('ct-'+targetId+'-crm');
   const co=document.getElementById('co-'+targetId);
-
-  if(wa && copyWA){
-    if(_isStructuredOutput(copyWA)){
-      // Output com estrutura: renderizar rich, esconder co-txt, mostrar painel rich
-      let richDiv=document.getElementById('co-rich-'+targetId);
-      if(!richDiv){
-        richDiv=document.createElement('div');
-        richDiv.id='co-rich-'+targetId;
-        richDiv.className='co-rich';
-        wa.parentNode.insertBefore(richDiv, wa);
-      }
-      richDiv.innerHTML=renderElucyStructured(copyWA);
-      richDiv.style.display='block';
-      wa.style.display='none';
-      // Guarda texto limpo para botão Copiar
-      wa.dataset.copyText=_stripMarkdown(copyWA);
-    } else {
-      // Copy simples: mostrar direto no co-txt editável (strip markdown)
-      const clean=_stripMarkdown(copyWA);
-      wa.style.display='';
-      wa.innerText=clean;
-      const richDiv=document.getElementById('co-rich-'+targetId);
-      if(richDiv) richDiv.style.display='none';
-    }
-  }
-
-  if(crm && copyCRM){
-    if(_isStructuredOutput(copyCRM)){
-      let richCrm=document.getElementById('co-rich-'+targetId+'-crm');
-      if(!richCrm){
-        richCrm=document.createElement('div');
-        richCrm.id='co-rich-'+targetId+'-crm';
-        richCrm.className='co-rich';
-        crm.parentNode.insertBefore(richCrm, crm);
-      }
-      richCrm.innerHTML=renderElucyStructured(copyCRM);
-      richCrm.style.display='block';
-      crm.style.display='none';
-      crm.dataset.copyText=_stripMarkdown(copyCRM);
-    } else {
-      crm.style.display='';
-      crm.innerText=_stripMarkdown(copyCRM);
-    }
-  }
-
+  if(wa&&copyWA) wa.innerText=copyWA;
+  if(crm&&copyCRM) crm.innerText=copyCRM;
   if(co) co.style.display='block';
   // Re-enable generate button
-  var btn=document.querySelector('button.bp[disabled]');
+  var btn=document.querySelector('#co-'+targetId)&&document.querySelector('button.bp[disabled]');
   if(btn){btn.textContent='Gerar Copy via ELUCY';btn.disabled=false;}
 }
 
@@ -6171,12 +5779,10 @@ function selectLiveDeal(id,d){
     </div>`;
   document.getElementById('screen-pipeline').appendChild(dealCard);
   setScreen('pipeline',null);
-  // Restaura copy do cache in-memory (imediato, antes do Supabase)
-  if(d._cachedCopyWA) injectElucyCopy(id, d._cachedCopyWA, d._cachedCopyCRM||'');
-  // Carrega histórico e cache do Supabase (async)
+  // Carrega histórico do deal
   if(d.deal_id && window.IS_REMOTE){
     loadDealHistory(d.deal_id, id);
-    if(!d._cachedCopyWA) loadDealCache(d.deal_id, id); // evita dupla renderização
+    loadDealCache(d.deal_id, id);
   }
   // Renderiza painel de sinais (Layer 18)
   if(window.renderSignalPanel){
@@ -6188,7 +5794,7 @@ function selectLiveDeal(id,d){
 function openWhatsApp(id, phone){
   // Pega o texto da copy atual
   const el=document.getElementById('ct-'+id+'-wa');
-  const text=el?(el.dataset.copyText||el.textContent||el.innerText):'';
+  const text=el?el.textContent||el.innerText:'';
   // Normalizar telefone: deal map primeiro (mais confiável), depois param
   const deal=window._COCKPIT_DEAL_MAP&&window._COCKPIT_DEAL_MAP[id];
   let raw=(deal&&(deal.telefone||deal.p_telefone))||phone||'';
@@ -6272,109 +5878,30 @@ function quickNote(id){
 // ── INTELLIGENCE ENGINE — Dashboard Inteligente ──────────────────────
 
 // ── INTELLIGENCE: Dimensioned Analytics (V4 Enterprise) ──────────
-// ── INTEL NAV V2 — 2-level architecture ──────────────────────────────────────
-// L1: overview | performance | pipeline | engines | strategic
-// L2: subtabs per section (rendered dynamically)
-var _intelCurrentL1 = 'overview';
-var _intelCurrentDim = 'global'; // legacy compat
+var _intelCurrentDim='global';
 
-var _INTEL_SUBTABS = {
-  // Overview: visão única — hero + KPIs + gargalos + próxima ação
-  overview:    [],
-  // Performance: métricas do operador — score, metas, conversão, velocidade, DQI
-  performance: [
-    { id:'performance', label:'Resumo V3' },
-    { id:'operator',    label:'Score Operador' }
-  ],
-  // Pipeline: estrutura do pipe — 4 dimensões MECE (linha / etapa / canal / valor)
-  pipeline:    [
-    { id:'line',    label:'Linha' },
-    { id:'stage',   label:'Etapa' },
-    { id:'channel', label:'Canal' },
-    { id:'value',   label:'Valor' },
-    { id:'task',    label:'Tasks' }
-  ],
-  // Engines: como o motor decide — forecast, framework, signals V8
-  engines: [
-    { id:'forecast',  label:'Forecast' },
-    { id:'framework', label:'Framework' }
-  ],
-  // Strategic: leitura estratégica — enterprise, RFV, trusted advisor, audit
-  strategic: [
-    { id:'enterprise', label:'Enterprise' },
-    { id:'advisor',    label:'Trusted Advisor' },
-    { id:'rfv',        label:'RFV' },
-    { id:'spin',       label:'Audit' },
-    { id:'bowtie',     label:'Bowtie' }
-  ]
-};
-
-// Default sub-dim for each L1 (first subtab or single view)
-var _INTEL_L1_DEFAULT = {
-  overview:    'global',
-  performance: 'performance',
-  pipeline:    'line',
-  engines:     'forecast',
-  strategic:   'enterprise'
-};
-
-window._intelL1 = function(section, el) {
-  _intelCurrentL1 = section;
-  document.querySelectorAll('.intel-l1-tab').forEach(function(t){ t.classList.remove('on'); });
+window._intelDim=function(dim,el){
+  _intelCurrentDim=dim;
+  document.querySelectorAll('.intel-dim').forEach(function(c){c.classList.remove('on');});
   if(el) el.classList.add('on');
-
-  var dimsEl = document.getElementById('intel-dims');
-  var subtabs = _INTEL_SUBTABS[section] || [];
-
-  if(subtabs.length) {
-    dimsEl.style.display = 'flex';
-    dimsEl.innerHTML = subtabs.map(function(s){
-      return '<span class="intel-dim" onclick="window._intelDim(\''+s.id+'\',this)">'+s.label+'</span>';
-    }).join('');
-    // activate first subtab
-    var firstTab = dimsEl.querySelector('.intel-dim');
-    if(firstTab) firstTab.classList.add('on');
-    _intelCurrentDim = _INTEL_L1_DEFAULT[section];
-  } else {
-    dimsEl.style.display = 'none';
-    dimsEl.innerHTML = '';
-    _intelCurrentDim = _INTEL_L1_DEFAULT[section];
-  }
-
-  _intelRenderCurrent();
-};
-
-window._intelDim = function(dim, el) {
-  _intelCurrentDim = dim;
-  document.querySelectorAll('.intel-dim').forEach(function(c){ c.classList.remove('on'); });
-  if(el) el.classList.add('on');
-  _intelRenderCurrent();
-};
-
-function _intelRenderCurrent() {
-  var dim = _intelCurrentDim;
-  var perfEl = document.getElementById('perf-report-v3');
-  var intelEl = document.getElementById('intel-content');
-
-  if(dim === 'performance') {
-    if(intelEl) intelEl.style.display = 'none';
-    if(perfEl) {
-      perfEl.style.display = 'block';
-      perfEl.innerHTML = '<div style="padding:20px;color:var(--text2)">Calculando Performance Report...</div>';
-    }
-    if(window.switchPerfPeriod) {
+  var perfEl=document.getElementById('perf-report-v3');
+  var intelEl=document.getElementById('intel-content');
+  if(dim==='performance'){
+    if(intelEl) intelEl.style.display='none';
+    if(perfEl){ perfEl.style.display='block'; perfEl.innerHTML='<div style="padding:20px;color:var(--text2)">Calculando Performance Report...</div>'; }
+    if(window.switchPerfPeriod){
       window.switchPerfPeriod('month');
-    } else if(window.calcPerformanceReportV3) {
+    } else if(window.calcPerformanceReportV3){
       window.calcPerformanceReportV3().then(function(report){
         if(report && window.renderPerformanceReportV3) window.renderPerformanceReportV3(report);
       });
     }
     return;
   }
-  if(intelEl) intelEl.style.display = 'block';
-  if(perfEl) perfEl.style.display = 'none';
+  if(intelEl) intelEl.style.display='block';
+  if(perfEl) perfEl.style.display='none';
   renderIntelligence();
-}
+};
 
 function renderIntelligence(){
   const map=window._COCKPIT_DEAL_MAP;
@@ -6389,8 +5916,7 @@ function renderIntelligence(){
   const AE=window.AnalyticsEngine;
   if(!AE){ct.innerHTML='<div class="intel-empty">Analytics Engine não carregado.</div>';return;}
   const deals=allDeals.filter(d=>{const s=(d.statusDeal||'').toLowerCase();return s!=='perdido'&&s!=='ganho'&&s!=='desqualificado';});
-  var _l1Labels = {overview:'Overview',performance:'Performance',pipeline:'Pipeline',engines:'Engines',strategic:'Strategic'};
-  if(sub) sub.textContent=deals.length+' deals ativos · '+new Date().toLocaleDateString('pt-BR')+(_intelCurrentL1 && _intelCurrentL1!=='overview' ? ' · '+(_l1Labels[_intelCurrentL1]||'') : '');
+  if(sub) sub.textContent=deals.length+' deals ativos — '+new Date().toLocaleDateString('pt-BR')+' — dim: '+_intelCurrentDim.toUpperCase();
 
   ct.innerHTML='<div class="intel-loading">Calculando...</div>';
   var dim=_intelCurrentDim;
@@ -7523,58 +7049,40 @@ function initSlackAlerts(){
 // ══════════════════════════════════════════════════════════════
 var _OB_STEPS = [
   {
-    target: '[onclick*="setScreen(\'home"]',
+    target: '.ntab:nth-child(1)',  // Home tab
     title: 'Bem-vindo ao Elucy',
-    desc: 'Seu cockpit de Revenue Intelligence. A Home mostra o foco do dia, métricas de hoje, performance e os 5 deals que precisam de ação imediata — tudo sincronizado com o Databricks.',
+    desc: 'Este é seu cockpit de vendas inteligente. A Home explica como o sistema funciona, mostra seus OKRs conectados ao funil real e acompanha sua performance — tudo com dados do Databricks.',
     pos: 'bottom'
   },
   {
-    target: '#deal-list',
-    title: 'Seus Deals Ativos',
-    desc: 'Todos os seus deals ficam aqui. Filtre por fase, tier, aging e sinais para encontrar o que precisa. Clique em qualquer deal para abrir o painel completo de inteligência.',
-    pos: 'bottom'
+    target: '#deal-list',  // Sidebar deal list
+    title: 'Sidebar de Deals',
+    desc: 'Todos os seus deals ativos ficam aqui. Use os filtros por fase, etapa, tier, linha de receita, aging, canal e sinais para encontrar rapidamente o que precisa.',
+    pos: 'right'
   },
   {
-    target: '[onclick*="setScreen(\'pipeline"]',
+    target: '.ntab:nth-child(2)',  // Pipeline tab
     title: 'Pipeline',
-    desc: 'Visão completa dos seus deals com temperatura, forecast V7, sinais de risco e aging. Clique em um deal para gerar copy calibrada, análise SPICED e next action.',
+    desc: 'Visualize seus deals em formato de lista com todos os detalhes: temperatura, sinais, forecast, aging. Clique em qualquer deal para ver o painel completo de inteligência e gerar copy.',
     pos: 'bottom'
   },
   {
-    target: '[onclick*="setScreen(\'tasks"]',
-    title: 'Mesa de Execução',
-    desc: 'Suas tarefas priorizadas pelo DAG de 25 camadas. O Elucy define a próxima ação exata — follow-up, qualificação, agendamento, handoff — ordenadas por valor × urgência.',
+    target: '.ntab:nth-child(3)',  // Tasks tab
+    title: 'Task Runner',
+    desc: 'Suas tarefas priorizadas pelo DAG de 25 camadas. O Elucy analisa cada deal e gera a próxima ação exata — follow-up, qualificação, agendamento, handoff. Ordenadas por valor x urgência.',
     pos: 'bottom'
   },
   {
-    target: '[onclick*="setScreen(\'reports"]',
-    title: 'Reports',
-    desc: 'Seu relatório de performance: conversão por linha de receita, taxa de handoff, DQI, score de operador e XP acumulado. Filtrado automaticamente pelo seu qualificador.',
-    pos: 'bottom'
-  },
-  {
-    target: '[onclick*="setScreen(\'prevendas"]',
-    title: 'Pre-Vendas',
-    desc: 'Gestão de leads em fase de prospecção e qualificação. Acompanhe o pipeline de entrada e leads em processo de conexão antes do agendamento.',
-    pos: 'bottom'
-  },
-  {
-    target: '[onclick*="setScreen(\'intelligence"]',
+    target: '.ntab:nth-child(6)',  // Intel tab
     title: 'Intelligence',
-    desc: 'Analytics completo: Score V9, conversão por canal e linha de receita, sinais de risco, forecast agregado e Data Quality Index. Dados reais, zero achismo.',
+    desc: 'Analytics completo do seu pipeline: Score V9, conversão por linha de receita, sinais de risco, distribuição por canal, forecast agregado e Data Quality. Dados reais, zero achismo.',
     pos: 'bottom'
   },
   {
-    target: '[onclick*="setScreen(\'playbooks"]',
-    title: 'Playbooks',
-    desc: 'Guias de abordagem por persona e framework: Challenger para Titan, SPICED para Builder, SPIN para Executor. Consulte antes de cada call para calibrar o tom certo.',
-    pos: 'bottom'
-  },
-  {
-    target: '.chip',
+    target: '#op-pill',  // User chip / operator pill
     title: 'Seu Perfil',
-    desc: 'Seu nível, XP e streak ficam aqui. Cada tarefa executada, deal qualificado e handoff gera pontos. Clique para configurações e ajustar seu modo de foco.',
-    pos: 'left',
+    desc: 'Aqui fica seu nível, XP e streak. O Elucy gamifica sua operação — cada tarefa executada, cada deal qualificado e cada handoff gera pontos. Agora é só operar!',
+    pos: 'bottom',
     last: true
   }
 ];
@@ -7582,12 +7090,9 @@ var _obStep = 0;
 var _obOverlay = null;
 var _obSpotlight = null;
 var _obTooltip = null;
-var _obStarted = false; // guard contra dupla execucao
 
 // Verifica Supabase se o tour foi completado — obrigatorio para TODOS
 async function _obCheckAndStart(email){
-  if(_obStarted) return; // ja foi chamado, ignora segunda chamada
-  _obStarted = true;
   console.log('[OB] _obCheckAndStart called, email:', email);
   var sb = getSB();
   if(sb && email){
@@ -7624,9 +7129,8 @@ async function _obCheckAndStart(email){
 }
 
 function _obStart(){
-  // Remove qualquer instancia anterior antes de criar nova
-  document.querySelectorAll('.ob-overlay,.ob-spotlight,.ob-tooltip').forEach(function(el){ el.remove(); });
   _obStep = 0;
+  // Create overlay elements
   _obOverlay = document.createElement('div');
   _obOverlay.className = 'ob-overlay';
   _obSpotlight = document.createElement('div');
@@ -7671,56 +7175,30 @@ function _obRender(){
       '<button class="ob-next" onclick="_obNext()">'+btnLabel+'</button>' +
     '</div>';
 
-  // Position tooltip — clamp to viewport
+  // Position tooltip relative to target
   var tw = 340;
-  var gap = 12;
-  var margin = 8;
-  var vw = window.innerWidth;
-  var vh = window.innerHeight;
-  // Estimate tooltip height (title ~20 + desc ~60 + footer ~36 + padding ~36)
-  var th = 160;
-  var top, left;
-
+  var gap = 14;
   if(s.pos === 'bottom'){
-    top = r.bottom + gap;
-    left = r.left;
+    _obTooltip.style.top = (r.bottom + gap) + 'px';
+    _obTooltip.style.left = Math.max(8, r.left - 10) + 'px';
+    _obTooltip.style.right = 'auto';
   } else if(s.pos === 'top'){
-    top = r.top - gap - th;
-    left = r.left;
+    _obTooltip.style.top = (r.top - gap - 180) + 'px';
+    _obTooltip.style.left = Math.max(8, r.left - 10) + 'px';
+    _obTooltip.style.right = 'auto';
   } else if(s.pos === 'right'){
-    top = r.top;
-    left = r.right + gap;
+    _obTooltip.style.top = r.top + 'px';
+    _obTooltip.style.left = (r.right + gap) + 'px';
+    _obTooltip.style.right = 'auto';
   } else if(s.pos === 'left'){
-    top = r.top;
-    left = r.left - gap - tw;
-  } else {
-    top = r.bottom + gap;
-    left = r.left;
+    _obTooltip.style.top = r.top + 'px';
+    _obTooltip.style.left = 'auto';
+    _obTooltip.style.right = (window.innerWidth - r.left + gap) + 'px';
   }
-
-  // Clamp horizontally
-  if(left + tw > vw - margin) left = vw - tw - margin;
-  if(left < margin) left = margin;
-
-  // Clamp vertically — if overflows bottom, flip to top
-  if(top + th > vh - margin){
-    if(s.pos === 'bottom'){
-      top = r.top - gap - th;
-      _obTooltip.setAttribute('data-pos', 'top');
-    } else {
-      top = vh - th - margin;
-    }
-  }
-  if(top < margin) top = margin;
-
-  _obTooltip.style.top = top + 'px';
-  _obTooltip.style.left = left + 'px';
-  _obTooltip.style.right = 'auto';
-
   // Re-trigger animation
   _obTooltip.style.animation = 'none';
   _obTooltip.offsetHeight; // reflow
-  _obTooltip.style.animation = 'ob-in .25s ease';
+  _obTooltip.style.animation = '';
 }
 
 function _obNext(){
@@ -7742,11 +7220,8 @@ function _obEnd(){
   }
 }
 
-// Expor para trigger manual (reseta guard para permitir restart)
-window._obStart = function(){
-  _obStarted = true;
-  _obStart();
-};
+// Expor para trigger manual
+window._obStart = _obStart;
 </script>
 <!-- ── TASK EXECUTION OVERLAY ────────────────────────────────────── -->
 <div class="tex-overlay" id="tex-overlay">
