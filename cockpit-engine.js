@@ -2762,7 +2762,7 @@ async function renderHome(){
     if(!gam) return;
     var sc=document.getElementById('home-score'); if(sc) sc.textContent=gam.operatorScore||gam.todayScore;
     var sk=document.getElementById('home-streak'); if(sk) sk.textContent=gam.streak+'d';
-  });
+  }).catch(function(e){ console.warn('[renderHome] calcGamification error:', e); });
   calcOperatorScore(30).then(function(ops){
     if(!ops) return;
     var bd=document.getElementById('home-score-breakdown');
@@ -2787,7 +2787,7 @@ async function renderHome(){
     });
     html+='</div>';
     bd.innerHTML=html;
-  });
+  }).catch(function(e){ console.warn('[renderHome] calcOperatorScore error:', e); });
 }
 window.renderHome = renderHome;
 
@@ -2973,7 +2973,7 @@ function initRealtimeListeners(){
     }, function(payload){
       var n=payload.new; if(!n) return;
       _unread++; _updateBadge();
-      _toast(n.title, n.body, n.deal_id);
+      _notifToast(n.title, n.body, n.deal_id);
     }).subscribe();
 }
 window.initRealtimeListeners = initRealtimeListeners;
@@ -2999,7 +2999,7 @@ function _handleResponse(response){
     if(window.ELUCY_CACHE) window.ELUCY_CACHE[dealId]=output;
     if(window.injectElucyReport) window.injectElucyReport(targetId, output);
     saveInteraction(dealId,'analysis',output);
-    _toast('Analise pronta','ELUCI REPORT disponivel',dealId);
+    _notifToast('Analise pronta','ELUCI REPORT disponivel',dealId);
   } else if(type==='copy'||type==='dm_copy'){
     try{
       var parsed=JSON.parse(output);
@@ -3008,11 +3008,11 @@ function _handleResponse(response){
       if(window.injectElucyCopy) window.injectElucyCopy(targetId, output, '');
     }
     saveInteraction(dealId,'copy',output);
-    _toast('Copy pronta','Copy gerada pelo motor Elucy',dealId);
+    _notifToast('Copy pronta','Copy gerada pelo motor Elucy',dealId);
   } else if(type==='note'){
     if(window.injectNotaCRM) window.injectNotaCRM(targetId, output);
     saveInteraction(dealId,'note_crm',output);
-    _toast('Nota CRM pronta','Nota disponivel',dealId);
+    _notifToast('Nota CRM pronta','Nota disponivel',dealId);
   } else if(type==='business_analysis'){
     if(window.injectBusinessAnalysis) window.injectBusinessAnalysis(targetId, output);
     saveInteraction(dealId,'business_analysis',output);
@@ -3047,7 +3047,7 @@ function _updateBadge(){
   b.style.display=_unread>0?'inline-block':'none';
 }
 
-function _toast(title,body,dealId){
+function _notifToast(title,body,dealId){
   var t=document.createElement('div');
   t.style.cssText='position:fixed;top:60px;right:16px;z-index:200;background:var(--bg3);border:1px solid var(--accent);border-radius:8px;padding:12px 16px;max-width:320px;animation:fadeIn .2s ease;cursor:pointer;';
   t.innerHTML='<div style="font-size:11px;font-weight:700;color:var(--accent2);margin-bottom:3px">'+_escHtml(title)+'</div><div style="font-size:12px;color:var(--text);line-height:1.4">'+_escHtml(body||'')+'</div>';
@@ -3065,7 +3065,7 @@ function _toast(title,body,dealId){
   document.body.appendChild(t);
   setTimeout(function(){ if(t.parentNode) t.remove(); },8000);
 }
-window.showNotifToast = _toast;
+window.showNotifToast = _notifToast;
 
 // ==================================================================
 // ACTIVITY LOG + INTERACTIONS
@@ -4543,7 +4543,7 @@ function calcForecastV6(deal){
       qualitative: { show_weight:show_weight, note_weight:note_weight, authority_weight:authority_weight, urgency_weight:urgency_weight, behavior_weight:behavior_weight, next_step_weight:next_step_weight },
       framework: { qualitative_score:framework_qs, spiced_avg:framework_data?framework_data.spiced_avg:null, meddic_avg:framework_data?framework_data.meddic_avg:null, coverage:framework_data?framework_data.overall_coverage:null },
       no_show_penalty: no_show_penalty,
-      data_points: data_points,
+      data_points: (positive_signals.length + risk_signals.length),
       signals: { positive:positive_signals, risk:risk_signals }
     }
   };
@@ -7429,16 +7429,8 @@ function calcPortfolioPriorityV21(allDeals){
     urgency_score = Math.min(1, Math.max(0, urgency_score));
 
     // 3) Actionability Score (0.25)
-    var actionability_score =
-      ((tr.transition_readiness_score || 0) * 0.35) +
-      ((fr.authority_score || 0) * 0.15) +
-      ((fr.overall_coverage || 0) * 0.15) +
-      ((dq.data_trust_score || 0) * 0.15) +
-      ((fr.qualitative_score || 1.0) >= 1.0 ? 0.5 : (fr.qualitative_score || 0.5) * 0.10 / 0.10) +
-      ((fc.forecast_score_adjusted || 0) * 0.10);
-    // Fix actionability qualitative component
     var qs_norm = fr.qualitative_score ? Math.min(1, Math.max(0, (fr.qualitative_score - 0.20) / 1.10)) : 0.5;
-    actionability_score =
+    var actionability_score =
       ((tr.transition_readiness_score || 0) * 0.35) +
       ((fr.authority_score || 0) * 0.15) +
       ((fr.overall_coverage || 0) * 0.15) +
@@ -8573,21 +8565,20 @@ async function runIntelligenceDAG(){
   var t0 = Date.now();
 
   try {
-    // Phase 2: Data Quality (L19) — depends on base data only
-    console.log('[DAG] Phase 2: L19 Data Quality...');
-    await syncDataQualityRuntimeV19();
+    // Phase 2: Data Quality (L19) + Attribution (L22) — independent, run in parallel
+    console.log('[DAG] Phase 2: L19 Data Quality + L22 Attribution (parallel)...');
+    await Promise.all([
+      syncDataQualityRuntimeV19(),
+      syncAttributionRuntimeV22()
+    ]);
 
     // Phase 4: Transition Rules (L20) — depends on L19
     console.log('[DAG] Phase 4: L20 Transition Rules...');
     await syncTransitionRuntimeV20();
 
     // Phase 5: Portfolio Prioritization (L21) — depends on L19, L20
-    console.log('[DAG] Phase 5: L21 Portfolio Prioritization...');
+    console.log('[DAG] Phase 5: L21 Portfolio Prioritization...')
     await syncPortfolioRuntimeV21();
-
-    // Phase 7: Attribution (L22) — retrospective, batch
-    console.log('[DAG] Phase 7: L22 Attribution...');
-    await syncAttributionRuntimeV22();
 
     // Phase 8: SPIN Audit + RFV (L26, L27) — depends on enrichment
     console.log('[DAG] Phase 8: L26 SPIN Audit + L27 RFV Portfolio...');
