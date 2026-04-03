@@ -13,17 +13,17 @@ const CORS = {
 
 // MCP_MAP — quais documentos injetar por request type
 const MCP_MAP: Record<string, string[]> = {
-  analyze: ['eluci-core','lead-profile','output-schema','signals','strategy','cse-engine','behavior','segments','conversion','iron-dome'],
-  copy: ['eluci-core','playbooks','playbook-sdr','cse-engine','blde','fip','sdr-social-dm','behavior','signals','output-schema'],
+  analyze: ['eluci-core','mece-intelligence','lead-profile','output-schema','signals','strategy','cse-engine','behavior','segments','conversion','iron-dome'],
+  copy: ['eluci-core','mece-intelligence','playbooks','playbook-sdr','cse-engine','blde','fip','sdr-social-dm','behavior','signals','output-schema'],
   note: ['eluci-core','output-schema','data-contract','validation-forms','funnel','lead-profile','guardrails'],
-  business_analysis: ['eluci-core','strategy','revops-gtm','produtos-g4','bench-canais','segments','revenue-line-matrix','cse-engine'],
-  dm_copy: ['eluci-core','sdr-social-dm','fip','blde','behavior','playbook-sdr','signals'],
+  business_analysis: ['eluci-core','mece-intelligence','strategy','revops-gtm','produtos-g4','bench-canais','segments','revenue-line-matrix','cse-engine'],
+  dm_copy: ['eluci-core','mece-intelligence','sdr-social-dm','fip','blde','behavior','playbook-sdr','signals'],
   coaching: ['eluci-core','sdr-coaching','training-scenarios','playbook-sdr','guardrails'],
-  briefing: ['eluci-core','lead-profile','strategy','cse-engine','behavior','segments','signals','output-schema'],
+  briefing: ['eluci-core','mece-intelligence','lead-profile','strategy','cse-engine','behavior','segments','signals','output-schema'],
   batch_classify: ['eluci-core','signals','lead-profile','segments','output-schema'],
-  competitive: ['eluci-core','strategy','revops-gtm','produtos-g4','bench-canais','segments','revenue-line-matrix','cse-engine'],
-  rt_assist: ['eluci-core','playbooks','playbook-sdr','cse-engine','blde','behavior','signals','output-schema'],
-  downsell: ['eluci-core','playbooks','iron-dome','produtos-g4','revenue-line-matrix','output-schema'],
+  competitive: ['eluci-core','mece-intelligence','strategy','revops-gtm','produtos-g4','bench-canais','segments','revenue-line-matrix','cse-engine'],
+  rt_assist: ['eluci-core','mece-intelligence','playbooks','playbook-sdr','cse-engine','blde','behavior','signals','output-schema'],
+  downsell: ['eluci-core','mece-intelligence','playbooks','iron-dome','produtos-g4','revenue-line-matrix','output-schema'],
   conv_enrichment: ['eluci-core','lead-profile','signals','behavior','output-schema'],
 }
 

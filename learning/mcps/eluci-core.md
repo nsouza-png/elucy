@@ -58,6 +58,7 @@ ACTIVE_DOCUMENTS:
 - DOCUMENT_44: crm-pipeline-schema.md (SCHEMA_CRM_001 — Blueprint Canônico de Deal, Funil e Cockpit: schema completo de propriedades do deal HubSpot G4, 4 dimensões do funil (etapa/fase/grupo/linha), regras de transição de etapa por evento, blueprint de exibição do cockpit, mapeamento funil_comercial Databricks, DQI de deal. Consultar ao modelar deals, filtros de pipeline, métricas por dimensão ou validação de dados.)
 - DOCUMENT_45: g4-revops-blueprint.md (BLUEPRINT_001 — Taxonomia Canônica RevOps G4: 6 dimensões independentes mapeadas do Databricks real (etapa/fase/grupo/linha/canal/tier), volumes reais por valor, mapeamento grupo→linhas, regras de cruzamento, problemas conhecidos nos dados. CONSULTAR OBRIGATORIAMENTE quando houver dúvida sobre taxonomia, classificação de dimensões, ou significado de campos.)
 - DOCUMENT_46: spiced-framework.md (SPICED_001 — SPICED Framework: Protocolo de Qualificação Enterprise. Definições semânticas S-P-I-C-E-D, orquestração no DAG (L16-L17 gatekeeper, L18 signals, L23-L25 enterprise), integração Forecast V7, 3 kill switches SPICED-específicos, Urgency Test contrafactual, SPICED Completeness Score, Builder persona mapping, regras de copywriting Black Box. Fonte: Winning by Design Blueprint. CONSULTAR quando o deal envolver persona Builder, qualificação enterprise 5M+, ou gaps de framework.)
+- DOCUMENT_48: mece-intelligence.md (MECE_001 — MECE Intelligence Engine: organizacao contextual de dados do deal em 8 dimensoes mutuamente exclusivas (identidade, empresa, historico, deal, funil, canal, intel operacional, contexto de mercado). Motor de inferencia DDD→localizacao→mercado. Plano de negocio contextual inferido. CARREGADO OBRIGATORIAMENTE em toda geracao de copy e ELUCI REPORT.)
 
 GARANTIA DO SISTEMA:
 - Nenhum modulo orfao executa
@@ -230,11 +231,12 @@ INPUT
   → [11] APPLY_FIP                (se INSTAGRAM_FOUNDER)
   → [12] APPLY_BLDE               (buzzword level)
   → [13] BEG_GOVERN               (gate decision — permissoes)
-  → [14] GENERATE_BASE_RESPONSE
-  → [15] APPLY_HUMANIZER          (anti-AI patterns — so em FRONTSTAGE copy)
-  → [16] APPLY_LSM                (compressao linguistica por canal)
-  → [17] APPLY_INTERLOCUTOR_FILTER (remover termos internos — hard block)
-  → [18] DVL_SCORE                 (🆕 calcular temperatura + incrementar SDR Progress Score)
+  → [14] MECE_ORGANIZE            (organizar dados em 8 dimensoes MECE — ler mece-intelligence.md)
+  → [15] GENERATE_BASE_RESPONSE   (gerar com contexto MECE organizado)
+  → [16] APPLY_HUMANIZER          (anti-AI patterns — so em FRONTSTAGE copy)
+  → [17] APPLY_LSM                (compressao linguistica por canal)
+  → [18] APPLY_INTERLOCUTOR_FILTER (remover termos internos — hard block)
+  → [19] DVL_SCORE                 (🆕 calcular temperatura + incrementar SDR Progress Score)
   → OUTPUT
 ```
 
