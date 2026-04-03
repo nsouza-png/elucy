@@ -19,6 +19,7 @@ window.IS_REMOTE = true;
 // Supabase Secret ANTHROPIC_API_KEY é usada server-side, nunca exposta ao browser
 window.ELUCY_API_KEY = null; // deprecated — kept for backward compat checks
 window.ELUCY_INFERENCE_URL = 'https://tnbbsjvzwleeoqnxtafp.supabase.co/functions/v1/elucy-inference';
+window.ELUCY_SYNC_DEALS_URL = 'https://tnbbsjvzwleeoqnxtafp.supabase.co/functions/v1/sync-deals';
 window.ELUCY_API_MODEL = localStorage.getItem('elucy_api_model') || 'claude-sonnet-4-20250514';
 window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false';
 </script>
@@ -2854,7 +2855,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 });
 
-// ── GROWTH LOOP — Auto-refresh via Supabase (deals sincronizados pelo G4 OS worker) ──
+// ── GROWTH LOOP — Auto-refresh via Edge Function sync-deals (Databricks → Supabase) ──
 
 let _lastSyncAt = null;
 let _syncInProgress = false;
@@ -2865,28 +2866,37 @@ async function callSyncDeals(){
   const {data:{session}}=await sb.auth.getSession();
   if(!session) return;
   _syncInProgress=true;
+  if(typeof _syncStatus==='function') _syncStatus('syncing');
   try{
-    // 1. Enfileira sync request — schema real: operator_id(text), deal_id(text), request_type(text), status(text), deal_data(jsonb)
-    const {error:insertErr} = await sb.from('cockpit_requests').insert({
-      operator_id: session.user.email,
-      deal_id: '_sync_pipeline',
-      request_type: 'sync_pipeline',
-      status: 'pending',
-      deal_data: {operator_email: session.user.email, triggered_by: 'manual_refresh'}
+    // 1. Chama Edge Function sync-deals — Databricks query + upsert server-side
+    const syncUrl=window.ELUCY_SYNC_DEALS_URL||'https://tnbbsjvzwleeoqnxtafp.supabase.co/functions/v1/sync-deals';
+    const resp=await fetch(syncUrl,{
+      method:'POST',
+      headers:{
+        'content-type':'application/json',
+        'apikey':SUPABASE_ANON,
+        'Authorization':'Bearer '+session.access_token
+      }
     });
-    if(insertErr) throw new Error(insertErr.message);
-    // 2. Recarrega deals do Supabase (dados atuais enquanto sync roda)
+    if(!resp.ok){
+      const errBody=await resp.text().catch(()=>'');
+      throw new Error('sync-deals '+resp.status+': '+errBody.slice(0,200));
+    }
+    const result=await resp.json();
+    // 2. Recarrega deals do Supabase (agora atualizados pela Edge Function)
     await loadDealsFromSupabase(session.user.email);
     _lastSyncAt=Date.now();
+    if(typeof _syncStatus==='function') _syncStatus('ok');
     const si=document.getElementById('sync-indicator');
     if(si){ const d=new Date(); si.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2z"/></svg> ' + d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'); }
     const el=document.getElementById('sbdate');
     const now=new Date();
     const ts=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    if(el) el.textContent='Sync solicitado: '+ts+' (atualiza em ~2min)';
-    showSyncToast('ok','Sync solicitado — pipeline atualiza em ~2min.');
+    if(el) el.textContent='Sync concluído: '+ts+(result.synced?' · '+result.synced+' deals':'');
+    showSyncToast('ok','Pipeline sincronizado — '+(result.synced||0)+' deals atualizados.');
   }catch(err){
-    showSyncToast('err','Falha ao solicitar sync: '+err.message);
+    if(typeof _syncStatus==='function') _syncStatus('error');
+    showSyncToast('err','Falha ao sincronizar: '+err.message);
   }finally{
     _syncInProgress=false;
   }
