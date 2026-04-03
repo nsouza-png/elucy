@@ -7100,9 +7100,11 @@ var _obStep = 0;
 var _obOverlay = null;
 var _obSpotlight = null;
 var _obTooltip = null;
+var _obStarted = false; // guard contra multiplas execucoes
 
 // Verifica Supabase se o tour foi completado — obrigatorio para TODOS
 async function _obCheckAndStart(email){
+  if(_obStarted) return; // ja foi iniciado por outro code path
   console.log('[OB] _obCheckAndStart called, email:', email);
   var sb = getSB();
   if(sb && email){
@@ -7122,6 +7124,7 @@ async function _obCheckAndStart(email){
   }
   // Supabase diz que nao fez — forcar tour independente do localStorage
   localStorage.removeItem('elucy_ob_done');
+  _obStarted = true; // marca antes do timeout para bloquear chamadas concorrentes
   console.log('[OB] Scheduling tour start in 3s...');
   // Aguarda mais tempo para garantir que DOM esta estavel
   setTimeout(function(){
@@ -7221,6 +7224,7 @@ function _obEnd(){
   if(_obSpotlight) _obSpotlight.remove();
   if(_obTooltip) _obTooltip.remove();
   _obOverlay = _obSpotlight = _obTooltip = null;
+  _obStarted = false; // permite re-trigger manual
   localStorage.setItem('elucy_ob_done', '1');
   // Persist no Supabase
   var sb = getSB();
