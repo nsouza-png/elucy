@@ -4116,6 +4116,12 @@ function _dealToRuntime(id, d, email){
   var etapa = (d.etapa||d._etapa||'').toLowerCase();
   var aging = d._aging || {};
   var nba = d._nextAction || {};
+  var tl = d._timeline || {};
+  var tp = d._touchpoints || d.touchpointCount || 0;
+  // Velocity: from timeline intelligence (0-100 → 0-1)
+  var velScore = tl.velocity_score != null ? Math.round(tl.velocity_score) / 100 : null;
+  // Stall: deal is stale and not advancing
+  var stallFlag = tl.stall_flag || tl.stageStagnation === 'stagnant' || (tl.ageBucket === 'stale' && tl.velocity_label === 'Parado');
   return {
     deal_id: id,
     operator_email: email,
@@ -4133,7 +4139,10 @@ function _dealToRuntime(id, d, email){
     urgency_score: d._urgency || 0,
     value_score: d._oppValue || d.elucyValor || 0,
     priority_score: d._urgency || 0,
-    touchpoint_state: null,
+    velocity_score: velScore,
+    stall_flag: !!stallFlag,
+    total_events: tp || 0,
+    touchpoint_state: tp >= 5 ? 'engaged' : tp >= 2 ? 'active' : tp > 0 ? 'initial' : 'none',
     fup_state: 'none',
     show_state: 'unknown',
     last_touch_at: d.last_interaction_at || null,
@@ -5408,6 +5417,189 @@ async function calcPerformanceReportV3(periodType, periodKey){
   return report;
 }
 window.calcPerformanceReportV3 = calcPerformanceReportV3;
+
+// ==================================================================
+// AUTO NOTE ANALYSIS — Lightweight keyword-based note analyzer
+// Extracts sentiment, SPIN/SPICED elements, objections, commitments
+// Inserts into note_analysis → DB trigger auto-updates forecast_runtime
+// ==================================================================
+async function analyzeNoteAndPersist(dealId, rawText){
+  var sb = _sb(); if(!sb) return;
+  var email = getOperatorId(); if(!email) return;
+  if(!rawText || rawText.length < 20) return;
+
+  var lower = rawText.toLowerCase();
+
+  // ── SENTIMENT ──
+  var posWords = ['interessado','animado','quer','pronto','gostou','alinhado','positivo','engajado','empolgado','avançar','fechou','confirmou','agendou','ok','sim','topou','aceito','aprovado','ansioso','decidiu'];
+  var negWords = ['não','recusou','desistiu','cancelou','caro','preço','sem verba','sem tempo','não tem','difícil','complicado','negou','reclamou','insatisfeito','frustrado','atrasou','sumiu','ghosting','sem retorno','frio'];
+  var posCount = posWords.filter(function(w){ return lower.includes(w); }).length;
+  var negCount = negWords.filter(function(w){ return lower.includes(w); }).length;
+  var sentiment = posCount > negCount + 1 ? 'positive' : negCount > posCount + 1 ? 'negative' : 'neutral';
+  var confidence = Math.min(1, (Math.abs(posCount - negCount) + 1) * 0.20);
+
+  // ── OBJECTIONS ──
+  var objPatterns = [
+    {re:/pre[çc]o|caro|or[çc]amento|verba|investimento alto/i, type:'price'},
+    {re:/tempo|agenda|momento|timing|agora n[ãa]o/i, type:'timing'},
+    {re:/preciso consultar|falar com|n[ãa]o decid[eo]|aprovação|diretoria/i, type:'authority'},
+    {re:/t[ée]cnic|funcionalidade|plataforma|integra[çc][ãa]o/i, type:'technical'}
+  ];
+  var objections = [];
+  objPatterns.forEach(function(p){ if(p.re.test(rawText)) objections.push(p.type); });
+
+  // ── COMMITMENTS / NEXT STEPS ──
+  var commitPatterns = [/vou.*enviar/i, /agend[ao]/i, /confirm[ao]/i, /combina[do]/i, /pr[óo]xim[oa] (passo|etapa|reuni)/i, /retorn[ao]/i, /ligar/i];
+  var commitments = [];
+  commitPatterns.forEach(function(p){ if(p.test(rawText)) commitments.push(rawText.match(p)[0]); });
+
+  // ── PAIN POINTS ──
+  var painPatterns = [/dor|problema|desafio|dificuldade|gargalo|bloqueio|risco|perda|custo alto|inefici[eê]ncia/i];
+  var painPoints = [];
+  painPatterns.forEach(function(p){
+    var m = rawText.match(new RegExp('.{0,40}' + p.source + '.{0,40}', 'gi'));
+    if(m) painPoints = painPoints.concat(m.map(function(s){ return s.trim(); }));
+  });
+
+  // ── SPICED EXTRACTION (lightweight) ──
+  var spicedSituation = null, spicedPain = null, spicedImpact = null, spicedCritical = null, spicedDecision = null;
+  if(/situa[çc][ãa]o|contexto|cen[áa]rio|empresa.*faz|atua/i.test(rawText)) spicedSituation = rawText.match(/.{0,60}(?:situa[çc][ãa]o|contexto|cen[áa]rio).{0,60}/i)?.[0] || '';
+  if(/dor|problema|desafio|sofr/i.test(rawText)) spicedPain = rawText.match(/.{0,60}(?:dor|problema|desafio).{0,60}/i)?.[0] || '';
+  if(/impacto|consequ[eê]ncia|preju[íi]zo|perd|custo/i.test(rawText)) spicedImpact = rawText.match(/.{0,60}(?:impacto|consequ[eê]ncia|preju[íi]zo).{0,60}/i)?.[0] || '';
+  if(/urgente|prazo|deadline|evento|data/i.test(rawText)) spicedCritical = rawText.match(/.{0,60}(?:urgente|prazo|deadline|evento).{0,60}/i)?.[0] || '';
+  if(/decis[ãa]o|aprovação|quem decide|processo.*compra/i.test(rawText)) spicedDecision = rawText.match(/.{0,60}(?:decis[ãa]o|aprovação|quem decide).{0,60}/i)?.[0] || '';
+
+  // ── SCORES ──
+  var spicedFilled = [spicedSituation, spicedPain, spicedImpact, spicedCritical, spicedDecision].filter(Boolean).length;
+  var depthScore = Math.min(1, (rawText.length / 500) * 0.3 + (spicedFilled / 5) * 0.4 + (painPoints.length > 0 ? 0.15 : 0) + (commitments.length > 0 ? 0.15 : 0));
+  var qualityScore = Math.min(1, depthScore * 0.5 + confidence * 0.3 + (objections.length > 0 ? 0.1 : 0) + (commitments.length > 0 ? 0.1 : 0));
+
+  // Advancement signal: positive + commitments + no blocking objections
+  var advancementSignal = sentiment === 'positive' && commitments.length > 0 && !objections.includes('authority');
+
+  // Forecast impact
+  var forecastImpact = sentiment === 'positive' ? 0.05 + (advancementSignal ? 0.05 : 0) : sentiment === 'negative' ? -0.10 - (objections.length * 0.02) : 0;
+  var forecastDirection = forecastImpact > 0 ? 'up' : forecastImpact < 0 ? 'down' : 'neutral';
+
+  var row = {
+    deal_id: dealId,
+    operator_email: email,
+    source_type: 'crm_note',
+    raw_text: rawText.slice(0, 5000),
+    cleaned_text: rawText.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 3000),
+    sentiment: sentiment,
+    confidence: +confidence.toFixed(2),
+    intent_detected: advancementSignal ? 'advance' : objections.length ? 'objection' : commitments.length ? 'commitment' : 'inform',
+    objections: objections,
+    commitments: commitments.slice(0, 5),
+    next_steps_extracted: commitments.slice(0, 3),
+    pain_points: painPoints.slice(0, 5),
+    decision_criteria: [],
+    spiced_situation: spicedSituation,
+    spiced_pain: spicedPain,
+    spiced_impact: spicedImpact,
+    spiced_critical_event: spicedCritical,
+    spiced_decision: spicedDecision,
+    depth_score: +depthScore.toFixed(2),
+    quality_score: +qualityScore.toFixed(2),
+    advancement_signal: advancementSignal,
+    forecast_impact: +forecastImpact.toFixed(3),
+    forecast_direction: forecastDirection,
+    analyzed_by: 'elucy_auto',
+    analysis_payload: { pos_count: posCount, neg_count: negCount, spiced_filled: spicedFilled }
+  };
+
+  try {
+    var res = await sb.from('note_analysis').insert(row);
+    if(res.error) { _syncErr('note-analysis', res.error); }
+    else { console.log('[note-analysis] auto-analyzed deal=' + dealId + ' sentiment=' + sentiment + ' depth=' + depthScore.toFixed(2)); }
+  } catch(e) { _syncErr('note-analysis', e); }
+
+  // ── AUTO FRAMEWORK EXTRACTION from note text ──
+  // If SPICED elements were detected, save as lightweight framework extraction
+  if(spicedFilled >= 2 && window.saveFrameworkExtraction){
+    var fwResult = {
+      spiced: {
+        situation: spicedSituation ? 0.5 : 0,
+        pain: spicedPain ? 0.6 : 0,
+        impact: spicedImpact ? 0.5 : 0,
+        critical_event: spicedCritical ? 0.5 : 0,
+        decision: spicedDecision ? 0.5 : 0
+      },
+      meddic: {
+        metrics: painPoints.length > 0 ? 0.3 : 0,
+        economic_buyer: objections.includes('authority') ? 0.2 : 0,
+        decision_criteria: 0,
+        decision_process: spicedDecision ? 0.3 : 0,
+        identify_pain: spicedPain ? 0.5 : 0,
+        champion: 0
+      },
+      auxiliary: { objections: objections, commitments: commitments },
+      coverage: {
+        spiced: spicedFilled / 5,
+        meddic: [painPoints.length > 0, objections.includes('authority'), false, !!spicedDecision, !!spicedPain, false].filter(Boolean).length / 6
+      },
+      confidence: confidence * depthScore,
+      main_gaps: [],
+      next_best_questions: [],
+      raw_evidence: painPoints.slice(0, 3)
+    };
+    // Identify main gaps
+    if(!spicedPain) fwResult.main_gaps.push('pain_not_quantified');
+    if(!spicedDecision) fwResult.main_gaps.push('decision_process_unknown');
+    if(!objections.includes('authority')) fwResult.main_gaps.push('economic_buyer_unknown');
+    try { await window.saveFrameworkExtraction(dealId, 'auto_note', 'note_' + Date.now(), fwResult); }
+    catch(e){ console.warn('[framework-auto] extraction error:', e.message); }
+  }
+}
+window.analyzeNoteAndPersist = analyzeNoteAndPersist;
+
+// ==================================================================
+// QUICK MEETING REGISTRATION — Manual meeting logging for SDRs
+// Inserts into meetings table. Updates deal touchpoint count.
+// ==================================================================
+async function registerMeeting(dealId, meetingType, outcome, notes){
+  var sb = _sb(); if(!sb) return null;
+  var email = getOperatorId(); if(!email) return null;
+  var deal = (window._COCKPIT_DEAL_MAP || {})[dealId];
+  if(!deal) return null;
+
+  meetingType = meetingType || 'discovery';
+  outcome = outcome || 'completed';
+
+  var row = {
+    deal_id: dealId,
+    operator_email: email,
+    meeting_type: meetingType,
+    title: (deal.nome || 'Deal') + ' — ' + meetingType,
+    scheduled_at: new Date().toISOString(),
+    duration_min: 30,
+    contact_name: deal.contact_name || deal.nome || null,
+    contact_email: deal.emailLead || null,
+    contact_phone: deal.telefone || null,
+    meeting_status: outcome === 'no_show' ? 'no_show' : 'completed',
+    outcome: outcome,
+    outcome_notes: notes || null,
+    source: 'manual_cockpit'
+  };
+
+  try {
+    var res = await sb.from('meetings').insert(row);
+    if(res.error) { _syncErr('meeting-reg', res.error); return null; }
+    console.log('[meeting] registered deal=' + dealId + ' type=' + meetingType + ' outcome=' + outcome);
+
+    // Log activity
+    await sb.from('activity_log').insert({
+      operator_id: email,
+      activity_type: outcome === 'no_show' ? 'meeting_no_show' : 'meeting_completed',
+      deal_id: dealId,
+      metadata: { meeting_type: meetingType, outcome: outcome }
+    });
+
+    return row;
+  } catch(e) { _syncErr('meeting-reg', e); return null; }
+}
+window.registerMeeting = registerMeeting;
 
 // ── LAYER 15B — NARRATIVE ENGINE ──
 // Compara período atual vs anterior e gera narrativas inteligentes

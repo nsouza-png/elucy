@@ -2845,6 +2845,8 @@ function renderLiveDeals(rows,cols){
       <div class="di-qa">
         <button class="qa-btn" data-action="fup" data-id="${id}">Gerar FUP</button>
         <button class="qa-btn" data-action="note" data-id="${id}">Nota CRM</button>
+        <button class="qa-btn qa-btn-sm" data-action="meeting-show" data-id="${id}" title="Registrar meeting realizada">Show</button>
+        <button class="qa-btn qa-btn-sm qa-btn-warn" data-action="meeting-noshow" data-id="${id}" title="Registrar no-show">No-Show</button>
       </div>`,classes});
     }
   });
@@ -2893,6 +2895,22 @@ function renderLiveDeals(rows,cols){
       var tid=btn.getAttribute('data-id');
       if(action==='fup') quickFUP(tid);
       else if(action==='note') quickNote(tid);
+      else if(action==='meeting-show'){
+        if(window.registerMeeting){
+          btn.disabled=true; btn.textContent='...';
+          window.registerMeeting(tid,'discovery','completed').then(function(){
+            btn.textContent='Registrado'; showSyncToast('ok','Meeting registrada');
+          }).catch(function(){ btn.disabled=false; btn.textContent='Show'; });
+        }
+      }
+      else if(action==='meeting-noshow'){
+        if(window.registerMeeting){
+          btn.disabled=true; btn.textContent='...';
+          window.registerMeeting(tid,'discovery','no_show').then(function(){
+            btn.textContent='Registrado'; showSyncToast('ok','No-show registrado');
+          }).catch(function(){ btn.disabled=false; btn.textContent='No-Show'; });
+        }
+      }
     });
   }
 
@@ -3006,12 +3024,16 @@ function handleElucyResponse(row, pending){
     injectNotaCRM(targetId, row.output);
     pushNotification('Nota CRM pronta','Deal '+deal_id,'note',row.output,meta);
     logDealInteraction(deal_id, 'note_crm', row.output);
+    // Auto-analyze note → note_analysis (populates forecast_runtime via DB trigger)
+    if(window.analyzeNoteAndPersist) window.analyzeNoteAndPersist(deal_id, row.output);
     return;
   }
   if(type==='analyze'){
     ELUCY_CACHE[deal_id]=row.output;
     injectElucyReport(targetId, row.output);
     pushNotification('ELUCI Report pronto','Deal '+deal_id,'chart',row.output,meta);
+    // Auto-analyze report text for note_analysis (extracts SPICED, objections, etc)
+    if(window.analyzeNoteAndPersist) window.analyzeNoteAndPersist(deal_id, row.output);
   } else if(type==='copy'||type==='dm_copy'){
     try{
       const parsed=JSON.parse(row.output);

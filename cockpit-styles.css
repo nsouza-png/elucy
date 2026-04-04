@@ -900,6 +900,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .di:hover .di-qa,.di.on .di-qa{display:flex}
 .qa-btn{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg4);color:var(--text2);cursor:pointer;transition:.12s}
 .qa-btn:hover{border-color:var(--accent);color:var(--accent2);background:var(--adim)}
+.qa-btn-sm{padding:1px 5px;font-size:9px}
+.qa-btn-warn{border-color:var(--red);color:var(--red)}
+.qa-btn-warn:hover{background:rgba(239,68,68,.12);border-color:var(--red);color:var(--red)}
+.qa-btn:disabled{opacity:.5;cursor:default}
 /* Auth screens */
 #auth-screen,#pending-screen{position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:0}
 #auth-screen.hidden,#pending-screen.hidden{display:none}
