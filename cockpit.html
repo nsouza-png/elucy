@@ -839,7 +839,7 @@ function setScreen(n,el,skipHash){
   if(!skipHash) history.replaceState(null,'','#'+name);
   if(name==='home' && window.renderHome) window.renderHome();
   if(name==='tasks' && window.renderTaskRunner) window.renderTaskRunner();
-  if(name==='intelligence') renderIntelligence();
+  if(name==='intelligence') (typeof _intelRender!=='undefined'?_intelRender():renderIntelligence());
   if(name==='reports') loadReportsScreen();
   if(name==='prevendas' && window.ReportsV4) window.ReportsV4.renderReportsV4('screen-reports-v4');
   if(name==='playbooks') renderPlaybooks();
@@ -1791,6 +1791,9 @@ async function loadDealsFromSupabase(email){
   loadEfficiencyMetrics(sb,email);
   renderLiveDeals(rows,cols);
   showSyncToast('ok',`Pipeline carregado — ${rows.length} deals.`);
+  // Se tela Intel estiver ativa apos carregar deals, re-render com dados
+  var _si=document.getElementById('screen-intelligence');
+  if(_si&&_si.classList.contains('on')){ setTimeout(function(){if(typeof _intelRender!=='undefined')_intelRender();},150); }
 
   // V11 Engine Boot — roda apos deals carregados
   (async function(){
