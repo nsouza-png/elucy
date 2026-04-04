@@ -9383,6 +9383,318 @@ async function runIntelligenceDAG(){
 }
 window.runIntelligenceDAG = runIntelligenceDAG;
 
-console.log('[cockpit-engine v11.3] 29-Layer Architecture loaded — L19-L22 Quality + L23 Enterprise + L24 Trusted Advisor + L25 Strategic + L26 SPIN + L27 RFV + L28 Cadence + L29 ROA');
+// ══════════════════════════════════════════════════════════════════
+// LAYER 30 — Intelligence Requests + Chat Engine (V12)
+// ══════════════════════════════════════════════════════════════════
+
+var ELUCY_CACHE = {};
+
+var REQUEST_PROMPTS = {
+  analyze: 'Gere um [ELUCI REPORT] completo para este deal. Inclua: DIAGNOSTICO (situacao atual com dados do CRM), QUALIFICACAO (ICP fit, tier assessment, persona), RISCO (aging, SLA, sinais), ESTRATEGIA (framework recomendado, proximos 3 passos), PREVISAO (probabilidade ajustada, valor estimado). Formato: backstage para o operador (clinico, bullet points, sem filtro).',
+  copy: 'Gere a proxima mensagem de follow-up para este deal. Canal indicado no context.\n\nFORMATO OBRIGATORIO:\n\nVERSAO WHATSAPP:\n(texto pronto para copiar e colar direto no WhatsApp)\n\nNOTA CRM:\n(nota curta para registrar no CRM)',
+  note: 'Gere uma nota de qualificacao CRM para este deal. Formato canonico do output-schema. Preencha todos os campos com dados disponiveis. Marque NAO_INFORMADO onde faltar dado. Inclua DQI score.',
+  business_analysis: 'Gere uma analise de mercado/setor para o segmento deste deal. Inclua: PANORAMA DO SETOR, TOP PLAYERS, TENDENCIAS, LACUNAS, JOGADAS ESTRATEGICAS.',
+  dm_copy: 'Gere uma copy de Social DM (Instagram) para este deal. Tom do founder. Objetivo: tensao de custo de inacao. PROIBIDO: mencionar G4, produto, preco, call anterior.\n\nFORMATO:\n\nDM PRONTO PARA COLAR:\n(texto da DM direto)\n\nNOTA CRM:\n(nota curta para CRM)',
+  coaching: 'Analise a performance do operador neste deal e gere feedback de coaching. Inclua: o que fez bem, onde errou, proxima acao recomendada, score de execucao.',
+  pipeline_analytics: 'Gere uma analise quantitativa do pipeline deste operador. Inclua: distribuicao por fase, aging medio por faixa, taxa de conversao fase-a-fase, deals em risco (aging >7d), velocidade media de progressao, mix de linhas de receita. Formato: tabela markdown + insights acionaveis.',
+  forecast_deep: 'Gere um deep-dive de forecast para este deal. Inclua: breakdown dos 7 componentes de confidence, comparacao com benchmark da linha de receita, cenarios (otimista/base/pessimista) com probabilidades.',
+  data_quality_report: 'Gere um relatorio de qualidade de dados (DQI) para este deal. Analise: completeness, consistency, recency, evidence. Score 0-100 por dimensao + score composto. Liste os 5 campos mais criticos faltantes.',
+  operator_performance: 'Gere um relatorio de performance do operador baseado nos ultimos 30 dias. Inclua: volume FUPs vs meta, taxa qualificacao, handoffs, win rate, aging medio, DQI medio. Formato: KPIs em tabela + coaching.',
+  deal_comparison: 'Compare este deal com os 5 deals mais similares do pipeline (mesmo grupo_de_receita + tier). Inclua: tabela comparativa, padroes de sucesso, recomendacao.',
+  copy_optimization: 'Analise as copies anteriores e sugira otimizacoes. 3 variacoes (A/B/C test) com justificativa. Canal: WhatsApp.'
+};
+
+async function requestIntelligence(deal_id, requestType, btn){
+  var dealData = window._COCKPIT_DEAL_MAP && window._COCKPIT_DEAL_MAP[deal_id];
+  if(!dealData){window.showSyncToast&&window.showSyncToast('err','Deal nao encontrado no mapa.');return;}
+
+  var origText = btn ? btn.textContent : '';
+  if(btn){btn.disabled=true;btn.textContent='Processando...';}
+
+  var cacheKey = deal_id + '_' + requestType;
+  if(ELUCY_CACHE[cacheKey]){
+    renderIntelligenceOutput(deal_id, requestType, ELUCY_CACHE[cacheKey]);
+    if(btn){btn.disabled=false;btn.textContent=origText;}
+    return;
+  }
+
+  var reportEl = document.getElementById('er-'+deal_id);
+  if(reportEl){
+    reportEl.innerHTML='<div class="er-loading"><span class="elucy-pulse">ELUCY processando '+_escHtml(requestType.replace(/_/g,' '))+'...</span></div>';
+    reportEl.style.display='block';
+  }
+
+  try {
+    var apiResult = await callIntelligenceAPI(dealData, requestType, '');
+    if(apiResult && apiResult.intelligence){
+      var output = typeof apiResult.intelligence === 'string'
+        ? apiResult.intelligence
+        : JSON.stringify(apiResult.intelligence, null, 2);
+      ELUCY_CACHE[cacheKey] = output;
+      renderIntelligenceOutput(deal_id, requestType, output);
+      if(window.logActivity) window.logActivity('intelligence_'+requestType, deal_id);
+      if(window.saveAPIResponse) window.saveAPIResponse(deal_id, requestType, output);
+      if(window.logDealInteraction) window.logDealInteraction(deal_id, requestType, output);
+    } else {
+      throw new Error('Resposta vazia da API');
+    }
+  } catch(err) {
+    console.error('Intelligence request error:', err.message);
+    window.showSyncToast&&window.showSyncToast('err','Erro em '+requestType+': '+err.message);
+    if(reportEl) reportEl.innerHTML='<div class="er-b"><div class="er-bl">ERRO</div><div class="er-bt">'+_escHtml(err.message)+'</div></div>';
+  } finally {
+    if(btn){btn.disabled=false;btn.textContent=origText;}
+  }
+}
+window.requestIntelligence = requestIntelligence;
+
+function renderIntelligenceOutput(dealId, requestType, output){
+  var reportEl = document.getElementById('er-'+dealId);
+  if(!reportEl) return;
+  var typeLabels = {
+    pipeline_analytics: {badge:'PIPELINE ANALYTICS', color:'var(--blue,#3b82f6)', icon:'📊'},
+    forecast_deep: {badge:'FORECAST DEEP-DIVE', color:'var(--green)', icon:'📈'},
+    data_quality_report: {badge:'DQI REPORT', color:'var(--yellow)', icon:'🛡️'},
+    operator_performance: {badge:'OPERATOR PERFORMANCE', color:'var(--accent)', icon:'⚡'},
+    deal_comparison: {badge:'DEAL COMPARISON', color:'var(--accent)', icon:'📋'},
+    copy_optimization: {badge:'COPY LAB', color:'var(--accent2)', icon:'⭐'}
+  };
+  var meta = typeLabels[requestType] || {badge:requestType.toUpperCase(), color:'var(--accent)', icon:'🔍'};
+  reportEl.innerHTML = '<div class="er-h"><span class="er-badge" style="background:'+meta.color+'">'+meta.icon+' '+meta.badge+'</span><span class="er-htitle">Gerado pelo Motor ELUCY</span><span class="er-dqi elucy-live">LIVE</span></div>'
+    + '<div class="er-b"><div class="er-bt">' + (typeof renderMd==='function'?renderMd(output):output) + '</div></div>'
+    + '<div style="padding:8px 14px;display:flex;gap:8px;flex-wrap:wrap">'
+    + '<button class="btn bs btn-sm" onclick="clipCache(this,\''+dealId+'_'+requestType+'\')" style="font-size:10px">Copiar</button>'
+    + '</div>';
+  reportEl.style.display='block';
+}
+
+function clipCache(btn, cacheKey){
+  var text = ELUCY_CACHE[cacheKey] || '';
+  if(!text){window.showSyncToast&&window.showSyncToast('err','Nada para copiar.');return;}
+  navigator.clipboard.writeText(text).then(function(){
+    var orig=btn.textContent;btn.textContent='Copiado!';
+    setTimeout(function(){btn.textContent=orig;},1500);
+  }).catch(function(){window.showSyncToast&&window.showSyncToast('err','Erro ao copiar.');});
+}
+window.clipCache = clipCache;
+
+// ── CHAT ENGINE ─────────────────────────────────────────────────
+(function(){
+  var _chatState = {
+    conversations: [],
+    filtered: [],
+    activeThread: null,
+    messages: [],
+    channelFilter: 'all',
+    searchTerm: '',
+    initialized: false,
+    realtimeSub: null
+  };
+
+  function chatInit(){
+    if(_chatState.initialized) return;
+    _chatState.initialized = true;
+    chatLoadConversations();
+    chatInitRealtime();
+  }
+  window.chatInit = chatInit;
+
+  async function chatLoadConversations(){
+    try {
+      var sb = window._supabase;
+      if(!sb){console.warn('[Chat] Supabase not available');return;}
+      var {data,error} = await sb.from('chat_conversations').select('*').order('last_message_at',{ascending:false});
+      if(error) throw error;
+      _chatState.conversations = data || [];
+      _chatState.filtered = _chatState.conversations;
+      chatRenderConversations();
+    } catch(err){
+      console.error('[Chat] Load error:', err.message);
+    }
+  }
+
+  function chatRenderConversations(){
+    var el = document.getElementById('chat-conversations');
+    if(!el) return;
+    var convs = _chatState.filtered;
+    if(!convs.length){
+      el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text2);font-size:12px">Nenhuma conversa encontrada</div>';
+      return;
+    }
+    el.innerHTML = convs.map(function(c){
+      var isActive = _chatState.activeThread === c.thread_id;
+      var chClass = (c.channel||'whatsapp')==='instagram'?'ig':'wa';
+      var initial = (c.contact_name||'?')[0].toUpperCase();
+      var unread = c.unread_count>0?'<span class="chat-conv-badge">'+c.unread_count+'</span>':'';
+      var timeStr = c.last_message_at?new Date(c.last_message_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
+      return '<div class="chat-conv'+(isActive?' active':'')+'" onclick="window.chatOpenThread(\''+c.thread_id+'\')">'
+        +'<div class="chat-conv-av '+chClass+'">'+initial+'</div>'
+        +'<div class="chat-conv-body"><div class="chat-conv-name">'+(c.contact_name||c.contact_phone||'Desconhecido')+'</div>'
+        +'<div class="chat-conv-last">'+(c.last_message_preview||'')+'</div></div>'
+        +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><span class="chat-conv-time">'+timeStr+'</span>'+unread+'</div></div>';
+    }).join('');
+  }
+
+  async function chatOpenThread(threadId){
+    _chatState.activeThread = threadId;
+    chatRenderConversations();
+    var inputArea = document.getElementById('chat-input-area');
+    if(inputArea) inputArea.style.display='block';
+    var app = document.getElementById('chat-app');
+    if(app) app.classList.add('chat-open');
+
+    var conv = _chatState.conversations.find(function(c){return c.thread_id===threadId;});
+    var headerName = document.getElementById('chat-header-name');
+    var headerMeta = document.getElementById('chat-header-meta');
+    if(headerName) headerName.textContent = conv?(conv.contact_name||conv.contact_phone||'Desconhecido'):'';
+    if(headerMeta) headerMeta.textContent = conv?(conv.channel||'whatsapp').toUpperCase():'';
+
+    try {
+      var sb = window._supabase;
+      if(!sb) return;
+      var {data,error} = await sb.from('chat_messages').select('*').eq('thread_id',threadId).order('sent_at',{ascending:true});
+      if(error) throw error;
+      _chatState.messages = data || [];
+      chatRenderMessages();
+    } catch(err){
+      console.error('[Chat] Open thread error:', err.message);
+    }
+  }
+  window.chatOpenThread = chatOpenThread;
+
+  function chatRenderMessages(){
+    var el = document.getElementById('chat-messages');
+    if(!el) return;
+    el.innerHTML = _chatState.messages.map(function(m){
+      var dir = m.direction==='outbound'?'out':'in';
+      var timeStr = m.sent_at?new Date(m.sent_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
+      var statusIcon = m.status==='delivered'?' ✓✓':m.status==='sent'?' ✓':m.status==='read'?' ✓✓':m.status==='failed'?' ✗':'';
+      return '<div style="display:flex;flex-direction:column;align-items:'+(dir==='out'?'flex-end':'flex-start')+'">'
+        +'<div class="chat-msg '+dir+'">'+(m.body||'')+'</div>'
+        +'<div class="chat-msg-time">'+timeStr+(dir==='out'?'<span class="chat-msg-status">'+statusIcon+'</span>':'')+'</div></div>';
+    }).join('');
+    el.scrollTop = el.scrollHeight;
+  }
+
+  async function chatSend(){
+    var input = document.getElementById('chat-input');
+    if(!input||!input.value.trim()||!_chatState.activeThread) return;
+    var body = input.value.trim();
+    input.value = '';
+
+    var conv = _chatState.conversations.find(function(c){return c.thread_id===_chatState.activeThread;});
+    var channel = conv?conv.channel:'whatsapp';
+
+    _chatState.messages.push({
+      body: body, direction:'outbound', sent_at: new Date().toISOString(), status:'sending', channel: channel
+    });
+    chatRenderMessages();
+
+    try {
+      var sb = window._supabase;
+      if(!sb) return;
+      var session = await sb.auth.getSession();
+      var token = session.data.session?session.data.session.access_token:'';
+      var resp = await fetch(window._SUPABASE_URL+'/functions/v1/chat-proxy', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+        body:JSON.stringify({thread_id:_chatState.activeThread,body:body,channel:channel,contact_phone:conv?conv.contact_phone:''})
+      });
+      var result = await resp.json();
+      if(!resp.ok) throw new Error(result.error||'Erro ao enviar');
+      _chatState.messages[_chatState.messages.length-1].status='sent';
+      chatRenderMessages();
+    } catch(err){
+      console.error('[Chat] Send error:', err.message);
+      _chatState.messages[_chatState.messages.length-1].status='failed';
+      chatRenderMessages();
+      window.showSyncToast&&window.showSyncToast('err','Erro ao enviar: '+err.message);
+    }
+  }
+  window.chatSend = chatSend;
+
+  function chatNewMessage(){
+    var phone = prompt('Numero do contato (com DDD):');
+    if(!phone) return;
+    var threadId = 'wa_'+phone.replace(/\D/g,'');
+    _chatState.conversations.unshift({
+      thread_id:threadId, contact_phone:phone, contact_name:phone, channel:'whatsapp',
+      last_message_at:new Date().toISOString(), last_message_preview:'', unread_count:0
+    });
+    _chatState.filtered = _chatState.conversations;
+    chatRenderConversations();
+    chatOpenThread(threadId);
+  }
+  window.chatNewMessage = chatNewMessage;
+
+  function chatInsertCopy(){
+    var input = document.getElementById('chat-input');
+    if(!input||!_chatState.activeThread) return;
+    var conv = _chatState.conversations.find(function(c){return c.thread_id===_chatState.activeThread;});
+    if(!conv) return;
+    var dealMap = window._COCKPIT_DEAL_MAP||{};
+    var deals = Object.values(dealMap);
+    var match = deals.find(function(d){
+      var phone = (conv.contact_phone||'').replace(/\D/g,'');
+      return (d.telefone||'').replace(/\D/g,'')===phone || (d.celular||'').replace(/\D/g,'')===phone;
+    });
+    if(!match){window.showSyncToast&&window.showSyncToast('warn','Nenhum deal vinculado a este contato.');return;}
+    var cacheKey = match.deal_id+'_copy';
+    if(ELUCY_CACHE[cacheKey]){
+      var waMatch = ELUCY_CACHE[cacheKey].match(/VERSAO WHATSAPP:\s*([\s\S]*?)(?:NOTA CRM:|$)/i);
+      input.value = waMatch?waMatch[1].trim():ELUCY_CACHE[cacheKey];
+      input.focus();
+    } else {
+      window.showSyncToast&&window.showSyncToast('info','Gere uma copy primeiro (botao "Gerar Copy" no deal card).');
+    }
+  }
+  window.chatInsertCopy = chatInsertCopy;
+
+  function chatFilterChannel(ch, btn){
+    _chatState.channelFilter = ch;
+    var chips = document.querySelectorAll('#chat-list-panel .fchip');
+    chips.forEach(function(c){c.classList.remove('fchip-on');});
+    if(btn) btn.classList.add('fchip-on');
+    applyFilters();
+  }
+  window.chatFilterChannel = chatFilterChannel;
+
+  function chatFilterConversations(term){
+    _chatState.searchTerm = (term||'').toLowerCase();
+    applyFilters();
+  }
+  window.chatFilterConversations = chatFilterConversations;
+
+  function applyFilters(){
+    _chatState.filtered = _chatState.conversations.filter(function(c){
+      if(_chatState.channelFilter!=='all' && c.channel!==_chatState.channelFilter) return false;
+      if(_chatState.searchTerm && !(c.contact_name||'').toLowerCase().includes(_chatState.searchTerm) && !(c.contact_phone||'').includes(_chatState.searchTerm)) return false;
+      return true;
+    });
+    chatRenderConversations();
+  }
+
+  function chatInitRealtime(){
+    var sb = window._supabase;
+    if(!sb||!sb.channel) return;
+    _chatState.realtimeSub = sb.channel('chat-realtime')
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'chat_messages'},function(payload){
+        var msg = payload.new;
+        if(msg.thread_id===_chatState.activeThread && msg.direction==='inbound'){
+          _chatState.messages.push(msg);
+          chatRenderMessages();
+        }
+        chatLoadConversations();
+      })
+      .subscribe();
+  }
+
+  function chatAttach(){window.showSyncToast&&window.showSyncToast('info','Anexos em breve.');}
+  window.chatAttach = chatAttach;
+  function chatUseTemplate(){window.showSyncToast&&window.showSyncToast('info','Templates em breve.');}
+  window.chatUseTemplate = chatUseTemplate;
+})();
+
+console.log('[cockpit-engine v12.0] 30-Layer Architecture loaded — L19-L22 Quality + L23 Enterprise + L24 Trusted Advisor + L25 Strategic + L26 SPIN + L27 RFV + L28 Cadence + L29 ROA + L30 Chat+Intel');
 
 })();

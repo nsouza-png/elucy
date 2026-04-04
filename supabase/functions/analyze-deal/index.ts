@@ -109,6 +109,17 @@ Instagram Alfredo: A=7.4%|R$34.2k, B=5.0%|R$108k(outlier), C=5.1%|R$25k, E=6.0%|
 Instagram Nardon: A=6.7%|R$43.4k, C=4.3%|R$21.1k, H=11.1%|R$20.8k, I=3.7%|R$19.7k, J=2.2%|R$14.4k
 Mapeamento tier->perfil: diamond=A/B | gold=C/D | silver=E/F | bronze=G+`
 
+// Sliding window rate limit: 8 req/min per operator
+const _rlMap = new Map<string, number[]>();
+function _checkRL(email: string): boolean {
+  const now = Date.now();
+  const ts = (_rlMap.get(email) || []).filter(t => now - t < 60000);
+  if (ts.length >= 8) { _rlMap.set(email, ts); return false; }
+  ts.push(now);
+  _rlMap.set(email, ts);
+  return true;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -136,6 +147,13 @@ Deno.serve(async (req) => {
     if (userErr || !user) {
       return new Response(JSON.stringify({ error: 'Invalid token' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Rate limit: 8 req/min per operator
+    if (!_checkRL(user.email || '')) {
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded (8/min)' }), {
+        status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 

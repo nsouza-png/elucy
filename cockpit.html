@@ -61,18 +61,21 @@ window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false'
   </div>
 </div>
 <div id="sb-overlay" onclick="window.toggleSidebar&&window.toggleSidebar(false)"></div>
-<div id="elucy-toast"></div>
+<div id="elucy-toast" role="alert" aria-live="polite"></div>
 <div id="topbar">
   <button id="sb-toggle" onclick="window.toggleSidebar&&window.toggleSidebar()" aria-label="Menu" title="Abrir pipeline">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
   </button>
   <span class="logo"><span class="logo-name">ELUCY</span><span class="logo-badge-ent">ENTERPRISE</span></span>
-  <button class="ntab on" onclick="setScreen('home',this)">Home</button>
-  <button class="ntab" onclick="setScreen('pipeline',this)">Pipeline</button>
-  <button class="ntab" onclick="setScreen('tasks',this)">Tasks <span class="tab-count" id="task-count"></span></button>
-  <button class="ntab" onclick="setScreen('prevendas',this)">Pre-Vendas</button>
-  <button class="ntab" onclick="setScreen('intelligence',this)">Intel</button>
-  <button class="ntab" onclick="setScreen('playbooks',this)">Playbooks</button>
+  <nav role="tablist" aria-label="Navegação principal" style="display:contents">
+  <button class="ntab on" role="tab" aria-selected="true" aria-label="Home" tabindex="0" onclick="setScreen('home',this)">Home</button>
+  <button class="ntab" role="tab" aria-selected="false" aria-label="Pipeline" tabindex="-1" onclick="setScreen('pipeline',this)">Pipeline</button>
+  <button class="ntab" role="tab" aria-selected="false" aria-label="Tasks" tabindex="-1" onclick="setScreen('tasks',this)">Tasks <span class="tab-count" id="task-count"></span></button>
+  <button class="ntab" role="tab" aria-selected="false" aria-label="Pre-Vendas" tabindex="-1" onclick="setScreen('prevendas',this)">Pre-Vendas</button>
+  <button class="ntab" role="tab" aria-selected="false" aria-label="Intel" tabindex="-1" onclick="setScreen('intelligence',this)">Intel</button>
+  <button class="ntab" role="tab" aria-selected="false" aria-label="Playbooks" tabindex="-1" onclick="setScreen('playbooks',this)">Playbooks</button>
+  <button class="ntab" role="tab" aria-selected="false" aria-label="Chat" tabindex="-1" onclick="setScreen('chat',this)">Chat</button>
+  </nav>
   <div class="tbr">
     <span id="sync-dot" class="sync-dot sync-dot-ok" title="Sincronizado"></span>
     <span class="op-pill" id="op-pill">CRM Sincronizado</span>
@@ -96,7 +99,7 @@ window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false'
     </div>
     <div id="slack-alert-list"><div class="notif-empty">Nenhum alerta Slack.</div></div>
   </div>
-  <div class="slack-setup-modal" id="slack-setup-modal">
+  <div class="slack-setup-modal" id="slack-setup-modal" role="dialog" aria-modal="true" aria-label="Configurar Alertas Slack">
     <div class="slack-setup-box">
       <div class="slack-setup-title">Configurar Alertas Slack</div>
       <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Descreva o que quer monitorar em linguagem natural. Ex: "quero receber alertas do canal fup-dm-insta com destaque especial" ou "monitorar menções no #deals-quentes"</p>
@@ -499,6 +502,44 @@ window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false'
     <div class="screen" id="screen-playbooks">
       <div id="pb-root"><div style="font-size:12px;color:var(--text2);padding:20px;text-align:center">Carregando Playbooks...</div></div>
     </div>
+    <div class="screen" id="screen-chat">
+      <div id="chat-app" style="display:flex;height:calc(100vh - 56px);gap:0">
+        <div id="chat-list-panel" style="width:320px;min-width:280px;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden">
+          <div style="padding:12px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center">
+            <input id="chat-search" class="srch" placeholder="Buscar conversa..." oninput="window.chatFilterConversations(this.value)" style="flex:1">
+            <button class="btn bs" onclick="window.chatNewMessage()" title="Nova mensagem" style="padding:4px 8px;font-size:14px">+</button>
+          </div>
+          <div style="padding:8px 12px;display:flex;gap:6px">
+            <button class="fchip fchip-on" onclick="window.chatFilterChannel('all',this)" data-ch="all">Todos</button>
+            <button class="fchip" onclick="window.chatFilterChannel('whatsapp',this)" data-ch="whatsapp">WhatsApp</button>
+            <button class="fchip" onclick="window.chatFilterChannel('instagram',this)" data-ch="instagram">Instagram</button>
+          </div>
+          <div id="chat-conversations" style="flex:1;overflow-y:auto;padding:4px 0"></div>
+        </div>
+        <div id="chat-main-panel" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+          <div id="chat-header" style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;min-height:56px">
+            <div id="chat-header-info" style="flex:1">
+              <div style="font-weight:600;font-size:14px" id="chat-header-name">Selecione uma conversa</div>
+              <div style="font-size:11px;color:var(--text2)" id="chat-header-meta"></div>
+            </div>
+            <div id="chat-header-actions" style="display:flex;gap:6px"></div>
+          </div>
+          <div id="chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px"></div>
+          <div id="chat-input-area" style="padding:12px 16px;border-top:1px solid var(--border);display:none">
+            <div style="display:flex;gap:8px;align-items:flex-end">
+              <textarea id="chat-input" rows="1" placeholder="Digite sua mensagem..." style="flex:1;resize:none;padding:10px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;max-height:120px;overflow-y:auto" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();window.chatSend()}"></textarea>
+              <button class="btn bp" onclick="window.chatSend()" style="border-radius:50%;width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center" title="Enviar">&#10148;</button>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:6px;padding:0 4px">
+              <button class="btn bs" onclick="window.chatAttach()" style="font-size:11px;padding:2px 8px">Anexar</button>
+              <button class="btn bs" onclick="window.chatInsertCopy()" style="font-size:11px;padding:2px 8px">Inserir Copy</button>
+              <button class="btn bs" onclick="window.chatUseTemplate()" style="font-size:11px;padding:2px 8px">Template</button>
+              <span id="chat-typing-indicator" style="font-size:11px;color:var(--accent);margin-left:auto;display:none">digitando...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 <!-- ── SCREEN: DM WAR ROOM — REMOVIDO (touchpoint lógica migrada para CSE engine) -->
 <div class="screen" id="screen-dm" style="display:none!important">
   <div class="dm-center" style="position:relative">
@@ -711,19 +752,19 @@ let cur=null;
 
 function setScreen(n,el,skipHash){
   document.querySelectorAll('#ct > .screen').forEach(s=>s.classList.remove('on'));
-  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.ntab').forEach(t=>{t.classList.remove('on');t.setAttribute('aria-selected','false');t.setAttribute('tabindex','-1');});
   var ct=document.getElementById('ct'); if(ct) ct.scrollTop=0;
-  const screenMap={home:'screen-home',pipeline:'screen-pipeline',tasks:'screen-tasks',reports:'screen-reports',prevendas:'screen-prevendas',intelligence:'screen-intelligence',playbooks:'screen-playbooks',dm:'screen-dm'};
+  const screenMap={home:'screen-home',pipeline:'screen-pipeline',tasks:'screen-tasks',reports:'screen-reports',prevendas:'screen-prevendas',intelligence:'screen-intelligence',playbooks:'screen-playbooks',dm:'screen-dm',chat:'screen-chat'};
   const validScreens=Object.keys(screenMap);
   const name=validScreens.includes(n)?n:'home';
   const target=document.getElementById(screenMap[name]);
   if(target) target.classList.add('on');
-  if(el){ el.classList.add('on'); }
+  if(el){ el.classList.add('on');el.setAttribute('aria-selected','true');el.setAttribute('tabindex','0'); }
   else {
     const tabs=document.querySelectorAll('.ntab');
-    const tabMap={home:0,pipeline:1,tasks:2,reports:3,prevendas:4,intelligence:5,playbooks:6};
+    const tabMap={home:0,pipeline:1,tasks:2,reports:3,prevendas:4,intelligence:5,playbooks:6,chat:7};
     const idx=tabMap[name]!=null?tabMap[name]:0;
-    if(tabs[idx]) tabs[idx].classList.add('on');
+    if(tabs[idx]){tabs[idx].classList.add('on');tabs[idx].setAttribute('aria-selected','true');tabs[idx].setAttribute('tabindex','0');}
   }
   if(!skipHash) history.replaceState(null,'','#'+name);
   if(name==='home' && window.renderHome) window.renderHome();
@@ -732,14 +773,33 @@ function setScreen(n,el,skipHash){
   if(name==='reports') loadReportsScreen();
   if(name==='prevendas' && window.ReportsV4) window.ReportsV4.renderReportsV4('screen-reports-v4');
   if(name==='playbooks') renderPlaybooks();
+  if(name==='chat' && window.chatInit) window.chatInit();
 }
 // Hash routing — abre a seção correta ao carregar URL direta ou navegar pelo histórico
 function _routeFromHash(){
   const hash=(location.hash||'').replace('#','').toLowerCase().trim();
-  const valid=['home','pipeline','tasks','reports','prevendas','intelligence','playbooks','dm'];
+  const valid=['home','pipeline','tasks','reports','prevendas','intelligence','playbooks','dm','chat'];
   setScreen(valid.includes(hash)?hash:'home',null,true);
 }
 window.addEventListener('hashchange',_routeFromHash);
+
+// ── ARIA keyboard navigation for tabs ──
+document.addEventListener('keydown',function(e){
+  var active=document.activeElement;
+  if(!active||!active.classList.contains('ntab')) return;
+  var tabs=Array.from(document.querySelectorAll('.ntab'));
+  var idx=tabs.indexOf(active);
+  if(idx<0) return;
+  var next=-1;
+  if(e.key==='ArrowRight'||e.key==='Right') next=(idx+1)%tabs.length;
+  else if(e.key==='ArrowLeft'||e.key==='Left') next=(idx-1+tabs.length)%tabs.length;
+  else if(e.key==='Home') next=0;
+  else if(e.key==='End') next=tabs.length-1;
+  if(next<0) return;
+  e.preventDefault();
+  tabs[next].focus();
+  tabs[next].click();
+});
 
 function renderPlaybooks(){
   var el=document.getElementById('pb-root');
@@ -1926,6 +1986,9 @@ function openSettings(section){
   const ov=document.createElement('div');
   ov.className='modal-ov';
   ov.id='settings-modal';
+  ov.setAttribute('role','dialog');
+  ov.setAttribute('aria-modal','true');
+  ov.setAttribute('aria-label','Configurações do operador');
   ov.style.cssText='align-items:center;justify-content:center';
 
   ov.innerHTML=`
@@ -1998,6 +2061,26 @@ function openSettings(section){
 .sg-dqi-bar{height:6px;border-radius:3px;background:var(--border);overflow:hidden;margin-top:6px}
 .sg-dqi-fill{height:100%;border-radius:3px;background:var(--green);transition:width .4s}
 @media(max-width:640px){#settings-panel{flex-direction:column;max-height:96vh}#settings-nav{width:100%;min-width:0;flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid var(--border)}#settings-nav-status{display:none}#settings-body{padding:14px}}
+/* ── COLLAPSIBLE DEAL CARD ── */
+.deal-actions-toggle{display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--t2);cursor:pointer;transition:all .2s ease}.deal-actions-toggle:hover{border-color:var(--accent);color:var(--accent)}.deal-actions-toggle .tgl-chevron{transition:transform .25s ease;display:inline-block}.deal-actions-toggle.open .tgl-chevron{transform:rotate(180deg)}.deal-actions-advanced{display:flex;align-items:center;gap:9px;flex-wrap:wrap;overflow:hidden;max-height:0;opacity:0;transition:max-height .3s ease,opacity .25s ease,margin .2s ease;margin-top:0}.deal-actions-advanced.show{max-height:120px;opacity:1;margin-top:8px}
+/* ── CHAT ── */
+.chat-conv{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--bg3);display:flex;gap:10px;align-items:center;transition:background .15s}
+.chat-conv:hover{background:var(--bg2)}
+.chat-conv.active{background:var(--bg3)}
+.chat-conv-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+.chat-conv-av.wa{background:#25d366;color:#fff}
+.chat-conv-av.ig{background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:#fff}
+.chat-conv-body{flex:1;min-width:0}
+.chat-conv-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-conv-last{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-conv-time{font-size:10px;color:var(--text3);white-space:nowrap}
+.chat-conv-badge{background:var(--accent);color:#fff;font-size:10px;border-radius:10px;padding:1px 6px;min-width:18px;text-align:center}
+.chat-msg{max-width:70%;padding:8px 12px;border-radius:16px;font-size:13px;line-height:1.4;word-wrap:break-word}
+.chat-msg.out{background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.chat-msg.in{background:var(--bg3);color:var(--text);align-self:flex-start;border-bottom-left-radius:4px}
+.chat-msg-time{font-size:10px;opacity:.6;margin-top:2px}
+.chat-msg-status{font-size:10px;opacity:.6;margin-left:4px}
+@media(max-width:768px){#chat-list-panel{width:100%!important;min-width:0!important}#chat-main-panel{display:none!important}#chat-app.chat-open #chat-list-panel{display:none!important}#chat-app.chat-open #chat-main-panel{display:flex!important}}
 </style>
 <div id="settings-panel">
   <div id="settings-nav">
@@ -2443,6 +2526,9 @@ function promptDbToken(email){
   const ov=document.createElement('div');
   ov.className='modal-ov';
   ov.id='token-modal';
+  ov.setAttribute('role','dialog');
+  ov.setAttribute('aria-modal','true');
+  ov.setAttribute('aria-label','Conectar Databricks');
   ov.innerHTML=`
     <div class="modal">
       <div class="modal-t">Conectar Databricks</div>
@@ -2538,6 +2624,9 @@ function showNamePicker(names,token,btn){
   const ov=document.createElement('div');
   ov.className='modal-ov';
   ov.id='picker-modal';
+  ov.setAttribute('role','dialog');
+  ov.setAttribute('aria-modal','true');
+  ov.setAttribute('aria-label','Confirmar operador');
   const opts=names.map(n=>`<button class="btn bs" style="width:100%;text-align:left;margin-bottom:6px" onclick="pickName('${n.replace(/'/g,"\\'")}','${encodeURIComponent(JSON.stringify(names))}')">${n}</button>`).join('');
   ov.innerHTML=`<div class="modal"><div class="modal-t">Confirmar operador</div><div class="modal-s">Encontrei mais de um match. Qual é você?</div>${opts}<button class="btn bs btn-sm" style="margin-top:4px" onclick="document.getElementById('picker-modal').remove()">Cancelar</button></div>`;
   document.body.appendChild(ov);
@@ -4729,10 +4818,19 @@ function selectLiveDeal(id,d){
         <button class="btn bp" onclick="showCopy('${id}',this)">Gerar Copy via ELUCY</button>
         <button class="btn bs" id="btn-er-${id}" onclick="toggleER('${id}',this)">ELUCI Report</button>
         <button class="btn bs" id="btn-ba-${id}" data-color="clay" onclick="requestBusinessAnalysis('${id}',this)" style="border-color:var(--clay);color:var(--clay)">Análise de Mercado</button>
+        <button class="deal-actions-toggle" onclick="var adv=this.parentElement.nextElementSibling;adv.classList.toggle('show');this.classList.toggle('open')"><span class="tgl-chevron">&#9662;</span> Mais ações</button>
+      </div>
+      <div class="deal-actions-advanced" id="deal-adv-${id}">
         <button class="wa-conv-btn" id="btn-wa-${id}" onclick="toggleWaPanel('${id}',this)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Conversa</button>
         <button class="btn bs btn-sm" id="btn-nota-${id}" data-color="green" onclick="requestNotaCRM('${id}',this)" style="border-color:var(--green);color:var(--green)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Nota CRM</button>
         <button class="btn bs btn-sm" onclick="if(window.renderCadenceModal)window.renderCadenceModal('${id}')" style="border-color:var(--accent2);color:var(--accent2)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Cadência</button>
         <button class="btn bs btn-sm" onclick="window.open('https://app.hubspot.com/contacts/7186301/record/0-3/${d.deal_id||id}','_blank')" style="border-color:#ff7a59;color:#ff7a59"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> HubSpot</button>
+        <div style="width:100%;height:1px;background:var(--border);margin:6px 0"></div>
+        <button class="btn bs btn-sm" onclick="requestIntelligence('${id}','pipeline_analytics',this)" style="border-color:var(--blue,#3b82f6);color:var(--blue,#3b82f6)" title="Análise quantitativa do pipeline"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> Pipeline Analytics</button>
+        <button class="btn bs btn-sm" onclick="requestIntelligence('${id}','forecast_deep',this)" style="border-color:var(--green);color:var(--green)" title="Deep-dive forecast com 7 componentes"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Forecast Deep</button>
+        <button class="btn bs btn-sm" onclick="requestIntelligence('${id}','data_quality_report',this)" style="border-color:var(--yellow);color:var(--yellow)" title="Relatório DQI por dimensão"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> DQI Report</button>
+        <button class="btn bs btn-sm" onclick="requestIntelligence('${id}','deal_comparison',this)" style="border-color:var(--accent);color:var(--accent)" title="Compara com deals similares"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Comparar Deals</button>
+        <button class="btn bs btn-sm" onclick="requestIntelligence('${id}','copy_optimization',this)" style="border-color:var(--accent2);color:var(--accent2)" title="A/B/C test de copies otimizadas"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Copy Lab</button>
       </div>
       <div class="ba" id="nota-${id}" style="display:none"></div>
       <div class="wa-panel" id="wa-panel-${id}">
