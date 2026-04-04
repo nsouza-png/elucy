@@ -5028,6 +5028,8 @@ function renderIntelligence(){
   const AE=window.AnalyticsEngine;
   if(!AE){ct.innerHTML='<div class="intel-empty">Analytics Engine não carregado.</div>';return;}
   const deals=allDeals.filter(d=>{const s=(d.statusDeal||'').toLowerCase();return s!=='perdido'&&s!=='ganho'&&s!=='desqualificado';});
+  // Enriquecer deals para Strategic/Engines (RFV, Enterprise, TA, SPIN, Bowtie, Signals, DQ, Priority)
+  if(window.enrichDealContext) deals.forEach(function(d){window.enrichDealContext(d);});
   if(sub) sub.textContent=deals.length+' deals ativos — '+new Date().toLocaleDateString('pt-BR')+' — dim: '+_intelCurrentDim.toUpperCase();
 
   ct.innerHTML='<div class="intel-loading">Calculando...</div>';
@@ -5859,6 +5861,10 @@ function _renderFramework(ct,allDeals,deals){
 function _renderEnterprise(ct,deals){
   var html='';
   var entDeals=deals.filter(function(d){return d._enterpriseScore&&d._enterpriseScore.is_enterprise;});
+  if(!entDeals.length){
+    ct.innerHTML='<div class="intel-empty">Nenhum deal enterprise detectado (faturamento ≥ 5M, tier diamond ou ticket ≥ 50k).<br><span style="font-size:11px;color:var(--text3)">Verifique se os deals possuem faixa_de_faturamento preenchida no CRM.</span></div>';
+    return;
+  }
   var stdDeals=deals.length-entDeals.length;
   var totalEVS=entDeals.reduce(function(s,d){return s+(d._enterpriseScore.evs||0);},0);
   var avgEVS=entDeals.length?Math.round(totalEVS/entDeals.length*10)/10:0;
@@ -5996,7 +6002,7 @@ function _renderSpinAudit(ct,deals){
 function _renderTrustedAdvisor(ct,deals){
   var html='';
   var taDeals=deals.filter(function(d){return d._trustedAdvisor&&d._trustedAdvisor.score>0;});
-  if(!taDeals.length){ct.innerHTML='<div class="intel-empty">Nenhum deal com Trusted Advisor Score calculado.</div>';return;}
+  if(!taDeals.length){ct.innerHTML='<div class="intel-empty">Nenhum deal com Trusted Advisor Score calculado.<br><span style="font-size:11px;color:var(--text3)">O score depende de touchpoints, notas de call e cobertura de framework. Registre interações para ativar.</span></div>';return;}
 
   var avgScore=Math.round(taDeals.reduce(function(s,d){return s+d._trustedAdvisor.score;},0)/taDeals.length*100);
   var avgMaister=Math.round(taDeals.reduce(function(s,d){return s+d._trustedAdvisor.maister_score;},0)/taDeals.length*100);
@@ -6135,7 +6141,15 @@ function _renderBowtie(ct,deals){
     });
   });
 
-  html+=renderSection(2,'Deals por Perna do Bowtie',
+  if(legs.null_leg.length>0){
+    html+=renderSection(2,'Deals sem classificação Bowtie ('+legs.null_leg.length+')',
+      '<div style="font-size:11px;color:var(--text2);padding:8px 10px;background:var(--bg3);border-radius:6px;border:1px solid var(--border);margin-bottom:8px">'+legs.null_leg.length+' deal(s) com <b>grupo_de_receita</b> vazio ou "Não Definido" — preencha no CRM para classificar corretamente.</div>'+
+      '<table class="intel-table"><thead><tr><th>Deal</th><th>Grupo</th><th>Etapa</th></tr></thead><tbody>'+
+      legs.null_leg.slice(0,8).map(function(d){return '<tr><td>'+_escHtml(d.nome||'—')+'</td><td style="color:var(--text3)">'+_escHtml(d.grupo_de_receita||'vazio')+'</td><td>'+_escHtml(d.etapa||'—')+'</td></tr>';}).join('')+
+      '</tbody></table>');
+  }
+
+  html+=renderSection(legs.null_leg.length>0?3:2,'Deals por Perna do Bowtie',
     '<table class="intel-table"><thead><tr><th>Perna</th><th>Deal</th><th>Linha</th><th>Etapa</th><th>Forecast</th><th>Aging</th></tr></thead><tbody>'+tableRows+'</tbody></table>');
 
   ct.innerHTML=html;

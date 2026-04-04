@@ -321,6 +321,27 @@ var BOWTIE_MAP = {
 };
 window.BOWTIE_MAP = BOWTIE_MAP;
 
+// Parsear faixa_de_faturamento textual → valor numérico médio
+function parseFaixaFaturamento(faixa){
+  if(!faixa) return 0;
+  var f = faixa.toLowerCase().replace(/r\$/g,'').replace(/\./g,'').replace(/,/g,'.');
+  // Extrair números e multiplicador
+  var nums = f.match(/[\d]+(?:[\.][\d]+)?/g);
+  if(!nums || !nums.length) return 0;
+  var mult = 1;
+  if(f.includes('bilh')) mult = 1000000000;
+  else if(f.includes('milh')) mult = 1000000;
+  else if(f.includes('mil')) mult = 1000;
+  var vals = nums.map(function(n){ return parseFloat(n) * mult; });
+  // Se tem "De X a Y", retorna média
+  if(vals.length >= 2) return (vals[0] + vals[1]) / 2;
+  // "Acima de X" → X * 1.5
+  if(f.includes('acima') || f.includes('mais')) return vals[0] * 1.5;
+  // "Até X" → X * 0.5
+  if(f.includes('at\u00e9') || f.includes('menos')) return vals[0] * 0.5;
+  return vals[0];
+}
+
 function calcBowtiegLeg(deal){
   var grupo = (deal.grupo_de_receita || deal.grupoReceita || deal._revLine || '').toLowerCase().replace(/[\s&]/g,'_').replace(/ã/g,'a').replace(/ç/g,'c').replace(/ê/g,'e');
   // Normaliza variações comuns do Databricks
@@ -551,6 +572,14 @@ function enrichDealContext(deal){
   // Resolve delta real antes de aging/opp (usa created_at_crm → created_at → fallback 0)
   if(!deal._delta && !deal.delta) deal._delta = resolveRealDelta(deal);
   deal.delta = Math.max(0, deal._delta || deal.delta || 0);
+  // Parsear faixa_de_faturamento → número (ex: "De R$5 a R$10 milhões" → 7500000)
+  if(!deal.faturamento && deal.faixa_de_faturamento){
+    deal.faturamento = parseFaixaFaturamento(deal.faixa_de_faturamento);
+  }
+  // Proxy touchpoints: usa total_events do deal_runtime quando deal_interactions está vazio
+  if(!deal._touchpoints){
+    deal._touchpoints = deal.touchpointCount || (deal._runtime && deal._runtime.total_events ? deal._runtime.total_events : 0) || (deal._totalEvents || 0);
+  }
   // Velocity metrics from deal_runtime (populated by PS1 v8 Query D)
   if(deal._runtime){
     var rt = deal._runtime;
@@ -7838,6 +7867,7 @@ function calcRFVPortfolio(deals){
 
   return result;
 }
+window.calcRFVPortfolio = calcRFVPortfolio;
 
 // ==================================================================
 // FEATURE 3 — L23 ENTERPRISE QUALIFICATION + L24 TRUSTED ADVISOR
