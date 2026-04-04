@@ -6947,16 +6947,28 @@ function renderSignalPanel(dealId, containerId){
   var riskBg    = risk==='low' ? 'var(--gdim)' : risk==='medium' ? 'var(--ydim)' : 'var(--rdim)';
   var sign = total >= 0 ? '+' : '';
 
+  // Atualiza label do toggle header com score resumido
+  var toggleEl = el.previousElementSibling;
+  if(toggleEl && toggleEl.classList.contains('ig-toggle')){
+    var lbl = toggleEl.querySelector('.ig-toggle-label');
+    if(lbl){
+      lbl.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2z"/></svg>'
+        + ' Sinais do Deal'
+        + ' <span style="font-size:10px;font-weight:700;color:'+riskColor+';margin-left:4px;">'+sign+total.toFixed(2)+'</span>'
+        + ' <span style="font-size:9px;color:var(--text2);">('+sc.positive_count+'+ / '+sc.negative_count+'−)</span>';
+    }
+  }
+
   var html = '';
 
   // Score header
-  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-top:4px;">';
   html += '<div>';
   html += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:2px;">Signal Score</div>';
   html += '<div style="font-size:28px;font-weight:800;color:'+riskColor+';">'+sign+total.toFixed(2)+'</div>';
   html += '</div>';
   html += '<div style="text-align:right;">';
-  html += '<div style="background:'+riskBg+';border:1px solid '+riskColor+';border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;color:'+riskColor+';">'+risk.toUpperCase()+'</div>';
+  html += '<div style="background:var(--surface-mid);border:1px solid '+(risk==='high'?'rgba(239,68,68,.25)':'var(--border2)')+';border-radius:var(--r);padding:4px 10px;font-size:12px;font-weight:700;color:'+riskColor+';">'+risk.toUpperCase()+'</div>';
   html += '<div style="font-size:10px;color:var(--text2);margin-top:3px;">'+sc.positive_count+' pos · '+sc.negative_count+' neg</div>';
   html += '</div></div>';
 
