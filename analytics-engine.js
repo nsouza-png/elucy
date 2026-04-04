@@ -29,12 +29,7 @@ async function _loadActivity(periodDays){
   var now = Date.now();
   // Cache for 60s
   if(_activityCache && (now - _activityCacheTs) < 60000) return _activityCache;
-  // Mock data fallback
-  if(window._MOCK_ACTIVITY_LOG){
-    _activityCache = window._MOCK_ACTIVITY_LOG;
-    _activityCacheTs = now;
-    return _activityCache;
-  }
+
   var sb=_sb(); if(!sb) return [];
   var opId=_opId(); if(!opId) return [];
   var since=new Date();
