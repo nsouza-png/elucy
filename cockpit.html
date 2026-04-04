@@ -1612,6 +1612,7 @@ async function checkApproval(user){
   }
 }
 
+window.loadDealsFromSupabase=loadDealsFromSupabase;
 async function loadDealsFromSupabase(email){
   const sb=getSB(); if(!sb) return;
   window._currentUserEmail=email;
@@ -5050,15 +5051,31 @@ window._intelDim=function(dim){
 };
 
 function renderIntelligence(){
-  const map=window._COCKPIT_DEAL_MAP;
   const ct=document.getElementById('intel-content');
   const sub=document.getElementById('intel-subtitle');
-  if(!map||!ct) return;
-  const allDeals=Object.values(map);
-  if(!allDeals.length){
-    ct.innerHTML='<div class="intel-empty">Nenhum deal carregado. Sincronize o pipeline primeiro.</div>';
+  if(!ct) return;
+  // Auto-load deals if not yet loaded
+  var map=window._COCKPIT_DEAL_MAP;
+  if(!map||!Object.keys(map).length){
+    if(window._intelAutoLoading) return;
+    window._intelAutoLoading=true;
+    ct.innerHTML='<div class="intel-empty" style="color:var(--amber2)">Carregando deals automaticamente...</div>';
+    var email=window._currentUserEmail||window.getOperatorId&&window.getOperatorId()||'';
+    if(email && window.loadDealsFromSupabase){
+      window.loadDealsFromSupabase(email).then(function(){
+        window._intelAutoLoading=false;
+        renderIntelligence();
+      }).catch(function(){
+        window._intelAutoLoading=false;
+        ct.innerHTML='<div class="intel-empty">Erro ao carregar deals. Vá para Pipeline e sincronize.</div>';
+      });
+    } else {
+      window._intelAutoLoading=false;
+      ct.innerHTML='<div class="intel-empty">Nenhum deal carregado. Vá para Pipeline primeiro para carregar.</div>';
+    }
     return;
   }
+  const allDeals=Object.values(map);
   const AE=window.AnalyticsEngine;
   if(!AE){ct.innerHTML='<div class="intel-empty">Analytics Engine não carregado.</div>';return;}
   const deals=allDeals.filter(d=>{const s=(d.statusDeal||'').toLowerCase();return s!=='perdido'&&s!=='ganho'&&s!=='desqualificado';});
