@@ -1,5 +1,5 @@
 // ==================================================================
-// ELUCY COCKPIT ENGINE v9.1 — 18-Layer Architecture
+// ELUCY COCKPIT ENGINE v11.3 — 29-Layer Architecture
 // 1. Operator Context | 2. Taxonomy Core | 3. Runtime Deal Context
 // 4. Task Execution | 5. Analytics | 6. UI State | 7. Product Intelligence
 // 8. Cadence Engine | 9. Runtime Sync | 10. Taxonomy Loader
@@ -7,6 +7,9 @@
 // 14. Operator Performance Model | 15. Performance Report V3
 // 16. Framework Extractor Engine | 17. Framework UI
 // 18. Signal Engine (V8) — detect, score, persist, route to tasks + UI
+// 19-22. Data Quality + Attribution | 23-25. Enterprise + Strategic
+// 26-27. SPIN Audit + RFV | 28. Cadence V1
+// 29. ROA Engine — Quality Conversations + Five Whys + Intent + Coaching
 // Incluir APOS cockpit.html carregar (antes do </body>)
 // ==================================================================
 
@@ -143,6 +146,7 @@ const _operatorCtx = {
   permissions: { can_view_team:false, can_approve:false, is_leader:false },
   squad: '',
   performance_profile: null,
+  preferences: {},
   initialized: false
 };
 
@@ -159,50 +163,109 @@ async function initOperatorContext(){
   const email=getOperatorId(); if(!email) return;
   _operatorCtx.email=email;
   const {data}=await sb.from('operators')
-    .select('qualificador_name,role,meta_mensal,focus_mode,squad,approved')
+    .select('qualificador_name,role,meta_mensal,focus_mode,squad,approved,preferences')
     .eq('email',email).maybeSingle();
   if(data){
     _operatorCtx.qualificador_name=data.qualificador_name||email.split('@')[0];
     _operatorCtx.role=data.role||'sdr';
     _operatorCtx.squad=data.squad||'';
     _operatorCtx.focus_mode=data.focus_mode||'velocidade';
-    if(data.meta_mensal) try{ Object.assign(_operatorCtx.meta_mensal,JSON.parse(data.meta_mensal)); }catch(e){}
+    if(data.meta_mensal){
+      try{
+        // Supabase pode retornar JSONB (objeto) ou TEXT (string) — tratar ambos
+        var mm = typeof data.meta_mensal==='string' ? JSON.parse(data.meta_mensal) : data.meta_mensal;
+        Object.assign(_operatorCtx.meta_mensal, mm);
+      }catch(e){ console.warn('[operator] meta_mensal parse error:', e); }
+    }
     _operatorCtx.permissions.can_view_team=data.role==='leader'||data.role==='manager';
     _operatorCtx.permissions.can_approve=data.role==='leader'||data.role==='manager';
     _operatorCtx.permissions.is_leader=data.role==='leader';
+    if(data.preferences){
+      try{
+        const prefs=typeof data.preferences==='string'?JSON.parse(data.preferences):data.preferences;
+        if(prefs.voice_mode) localStorage.setItem('elucy_voice_mode', prefs.voice_mode);
+        if(prefs.challenger_tension) localStorage.setItem('elucy_challenger_tension', prefs.challenger_tension);
+        if(prefs.auto_draft!=null) localStorage.setItem('elucy_auto_draft', prefs.auto_draft?'1':'0');
+        if(prefs.auto_focus!=null) localStorage.setItem('elucy_auto_focus', prefs.auto_focus?'1':'0');
+        if(prefs.alert_stall!=null) localStorage.setItem('elucy_alert_stall', prefs.alert_stall?'1':'0');
+        if(prefs.alert_signals!=null) localStorage.setItem('elucy_alert_signals', prefs.alert_signals?'1':'0');
+        if(prefs.alert_daily!=null) localStorage.setItem('elucy_alert_daily', prefs.alert_daily?'1':'0');
+        if(prefs.slack_webhook) localStorage.setItem('elucy_slack_webhook', prefs.slack_webhook);
+        _operatorCtx.preferences = prefs;
+      }catch(e){}
+    }
   }
-  _operatorCtx.meta_diaria.fups=Math.ceil(_operatorCtx.meta_mensal.fups/22);
-  _operatorCtx.meta_diaria.qualificacoes=Math.ceil(_operatorCtx.meta_mensal.qualificacoes/22);
-  _operatorCtx.meta_diaria.handoffs=Math.ceil(_operatorCtx.meta_mensal.handoffs/22);
-  _operatorCtx.meta_diaria.opp=Math.ceil((_operatorCtx.meta_mensal.opp||15)/22);
+  _deriveMetaDiaria(_operatorCtx.meta_mensal);
   _operatorCtx.initialized=true;
   // Load cadence enrollments after operator context is ready
   cadenceLoadAll();
 }
 window.initOperatorContext = initOperatorContext;
 
+// ── _deriveMetaDiaria: única fonte de verdade para o cálculo diário ─────────
+function _deriveMetaDiaria(mm){
+  _operatorCtx.meta_diaria.fups          = Math.ceil((mm.fups||300)/22);
+  _operatorCtx.meta_diaria.qualificacoes = Math.ceil((mm.qualificacoes||100)/22);
+  _operatorCtx.meta_diaria.handoffs      = Math.ceil((mm.handoffs||40)/22);
+  _operatorCtx.meta_diaria.opp           = Math.ceil((mm.opp||15)/22);
+}
+window._deriveMetaDiaria = _deriveMetaDiaria;
+
+// ── saveOperatorSettings: write-through atômico ───────────────────────────
+// Retorna {ok: true} ou {ok: false, error}
 async function saveOperatorSettings(settings){
-  const sb=_sb(); if(!sb) return;
-  const email=getOperatorId(); if(!email) return;
+  const sb=_sb();
+  const email=getOperatorId();
+  if(!sb||!email){ console.warn('[saveOp] missing sb or email'); return {ok:false,error:'no_sb_or_email'}; }
+
   const update={};
-  if(settings.focus_mode){ update.focus_mode=settings.focus_mode; _operatorCtx.focus_mode=settings.focus_mode; }
+
+  // 1. focus_mode
+  if(settings.focus_mode){
+    update.focus_mode=settings.focus_mode;
+    _operatorCtx.focus_mode=settings.focus_mode;
+  }
+
+  // 2. meta_mensal — aplica em memória imediatamente, depois persiste
   if(settings.meta_mensal){
-    update.meta_mensal=JSON.stringify(settings.meta_mensal);
-    Object.assign(_operatorCtx.meta_mensal,settings.meta_mensal);
-    _operatorCtx.meta_diaria.fups=Math.ceil(_operatorCtx.meta_mensal.fups/22);
-    _operatorCtx.meta_diaria.qualificacoes=Math.ceil(_operatorCtx.meta_mensal.qualificacoes/22);
-    _operatorCtx.meta_diaria.handoffs=Math.ceil(_operatorCtx.meta_mensal.handoffs/22);
-    _operatorCtx.meta_diaria.opp=Math.ceil((_operatorCtx.meta_mensal.opp||15)/22);
-    // Persist goal history
-    var pk=new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
+    Object.assign(_operatorCtx.meta_mensal, settings.meta_mensal);
+    _deriveMetaDiaria(_operatorCtx.meta_mensal);
+    window._OPERATOR_META = Object.assign({}, _operatorCtx.meta_mensal); // cache cross-boot
+    update.meta_mensal = Object.assign({}, _operatorCtx.meta_mensal);    // JSONB nativo
+
+    // Histórico de metas (não bloqueia o save principal)
+    var pk = new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
     sb.from('operator_goals').upsert({
       operator_email:email, period_key:pk,
-      fups:_operatorCtx.meta_mensal.fups, qualificacoes:_operatorCtx.meta_mensal.qualificacoes,
-      handoffs:_operatorCtx.meta_mensal.handoffs, opp:_operatorCtx.meta_mensal.opp||15,
+      fups:_operatorCtx.meta_mensal.fups,
+      qualificacoes:_operatorCtx.meta_mensal.qualificacoes,
+      handoffs:_operatorCtx.meta_mensal.handoffs,
+      opp:_operatorCtx.meta_mensal.opp||15,
       updated_at:new Date().toISOString()
-    },{onConflict:'operator_email,period_key'}).then(function(){});
+    },{onConflict:'operator_email,period_key'})
+    .then(function(r){ if(r.error) console.warn('[saveOp] goals upsert:', r.error); });
   }
-  await sb.from('operators').update(update).eq('email',email);
+
+  // 3. preferences — merge incremental (campo é text/json no Supabase — serializar como string)
+  if(settings.preferences){
+    const merged = Object.assign({}, _operatorCtx.preferences||{}, settings.preferences);
+    _operatorCtx.preferences = merged;
+    update.preferences = JSON.stringify(merged);
+  }
+
+  // 4. Persiste no Supabase — única escritura, atômica
+  if(Object.keys(update).length===0) return {ok:true}; // nada a salvar
+  try{
+    const {error} = await sb.from('operators').update(update).eq('email',email);
+    if(error){ console.error('[saveOp] Supabase error:', error); return {ok:false,error}; }
+  }catch(e){ console.error('[saveOp] Exception:', e); return {ok:false,error:e}; }
+
+  // 5. Re-renderiza Home se meta ou modo mudaram
+  if(settings.meta_mensal||settings.focus_mode){
+    try{ if(window.renderHome) window.renderHome(); }catch(e){}
+  }
+
+  return {ok:true};
 }
 window.saveOperatorSettings = saveOperatorSettings;
 
@@ -228,7 +291,7 @@ var REVENUE_LINES = {
   turmas:           { label:'Turmas',                    base:'qualified',   risk_after:4, line_weight:1.0  },
   projetos_eventos: { label:'Projetos & Eventos',        base:'qualified',   risk_after:5, line_weight:0.9  },
   social_dm:        { label:'Social DM',                 base:'touchpoints', risk_after:1, line_weight:0.75 },
-  social_dm_k:      { label:'Social DM K',               base:'touchpoints', risk_after:1, line_weight:0.70 },
+  social_dm_segment_k:      { label:'Social DM K',               base:'touchpoints', risk_after:1, line_weight:0.70 },
   selfcheckout:     { label:'Self Checkout',             base:'leads',       risk_after:1, line_weight:0.5  },
   reativacao:       { label:'Reativação',                base:'leads',       risk_after:2, line_weight:0.6  },
   expansao:         { label:'Expansão (Farmer/CS Corp)', base:'opportunity', risk_after:7, line_weight:0.9  },
@@ -260,6 +323,27 @@ var BOWTIE_MAP = {
   nao_definido:     null
 };
 window.BOWTIE_MAP = BOWTIE_MAP;
+
+// Parsear faixa_de_faturamento textual → valor numérico médio
+function parseFaixaFaturamento(faixa){
+  if(!faixa) return 0;
+  var f = faixa.toLowerCase().replace(/r\$/g,'').replace(/\./g,'').replace(/,/g,'.');
+  // Extrair números e multiplicador
+  var nums = f.match(/[\d]+(?:[\.][\d]+)?/g);
+  if(!nums || !nums.length) return 0;
+  var mult = 1;
+  if(f.includes('bilh')) mult = 1000000000;
+  else if(f.includes('milh')) mult = 1000000;
+  else if(f.includes('mil')) mult = 1000;
+  var vals = nums.map(function(n){ return parseFloat(n) * mult; });
+  // Se tem "De X a Y", retorna média
+  if(vals.length >= 2) return (vals[0] + vals[1]) / 2;
+  // "Acima de X" → X * 1.5
+  if(f.includes('acima') || f.includes('mais')) return vals[0] * 1.5;
+  // "Até X" → X * 0.5
+  if(f.includes('at\u00e9') || f.includes('menos')) return vals[0] * 0.5;
+  return vals[0];
+}
 
 function calcBowtiegLeg(deal){
   var grupo = (deal.grupo_de_receita || deal.grupoReceita || deal._revLine || '').toLowerCase().replace(/[\s&]/g,'_').replace(/ã/g,'a').replace(/ç/g,'c').replace(/ê/g,'e');
@@ -296,29 +380,32 @@ window.KILL_SWITCHES = KILL_SWITCHES;
 // HIERARQUIA: (1) grupo_de_receita → (2) linha_de_receita_vigente → (3) utm_medium (último recurso)
 // linha_de_receita_vigente é a propriedade-mãe que diz de onde o dinheiro vem
 // utm/canal_de_marketing só entra quando linha_de_receita_vigente está vazia
+// Normaliza string para comparação — remove acentos, lowercase, trim
+function _normStr(s){ return (s||'').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+
 function resolveRevenueLine(deal){
-  var lr=(deal.linhaReceita||deal.linha_de_receita_vigente||'').toLowerCase().trim();
-  var gr=(deal.grupo_de_receita||deal.grupoReceita||'').toLowerCase().trim();
+  var lr=_normStr(deal.linhaReceita||deal.linha_de_receita_vigente||'');
+  var gr=_normStr(deal.grupo_de_receita||deal.grupoReceita||'');
   var utm=(deal.utm_medium||'').toLowerCase().trim();
 
   // REGRA 1 — grupo_de_receita direto do Databricks (fonte da verdade)
-  if(gr && gr!=='não definido' && gr!=='nao definido') {
-    if(gr==='funil de marketing')          return 'funil_marketing';
-    if(gr==='turmas')                      return 'turmas';
-    if(gr==='projetos e eventos')          return 'projetos_eventos';
-    if(gr==='selfcheckout')                return 'selfcheckout';
-    if(gr==='expansão'||gr==='expansao')   return 'expansao';
-    if(gr==='renovação'||gr==='renovacao') return 'renovacao';
-    if(gr==='time de vendas - field sales') return 'field_sales';
-    if(gr==='time de vendas - aquisição'||gr==='time de vendas - aquisicao') return 'aquisicao';
-    if(gr==='g4 tools')                    return 'g4_tools';
+  if(gr && gr!=='nao definido' && gr!=='nao_definido') {
+    if(gr==='funil de marketing')                    return 'funil_marketing';
+    if(gr==='turmas')                                return 'turmas';
+    if(gr==='projetos e eventos')                    return 'projetos_eventos';
+    if(gr==='selfcheckout')                          return 'selfcheckout';
+    if(gr==='expansao')                              return 'expansao';
+    if(gr==='renovacao')                             return 'renovacao';
+    if(gr==='time de vendas - field sales')          return 'field_sales';
+    if(gr==='time de vendas - aquisicao'||gr==='aquisicao') return 'aquisicao';
+    if(gr==='g4 tools')                              return 'g4_tools';
   }
 
   // REGRA 2 — linha_de_receita_vigente (propriedade-mãe: de onde o dinheiro vem)
   if(lr) {
     // Social DM
     if(lr.includes('[im] social dm')||lr.includes('social dm - perfil k'))
-      return lr.includes('perfil k') ? 'social_dm_k' : 'social_dm';
+      return lr.includes('perfil k') ? 'social_dm_segment_k' : 'social_dm';
     if(lr.includes('[im] social'))  return 'social_dm';
     // Reativação
     if(lr.includes('reativ'))       return 'reativacao';
@@ -332,21 +419,21 @@ function resolveRevenueLine(deal){
       return 'funil_marketing';
     // Turmas (produtos online e imersões)
     if(lr.includes('[on]') && !lr.includes('customer success'))  return 'turmas';
-    if(lr.includes('gestão e estratégia')||lr.includes('gestao e estrategia')) return 'turmas';
+    if(lr.includes('gestao e estrategia')) return 'turmas';
     if(lr.includes('g4 traction')||lr.includes('g4 sales')||lr.includes('g4 frontier')||lr.includes('g4 scale')) return 'turmas';
     if(lr.match(/^im-/)) return 'turmas'; // turmas especificas: IM-GE-xxx, IM-TRA-xxx
     if(lr.includes('relançamento-tra')||lr.includes('relançamento-ge')||lr.includes('masterclass')) return 'turmas';
     // Expansão
-    if(lr.includes('farmer')||lr.includes('cs corp')||lr.includes('[on] customer success')||lr.includes('[skl] expansão')||lr.includes('[skl] expansao')||lr.includes('[im] customer success'))
+    if(lr.includes('farmer')||lr.includes('cs corp')||lr.includes('[on] customer success')||lr.includes('[skl] expansao')||lr.includes('[im] customer success'))
       return 'expansao';
     // Renovação
-    if(lr.includes('renovaç')||lr.includes('renovac')||lr.includes('g4 club')) return 'renovacao';
+    if(lr.includes('renovac')||lr.includes('g4 club')) return 'renovacao';
     // G4 Tools
-    if(lr.includes('g4 tools')||lr.includes('finders fee')||lr.includes('g4 capital')||lr.includes('serviços')) return 'g4_tools';
+    if(lr.includes('g4 tools')||lr.includes('finders fee')||lr.includes('g4 capital')||lr.includes('servicos')) return 'g4_tools';
     // Projetos e Eventos
-    if(lr.includes('aniversário')||lr.includes('aniversario')||lr.includes('valley')||lr.includes('blackfriday')||lr.includes('black friday')||lr.includes('g4 pelo brasil')||lr.includes('frontier')||lr.includes('eventos'))
+    if(lr.includes('aniversario')||lr.includes('valley')||lr.includes('blackfriday')||lr.includes('black friday')||lr.includes('g4 pelo brasil')||lr.includes('frontier')||lr.includes('eventos'))
       return 'projetos_eventos';
-    if(lr.includes('parceria')||lr.includes('patrocín')||lr.includes('indica')||lr.includes('scale experience')||lr.includes('g4 alumni'))
+    if(lr.includes('parceria')||lr.includes('patrocin')||lr.includes('indica')||lr.includes('scale experience')||lr.includes('g4 alumni'))
       return 'projetos_eventos';
     // SKL genérico (sem classificação mais específica)
     if(lr.includes('[skl]'))        return 'nao_definido';
@@ -411,15 +498,24 @@ function calcConversionByLine(allDeals){
   allDeals.forEach(function(d){
     var line=d._revLine||resolveRevenueLine(d);
     if(!byLine[line]) byLine[line]={mql:0,sal:0,opp:0,won:0,lost:0,total_value:0};
-    var s=byLine[line]; var status=(d.statusDeal||'').toLowerCase(); var fase=(d._fase||d.fase||'').toLowerCase();
+    var s=byLine[line];
+    // Status canônico: statusDeal (COCKPIT_DEAL_MAP) ou status_do_deal (query direta)
+    var status=_normStr(d.statusDeal||d.status_do_deal||'');
+    var fase=_normStr(d._fase||d.fase_atual_no_processo||d.fase||'');
     s.mql++;
-    if(status==='ganho'){ s.sal++;s.opp++;s.won++;s.total_value+=(d.revenueRaw||0); }
-    else if(status==='perdido'||fase==='perdido'){
-      var m=(d.motivoLost||d.motivo_lost||'').toLowerCase();
+    if(status==='ganho'){
+      s.sal++; s.opp++; s.won++;
+      s.total_value+=(d.revenueRaw||d.revenue||0);
+    } else if(status==='perdido'){
+      var m=_normStr(d.motivoLost||d.motivo_lost||'');
       if(m.indexOf('[validacao]')!==0) s.sal++;
-      if(m.indexOf('[negociacao]')===0||m.indexOf('[im]')===0) s.opp++;
+      if(m.indexOf('[negociacao]')===0||m.indexOf('[im]')===0||m.indexOf('[neg]')===0) s.opp++;
       s.lost++;
-    } else { if(fase!=='mql') s.sal++; if(fase==='oportunidade'||fase==='negociacao') s.opp++; }
+    } else {
+      // Deal ativo: SAL = saiu do MQL; OPP = chegou em Oportunidade/Agendado/Negociação
+      if(fase!=='mql') s.sal++;
+      if(fase==='oportunidade'||fase==='agendado'||fase==='negociacao') s.opp++;
+    }
   });
   Object.keys(byLine).forEach(function(k){ var s=byLine[k];
     s.cr_mql_sal=s.mql>0?Math.round(s.sal/s.mql*1000)/10:0;
@@ -461,11 +557,78 @@ window.calcEfficiencyByChannel = calcEfficiencyByChannel;
 // Camada viva por deal. Enriquece deal com estado derivado.
 // ==================================================================
 
+// ── Derive fase_atual_no_processo from etapa_atual_no_pipeline ──
+// Mapeamento determinístico D1→D2 (ref: G4 RevOps Taxonomy)
+function _deriveFaseFromEtapa(etapa, status){
+  if(!etapa) return '';
+  var e = etapa.toLowerCase().trim();
+  var s = (status||'').toLowerCase();
+  if(s === 'ganho') return 'Ganho';
+  if(s === 'perdido') return 'Perdido';
+  if(s === 'desqualificado') return 'Desqualificado';
+  // Pipeline SDR (prospecção)
+  if(e === 'novo lead') return 'MQL';
+  if(e.match(/^dia\s*0[1-5]$/) || e.match(/^d[1-5]$/)) return 'SAL';
+  if(e === 'conectados') return 'Conectado';
+  if(e === 'agendamento' || e.includes('entrevista agendada')) return 'Agendado';
+  if(e === 'reagendamento') return 'Agendado';
+  // Pipeline Closer (negociação)
+  if(e.includes('negocia')) return 'Negociação';
+  if(e.includes('proposta')) return 'Negociação';
+  if(e.includes('oportunidade')) return 'Oportunidade';
+  // Fallback por posição no funil
+  if(e === 'lost') return 'Perdido';
+  if(e === 'won' || e === 'ganho') return 'Ganho';
+  return 'SAL'; // default para etapas não mapeadas = qualificação ativa
+}
+
+// Memoization: skip re-enrichment if already done this render cycle
+var _enrichBatchId = 0;
 function enrichDealContext(deal){
+  if(deal._enrichedBatch === _enrichBatchId) return deal;
+  deal._enrichedBatch = _enrichBatchId;
+  // Normalizar statusDeal — campo canônico para uso interno.
+  // Fonte: statusDeal (do COCKPIT_DEAL_MAP) ou status_do_deal (query Supabase direta).
+  if(!deal.statusDeal && deal.status_do_deal) deal.statusDeal = deal.status_do_deal;
+  if(!deal.status_do_deal && deal.statusDeal) deal.status_do_deal = deal.statusDeal;
+  // Normalizar fase/etapa — campos canônicos para uso interno (ambos os nomes usados no codebase)
+  if(!deal._etapa) deal._etapa = deal.etapa_atual_no_pipeline || deal.etapa || '';
+  if(!deal.etapa) deal.etapa = deal._etapa;
+  // Derivar fase_atual_no_processo de etapa quando vazia (cobertura 11.5% → 100%)
+  if(!deal._fase){
+    deal._fase = deal.fase_atual_no_processo || deal.fase || '';
+    if(!deal._fase && deal._etapa){
+      deal._fase = _deriveFaseFromEtapa(deal._etapa, deal.status_do_deal || deal.statusDeal);
+      deal.fase_atual_no_processo = deal._fase;
+    }
+  }
+  if(!deal.fase) deal.fase = deal._fase;
   if(!deal._revLine) deal._revLine = resolveRevenueLine(deal);
-  // Resolve delta real antes de aging/opp (usa created_at como fallback)
-  if(!deal._delta&&!deal.delta) deal._delta = resolveRealDelta(deal);
-  deal.delta = deal._delta || deal.delta || 0;
+  // Resolve delta real antes de aging/opp (usa created_at_crm → created_at → fallback 0)
+  if(!deal._delta && !deal.delta) deal._delta = resolveRealDelta(deal);
+  deal.delta = Math.max(0, deal._delta || deal.delta || 0);
+  // Parsear faixa_de_faturamento → número (ex: "De R$5 a R$10 milhões" → 7500000)
+  if(!deal.faturamento && deal.faixa_de_faturamento){
+    deal.faturamento = parseFaixaFaturamento(deal.faixa_de_faturamento);
+  }
+  // Proxy touchpoints: usa total_events do deal_runtime quando deal_interactions está vazio
+  if(!deal._touchpoints){
+    deal._touchpoints = deal.touchpointCount || (deal._runtime && deal._runtime.total_events ? deal._runtime.total_events : 0) || (deal._totalEvents || 0);
+  }
+  // Velocity metrics from deal_runtime (populated by PS1 v8 Query D)
+  if(deal._runtime){
+    var rt = deal._runtime;
+    if(rt.velocity_score != null) deal._velocityScore = rt.velocity_score;
+    if(rt.stall_flag != null)     deal._stallFlag    = rt.stall_flag;
+    if(rt.last_event != null)     deal._lastEvent    = rt.last_event;
+    if(rt.last_event_at != null)  deal._lastEventAt  = rt.last_event_at;
+    if(rt.total_events != null)   deal._totalEvents  = rt.total_events;
+    if(rt.dt_sal_conectado != null)     deal._dtSalConectado     = rt.dt_sal_conectado;
+    if(rt.dt_conectado_agendado != null) deal._dtConectadoAgendado = rt.dt_conectado_agendado;
+    if(rt.dt_agendado_opp != null)      deal._dtAgendadoOpp      = rt.dt_agendado_opp;
+    if(rt.dt_opp_negociacao != null)    deal._dtOppNegociacao    = rt.dt_opp_negociacao;
+    if(rt.dt_negociacao_ganho != null)  deal._dtNegociacaoGanho  = rt.dt_negociacao_ganho;
+  }
   if(!deal._aging) deal._aging = calcAgingRisk(deal);
   if(!deal._oppValue){
     var ov = calcOpportunityValue(deal);
@@ -492,6 +655,17 @@ function enrichDealContext(deal){
   if(deal._channelConversion !== undefined) deal._gtmMisaligned = checkGTMMisalignment(deal);
   // RF·2: Bowtie leg (ACQ / RET / EXP)
   if(!deal._bowtieLeg) deal._bowtieLeg = calcBowtiegLeg(deal);
+  // ROA: Five Whys psychological progress (from cached _psychProgress loaded by loadPsychProgress)
+  if(!deal._fiveWhys && deal._psychProgress){
+    deal._fiveWhys = deal._psychProgress;
+    deal._whyStage = deal._psychProgress.stage || 'listen';
+    deal._prematureMeeting = deal._psychProgress.premature_meeting || false;
+  }
+  // ROA: Intent classification (from cached _intentAnalysis)
+  if(!deal._intentClass && deal._intentAnalysis){
+    deal._intentClass = deal._intentAnalysis.classification || 'undetermined';
+    deal._curiosityRisk = deal._intentAnalysis.curiosity_risk || false;
+  }
   // RF·3: Framework compliance score (0-100) derivado do qualitativeScore calculado no L16
   if(!deal._frameworkCompliance){
     var fr = deal._frameworkRuntime || deal._forecastV6 && deal._forecastV6.explain_json && deal._forecastV6.explain_json.framework;
@@ -552,6 +726,7 @@ var TASK_TYPES = {
 window.TASK_TYPES = TASK_TYPES;
 
 function buildTaskQueue(filterType, filterRevLine, filterFase, filterCiclo, filterSmart){
+  _enrichBatchId++; // new batch — allows re-enrichment if deal data changed
   var map = window._COCKPIT_DEAL_MAP||{};
   var tasks = [];
   var focusMode = _operatorCtx.focus_mode||'velocidade';
@@ -575,18 +750,17 @@ function buildTaskQueue(filterType, filterRevLine, filterFase, filterCiclo, filt
 
     // DIM 1: Fase de conversão (CQL/SAL/SQL/stall)
     if(filterFase && filterFase !== 'all'){
-      var fase = (d.fase_atual_no_processo||d.fase||'').toLowerCase();
+      // _normStr remove acentos — Negociação == negociacao, etc.
+      var fase = _normStr(d._fase||d.fase_atual_no_processo||d.fase||'');
       var aging = d._aging||{};
       var delta = d.delta||0;
       if(filterFase==='CQL'){
-        // MQL ou Lead/Novo — ainda não qualificado
         if(!fase.includes('mql')&&!fase.includes('lead')&&!fase.includes('novo')) return;
       } else if(filterFase==='SAL'){
         if(!fase.includes('sal')&&!fase.includes('conectado')) return;
       } else if(filterFase==='SQL'){
-        if(!fase.includes('oportunidade')&&!fase.includes('negociacao')&&!fase.includes('sql')) return;
+        if(!fase.includes('oportunidade')&&!fase.includes('negociacao')&&!fase.includes('agendado')&&!fase.includes('sql')) return;
       } else if(filterFase==='stall'){
-        // Stall: aging crítico ou sem ação há mais de 10 dias
         var isStall = (aging.riskLevel==='critical')||(delta>10&&(d.tc==='tc'||d.tc==='tf'));
         if(!isStall) return;
       }
@@ -625,10 +799,20 @@ function buildTaskQueue(filterType, filterRevLine, filterFase, filterCiclo, filt
       }
     }
 
-    // Check if deal has active cadence — cadence overrides default _nextAction
+    // Check if deal has active cadence — Cadence Engine V1 overrides default _nextAction
+    var cadV1 = d._cadence || (calcCadenceEngineV1 ? calcCadenceEngineV1(d) : null);
     var cadStep = cadenceGetCurrentStep(id);
     var action, isCadence = false;
-    if(cadStep){
+    // V1 Engine takes priority when available and not stopped
+    if(cadV1 && cadV1.cadence_stop_state === 'NONE'){
+      var chIcon = cadV1.cadence_channel==='CALL'?'📞 ':cadV1.cadence_channel==='WHATSAPP'?'💬 ':cadV1.cadence_channel==='EMAIL'?'📧 ':cadV1.cadence_channel==='INSTAGRAM_DM'?'📸 ':'';
+      action = {
+        type: cadV1.cadence_objective==='PULL_MEETING'?'agendamento':cadV1.cadence_objective==='DIAGNOSE_PAIN'?'follow_up':cadV1.cadence_objective==='MAP_AUTHORITY'?'follow_up':cadV1.cadence_objective==='RECOVER_NO_SHOW'?'no_show_recovery':cadV1.cadence_objective==='HANDOFF_PREP'?'handoff_prep':cadV1.cadence_objective==='REENGAGE'?'reativacao':cadV1.cadence_objective==='OPEN_LOOP'?'follow_up':'follow_up',
+        label: chIcon + cadV1.cadence_reason_main,
+        priority: cadV1.cadence_priority_score>=0.7?'critical':cadV1.cadence_priority_score>=0.4?'high':'medium'
+      };
+      isCadence = true;
+    } else if(cadStep){
       var channelIcon = (CHANNEL_ICONS[cadStep.step.channel]||'') + ' ';
       action = {
         type: cadStep.step.taskType,
@@ -853,6 +1037,463 @@ function renderTaskRunner(filterType, filterRevLine, filterFase, filterCiclo, fi
   if(counter) counter.textContent = tasks.length;
 }
 window.renderTaskRunner = renderTaskRunner;
+
+// ============================================================
+// TASKS V2 — Mesa de Execução
+// ============================================================
+
+var ELUCY_TASKS_STATE = {
+  mode: 'all',       // focus mode slug or 'all'
+  queue: 'all',      // queue slug or 'all'
+  filtersOpen: false
+};
+
+// Focus mode definitions (mirror taxonomy, human labels)
+var TASK_FOCUS_MODES = [
+  { slug:'all',           label:'Todos',          icon:'⚡' },
+  { slug:'velocidade',    label:'Velocidade',      icon:'🚀' },
+  { slug:'qualificacao',  label:'Qualificação',    icon:'🎯' },
+  { slug:'handoff',       label:'Handoff',         icon:'🤝' },
+  { slug:'reativacao',    label:'Reativação',      icon:'🔄' },
+  { slug:'social_dm',     label:'Social DM',       icon:'💬' },
+  { slug:'alta_performance', label:'Alta Performance', icon:'💎' }
+];
+
+// Queue definitions
+var TASK_QUEUES = [
+  { slug:'all',              label:'Todas as Filas',    color:'' },
+  { slug:'cadencia',         label:'Cadência Ativa',    color:'var(--accent2)' },
+  { slug:'follow_up',        label:'FUP',               color:'var(--text)' },
+  { slug:'social_dm',        label:'DM',                color:'#a78bfa' },
+  { slug:'handoff_prep',     label:'Handoff',           color:'var(--green)' },
+  { slug:'reativacao',       label:'Reativação',        color:'var(--yellow)' },
+  { slug:'no_show_recovery', label:'No-Show',           color:'var(--red)' },
+  { slug:'framework_gap',    label:'Framework Gap',     color:'var(--clay)' }
+];
+
+function buildQueueCounts(){
+  var counts = {};
+  TASK_QUEUES.forEach(function(q){ counts[q.slug]=0; });
+  counts.all=0;
+  // Usa buildTaskQueue() — fonte única e com enriquecimento correto
+  var queue = buildTaskQueue(null, null, null, null, null);
+  queue.forEach(function(t){
+    var type = t.taskType||'follow_up';
+    counts.all++;
+    if(counts[type]!==undefined) counts[type]++;
+    else counts[type]=1;
+    // Conta cadência separadamente se deal tem enrollment ativo
+    if(t.cadence) counts.cadencia = (counts.cadencia||0)+1;
+  });
+  return counts;
+}
+
+function matchFocusMode(deal, mode){
+  if(!mode||mode==='all') return true;
+  var fm = (deal.focus_mode||deal._focusMode||'');
+  if(fm===mode) return true;
+  // derive from deal signals/aging
+  if(mode==='velocidade' && (deal._aging||0)<10) return true;
+  if(mode==='reativacao' && (deal._aging||0)>30) return true;
+  if(mode==='handoff' && (deal.fase_atual_no_processo||'').toLowerCase().includes('oportun')) return true;
+  if(mode==='social_dm' && (deal._tasks||[]).some(function(t){return t.type==='social_dm';})) return true;
+  if(mode==='alta_performance' && (deal.tier_da_oportunidade||'').toLowerCase()==='diamond') return true;
+  if(mode==='qualificacao') {
+    var fase = (deal.fase_atual_no_processo||'').toLowerCase();
+    return fase.includes('sal')||fase.includes('mql')||fase.includes('conect');
+  }
+  return false;
+}
+
+function matchQueue(deal, queue){
+  if(!queue||queue==='all') return true;
+  var dealId = deal.id||deal.contact_id||deal.deal_id||'';
+  // Cadência: verifica enrollment ativo diretamente
+  if(queue==='cadencia'){
+    return !!(window._cadenceEnrollments && window._cadenceEnrollments[dealId] &&
+      !window._cadenceEnrollments[dealId].paused &&
+      !window._cadenceEnrollments[dealId].completed);
+  }
+  return false; // outros slugs — buildTaskQueue já filtra por filterType
+}
+
+function getFilteredTaskDeals(){
+  var map = window._COCKPIT_DEAL_MAP;
+  if(!map) return [];
+  var fase  = (document.getElementById('tf-fase')||{}).value||'';
+  var ciclo = (document.getElementById('tf-ciclo')||{}).value||'';
+  var tier  = (document.getElementById('tf-tier')||{}).value||'';
+  var deals = Object.values(map).filter(function(d){
+    if(!matchFocusMode(d, ELUCY_TASKS_STATE.mode)) return false;
+    if(!matchQueue(d, ELUCY_TASKS_STATE.queue)) return false;
+    if(fase){
+      var f=(d.fase_atual_no_processo||'').toLowerCase();
+      if(fase==='CQL'&&!f.includes('mql')&&!f.includes('cql')) return false;
+      if(fase==='SAL'&&!f.includes('sal')&&!f.includes('conect')) return false;
+      if(fase==='SQL'&&!f.includes('oportun')&&!f.includes('negoc')) return false;
+      if(fase==='stall'&&(d._aging||0)<20) return false;
+    }
+    if(ciclo){
+      var age=d._aging||0;
+      if(ciclo==='d1'&&(age<0||age>10)) return false;
+      if(ciclo==='d2'&&(age<10||age>20)) return false;
+      if(ciclo==='d3'&&(age<20||age>30)) return false;
+      if(ciclo==='d4'&&(age<30||age>40)) return false;
+      if(ciclo==='d56'&&age<=40) return false;
+    }
+    if(tier){
+      var t=(d.tier_da_oportunidade||'').toLowerCase();
+      if(t!==tier) return false;
+    }
+    return true;
+  });
+  // Sort by portfolio priority score desc
+  deals.sort(function(a,b){
+    return ((b._portfolioPriority||b.portfolio_priority_score||0)-(a._portfolioPriority||a.portfolio_priority_score||0));
+  });
+  return deals;
+}
+
+function renderTaskFocusModes(){
+  var row = document.getElementById('tasks-focus-row');
+  if(!row) return;
+  // Use real focus modes from taxonomy if available
+  var modes = (window._taxonomyFocusModes && window._taxonomyFocusModes.length)
+    ? window._taxonomyFocusModes.map(function(fm){ return {slug:fm.slug,label:fm.name,icon:'⚡'}; })
+    : TASK_FOCUS_MODES;
+  // Always prepend 'all'
+  var hasAll = modes.some(function(m){return m.slug==='all';});
+  if(!hasAll) modes = [{slug:'all',label:'Todos',icon:'⚡'}].concat(modes);
+  row.innerHTML = modes.map(function(m){
+    var active = ELUCY_TASKS_STATE.mode===m.slug ? ' is-active' : '';
+    return '<button class="tasks-mode-btn'+active+'" onclick="window._tasksSetMode(\''+_escHtml(m.slug)+'\')">'
+      + m.icon + ' ' + _escHtml(m.label)
+      + '</button>';
+  }).join('');
+}
+
+function renderTaskQueues(){
+  var row = document.getElementById('tasks-queue-row');
+  if(!row) return;
+  var counts = buildQueueCounts();
+  row.innerHTML = TASK_QUEUES.map(function(q){
+    var active = ELUCY_TASKS_STATE.queue===q.slug ? ' is-active' : '';
+    var cnt = counts[q.slug]||0;
+    var colorStyle = q.color ? 'style="color:'+q.color+'"' : '';
+    return '<button class="tasks-queue-btn'+active+'" onclick="window._tasksSetQueue(\''+_escHtml(q.slug)+'\')">'
+      + '<span '+colorStyle+'>'+_escHtml(q.label)+'</span>'
+      + '<span class="tasks-queue-count">'+cnt+'</span>'
+      + '</button>';
+  }).join('');
+}
+
+function renderTaskRecommendation(deals){
+  var banner = document.getElementById('tasks-priority-banner');
+  var mainEl = document.getElementById('tasks-priority-main');
+  var metricsEl = document.getElementById('tasks-priority-metrics');
+  if(!banner||!mainEl||!metricsEl) return;
+  if(!deals||!deals.length){ banner.style.display='none'; return; }
+  banner.style.display='';
+
+  // Top deal recommendation
+  var top = deals[0];
+  var name = top.name||top.person_name||top.nome||'Deal';
+  var nba = top._nextAction||'Próxima ação recomendada';
+  var priority = Math.round((top._portfolioPriority||top.portfolio_priority_score||0)*100);
+  var tier = (top.tier_da_oportunidade||'').toLowerCase();
+  var tierColor = tier==='diamond'?'var(--green)':tier==='gold'?'var(--accent2)':tier==='silver'?'var(--text2)':'var(--clay)';
+
+  mainEl.innerHTML = '<div style="font-size:10px;font-weight:700;color:var(--accent2);letter-spacing:.7px;text-transform:uppercase;margin-bottom:6px">Próxima Prioridade</div>'
+    + '<div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">'+_escHtml(name)+'</div>'
+    + '<div class="task-card-nba">'+_escHtml(nba)+'</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">'
+    + (tier?'<span class="tag" style="color:'+tierColor+'">'+tier.toUpperCase()+'</span>':'')
+    + '<span class="tag">Score '+priority+'</span>'
+    + '</div>';
+
+  // Portfolio metrics
+  var killCount   = deals.filter(function(d){return (d._killSwitches||[]).length>0;}).length;
+  var handoffCount = deals.filter(function(d){
+    return (d.fase_atual_no_processo||'').toLowerCase().includes('oportun');
+  }).length;
+  var stalledCount = deals.filter(function(d){return (d._aging||0)>30;}).length;
+  metricsEl.innerHTML = [
+    {label:'Deals na fila', value:deals.length, color:'var(--text)'},
+    {label:'Kill Switch', value:killCount, color:'var(--red)'},
+    {label:'Prontos p/ Handoff', value:handoffCount, color:'var(--green)'},
+  ].map(function(m){
+    return '<div class="kpi" style="padding:10px">'
+      + '<div class="kpi-l">'+m.label+'</div>'
+      + '<div class="kpi-v" style="font-size:22px;color:'+m.color+'">'+m.value+'</div>'
+      + '</div>';
+  }).join('');
+}
+
+function renderTaskCardFromItem(t, idx){
+  var d = t.deal;
+  var taskType = t.taskType||'follow_up';
+  var nba      = t.label||d._nextAction&&(d._nextAction.label||d._nextAction)||'Realizar FUP';
+  var aging    = d.delta||0;
+  var ks       = d._transitionRuntime&&d._transitionRuntime.hard_blocks&&d._transitionRuntime.hard_blocks.length>0;
+
+  var taskTypeLabels = {
+    follow_up:'FUP', social_dm:'DM', handoff_prep:'Handoff',
+    reativacao:'Reativação', no_show_recovery:'No-Show',
+    framework_gap:'Framework Gap', authority_confirmation:'Autoridade',
+    pain_quantification:'Quantificar Dor', cadence:'Cadência'
+  };
+  var taskLabel = taskTypeLabels[taskType]||taskType;
+  var taskColor = taskType==='follow_up'?'task-c-accent':taskType==='social_dm'?'task-c-text2':taskType==='handoff_prep'?'task-c-green':taskType==='reativacao'?'task-c-yellow':taskType==='no_show_recovery'?'task-c-red':'task-c-text2';
+  var agingClass = aging>40?'task-aging-critical':aging>20?'task-aging-high':'task-aging-medium';
+  var deltaColor = aging>=40?'var(--red)':aging>=20?'var(--yellow)':'var(--text2)';
+
+  var tier  = (d.tier_da_oportunidade||d.tier||'').toLowerCase();
+  var tierColor = tier==='diamond'?'var(--green)':tier==='gold'?'var(--accent2)':tier==='silver'?'var(--text2)':'var(--clay)';
+
+  var fmtBRL = window.fmtBRL||function(v){return v?'R$'+Math.round(v/1000)+'k':'—';};
+  var oppVal = d._oppValue||d.revenueRaw||0;
+  var valStr = oppVal>0 ? fmtBRL(oppVal) : '—';
+  var linha  = d.linhaReceita||d.linha_de_receita_vigente||d._revLine||'—';
+  var empresa = d.empresa||d.company||'';
+  var cargo   = d.cargo||d.title||'';
+  var nome    = d.nome||d.name||d.person_name||d.emailLead||'Lead';
+  var etapa   = d.etapa||d.etapa_atual_no_pipeline||'';
+  var fase    = d.fase||d.fase_atual_no_processo||'';
+
+  // id para texOpen — usa a chave do map (t.id)
+  var queueId = _escHtml(String(t.id||idx));
+
+  // Cadence V1 badge — show state, channel, next touch
+  var cadV1 = d._cadence;
+  var cadBadge = '';
+  if(cadV1 && cadV1.cadence_stop_state==='NONE'){
+    var chEmoji=cadV1.cadence_channel==='CALL'?'📞':cadV1.cadence_channel==='WHATSAPP'?'💬':cadV1.cadence_channel==='EMAIL'?'📧':cadV1.cadence_channel==='INSTAGRAM_DM'?'📸':'⏸';
+    var stateShort=cadV1.cadence_state.replace(/_/g,' ');
+    var delayTxt=cadV1.cadence_delay_hours?Math.round(cadV1.cadence_delay_hours)+'h':'—';
+    cadBadge='<span class="tag" style="font-size:9px;color:var(--accent2)" title="'+_escHtml(cadV1.cadence_reason_main)+'">⚡ '+chEmoji+' '+_escHtml(stateShort)+' · '+delayTxt+'</span>';
+  } else if(cadV1 && cadV1.cadence_stop_state!=='NONE'){
+    cadBadge='<span class="tag" style="font-size:9px;color:var(--text3)">⏸ '+_escHtml(cadV1.cadence_stop_state)+'</span>';
+  } else if(t.cadence){
+    cadBadge='<span class="tag" style="font-size:9px;color:var(--accent2)">⚡ '+_escHtml(t.cadence.templateName||'Cadência')+'</span>';
+  }
+
+  return '<div class="task-card" data-task-idx="'+idx+'" data-qid="'+queueId+'" style="cursor:pointer" onclick="window.texOpen('+idx+')">'
+    + '<div class="task-card-main">'
+      + '<div class="task-card-top">'
+        + '<span class="task-type-badge '+taskColor+'">'+taskLabel+'</span>'
+        + (ks?'<span class="tag is-risk" style="font-size:9px">Kill Switch</span>':'')
+        + cadBadge
+        + (tier?'<span class="tag" style="color:'+tierColor+';font-size:9px">'+tier.toUpperCase()+'</span>':'')
+        + '<span class="task-aging '+agingClass+'">D'+aging+'</span>'
+      + '</div>'
+      + '<h3 class="task-card-title">'+_escHtml(nome)+'</h3>'
+      + '<div class="task-card-sub">'+_escHtml(empresa+(cargo?' · '+cargo:''))+'</div>'
+      + '<div style="display:flex;gap:10px;font-size:11px;color:var(--text2);margin:4px 0 8px">'
+        + (etapa?'<span>'+_escHtml(_fmtEtapa(etapa))+'</span>':'')
+        + (fase?'<span>'+_escHtml(fase)+'</span>':'')
+        + '<span style="color:'+deltaColor+'">'+aging+'d</span>'
+      + '</div>'
+      + '<div class="task-card-nba">→ '+_escHtml(String(nba))+'</div>'
+      + '<div class="task-actions">'
+        + '<button class="task-btn is-primary" onclick="event.stopPropagation();window.texOpen('+idx+')">Executar →</button>'
+        + '<button class="task-btn" onclick="event.stopPropagation();window.taskQuickAction&&window.taskQuickAction(\''+queueId+'\',\'fup\')">Gerar FUP</button>'
+        + '<button class="task-btn" onclick="event.stopPropagation();window.taskQuickAction&&window.taskQuickAction(\''+queueId+'\',\'analyze\')">Analisar</button>'
+      + '</div>'
+    + '</div>'
+    + '<div class="task-card-side">'
+      + '<div class="kpi" style="padding:10px"><div class="kpi-l">Valor</div><div class="kpi-v" style="font-size:18px">'+valStr+'</div></div>'
+      + '<div class="kpi" style="padding:10px"><div class="kpi-l">Linha</div><div class="kpi-v" style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_escHtml(_fmtLinha(linha))+'</div></div>'
+    + '</div>'
+  + '</div>';
+}
+
+function renderTaskCard(deal, idx){
+  var name  = deal.name||deal.person_name||deal.nome||'Lead';
+  var linha = deal.linha_de_receita_vigente||deal._revLine||'—';
+  var fase  = deal.fase_atual_no_processo||'—';
+  var aging = deal._aging||0;
+  var nba   = deal._nextAction||'Realizar FUP';
+  var tier  = (deal.tier_da_oportunidade||'').toLowerCase();
+  var tasks = deal._tasks||[];
+  var firstTask = tasks[0]||{type:'follow_up'};
+  var taskType  = firstTask.type||'follow_up';
+  var ks = (deal._killSwitches||[]).length>0;
+  var fw = deal._frameworkScore||0;
+  var deltaVal = deal.delta||deal._aging||0;
+  var deltaColor = deltaVal>=40?'var(--red)':deltaVal>=20?'var(--yellow)':'var(--text2)';
+
+  var agingClass = aging>40?'task-aging-critical':aging>20?'task-aging-high':'task-aging-medium';
+  var tierColor  = tier==='diamond'?'var(--green)':tier==='gold'?'var(--accent2)':tier==='silver'?'var(--text2)':'var(--clay)';
+
+  var taskTypeLabels = {
+    follow_up:'FUP', social_dm:'DM', handoff_prep:'Handoff',
+    reativacao:'Reativação', no_show_recovery:'No-Show',
+    framework_gap:'Framework Gap', authority_confirmation:'Autoridade',
+    pain_quantification:'Quantificar Dor', cadence:'Cadência'
+  };
+  var taskLabel = taskTypeLabels[taskType]||taskType;
+  var taskColor = taskType==='follow_up'?'task-c-accent':taskType==='social_dm'?'task-c-text2':taskType==='handoff_prep'?'task-c-green':taskType==='reativacao'?'task-c-yellow':taskType==='no_show_recovery'?'task-c-red':'task-c-text2';
+
+  var oppVal = deal._oppValue||0;
+  var valStr = oppVal>0 ? (typeof window.fmtBRL==='function' ? window.fmtBRL(oppVal) : 'R$'+Math.round(oppVal/1000)+'k') : '—';
+
+  var empresa = deal.empresa||deal.company||'';
+  var cargo   = deal.cargo||deal.title||'';
+
+  var signalBadge = '';
+  if(typeof window.hasSignal==='function' && window.hasSignal(deal,'compra')){
+    signalBadge = '<span class="tag is-buy" style="font-size:9px">Sinal de Compra</span>';
+  }
+
+  var dealId = _escHtml(String(deal.id||deal.contact_id||deal.deal_id||idx));
+  return '<div class="task-card" data-task-idx="'+idx+'" data-id="'+dealId+'" style="cursor:pointer" onclick="window.texOpen(\''+dealId+'\')">'
+    + '<div class="task-card-main">'
+      + '<div class="task-card-top">'
+        + '<span class="task-type-badge '+taskColor+'">'+taskLabel+'</span>'
+        + (ks?'<span class="tag is-risk" style="font-size:9px">Kill Switch</span>':'')
+        + signalBadge
+        + (tier?'<span class="tag" style="color:'+tierColor+';font-size:9px">'+tier.toUpperCase()+'</span>':'')
+        + '<span class="task-aging '+agingClass+'">D'+aging+'</span>'
+      + '</div>'
+      + '<h3 class="task-card-title">'+_escHtml(name)+'</h3>'
+      + '<div class="task-card-sub">'+_escHtml(empresa+(cargo?' · '+cargo:''))+'</div>'
+      + '<div style="display:flex;gap:10px;font-size:11px;color:var(--text2);margin:4px 0 8px">'
+        + '<span>'+_escHtml(_fmtEtapa(fase))+'</span>'
+        + '<span>'+_escHtml(_fmtLinha(linha))+'</span>'
+        + '<span style="color:'+deltaColor+'">'+deltaVal+'d</span>'
+      + '</div>'
+      + '<div class="task-card-nba">→ '+_escHtml(nba)+'</div>'
+      + '<div class="task-actions">'
+        + '<button class="task-btn is-primary" onclick="event.stopPropagation();window.texOpen(\''+dealId+'\')">Executar →</button>'
+        + '<button class="task-btn" onclick="event.stopPropagation();window.taskQuickAction&&window.taskQuickAction(\''+dealId+'\',\'fup\')">Gerar FUP</button>'
+        + '<button class="task-btn" onclick="event.stopPropagation();window.taskQuickAction&&window.taskQuickAction(\''+dealId+'\',\'analyze\')">Analisar</button>'
+      + '</div>'
+      + (fw>0?'<div class="task-chip-row"><span class="tag" style="font-size:9px">FW '+Math.round(fw*100)+'%</span></div>':'')
+    + '</div>'
+    + '<div class="task-card-side">'
+      + '<div class="kpi" style="padding:10px"><div class="kpi-l">Valor</div><div class="kpi-v" style="font-size:18px">'+valStr+'</div></div>'
+      + '<div class="kpi" style="padding:10px"><div class="kpi-l">Linha</div><div class="kpi-v" style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_escHtml(_fmtLinha(linha))+'</div></div>'
+    + '</div>'
+  + '</div>';
+}
+
+function renderTaskListFromQueue(queue){
+  var el = document.getElementById('tasks-list');
+  if(!el) return;
+  if(!queue||!queue.length){
+    el.innerHTML = '<div class="task-empty">Nenhuma tarefa para o modo e fila selecionados.</div>';
+    return;
+  }
+  // Virtual pagination: render first 30, lazy-load rest on scroll
+  var TPAGE=30;
+  var _tRendered=0;
+  el.innerHTML='';
+  function _tBatch(count){
+    var end=Math.min(_tRendered+count, queue.length);
+    var html='';
+    for(var i=_tRendered;i<end;i++) html+=renderTaskCardFromItem(queue[i],i);
+    el.insertAdjacentHTML('beforeend', html);
+    _tRendered=end;
+  }
+  _tBatch(TPAGE);
+  var tasksPanel=el.closest('.screen')||el.parentElement;
+  if(tasksPanel && !tasksPanel._tpBound){
+    tasksPanel._tpBound=true;
+    tasksPanel.addEventListener('scroll',function(){
+      if(_tRendered>=queue.length) return;
+      if(tasksPanel.scrollTop+tasksPanel.clientHeight>=tasksPanel.scrollHeight-300) _tBatch(TPAGE);
+    });
+  }
+}
+
+function renderTasksV2(){
+  var sumEl  = document.getElementById('tasks-summary-line');
+  var focusEl = document.getElementById('tasks-focus-label');
+  var activeMode = ELUCY_TASKS_STATE.mode;
+  var focusDef = TASK_FOCUS_MODES.find(function(m){return m.slug===activeMode;})||{label:'Todos'};
+  if(focusEl) focusEl.textContent = focusDef.label;
+
+  renderTaskFocusModes();
+  renderTaskQueues();
+
+  // Lê filtros avançados do painel
+  var filterFase  = (document.getElementById('tf-fase')||{}).value||null;
+  var filterCiclo = (document.getElementById('tf-ciclo')||{}).value||null;
+  var filterTier  = (document.getElementById('tf-tier')||{}).value||null;
+
+  // Monta fila via buildTaskQueue — mesmo formato que texOpen usa
+  // 'cadencia' não é um taskType — passa null e filtra depois
+  var queueSlug = ELUCY_TASKS_STATE.queue;
+  var filterType = (queueSlug !== 'all' && queueSlug !== 'cadencia') ? queueSlug : null;
+  var queue = buildTaskQueue(filterType, null, filterFase||null, filterCiclo||null, null);
+
+  // Filtro fila cadência — mantém só deals com enrollment ativo
+  if(queueSlug === 'cadencia'){
+    queue = queue.filter(function(t){ return !!t.cadence; });
+  }
+
+  // Filtro de tier (não suportado nativamente pelo buildTaskQueue)
+  if(filterTier){
+    queue = queue.filter(function(t){
+      return (t.deal.tier_da_oportunidade||t.deal.tier||'').toLowerCase() === filterTier;
+    });
+  }
+
+  // Filtro de focus mode (mapeado para critérios de deal)
+  if(activeMode && activeMode !== 'all'){
+    queue = queue.filter(function(t){ return matchFocusMode(t.deal, activeMode); });
+  }
+
+  // Guarda para texOpen usar — já no formato correto
+  window._texV2Queue = queue;
+
+  if(sumEl) sumEl.textContent = queue.length + ' tarefa' + (queue.length!==1?'s':'') + ' priorizadas';
+
+  // Converte para array de deals para os renders de card/banner
+  var deals = queue.map(function(t){ return t.deal; });
+  renderTaskRecommendation(deals);
+  renderTaskListFromQueue(queue);
+}
+
+// Public controls
+window._tasksSetMode = function(mode){
+  ELUCY_TASKS_STATE.mode = mode||'all';
+  renderTasksV2();
+};
+window._tasksSetQueue = function(queue){
+  ELUCY_TASKS_STATE.queue = queue||'all';
+  renderTasksV2();
+};
+window._tasksToggleFilters = function(){
+  var panel = document.getElementById('tasks-filters-panel');
+  if(!panel) return;
+  ELUCY_TASKS_STATE.filtersOpen = !ELUCY_TASKS_STATE.filtersOpen;
+  panel.classList.toggle('is-collapsed', !ELUCY_TASKS_STATE.filtersOpen);
+};
+window._tasksResetFilters = function(){
+  ['tf-fase','tf-ciclo','tf-tier'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.value='';
+  });
+  renderTasksV2();
+};
+window.rerenderTasks = function(){ renderTasksV2(); };
+
+// Mark task done (optimistic UI)
+window._taskMarkDone = function(dealId, btn){
+  if(btn){ btn.disabled=true; btn.textContent='Concluído'; }
+  var card = btn&&btn.closest('.task-card');
+  if(card) card.style.opacity='0.4';
+  // Log activity if available
+  if(window.logActivity) window.logActivity('task_complete','Deal '+dealId+' — tarefa concluída');
+};
+
+// Wire old renderTaskRunner to V2
+window.renderTaskRunner = function(){ renderTasksV2(); };
+
+// ============================================================
+// END TASKS V2
+// ============================================================
 
 // Filter tasks by pipeline stage (client-side show/hide)
 window._filterTaskStage = function(stage, el){
@@ -1127,13 +1768,19 @@ function _texStopTimer(){
 
 // Open execution mode at given task index
 window.texOpen = function(idx){
-  var filterEl = document.querySelector('.fchip.on');
-  var filterType = filterEl && filterEl.dataset.tfilter !== 'all' ? filterEl.dataset.tfilter : null;
-  var rlEl = document.querySelector('.task-rl-chip.on');
-  var filterRevLine = rlEl && rlEl.dataset.revline !== 'all' ? rlEl.dataset.revline : null;
-  _texQueue = buildTaskQueue(filterType, filterRevLine);
+  // Tasks V2: usa a fila já montada por renderTasksV2 (buildTaskQueue filtrado)
+  if(window._texV2Queue && window._texV2Queue.length){
+    _texQueue = window._texV2Queue;
+  } else {
+    // Fallback legado
+    var filterEl = document.querySelector('.fchip.on');
+    var filterType = filterEl && filterEl.dataset.tfilter !== 'all' ? filterEl.dataset.tfilter : null;
+    var rlEl = document.querySelector('.task-rl-chip.on');
+    var filterRevLine = rlEl && rlEl.dataset.revline !== 'all' ? rlEl.dataset.revline : null;
+    _texQueue = buildTaskQueue(filterType, filterRevLine);
+  }
   if(!_texQueue.length) return;
-  _texIdx = Math.min(idx, _texQueue.length - 1);
+  _texIdx = Math.min(Number(idx)||0, _texQueue.length - 1);
   document.getElementById('tex-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
   _texUpdateUI();
@@ -1407,6 +2054,7 @@ window.CADENCE_TEMPLATES = CADENCE_TEMPLATES;
 // In-memory enrollment state: { dealId: { template, startDate, currentStep, paused, completedSteps:[] } }
 var _cadenceEnrollments = {};
 var _cadenceLoaded = false;
+window._cadenceEnrollments = _cadenceEnrollments; // expõe para matchQueue e UI
 
 // Load enrollments from Supabase elucy_cache
 async function cadenceLoadAll(){
@@ -1666,8 +2314,9 @@ async function calcOperatorScore(periodDays){
   var c5=Math.min(1,dqiRaw/Math.max(metrics.unique_deals,1));
 
   // C6 — Forecast Confidence V7 (média de confiança dos deals scorados)
+  // Default 0 (não 0.5) — sem deals scorados = sem evidência de qualidade de forecast
   var scoredDeals=active.filter(function(d){return d._forecastV6&&d._forecastV6.confidence!=null;});
-  var c6=scoredDeals.length>0?Math.min(1,scoredDeals.reduce(function(s,d){return s+d._forecastV6.confidence;},0)/scoredDeals.length):0.5;
+  var c6=scoredDeals.length>0?Math.min(1,scoredDeals.reduce(function(s,d){return s+d._forecastV6.confidence;},0)/scoredDeals.length):0;
 
   // C7 — Framework Coverage (deals com extração vs deals ativos)
   var fwDeals=active.filter(function(d){return d._frameworkRuntime&&d._frameworkRuntime.qualitative_score!=null;}).length;
@@ -1762,6 +2411,63 @@ async function loadTodayStats(){
   };
 }
 window.loadTodayStats = loadTodayStats;
+
+// Conta OPPs reais geradas no mês corrente.
+// Fonte primária: deal_stage_history WHERE source='databricks' — timestamps reais do HubSpot
+// Fonte de verdade: deal_stage_history com source='databricks' e to_stage='Oportunidade'
+// Populado pelo sync diário com event=Oportunidade do funil_comercial (COUNT DISTINCT deal_id).
+// Resultado cacheado em window._OPP_MENSAL_COUNT para uso imediato em renderHome().
+async function calcOppMensal(){
+  var sb=_sb(); if(!sb) return 0;
+  var email=getOperatorId(); if(!email) return 0;
+  var now=new Date();
+  var mesInicio=new Date(now.getFullYear(),now.getMonth(),1).toISOString();
+
+  try{
+    // Fonte primária: eventos Oportunidade do Databricks (event=Oportunidade no funil_comercial)
+    var rEvt=await sb.from('deal_stage_history')
+      .select('deal_id')
+      .eq('changed_by',email)
+      .eq('source','databricks')
+      .eq('to_stage','Oportunidade')
+      .gte('changed_at',mesInicio)
+      .limit(500);
+
+    var evtData=rEvt.data||[];
+    if(evtData.length>0){
+      var count=new Set(evtData.map(function(e){return e.deal_id;})).size;
+      window._OPP_MENSAL_COUNT=count;
+      window._OPP_MENSAL_LOADED=true;
+      window._OPP_MENSAL_SOURCE='databricks_events';
+      return count;
+    }
+
+    // Fallback: deals snapshot (enquanto sync não rodou)
+    var r=await sb.from('deals')
+      .select('deal_id,etapa_atual_no_pipeline,fase_atual_no_processo')
+      .eq('operator_email',email)
+      .limit(500);
+
+    var OPP_ETAPAS=['agendamento','reagendamento','entrevista agendada','negociação','negociacao','nova oportunidade','ganho'];
+    var OPP_FASES=['oportunidade','agendado','negociação','negociacao'];
+    var ids=new Set();
+    (r.data||[]).forEach(function(d){
+      var etapa=(d.etapa_atual_no_pipeline||'').toLowerCase();
+      var fase=(d.fase_atual_no_processo||'').toLowerCase();
+      if(OPP_ETAPAS.some(function(e){return etapa.includes(e);})||OPP_FASES.includes(fase)) ids.add(d.deal_id);
+    });
+
+    window._OPP_MENSAL_COUNT=ids.size;
+    window._OPP_MENSAL_LOADED=true;
+    window._OPP_MENSAL_SOURCE='deals_snapshot';
+    return ids.size;
+  }catch(e){
+    console.warn('[calcOppMensal] error:',e);
+    window._OPP_MENSAL_LOADED=false;
+    return 0;
+  }
+}
+window.calcOppMensal=calcOppMensal;
 
 // ==================================================================
 // LAYER 6 — UI STATE
@@ -2014,7 +2720,8 @@ async function renderHome(){
     return s!=='perdido'&&s!=='ganho';
   });
 
-  // Enrich all deals
+  // Enrich all deals (new batch cycle — memoized per cycle)
+  _enrichBatchId++;
   allDeals.forEach(function(d){ enrichDealContext(d); });
 
   var tasks = buildTaskQueue();
@@ -2032,13 +2739,21 @@ async function renderHome(){
   var fupPct = meta.fups>0 ? Math.min(100,Math.round((todayStats.fups||0)/meta.fups*100)) : 0;
   var qualPct = meta.qualificacoes>0 ? Math.min(100,Math.round((todayStats.qualificacoes||0)/meta.qualificacoes*100)) : 0;
   var handPct = meta.handoffs>0 ? Math.min(100,Math.round((todayStats.handoffs||0)/meta.handoffs*100)) : 0;
-  // OPP mensal — conta deals em fase oportunidade/negociacao no pipe atual
+  // OPP mensal — conta TODOS os deals que viraram OPP este mês via Supabase (inclui Ganho/Perdido)
+  // Fonte: tabela deals (PS1 sync: ativos + Ganho/Perdido do mês corrente)
   var metaMensal = _operatorCtx.meta_mensal || {};
   var oppTarget = metaMensal.opp || 15;
-  var oppActual = allDeals.filter(function(d){
-    var fase = (d._fase || d.fase || d.fase_atual_no_processo || '').toLowerCase();
-    return fase === 'oportunidade' || fase.includes('negoc');
-  }).length;
+  var oppActual = (typeof window._OPP_MENSAL_COUNT === 'number') ? window._OPP_MENSAL_COUNT : 0;
+  // Fallback local se async ainda não completou (event stream não carregou):
+  // Conta apenas deals em fase OPP real — Oportunidade, Agendado, Negociação
+  // NÃO inclui 'agendamento' (etapa operacional SDR, não é OPP ainda)
+  if(!window._OPP_MENSAL_LOADED){
+    var OPP_FASES_FB = ['oportunidade','agendado','negociacao'];
+    oppActual = allDeals.filter(function(d){
+      var fase = _normStr(d._fase||d.fase_atual_no_processo||d.fase||'');
+      return OPP_FASES_FB.indexOf(fase) !== -1;
+    }).length;
+  }
   var oppPct = oppTarget > 0 ? Math.min(100, Math.round(oppActual / oppTarget * 100)) : 0;
 
   var html = '';
@@ -2118,7 +2833,39 @@ async function renderHome(){
     + '<div id="home-score-breakdown" style="margin-top:8px"></div>'
     + '</div>';
 
-  // BLOCO 4 — Inteligencia
+  // BLOCO 4 — OPPs Geradas no Mês
+  (function(){
+    var oppPctBar = oppTarget>0 ? Math.min(100,Math.round(oppActual/oppTarget*100)) : 0;
+    var oppStatus = oppPctBar>=100?'#22c55e':oppPctBar>=60?'#f59e0b':'#ef4444';
+    var oppLabel  = oppPctBar>=100?'Meta atingida!':oppPctBar>=60?'No caminho certo':'Acelerar ritmo';
+    // Dias úteis restantes no mês (aprox)
+    var hoje=new Date(); var diasMes=new Date(hoje.getFullYear(),hoje.getMonth()+1,0).getDate();
+    var diasRestantes=diasMes-hoje.getDate(); var semanas=Math.ceil(diasRestantes/5);
+    var ritmoNecessario=oppTarget-oppActual; var ritmoLabel='';
+    if(ritmoNecessario<=0) ritmoLabel='Superou a meta!';
+    else if(semanas>0) ritmoLabel=Math.ceil(ritmoNecessario/semanas)+' OPP/semana para bater a meta';
+    else ritmoLabel=ritmoNecessario+' OPP restantes';
+
+    var oppSrc=window._OPP_MENSAL_SOURCE||'deals_snapshot';
+    var oppSrcLabel=oppSrc==='databricks_events'?'<span style="font-size:9px;color:#22c55e;margin-left:6px">● event stream</span>':'<span style="font-size:9px;color:var(--text2);margin-left:6px">● snapshot</span>';
+    html += '<div class="home-block" id="home-opp-block">'
+      + '<div class="home-block-title" style="display:flex;justify-content:space-between;align-items:center">'
+      + '<span>OPPs Geradas no Mês'+oppSrcLabel+'</span>'
+      + '<button class="home-fm-btn" onclick="window.toggleOppList(this)">Detalhar ▾</button>'
+      + '</div>'
+      + '<div style="display:flex;align-items:baseline;gap:10px;margin:8px 0 4px">'
+      + '<span style="font-size:32px;font-weight:700;color:'+oppStatus+'">'+oppActual+'</span>'
+      + '<span style="color:var(--text2);font-size:13px">/ '+oppTarget+' meta mensal</span>'
+      + '</div>'
+      + '<div class="meta-bar-bg" style="margin-bottom:6px"><div class="meta-bar-fill'+(oppPctBar>=100?' done':'')+'" style="width:'+oppPctBar+'%;background:'+oppStatus+'"></div></div>'
+      + '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)">'
+      + '<span>'+oppLabel+'</span><span>'+ritmoLabel+'</span>'
+      + '</div>'
+      + '<div id="home-opp-list" style="display:none;margin-top:10px"></div>'
+      + '</div>';
+  })();
+
+  // BLOCO 5 — Inteligencia
   if(insights.length){
     html += '<div class="home-block">'
       + '<div class="home-block-title">Inteligencia</div>';
@@ -2137,7 +2884,7 @@ async function renderHome(){
     if(!gam) return;
     var sc=document.getElementById('home-score'); if(sc) sc.textContent=gam.operatorScore||gam.todayScore;
     var sk=document.getElementById('home-streak'); if(sk) sk.textContent=gam.streak+'d';
-  });
+  }).catch(function(e){ console.warn('[renderHome] calcGamification error:', e); });
   calcOperatorScore(30).then(function(ops){
     if(!ops) return;
     var bd=document.getElementById('home-score-breakdown');
@@ -2162,9 +2909,131 @@ async function renderHome(){
     });
     html+='</div>';
     bd.innerHTML=html;
-  });
+  }).catch(function(e){ console.warn('[renderHome] calcOperatorScore error:', e); });
 }
 window.renderHome = renderHome;
+
+// Carrega e exibe lista de OPPs geradas no mês no bloco home
+window.toggleOppList = async function(btn){
+  var listEl=document.getElementById('home-opp-list');
+  if(!listEl) return;
+  if(listEl.style.display!=='none'){
+    listEl.style.display='none';
+    btn.textContent='Detalhar ▾';
+    return;
+  }
+  btn.textContent='Fechar ▴';
+  listEl.style.display='block';
+  if(listEl.dataset.loaded==='1') return; // já carregado
+  listEl.innerHTML='<div style="color:var(--text2);font-size:12px;padding:6px 0">Carregando...</div>';
+
+  var sb=_sb(); if(!sb){ listEl.innerHTML='<div style="color:var(--red);font-size:12px">Sem conexão</div>'; return; }
+  var email=getOperatorId(); if(!email) return;
+  var now=new Date();
+  var mesInicio=new Date(now.getFullYear(),now.getMonth(),1).toISOString();
+  var OPP_TO_STAGES=['Oportunidade','Agendado','Negociação','Negociacao'];
+  var FASES_OPP=['Oportunidade','Agendado','Negociação','Negociacao'];
+  var ETAPAS_OPP=['Agendamento','Reagendamento','Entrevista Agendada','Negociação','Negociacao','Ganho'];
+
+  try{
+    // Tenta fonte primária: event stream Databricks (PS1 v6)
+    var rEvt=await sb.from('deal_stage_history')
+      .select('deal_id,to_stage,changed_at')
+      .eq('changed_by',email)
+      .eq('source','databricks')
+      .gte('changed_at',mesInicio)
+      .in('to_stage',OPP_TO_STAGES)
+      .limit(500);
+
+    var evtData=rEvt.data||[];
+    var oppDealIds=new Set(evtData.map(function(e){return e.deal_id;}));
+
+    var oppRows=[];
+    if(oppDealIds.size>0){
+      // Busca detalhes dos deals identificados pelo event stream
+      var idList=Array.from(oppDealIds).slice(0,200);
+      var rD=await sb.from('deals')
+        .select('deal_id,contact_name,email_lead,linha_de_receita_vigente,fase_atual_no_processo,etapa_atual_no_pipeline,status_do_deal,tier_da_oportunidade,valor_da_oportunidade')
+        .eq('operator_email',email)
+        .in('deal_id',idList);
+      oppRows=rD.data||[];
+      // Para deals não encontrados em deals (já saíram do pipeline ativo), mostra só deal_id
+      oppDealIds.forEach(function(id){
+        if(!oppRows.find(function(d){return d.deal_id===id;})){
+          oppRows.push({deal_id:id,contact_name:'',email_lead:'',linha_de_receita_vigente:'',fase_atual_no_processo:'',etapa_atual_no_pipeline:'',status_do_deal:'Fechado',tier_da_oportunidade:'',valor_da_oportunidade:0});
+        }
+      });
+    } else {
+      // Fallback: tabela deals (snapshot)
+      var r=await sb.from('deals')
+        .select('deal_id,contact_name,email_lead,linha_de_receita_vigente,fase_atual_no_processo,etapa_atual_no_pipeline,status_do_deal,fase_anterior_no_processo,tier_da_oportunidade,valor_da_oportunidade,created_at_crm')
+        .eq('operator_email',email)
+        .gte('created_at_crm',mesInicio)
+        .order('created_at_crm',{ascending:false})
+        .limit(200);
+      var allRows=(r.data||[]);
+      oppRows=allRows.filter(function(d){
+        var fase=(d.fase_atual_no_processo||'').toLowerCase();
+        var faseAnt=(d.fase_anterior_no_processo||'').toLowerCase();
+        var etapa=(d.etapa_atual_no_pipeline||'').toLowerCase();
+        var status=(d.status_do_deal||'').toLowerCase();
+        var isActiveOpp=FASES_OPP.some(function(f){return fase.includes(f.toLowerCase());});
+        var isClosedOpp=(status==='ganho'||status==='perdido')&&(
+          FASES_OPP.some(function(f){return faseAnt.includes(f.toLowerCase());})||
+          ETAPAS_OPP.some(function(e){return etapa.includes(e.toLowerCase());})
+        );
+        return isActiveOpp||isClosedOpp;
+      });
+    }
+
+    if(!oppRows.length){
+      listEl.innerHTML='<div style="color:var(--text2);font-size:12px;padding:6px 0">Nenhuma OPP encontrada neste mês. Dados sincronizados do CRM.</div>';
+      listEl.dataset.loaded='1';
+      return;
+    }
+
+    // Agrupa por status
+    var byStatus={};
+    oppRows.forEach(function(d){
+      var s=d.status_do_deal||'Aberto';
+      if(!byStatus[s]) byStatus[s]=[];
+      byStatus[s].push(d);
+    });
+
+    var STATUS_ORDER=['Ganho','Aberto','Perdido'];
+    var STATUS_COLOR={'Ganho':'#22c55e','Aberto':'#f59e0b','Perdido':'#ef4444'};
+    var h='<div style="font-size:11px;color:var(--text2);margin-bottom:6px">'+oppRows.length+' OPP(s) geradas em '+now.toLocaleString('pt-BR',{month:'long'})+'</div>';
+
+    STATUS_ORDER.forEach(function(s){
+      var rows=byStatus[s]; if(!rows||!rows.length) return;
+      h+='<div style="margin-bottom:8px">'
+        +'<div style="font-size:10px;font-weight:600;color:'+STATUS_COLOR[s]+';margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">'+s+' ('+rows.length+')</div>';
+      rows.forEach(function(d){
+        var nome=d.contact_name||d.email_lead||d.deal_id;
+        var linha=d.linha_de_receita_vigente||d.grupo_de_receita||'—';
+        var tier=(d.tier_da_oportunidade||'').toLowerCase();
+        var val=d.valor_da_oportunidade&&d.valor_da_oportunidade>0?'R$'+Number(d.valor_da_oportunidade).toLocaleString('pt-BR'):'';
+        var tierBadge=tier?'<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(245,158,11,.15);color:#f59e0b;margin-left:4px">'+tier+'</span>':'';
+        h+='<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px">'
+          +'<div style="flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"><span style="color:var(--text1)">'+_escHtml(nome)+'</span>'+tierBadge+'</div>'
+          +'<div style="color:var(--text2);font-size:10px;white-space:nowrap">'+_escHtml(linha)+'</div>'
+          +(val?'<div style="color:#22c55e;font-size:10px;white-space:nowrap">'+val+'</div>':'')
+          +'</div>';
+      });
+      h+='</div>';
+    });
+
+    listEl.innerHTML=h;
+    listEl.dataset.loaded='1';
+
+    // Atualiza count no engine
+    window._OPP_MENSAL_COUNT=oppRows.length;
+    window._OPP_MENSAL_LOADED=true;
+
+  }catch(e){
+    listEl.innerHTML='<div style="color:var(--red);font-size:12px">Erro ao carregar: '+e.message+'</div>';
+  }
+};
 
 window.cycleFocusMode = function(){
   var modes = Object.keys(FOCUS_MODES);
@@ -2226,7 +3095,7 @@ function initRealtimeListeners(){
     }, function(payload){
       var n=payload.new; if(!n) return;
       _unread++; _updateBadge();
-      _toast(n.title, n.body, n.deal_id);
+      _notifToast(n.title, n.body, n.deal_id);
     }).subscribe();
 }
 window.initRealtimeListeners = initRealtimeListeners;
@@ -2252,7 +3121,7 @@ function _handleResponse(response){
     if(window.ELUCY_CACHE) window.ELUCY_CACHE[dealId]=output;
     if(window.injectElucyReport) window.injectElucyReport(targetId, output);
     saveInteraction(dealId,'analysis',output);
-    _toast('Analise pronta','ELUCI REPORT disponivel',dealId);
+    _notifToast('Analise pronta','ELUCI REPORT disponivel',dealId);
   } else if(type==='copy'||type==='dm_copy'){
     try{
       var parsed=JSON.parse(output);
@@ -2261,11 +3130,11 @@ function _handleResponse(response){
       if(window.injectElucyCopy) window.injectElucyCopy(targetId, output, '');
     }
     saveInteraction(dealId,'copy',output);
-    _toast('Copy pronta','Copy gerada pelo motor Elucy',dealId);
+    _notifToast('Copy pronta','Copy gerada pelo motor Elucy',dealId);
   } else if(type==='note'){
     if(window.injectNotaCRM) window.injectNotaCRM(targetId, output);
     saveInteraction(dealId,'note_crm',output);
-    _toast('Nota CRM pronta','Nota disponivel',dealId);
+    _notifToast('Nota CRM pronta','Nota disponivel',dealId);
   } else if(type==='business_analysis'){
     if(window.injectBusinessAnalysis) window.injectBusinessAnalysis(targetId, output);
     saveInteraction(dealId,'business_analysis',output);
@@ -2300,7 +3169,7 @@ function _updateBadge(){
   b.style.display=_unread>0?'inline-block':'none';
 }
 
-function _toast(title,body,dealId){
+function _notifToast(title,body,dealId){
   var t=document.createElement('div');
   t.style.cssText='position:fixed;top:60px;right:16px;z-index:200;background:var(--bg3);border:1px solid var(--accent);border-radius:8px;padding:12px 16px;max-width:320px;animation:fadeIn .2s ease;cursor:pointer;';
   t.innerHTML='<div style="font-size:11px;font-weight:700;color:var(--accent2);margin-bottom:3px">'+_escHtml(title)+'</div><div style="font-size:12px;color:var(--text);line-height:1.4">'+_escHtml(body||'')+'</div>';
@@ -2318,7 +3187,7 @@ function _toast(title,body,dealId){
   document.body.appendChild(t);
   setTimeout(function(){ if(t.parentNode) t.remove(); },8000);
 }
-window.showNotifToast = _toast;
+window.showNotifToast = _notifToast;
 
 // ==================================================================
 // ACTIVITY LOG + INTERACTIONS
@@ -2680,14 +3549,27 @@ function calcTimelineIntelligence(deal){
   var ageBucket=ageDays<=3?'fresh':ageDays<=7?'active':ageDays<=14?'warm':ageDays<=21?'cooling':'stale';
 
   // ── VELOCIDADE DE PROGRESSÃO ──
-  // Mapa de ordem de etapas do SDR
-  var ETAPA_ORDER={'novo lead':1,'dia 01':2,'dia 02':3,'dia 03':4,'dia 04':5,'dia 05':6,'dia 06':7,'conectados':8,'agendamento':9,'reagendamento':10,'entrevista agendada':11};
-  var currentStageOrder=ETAPA_ORDER[etapa]||0;
-  // Velocidade: etapas avançadas / dias. Mais alto = mais rápido
-  var velocity=ageDays>0&&currentStageOrder>0?Math.round(currentStageOrder/ageDays*100)/100:0;
-  // Benchmark médio: ~1 etapa a cada 2 dias = 0.5
-  var velocityLabel=velocity>=1.0?'Acelerado':velocity>=0.5?'Normal':velocity>=0.2?'Lento':'Parado';
-  var velocityScore=velocity>=1.0?100:velocity>=0.5?75:velocity>=0.2?50:velocity>0?25:0;
+  // Prefer Databricks velocity_score (0-1) from deal_runtime when available
+  var velocityScore, velocityLabel;
+  if(deal._velocityScore != null){
+    velocityScore = Math.round(deal._velocityScore * 100);
+    velocityLabel = velocityScore>=80?'Acelerado':velocityScore>=55?'Normal':velocityScore>=30?'Lento':'Parado';
+  } else {
+    var ETAPA_ORDER={'novo lead':1,'dia 01':2,'dia 02':3,'dia 03':4,'dia 04':5,'dia 05':6,'dia 06':7,'conectados':8,'agendamento':9,'reagendamento':10,'entrevista agendada':11};
+    var currentStageOrder=ETAPA_ORDER[etapa]||0;
+    var velocity=ageDays>0&&currentStageOrder>0?Math.round(currentStageOrder/ageDays*100)/100:0;
+    velocityLabel=velocity>=1.0?'Acelerado':velocity>=0.5?'Normal':velocity>=0.2?'Lento':'Parado';
+    velocityScore=velocity>=1.0?100:velocity>=0.5?75:velocity>=0.2?50:velocity>0?25:0;
+  }
+  // Δt breakdown from Databricks (dias por transição)
+  var dtBreakdown = {
+    salConectado:    deal._dtSalConectado     || null,
+    conectadoAgendado: deal._dtConectadoAgendado || null,
+    agendadoOpp:     deal._dtAgendadoOpp      || null,
+    oppNegociacao:   deal._dtOppNegociacao    || null,
+    negociacaoGanho: deal._dtNegociacaoGanho  || null
+  };
+  var stallFlag = deal._stallFlag || false;
 
   // ── SLA E RISCO TEMPORAL ──
   var riskAfter=lc.risk_after||3;
@@ -2736,8 +3618,10 @@ function calcTimelineIntelligence(deal){
 
   // ── PREVISÃO DE FECHAMENTO (se deal aberto) ──
   // Baseado na velocidade atual + etapas restantes até Entrevista Agendada
-  var etapasRestantes=Math.max(0,11-currentStageOrder); // 11 = Entrevista Agendada
-  var estimatedDaysToClose=velocity>0?Math.round(etapasRestantes/velocity):etapasRestantes*3;
+  var _stageOrder = typeof currentStageOrder !== 'undefined' ? currentStageOrder : 0;
+  var _velRaw     = typeof velocity !== 'undefined' ? velocity : 0;
+  var etapasRestantes=Math.max(0,11-_stageOrder); // 11 = Entrevista Agendada
+  var estimatedDaysToClose=_velRaw>0?Math.round(etapasRestantes/_velRaw):etapasRestantes*3;
   var estimatedCloseDate='';
   if(status!=='perdido'&&status!=='ganho'&&createdMs){
     var ecd=new Date(now+estimatedDaysToClose*86400000);
@@ -2804,8 +3688,8 @@ function calcTimelineIntelligence(deal){
     // Idade
     ageDays:ageDays, ageWeeks:ageWeeks, ageBucket:ageBucket,
     // Velocidade
-    velocity:velocity, velocityLabel:velocityLabel, velocityScore:velocityScore,
-    currentStageOrder:currentStageOrder,
+    velocity:_velRaw, velocityLabel:velocityLabel, velocityScore:velocityScore,
+    currentStageOrder:_stageOrder,
     // SLA
     riskAfter:riskAfter, daysOverSLA:daysOverSLA, daysToSLA:daysToSLA,
     slaStatus:slaStatus, slaLabel:slaLabel,
@@ -2827,7 +3711,9 @@ function calcTimelineIntelligence(deal){
     // V10: Response Propensity
     responsePropensity:response_propensity,
     // Ação
-    nextActionTemporal:nextActionTemporal
+    nextActionTemporal:nextActionTemporal,
+    // Databricks Velocity (Δt breakdown por transição de fase)
+    dtBreakdown:dtBreakdown, stallFlag:stallFlag
   };
 }
 window.calcTimelineIntelligence = calcTimelineIntelligence;
@@ -3276,6 +4162,12 @@ function _dealToRuntime(id, d, email){
   var etapa = (d.etapa||d._etapa||'').toLowerCase();
   var aging = d._aging || {};
   var nba = d._nextAction || {};
+  var tl = d._timeline || {};
+  var tp = d._touchpoints || d.touchpointCount || 0;
+  // Velocity: from timeline intelligence (0-100 → 0-1)
+  var velScore = tl.velocity_score != null ? Math.round(tl.velocity_score) / 100 : null;
+  // Stall: deal is stale and not advancing
+  var stallFlag = tl.stall_flag || tl.stageStagnation === 'stagnant' || (tl.ageBucket === 'stale' && tl.velocity_label === 'Parado');
   return {
     deal_id: id,
     operator_email: email,
@@ -3293,7 +4185,10 @@ function _dealToRuntime(id, d, email){
     urgency_score: d._urgency || 0,
     value_score: d._oppValue || d.elucyValor || 0,
     priority_score: d._urgency || 0,
-    touchpoint_state: null,
+    velocity_score: velScore,
+    stall_flag: !!stallFlag,
+    total_events: tp || 0,
+    touchpoint_state: tp >= 5 ? 'engaged' : tp >= 2 ? 'active' : tp > 0 ? 'initial' : 'none',
     fup_state: 'none',
     show_state: 'unknown',
     last_touch_at: d.last_interaction_at || null,
@@ -3516,15 +4411,16 @@ window.syncDailySnapshot = syncDailySnapshot;
 // Sync resultado para forecast_runtime + forecast_events no Supabase.
 // ==================================================================
 
-function calcForecastV6(deal){
+// --- FORECAST SUB-FUNCTIONS ---
+function _fcClamp(v){ return Math.max(0.3, Math.min(1.5, v)); }
+
+function _calcQuantitativeBaseline(deal){
   var etapa = (deal.etapa||deal._etapa||'').toLowerCase();
   var aging = deal._aging || calcAgingRisk(deal);
   var delta = deal._delta || deal.delta || 0;
   var revLine = deal._revLine || resolveRevenueLine(deal);
   var lc = REVENUE_LINES[revLine] || REVENUE_LINES.nao_definido;
   var ra = lc.risk_after;
-
-  // --- QUANTITATIVE BASELINE ---
   var stage_prob = STAGE_PROB[etapa] || 0.10;
   var aging_factor = delta > ra*4 ? 0.40 : delta > ra*3 ? 0.55 : delta > ra*2 ? 0.70 : delta > ra ? 0.85 : 1.0;
   var velocity_factor = 1.0;
@@ -3540,176 +4436,113 @@ function calcForecastV6(deal){
   if(tp >= 5) engagement_factor = 1.15;
   else if(tp >= 3) engagement_factor = 1.05;
   else if(tp === 0) engagement_factor = 0.70;
+  return { stage_prob:stage_prob, aging_factor:aging_factor, velocity_factor:velocity_factor, engagement_factor:engagement_factor, score:+(stage_prob*aging_factor*velocity_factor*engagement_factor).toFixed(4), delta:delta, aging:aging, tp:tp };
+}
 
-  var quantitative_score = +(stage_prob * aging_factor * velocity_factor * engagement_factor).toFixed(4);
-
-  // --- QUALITATIVE WEIGHTS (V6) ---
-  // Each weight defaults to 1.0, adjusted by signals detected in meetings/notes/runtime
-  var show_weight = 1.0;
-  var note_weight = 1.0;
-  var authority_weight = 1.0;
-  var urgency_weight = 1.0;
-  var behavior_weight = 1.0;
-  var next_step_weight = 1.0;
-  var no_show_penalty = 0;
-  var positive_signals = [];
-  var risk_signals = [];
-
-  // Show weight: based on meeting attendance
-  var showState = (deal._showState || deal.show_state || 'unknown').toLowerCase();
-  if(showState === 'attended' || showState === 'completed'){
-    show_weight = 1.20; positive_signals.push('Meeting attended');
-  } else if(showState === 'no_show'){
-    show_weight = 0.50; no_show_penalty = 0.15; risk_signals.push('No-show detected');
-  } else if(showState === 'rescheduled'){
-    show_weight = 0.85; risk_signals.push('Meeting rescheduled');
-  }
-
-  // Note weight: based on note_analysis quality/sentiment
+function _calcQualitativeWeights(deal, qb){
+  var show_weight=1.0, note_weight=1.0, authority_weight=1.0, urgency_weight=1.0, behavior_weight=1.0, next_step_weight=1.0, no_show_penalty=0;
+  var positive_signals=[], risk_signals=[];
+  var showState = (deal._showState||deal.show_state||'unknown').toLowerCase();
+  if(showState==='attended'||showState==='completed'){ show_weight=1.20; positive_signals.push('Meeting attended'); }
+  else if(showState==='no_show'){ show_weight=0.50; no_show_penalty=0.15; risk_signals.push('No-show detected'); }
+  else if(showState==='rescheduled'){ show_weight=0.85; risk_signals.push('Meeting rescheduled'); }
   if(deal._noteAnalysis){
-    var na = deal._noteAnalysis;
-    if(na.quality_score >= 70){ note_weight = 1.20; positive_signals.push('High quality notes ('+na.quality_score+')'); }
-    else if(na.quality_score >= 40) note_weight = 1.0;
-    else if(na.quality_score > 0){ note_weight = 0.80; risk_signals.push('Low quality notes'); }
-    if(na.sentiment === 'positive'){ note_weight *= 1.10; positive_signals.push('Positive sentiment'); }
-    else if(na.sentiment === 'negative'){ note_weight *= 0.80; risk_signals.push('Negative sentiment'); }
+    var na=deal._noteAnalysis;
+    if(na.quality_score>=70){ note_weight=1.20; positive_signals.push('High quality notes ('+na.quality_score+')'); }
+    else if(na.quality_score>=40) note_weight=1.0;
+    else if(na.quality_score>0){ note_weight=0.80; risk_signals.push('Low quality notes'); }
+    if(na.sentiment==='positive'){ note_weight*=1.10; positive_signals.push('Positive sentiment'); }
+    else if(na.sentiment==='negative'){ note_weight*=0.80; risk_signals.push('Negative sentiment'); }
     if(na.advancement_signal) positive_signals.push('Advancement signal detected');
     if(na.pain_detected) positive_signals.push('Pain confirmed');
   }
+  var cargo=(deal.cargo||'').toLowerCase();
+  if(cargo.includes('ceo')||cargo.includes('presidente')||cargo.includes('fundador')||cargo.includes('socio')){
+    authority_weight=1.25; positive_signals.push('C-Level authority');
+    if((deal.faturamento||deal.porte||'').toLowerCase().includes('mei')){ authority_weight=0.70; risk_signals.push('CEO MEI authority downgrade'); }
+  } else if(cargo.includes('diretor')||cargo.includes('vp')){ authority_weight=1.15; positive_signals.push('Director-level authority'); }
+  else if(cargo.includes('gerente')) authority_weight=0.95;
+  else if(cargo.includes('coordenador')||cargo.includes('analista')){ authority_weight=0.75; risk_signals.push('Low authority level'); }
+  var signal=deal._signal||'NEUTRAL';
+  if(signal==='HOT'){ urgency_weight=1.20; positive_signals.push('HOT signal'); }
+  else if(signal==='DOME'){ urgency_weight=0.60; risk_signals.push('Iron Dome active'); }
+  else if(signal==='WARM') urgency_weight=1.05;
+  if(qb.aging.riskLevel==='critical'){ urgency_weight*=0.70; risk_signals.push('Critical aging ('+qb.delta+' days)'); }
+  else if(qb.aging.riskLevel==='high'){ urgency_weight*=0.85; risk_signals.push('High aging risk'); }
+  var skipped=String(deal.event_skipped||deal.eventSkipped||'').toLowerCase()==='true';
+  if(!skipped){ behavior_weight=1.10; positive_signals.push('No events skipped'); }
+  else{ behavior_weight=0.85; risk_signals.push('Event skipped'); }
+  if(qb.tp>=5) behavior_weight*=1.10;
+  else if(qb.tp===0){ behavior_weight*=0.70; risk_signals.push('Zero touchpoints'); }
+  var nba=deal._nextAction||{};
+  if(nba.priority==='critical'){ next_step_weight=0.80; risk_signals.push('Critical next action needed'); }
+  else if(nba.type==='handoff_prep'){ next_step_weight=1.15; positive_signals.push('Ready for handoff'); }
+  else if(nba.type==='agendamento'){ next_step_weight=1.10; positive_signals.push('Meeting scheduling phase'); }
+  show_weight=_fcClamp(show_weight); note_weight=_fcClamp(+note_weight.toFixed(4)); authority_weight=_fcClamp(authority_weight);
+  urgency_weight=_fcClamp(+urgency_weight.toFixed(4)); behavior_weight=_fcClamp(+behavior_weight.toFixed(4)); next_step_weight=_fcClamp(next_step_weight);
+  no_show_penalty=Math.min(0.30,Math.max(0,no_show_penalty));
+  var combined=+(show_weight*note_weight*authority_weight*urgency_weight*behavior_weight*next_step_weight).toFixed(4);
+  combined=Math.max(0.10,Math.min(2.50,combined));
+  return { show_weight:show_weight, note_weight:note_weight, authority_weight:authority_weight, urgency_weight:urgency_weight, behavior_weight:behavior_weight, next_step_weight:next_step_weight, no_show_penalty:no_show_penalty, combined:combined, positive_signals:positive_signals, risk_signals:risk_signals, showState:showState, nba:nba };
+}
 
-  // Authority weight: based on cargo/decision_maker
-  var cargo = (deal.cargo || '').toLowerCase();
-  if(cargo.includes('ceo') || cargo.includes('presidente') || cargo.includes('fundador') || cargo.includes('socio')){
-    authority_weight = 1.25; positive_signals.push('C-Level authority');
-    // Kill switch: CEO de MEI downgrade
-    if((deal.faturamento||deal.porte||'').toLowerCase().includes('mei')){
-      authority_weight = 0.70; risk_signals.push('CEO MEI authority downgrade');
-    }
-  } else if(cargo.includes('diretor') || cargo.includes('vp')){
-    authority_weight = 1.15; positive_signals.push('Director-level authority');
-  } else if(cargo.includes('gerente')){
-    authority_weight = 0.95;
-  } else if(cargo.includes('coordenador') || cargo.includes('analista')){
-    authority_weight = 0.75; risk_signals.push('Low authority level');
-  }
+function _calcConfidenceV10(deal, qw, framework_data){
+  var fc_spiced_cov=(framework_data&&framework_data.spiced_coverage)||0;
+  var fc_meddic_cov=(framework_data&&framework_data.meddic_coverage)||0;
+  var fc_overall_cov=(framework_data&&framework_data.overall_coverage)||0;
+  var fc_next_step=(framework_data&&framework_data.next_step_clarity)||0;
+  var fc_authority=(framework_data&&framework_data.authority_score)||0;
+  var fc_note_q=(framework_data&&framework_data.note_quality_score)||0;
+  var framework_evidence_score=(fc_spiced_cov*0.25)+(fc_meddic_cov*0.20)+(fc_overall_cov*0.20)+(fc_next_step*0.15)+(fc_authority*0.10)+(fc_note_q*0.10);
+  var na=deal._noteAnalysis;
+  var conf_notes_count=na?(na.notes_count||na.count||1):0;
+  var conf_notes_density=conf_notes_count>=3?1.00:conf_notes_count===2?0.75:conf_notes_count===1?0.50:0.10;
+  var conf_meet_count=deal._meetingCount||0;
+  var conf_meet_density=conf_meet_count>=2?1.00:conf_meet_count===1?0.70:0.20;
+  var source_density_score=(conf_notes_density*0.55)+(conf_meet_density*0.45);
+  var conf_last_touch=deal._lastTouch?new Date(deal._lastTouch):null;
+  var conf_days_since=conf_last_touch?Math.max(0,(Date.now()-conf_last_touch.getTime())/86400000):30;
+  var recency_reliability_score;
+  if(conf_days_since<=1) recency_reliability_score=1.00;
+  else if(conf_days_since<=3) recency_reliability_score=0.85;
+  else if(conf_days_since<=7) recency_reliability_score=0.65;
+  else if(conf_days_since<=14) recency_reliability_score=0.40;
+  else recency_reliability_score=0.20;
+  var conf_shows=(qw.showState==='show')?1:0;
+  var conf_meet_q=(framework_data&&framework_data.meeting_quality_score)||0;
+  var meeting_reliability_score=(Math.min(conf_shows,1)*0.60)+(conf_meet_q*0.40);
+  var sig=deal._signalRuntime||{};
+  var sig_pos=sig.positive_score||0, sig_neg=sig.negative_score||0, sig_total=sig.signal_total||0;
+  var signal_balance=1-Math.min(Math.abs(sig_pos-sig_neg),1);
+  var signal_stability_score=(signal_balance*0.40)+((1-Math.min(sig_neg,1))*0.30)+((1-Math.min(Math.abs(sig_total),1))*0.30);
+  var conf_data_trust=(deal._dataQuality&&deal._dataQuality.data_trust_score)||0.50;
+  var conf_fw_confidence=(framework_data&&framework_data.confidence_score)||0;
+  var forecast_confidence=+((framework_evidence_score*0.28)+(source_density_score*0.18)+(recency_reliability_score*0.16)+(meeting_reliability_score*0.14)+(signal_stability_score*0.10)+(conf_data_trust*0.10)+(conf_fw_confidence*0.04)).toFixed(4);
+  forecast_confidence=Math.min(1,Math.max(0,forecast_confidence));
+  return { forecast_confidence:forecast_confidence, confidence_level:forecast_confidence>=0.7?'high':forecast_confidence>=0.4?'medium':'low' };
+}
 
-  // Urgency weight: based on aging + signal state
-  var signal = deal._signal || 'NEUTRAL';
-  if(signal === 'HOT'){ urgency_weight = 1.20; positive_signals.push('HOT signal'); }
-  else if(signal === 'DOME'){ urgency_weight = 0.60; risk_signals.push('Iron Dome active'); }
-  else if(signal === 'WARM') urgency_weight = 1.05;
-  if(aging.riskLevel === 'critical'){ urgency_weight *= 0.70; risk_signals.push('Critical aging ('+delta+' days)'); }
-  else if(aging.riskLevel === 'high'){ urgency_weight *= 0.85; risk_signals.push('High aging risk'); }
-
-  // Behavior weight: event_skipped + touchpoint engagement
-  var skipped = String(deal.event_skipped || deal.eventSkipped || '').toLowerCase() === 'true';
-  if(!skipped){ behavior_weight = 1.10; positive_signals.push('No events skipped'); }
-  else { behavior_weight = 0.85; risk_signals.push('Event skipped'); }
-  if(tp >= 5) behavior_weight *= 1.10;
-  else if(tp === 0){ behavior_weight *= 0.70; risk_signals.push('Zero touchpoints'); }
-
-  // Next step weight: based on _nextAction clarity
-  var nba = deal._nextAction || {};
-  if(nba.priority === 'critical'){ next_step_weight = 0.80; risk_signals.push('Critical next action needed'); }
-  else if(nba.type === 'handoff_prep'){ next_step_weight = 1.15; positive_signals.push('Ready for handoff'); }
-  else if(nba.type === 'agendamento'){ next_step_weight = 1.10; positive_signals.push('Meeting scheduling phase'); }
-
-  // Clamp weights to [0.3, 1.5]
-  function clamp(v){ return Math.max(0.3, Math.min(1.5, v)); }
-  show_weight = clamp(show_weight);
-  note_weight = clamp(+note_weight.toFixed(4));
-  authority_weight = clamp(authority_weight);
-  urgency_weight = clamp(+urgency_weight.toFixed(4));
-  behavior_weight = clamp(+behavior_weight.toFixed(4));
-  next_step_weight = clamp(next_step_weight);
-  no_show_penalty = Math.min(0.30, Math.max(0, no_show_penalty));
-
-  // --- COMBINED SCORE ---
-  var qualitative_weight = +(show_weight * note_weight * authority_weight * urgency_weight * behavior_weight * next_step_weight).toFixed(4);
-  qualitative_weight = Math.max(0.10, Math.min(2.50, qualitative_weight));
-
-  // V7: Framework qualitative_score from deal_framework_runtime (SPICED + MEDDIC)
-  var framework_qs = 1.0; // default neutral if no extraction yet
+function calcForecastV6(deal){
+  var qb = _calcQuantitativeBaseline(deal);
+  var qw = _calcQualitativeWeights(deal, qb);
   var framework_data = deal._frameworkRuntime || null;
+  var framework_qs = 1.0;
   if(framework_data && typeof framework_data.qualitative_score === 'number'){
     framework_qs = Math.max(0.20, Math.min(1.30, framework_data.qualitative_score));
   }
 
-  var forecast_score_raw = +quantitative_score.toFixed(4);
-  var forecast_score_adjusted = +((forecast_score_raw * qualitative_weight * framework_qs) - no_show_penalty).toFixed(4);
+  var forecast_score_raw = +qb.score.toFixed(4);
+  var forecast_score_adjusted = +((forecast_score_raw * qw.combined * framework_qs) - qw.no_show_penalty).toFixed(4);
   forecast_score_adjusted = Math.max(0, Math.min(1.0, forecast_score_adjusted));
 
-  // --- CONFIDENCE (V10 — 7-component weighted formula) ---
-  // 1) Framework Evidence Score (0.28)
-  var fc_spiced_cov = (framework_data && framework_data.spiced_coverage) || 0;
-  var fc_meddic_cov = (framework_data && framework_data.meddic_coverage) || 0;
-  var fc_overall_cov = (framework_data && framework_data.overall_coverage) || 0;
-  var fc_next_step = (framework_data && framework_data.next_step_clarity) || 0;
-  var fc_authority = (framework_data && framework_data.authority_score) || 0;
-  var fc_note_q = (framework_data && framework_data.note_quality_score) || 0;
-  var framework_evidence_score =
-    (fc_spiced_cov * 0.25) + (fc_meddic_cov * 0.20) + (fc_overall_cov * 0.20) +
-    (fc_next_step * 0.15) + (fc_authority * 0.10) + (fc_note_q * 0.10);
+  var conf = _calcConfidenceV10(deal, qw, framework_data);
 
-  // 2) Source Density Score (0.18)
-  var na = deal._noteAnalysis;
-  var conf_notes_count = na ? (na.notes_count || na.count || 1) : 0;
-  var conf_notes_density = conf_notes_count >= 3 ? 1.00 : conf_notes_count === 2 ? 0.75 : conf_notes_count === 1 ? 0.50 : 0.10;
-  var conf_meet_count = deal._meetingCount || 0;
-  var conf_meet_density = conf_meet_count >= 2 ? 1.00 : conf_meet_count === 1 ? 0.70 : 0.20;
-  var source_density_score = (conf_notes_density * 0.55) + (conf_meet_density * 0.45);
-
-  // 3) Recency Reliability Score (0.16)
-  var conf_last_touch = deal._lastTouch ? new Date(deal._lastTouch) : null;
-  var conf_days_since = conf_last_touch ? Math.max(0, (Date.now() - conf_last_touch.getTime()) / 86400000) : 30;
-  var recency_reliability_score;
-  if(conf_days_since <= 1) recency_reliability_score = 1.00;
-  else if(conf_days_since <= 3) recency_reliability_score = 0.85;
-  else if(conf_days_since <= 7) recency_reliability_score = 0.65;
-  else if(conf_days_since <= 14) recency_reliability_score = 0.40;
-  else recency_reliability_score = 0.20;
-
-  // 4) Meeting Reliability Score (0.14)
-  var conf_shows = (showState === 'show') ? 1 : 0;
-  var conf_meet_q = (framework_data && framework_data.meeting_quality_score) || 0;
-  var meeting_reliability_score = (Math.min(conf_shows, 1) * 0.60) + (conf_meet_q * 0.40);
-
-  // 5) Signal Stability Score (0.10)
-  var sig = deal._signalRuntime || {};
-  var sig_pos = sig.positive_score || 0;
-  var sig_neg = sig.negative_score || 0;
-  var sig_total = sig.signal_total || 0;
-  var signal_balance = 1 - Math.min(Math.abs(sig_pos - sig_neg), 1);
-  var signal_stability_score =
-    (signal_balance * 0.40) +
-    ((1 - Math.min(sig_neg, 1)) * 0.30) +
-    ((1 - Math.min(Math.abs(sig_total), 1)) * 0.30);
-
-  // 6) Data Trust Contribution (0.10) — from L19 if available
-  var conf_data_trust = (deal._dataQuality && deal._dataQuality.data_trust_score) || 0.50;
-
-  // 7) Framework confidence_score (0.04) — from extractor
-  var conf_fw_confidence = (framework_data && framework_data.confidence_score) || 0;
-
-  // Final weighted formula
-  var forecast_confidence = +(
-    (framework_evidence_score * 0.28) +
-    (source_density_score * 0.18) +
-    (recency_reliability_score * 0.16) +
-    (meeting_reliability_score * 0.14) +
-    (signal_stability_score * 0.10) +
-    (conf_data_trust * 0.10) +
-    (conf_fw_confidence * 0.04)
-  ).toFixed(4);
-  forecast_confidence = Math.min(1, Math.max(0, forecast_confidence));
-  var confidence_level = forecast_confidence >= 0.7 ? 'high' : forecast_confidence >= 0.4 ? 'medium' : 'low';
-
-  // --- FORECAST VALUE ---
   var tier = (deal.tier || deal._tier || '').toLowerCase();
   var ticket = TIER_BASE[tier] || 6000;
   var forecast_value = Math.round(ticket * forecast_score_adjusted);
 
-  // --- REASON ---
+  var positive_signals = qw.positive_signals;
+  var risk_signals = qw.risk_signals;
   var reason_main = '';
   var reason_secondary = '';
   if(forecast_score_adjusted >= 0.60) reason_main = 'Deal com alta probabilidade — sinais qualitativos fortes';
@@ -3719,7 +4552,6 @@ function calcForecastV6(deal){
   if(risk_signals.length) reason_secondary = 'Riscos: ' + risk_signals.slice(0,3).join(', ');
   else if(positive_signals.length) reason_secondary = 'Destaques: ' + positive_signals.slice(0,3).join(', ');
 
-  // V7: Framework-based signals
   if(framework_data){
     if(framework_data.spiced_avg >= 0.70) positive_signals.push('SPICED strong ('+framework_data.spiced_avg.toFixed(2)+')');
     else if(framework_data.spiced_avg > 0 && framework_data.spiced_avg < 0.35) risk_signals.push('SPICED weak ('+framework_data.spiced_avg.toFixed(2)+')');
@@ -3729,13 +4561,12 @@ function calcForecastV6(deal){
     if(framework_data.main_gap_1) risk_signals.push('Gap: '+framework_data.main_gap_1);
   }
 
-  // --- NEXT ACTION DERIVED ---
+  var nba = qw.nba;
   var next_action = nba.type || 'follow_up';
   var next_action_reason = nba.label || '';
-  if(forecast_score_adjusted < 0.10 && confidence_level !== 'low'){
-    next_action = 'forecast_repair'; next_action_reason = 'Forecast muito baixo com confianca '+confidence_level+' — revisar deal';
+  if(forecast_score_adjusted < 0.10 && conf.confidence_level !== 'low'){
+    next_action = 'forecast_repair'; next_action_reason = 'Forecast muito baixo com confianca '+conf.confidence_level+' — revisar deal';
   }
-  // V7: framework gap fills
   if(framework_data && framework_data.overall_coverage < 0.45 && framework_data.extraction_count > 0 && next_action !== 'forecast_repair'){
     if(!framework_data.authority_score || framework_data.authority_score < 0.30){
       next_action = 'authority_confirmation'; next_action_reason = 'Economic buyer nao confirmado — perguntar quem decide';
@@ -3747,20 +4578,20 @@ function calcForecastV6(deal){
   }
 
   return {
-    stage_probability_v6: stage_prob,
-    quantitative_score: quantitative_score,
-    qualitative_weight: qualitative_weight,
-    show_weight: show_weight,
-    note_weight: note_weight,
-    authority_weight: authority_weight,
-    urgency_weight: urgency_weight,
-    no_show_penalty: no_show_penalty,
-    behavior_weight: behavior_weight,
-    next_step_weight: next_step_weight,
+    stage_probability_v6: qb.stage_prob,
+    quantitative_score: qb.score,
+    qualitative_weight: qw.combined,
+    show_weight: qw.show_weight,
+    note_weight: qw.note_weight,
+    authority_weight: qw.authority_weight,
+    urgency_weight: qw.urgency_weight,
+    no_show_penalty: qw.no_show_penalty,
+    behavior_weight: qw.behavior_weight,
+    next_step_weight: qw.next_step_weight,
     forecast_score_raw: forecast_score_raw,
     forecast_score_adjusted: forecast_score_adjusted,
-    forecast_confidence: forecast_confidence,
-    confidence_level: confidence_level,
+    forecast_confidence: conf.forecast_confidence,
+    confidence_level: conf.confidence_level,
     forecast_value: forecast_value,
     reason_main: reason_main,
     reason_secondary: reason_secondary,
@@ -3768,18 +4599,17 @@ function calcForecastV6(deal){
     risk_signals: risk_signals,
     next_action: next_action,
     next_action_reason: next_action_reason,
-    // V7 framework data
     framework_qualitative_score: framework_qs,
     spiced_avg: framework_data ? framework_data.spiced_avg : null,
     meddic_avg: framework_data ? framework_data.meddic_avg : null,
     framework_coverage: framework_data ? framework_data.overall_coverage : null,
     framework_confidence: framework_data ? framework_data.confidence_score : null,
     explain_json: {
-      quantitative: { stage_prob:stage_prob, aging_factor:aging_factor, velocity_factor:velocity_factor, engagement_factor:engagement_factor },
-      qualitative: { show_weight:show_weight, note_weight:note_weight, authority_weight:authority_weight, urgency_weight:urgency_weight, behavior_weight:behavior_weight, next_step_weight:next_step_weight },
+      quantitative: { stage_prob:qb.stage_prob, aging_factor:qb.aging_factor, velocity_factor:qb.velocity_factor, engagement_factor:qb.engagement_factor },
+      qualitative: { show_weight:qw.show_weight, note_weight:qw.note_weight, authority_weight:qw.authority_weight, urgency_weight:qw.urgency_weight, behavior_weight:qw.behavior_weight, next_step_weight:qw.next_step_weight },
       framework: { qualitative_score:framework_qs, spiced_avg:framework_data?framework_data.spiced_avg:null, meddic_avg:framework_data?framework_data.meddic_avg:null, coverage:framework_data?framework_data.overall_coverage:null },
-      no_show_penalty: no_show_penalty,
-      data_points: data_points,
+      no_show_penalty: qw.no_show_penalty,
+      data_points: (positive_signals.length + risk_signals.length),
       signals: { positive:positive_signals, risk:risk_signals }
     }
   };
@@ -3919,6 +4749,144 @@ window.syncForecastRuntime = syncForecastRuntime;
 function _norm(val, max){ return Math.max(0, Math.min(1, (val||0) / Math.max(max, 1))); }
 function _pct(num, den){ return den > 0 ? num / den : 0; }
 
+// --- PERFORMANCE SUB-FUNCTIONS ---
+function _perfCalcVolume(activities, periodType){
+  var vol = { deals_trabalhados:0, fups:0, dms:0, calls:0, notes:0, analyses:0, copies:0, meetings_booked:0, handoffs:0, meetings_realized:0 };
+  var dealsTrabalhados = {};
+  activities.forEach(function(a){
+    var t = a.activity_type || '';
+    if(a.deal_id) dealsTrabalhados[a.deal_id] = true;
+    if(t === 'fup_sent' || t === 'task_completed') vol.fups++;
+    if(t === 'dm_generated' || t === 'dm_sent') vol.dms++;
+    if(t === 'call_logged') vol.calls++;
+    if(t === 'note_created') vol.notes++;
+    if(t === 'analysis_generated') vol.analyses++;
+    if(t === 'copy_generated') vol.copies++;
+    if(t === 'meeting_booked') vol.meetings_booked++;
+    if(t === 'meeting_realized' || t === 'meeting_completed') vol.meetings_realized++;
+    if(t === 'handoff_done') vol.handoffs++;
+    if(t === 'deal_opened') dealsTrabalhados[a.deal_id] = true;
+  });
+  vol.deals_trabalhados = Object.keys(dealsTrabalhados).length;
+  var metaMensal = _operatorCtx.meta_mensal || { fups:300, qualificacoes:100, handoffs:40 };
+  var daysInPeriod = periodType === 'daily' ? 1 : periodType === 'weekly' ? 5 : 22;
+  var metaFups = Math.ceil(metaMensal.fups / 22 * daysInPeriod);
+  var metaQual = Math.ceil(metaMensal.qualificacoes / 22 * daysInPeriod);
+  var volume_score = +((_norm(vol.deals_trabalhados, metaQual) + _norm(vol.fups, metaFups) + _norm(vol.dms, Math.ceil(metaFups * 0.3)) + _norm(vol.analyses + vol.copies, Math.ceil(metaQual * 0.5)) + _norm(vol.notes, Math.ceil(metaQual * 0.7))) / 5).toFixed(4);
+  return { vol: vol, volume_score: volume_score };
+}
+
+function _perfCalcConversion(allDeals, runtimeDeals){
+  var funnel = { mql:0, sal:0, conectado:0, agendamento:0, show:0, opp:0, won:0, lost:0 };
+  allDeals.forEach(function(d){
+    var fase = _normStr(d.fase_atual_no_processo || d.fase || '');
+    var etapa = _normStr(d.etapa_atual_no_pipeline || d.etapa || '');
+    var status = _normStr(d.status_do_deal || d.statusDeal || '');
+    funnel.mql++;
+    if(fase !== 'mql') funnel.sal++;
+    if(etapa === 'conectados' || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('oportunidade') || etapa.includes('negociacao')) funnel.conectado++;
+    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('oportunidade') || etapa.includes('negociacao')) funnel.agendamento++;
+    if(status === 'ganho' || etapa.includes('oportunidade') || etapa.includes('negociacao') || fase === 'oportunidade' || fase === 'agendado' || fase === 'negociacao') funnel.opp++;
+    if(status === 'ganho') funnel.won++;
+    if(status === 'perdido') funnel.lost++;
+  });
+  var showCount = 0;
+  runtimeDeals.forEach(function(r){ if(r.show_state === 'attended' || r.show_state === 'completed') showCount++; });
+  funnel.show = showCount;
+  var cr = {
+    mql_sal: _pct(funnel.sal, funnel.mql), sal_conectado: _pct(funnel.conectado, funnel.sal),
+    conectado_agendamento: _pct(funnel.agendamento, funnel.conectado), agendamento_show: _pct(funnel.show, funnel.agendamento),
+    show_opp: _pct(funnel.opp, Math.max(funnel.show, 1)), opp_won: _pct(funnel.won, funnel.opp)
+  };
+  var conversion_score = +(Math.min(1, cr.mql_sal) * 0.20 + Math.min(1, cr.conectado_agendamento) * 0.25 + Math.min(1, cr.agendamento_show) * 0.30 + Math.min(1, cr.show_opp) * 0.25).toFixed(4);
+  return { funnel: funnel, cr: cr, conversion_score: conversion_score };
+}
+
+function _perfCalcSpeed(runtimeDeals, allDeals){
+  var dealById = {};
+  allDeals.forEach(function(d){ dealById[d.deal_id] = d; });
+  var allDealsMap = window._COCKPIT_DEAL_MAP || {};
+  var agingSum = 0, agingCount = 0, slaRisk = 0, inactive = 0, touchDelaySum = 0, touchDelayCount = 0;
+  runtimeDeals.forEach(function(r){
+    if(!r.aging_days && r.aging_days !== 0) return;
+    agingSum += r.aging_days; agingCount++;
+    var dealRef = dealById[r.deal_id] || allDealsMap[r.deal_id];
+    var revLine = (dealRef && dealRef._revLine) ? dealRef._revLine : resolveRevenueLine(dealRef || {});
+    var riskAfter = (REVENUE_LINES[revLine] || REVENUE_LINES.nao_definido || {}).risk_after || 3;
+    if(r.aging_days > riskAfter * 2) slaRisk++;
+    if(!r.last_touch_at) inactive++;
+    else {
+      var daysSinceTouch = Math.floor((Date.now() - new Date(r.last_touch_at).getTime()) / 86400000);
+      if(daysSinceTouch > 3) inactive++;
+      touchDelaySum += daysSinceTouch; touchDelayCount++;
+    }
+  });
+  var activeDeals = Math.max(runtimeDeals.length, 1);
+  var aging_avg = agingCount > 0 ? +(agingSum / agingCount).toFixed(1) : 0;
+  var touch_delay_avg = touchDelayCount > 0 ? +(touchDelaySum / touchDelayCount).toFixed(1) : 0;
+  var sla_risk_rate = +(slaRisk / activeDeals).toFixed(4);
+  var inactive_rate = +(inactive / activeDeals).toFixed(4);
+  var speed_score = +(1 - _norm(aging_avg, 30)).toFixed(4);
+  var discipline_score = +(1 - Math.min(1, (sla_risk_rate * 0.5 + inactive_rate * 0.3 + _norm(aging_avg, 20) * 0.2))).toFixed(4);
+  return { aging_avg:aging_avg, touch_delay_avg:touch_delay_avg, sla_risk_rate:sla_risk_rate, inactive_rate:inactive_rate, speed_score:speed_score, discipline_score:discipline_score, activeDeals:activeDeals, slaRisk:slaRisk };
+}
+
+function _perfCalcDQI(runtimeDeals, noteByDeal, vol, funnel){
+  var totalActive = Math.max(runtimeDeals.length, 1);
+  var qm = { good_notes:0, next_step:0, authority:0, pain:0, meeting_logged:0, no_show_treated:0 };
+  runtimeDeals.forEach(function(r){
+    var na = noteByDeal[r.deal_id];
+    if(na){
+      if(na.quality_score >= 60) qm.good_notes++;
+      if(na.next_step_clear) qm.next_step++;
+      if(na.authority_identified) qm.authority++;
+      if(na.pain_detected) qm.pain++;
+    }
+    if(r.next_best_action && r.next_best_action !== 'follow_up') qm.next_step++;
+    if(r.show_state === 'attended' || r.show_state === 'completed') qm.meeting_logged++;
+    if(r.show_state === 'no_show' && r.next_best_action) qm.no_show_treated++;
+  });
+  var notes_quality_pct = +(_pct(qm.good_notes, totalActive) * 100).toFixed(1);
+  var next_step_pct = +(_pct(qm.next_step, totalActive) * 100).toFixed(1);
+  var authority_pct = +(_pct(qm.authority, totalActive) * 100).toFixed(1);
+  var pain_pct = +(_pct(qm.pain, totalActive) * 100).toFixed(1);
+  var meeting_pct = +(_pct(qm.meeting_logged, totalActive) * 100).toFixed(1);
+  var noshow_pct = +(_pct(qm.no_show_treated, Math.max(1, runtimeDeals.filter(function(r){ return r.show_state === 'no_show'; }).length)) * 100).toFixed(1);
+  var handoff_pct = +(_pct(vol.handoffs, Math.max(1, funnel.agendamento)) * 100).toFixed(1);
+  var dqi = +(_pct(notes_quality_pct, 100) * 0.20 + _pct(next_step_pct, 100) * 0.20 + _pct(authority_pct, 100) * 0.15 + _pct(pain_pct, 100) * 0.15 + _pct(meeting_pct, 100) * 0.10 + _pct(noshow_pct, 100) * 0.10 + _pct(handoff_pct, 100) * 0.10).toFixed(4);
+  return { dqi:dqi, notes_quality_pct:notes_quality_pct, next_step_pct:next_step_pct, authority_pct:authority_pct, pain_pct:pain_pct, meeting_pct:meeting_pct, noshow_pct:noshow_pct, handoff_pct:handoff_pct };
+}
+
+function _perfCalcForecastQuality(forecasts){
+  var fcConfSum = 0, fcCount = 0, inflated = 0, noContext = 0;
+  forecasts.forEach(function(f){
+    fcConfSum += (f.forecast_confidence || 0); fcCount++;
+    if(f.forecast_score_adjusted > 0.60 && f.confidence_level === 'low') inflated++;
+    if(f.note_weight === 1.0 && f.next_step_weight === 1.0 && f.show_weight === 1.0) noContext++;
+  });
+  var fcActive = Math.max(fcCount, 1);
+  var forecast_confidence_avg = +(fcConfSum / fcActive).toFixed(4);
+  var inflated_pipeline_rate = +(inflated / fcActive).toFixed(4);
+  var no_context_rate = +(noContext / fcActive).toFixed(4);
+  var forecast_quality_score = +(forecast_confidence_avg * 0.35 + (1 - inflated_pipeline_rate) * 0.25 + (1 - no_context_rate) * 0.20 + 0.20).toFixed(4);
+  return { forecast_quality_score:forecast_quality_score, forecast_confidence_avg:forecast_confidence_avg, inflated_pipeline_rate:inflated_pipeline_rate, no_context_rate:no_context_rate };
+}
+
+function _perfCalcRevenue(allDeals, forecasts, vol){
+  var revenue_influenced = 0, ticket_sum = 0, ticket_count = 0, forecast_value_total = 0;
+  allDeals.forEach(function(d){
+    var status = (d.status_do_deal || '').toLowerCase();
+    var rev = parseFloat(d.revenue || d.valor_da_oportunidade || 0);
+    if(status === 'ganho' && rev > 0){ revenue_influenced += rev; ticket_sum += rev; ticket_count++; }
+  });
+  forecasts.forEach(function(f){ forecast_value_total += (f.forecast_value || 0); });
+  var avg_ticket_val = ticket_count > 0 ? +(ticket_sum / ticket_count).toFixed(2) : 0;
+  var revenue_per_deal = vol.deals_trabalhados > 0 ? +(revenue_influenced / vol.deals_trabalhados).toFixed(2) : 0;
+  var revenue_per_handoff = vol.handoffs > 0 ? +(revenue_influenced / vol.handoffs).toFixed(2) : 0;
+  var revenue_score = +(_norm(revenue_influenced, 100000) * 0.40 + _norm(revenue_per_handoff, 20000) * 0.30 + _norm(avg_ticket_val, 15000) * 0.15 + _norm(revenue_per_deal, 5000) * 0.15).toFixed(4);
+  return { revenue_score:revenue_score, revenue_influenced:revenue_influenced, revenue_per_deal:revenue_per_deal, revenue_per_handoff:revenue_per_handoff, avg_ticket_val:avg_ticket_val, forecast_value_total:forecast_value_total };
+}
+
 async function calcOperatorPerformance(periodType, periodKey){
   var sb = _sb(); if(!sb) return null;
   var email = getOperatorId(); if(!email) return null;
@@ -3979,197 +4947,36 @@ async function calcOperatorPerformance(periodType, periodKey){
     .eq('operator_email', email);
   var allDeals = (dealsRes.data || []);
 
-  // ==================================================
-  // BLOCO 1: VOLUME OPERACIONAL
-  // ==================================================
-  var vol = { deals_trabalhados:0, fups:0, dms:0, calls:0, notes:0, analyses:0, copies:0, meetings_booked:0, handoffs:0, meetings_realized:0 };
-  var dealsTrabalhados = {};
-  activities.forEach(function(a){
-    var t = a.activity_type || '';
-    if(a.deal_id) dealsTrabalhados[a.deal_id] = true;
-    if(t === 'fup_sent' || t === 'task_completed') vol.fups++;
-    if(t === 'dm_generated' || t === 'dm_sent') vol.dms++;
-    if(t === 'call_logged') vol.calls++;
-    if(t === 'note_created') vol.notes++;
-    if(t === 'analysis_generated') vol.analyses++;
-    if(t === 'copy_generated') vol.copies++;
-    if(t === 'meeting_booked') vol.meetings_booked++;
-    if(t === 'meeting_realized' || t === 'meeting_completed') vol.meetings_realized++;
-    if(t === 'handoff_done') vol.handoffs++;
-    if(t === 'deal_opened') dealsTrabalhados[a.deal_id] = true;
-  });
-  vol.deals_trabalhados = Object.keys(dealsTrabalhados).length;
+  // --- BLOCO 1: VOLUME OPERACIONAL ---
+  var b1 = _perfCalcVolume(activities, periodType);
+  var vol = b1.vol, volume_score = b1.volume_score;
 
-  // Metas por periodo
-  var metaMensal = _operatorCtx.meta_mensal || { fups:300, qualificacoes:100, handoffs:40 };
-  var daysInPeriod = periodType === 'daily' ? 1 : periodType === 'weekly' ? 5 : 22;
-  var metaFups = Math.ceil(metaMensal.fups / 22 * daysInPeriod);
-  var metaQual = Math.ceil(metaMensal.qualificacoes / 22 * daysInPeriod);
-  var metaHandoffs = Math.ceil(metaMensal.handoffs / 22 * daysInPeriod);
+  // --- BLOCO 2: CONVERSAO ---
+  var b2 = _perfCalcConversion(allDeals, runtimeDeals);
+  var funnel = b2.funnel, cr = b2.cr, conversion_score = b2.conversion_score;
 
-  var volume_score = +(
-    ( _norm(vol.deals_trabalhados, metaQual)
-    + _norm(vol.fups, metaFups)
-    + _norm(vol.dms, Math.ceil(metaFups * 0.3))
-    + _norm(vol.analyses + vol.copies, Math.ceil(metaQual * 0.5))
-    + _norm(vol.notes, Math.ceil(metaQual * 0.7))
-    ) / 5
-  ).toFixed(4);
+  // --- BLOCO 3: VELOCIDADE / DISCIPLINA ---
+  var b3 = _perfCalcSpeed(runtimeDeals, allDeals);
+  var aging_avg = b3.aging_avg, touch_delay_avg = b3.touch_delay_avg, sla_risk_rate = b3.sla_risk_rate;
+  var inactive_rate = b3.inactive_rate, speed_score = b3.speed_score, discipline_score = b3.discipline_score;
+  var activeDeals = b3.activeDeals, slaRisk = b3.slaRisk;
 
-  // ==================================================
-  // BLOCO 2: CONVERSAO
-  // ==================================================
-  var funnel = { mql:0, sal:0, conectado:0, agendamento:0, show:0, opp:0, won:0, lost:0 };
-  allDeals.forEach(function(d){
-    var fase = (d.fase_atual_no_processo || '').toLowerCase();
-    var etapa = (d.etapa_atual_no_pipeline || '').toLowerCase();
-    var status = (d.status_do_deal || '').toLowerCase();
-    funnel.mql++;
-    if(fase !== 'mql') funnel.sal++;
-    if(etapa === 'conectados' || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('oportunidade') || etapa.includes('negociacao')) funnel.conectado++;
-    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('oportunidade') || etapa.includes('negociacao')) funnel.agendamento++;
-    if(status === 'ganho' || etapa.includes('oportunidade') || etapa.includes('negociacao')) funnel.opp++;
-    if(status === 'ganho') funnel.won++;
-    if(status === 'perdido') funnel.lost++;
-  });
-  // Show rate from deal_runtime
-  var showCount = 0;
-  runtimeDeals.forEach(function(r){
-    if(r.show_state === 'attended' || r.show_state === 'completed') showCount++;
-  });
-  funnel.show = showCount;
+  // --- BLOCO 4: QUALIDADE OPERACIONAL (DQI) ---
+  var b4 = _perfCalcDQI(runtimeDeals, noteByDeal, vol, funnel);
+  var dqi = b4.dqi;
 
-  var cr = {
-    mql_sal: _pct(funnel.sal, funnel.mql),
-    sal_conectado: _pct(funnel.conectado, funnel.sal),
-    conectado_agendamento: _pct(funnel.agendamento, funnel.conectado),
-    agendamento_show: _pct(funnel.show, funnel.agendamento),
-    show_opp: _pct(funnel.opp, Math.max(funnel.show, 1)),
-    opp_won: _pct(funnel.won, funnel.opp)
-  };
+  // --- BLOCO 5: FORECAST QUALITY ---
+  var b5 = _perfCalcForecastQuality(forecasts);
+  var forecast_quality_score = b5.forecast_quality_score;
+  var forecast_confidence_avg = b5.forecast_confidence_avg;
+  var inflated_pipeline_rate = b5.inflated_pipeline_rate;
+  var no_context_rate = b5.no_context_rate;
 
-  var conversion_score = +(
-    ( Math.min(1, cr.mql_sal) * 0.20
-    + Math.min(1, cr.conectado_agendamento) * 0.25
-    + Math.min(1, cr.agendamento_show) * 0.30
-    + Math.min(1, cr.show_opp) * 0.25
-    )
-  ).toFixed(4);
+  // --- BLOCO 6: IMPACTO EM RECEITA ---
+  var b6 = _perfCalcRevenue(allDeals, forecasts, vol);
+  var revenue_score = b6.revenue_score;
 
-  // ==================================================
-  // BLOCO 3: VELOCIDADE / DISCIPLINA
-  // ==================================================
-  var agingSum = 0, agingCount = 0, slaRisk = 0, inactive = 0;
-  var touchDelaySum = 0, touchDelayCount = 0;
-  runtimeDeals.forEach(function(r){
-    if(!r.aging_days && r.aging_days !== 0) return;
-    agingSum += r.aging_days; agingCount++;
-    var revLine = 'nao_definido'; // default
-    var riskAfter = (REVENUE_LINES[revLine] || {}).risk_after || 3;
-    if(r.aging_days > riskAfter * 2) slaRisk++;
-    if(!r.last_touch_at) inactive++;
-    else {
-      var daysSinceTouch = Math.floor((Date.now() - new Date(r.last_touch_at).getTime()) / 86400000);
-      if(daysSinceTouch > 3) inactive++;
-      touchDelaySum += daysSinceTouch; touchDelayCount++;
-    }
-  });
-  var activeDeals = Math.max(runtimeDeals.length, 1);
-  var aging_avg = agingCount > 0 ? +(agingSum / agingCount).toFixed(1) : 0;
-  var touch_delay_avg = touchDelayCount > 0 ? +(touchDelaySum / touchDelayCount).toFixed(1) : 0;
-  var sla_risk_rate = +(slaRisk / activeDeals).toFixed(4);
-  var inactive_rate = +(inactive / activeDeals).toFixed(4);
-
-  // Speed: lower aging = better (normalize inversely, max 30 days = score 0)
-  var speed_score = +(1 - _norm(aging_avg, 30)).toFixed(4);
-  // Discipline: lower risk/inactive = better
-  var discipline_score = +(1 - Math.min(1, (sla_risk_rate * 0.5 + inactive_rate * 0.3 + _norm(aging_avg, 20) * 0.2))).toFixed(4);
-
-  // ==================================================
-  // BLOCO 4: QUALIDADE OPERACIONAL (DQI)
-  // ==================================================
-  var totalActive = Math.max(runtimeDeals.length, 1);
-  var qm = { good_notes:0, next_step:0, authority:0, pain:0, meeting_logged:0, no_show_treated:0, handoff_good:0 };
-
-  runtimeDeals.forEach(function(r){
-    var na = noteByDeal[r.deal_id];
-    if(na){
-      if(na.quality_score >= 60) qm.good_notes++;
-      if(na.next_step_clear) qm.next_step++;
-      if(na.authority_identified) qm.authority++;
-      if(na.pain_detected) qm.pain++;
-    }
-    if(r.next_best_action && r.next_best_action !== 'follow_up') qm.next_step++;
-    if(r.show_state === 'attended' || r.show_state === 'completed') qm.meeting_logged++;
-    if(r.show_state === 'no_show' && r.next_best_action) qm.no_show_treated++;
-  });
-
-  var notes_quality_pct = +(_pct(qm.good_notes, totalActive) * 100).toFixed(1);
-  var next_step_pct = +(_pct(qm.next_step, totalActive) * 100).toFixed(1);
-  var authority_pct = +(_pct(qm.authority, totalActive) * 100).toFixed(1);
-  var pain_pct = +(_pct(qm.pain, totalActive) * 100).toFixed(1);
-  var meeting_pct = +(_pct(qm.meeting_logged, totalActive) * 100).toFixed(1);
-  var noshow_pct = +(_pct(qm.no_show_treated, Math.max(1, runtimeDeals.filter(function(r){ return r.show_state === 'no_show'; }).length)) * 100).toFixed(1);
-  var handoff_pct = +(_pct(vol.handoffs, Math.max(1, funnel.agendamento)) * 100).toFixed(1);
-
-  var dqi = +(
-    _pct(notes_quality_pct, 100) * 0.20
-    + _pct(next_step_pct, 100) * 0.20
-    + _pct(authority_pct, 100) * 0.15
-    + _pct(pain_pct, 100) * 0.15
-    + _pct(meeting_pct, 100) * 0.10
-    + _pct(noshow_pct, 100) * 0.10
-    + _pct(handoff_pct, 100) * 0.10
-  ).toFixed(4);
-
-  // ==================================================
-  // BLOCO 5: FORECAST QUALITY
-  // ==================================================
-  var fcConfSum = 0, fcCount = 0, inflated = 0, noContext = 0;
-  forecasts.forEach(function(f){
-    fcConfSum += (f.forecast_confidence || 0); fcCount++;
-    if(f.forecast_score_adjusted > 0.60 && f.confidence_level === 'low') inflated++;
-    if(f.note_weight === 1.0 && f.next_step_weight === 1.0 && f.show_weight === 1.0) noContext++;
-  });
-  var fcActive = Math.max(fcCount, 1);
-  var forecast_confidence_avg = +(fcConfSum / fcActive).toFixed(4);
-  var inflated_pipeline_rate = +(inflated / fcActive).toFixed(4);
-  var no_context_rate = +(noContext / fcActive).toFixed(4);
-
-  var forecast_quality_score = +(
-    forecast_confidence_avg * 0.35
-    + (1 - inflated_pipeline_rate) * 0.25
-    + (1 - no_context_rate) * 0.20
-    + 0.20 // forecast_error_rate placeholder (requires historical comparison)
-  ).toFixed(4);
-
-  // ==================================================
-  // BLOCO 6: IMPACTO EM RECEITA
-  // ==================================================
-  var revenue_influenced = 0, ticket_sum = 0, ticket_count = 0;
-  var forecast_value_total = 0;
-  allDeals.forEach(function(d){
-    var status = (d.status_do_deal || '').toLowerCase();
-    var rev = parseFloat(d.revenue || d.valor_da_oportunidade || 0);
-    if(status === 'ganho' && rev > 0){ revenue_influenced += rev; ticket_sum += rev; ticket_count++; }
-  });
-  forecasts.forEach(function(f){ forecast_value_total += (f.forecast_value || 0); });
-
-  var avg_ticket_val = ticket_count > 0 ? +(ticket_sum / ticket_count).toFixed(2) : 0;
-  var revenue_per_deal = vol.deals_trabalhados > 0 ? +(revenue_influenced / vol.deals_trabalhados).toFixed(2) : 0;
-  var revenue_per_handoff = vol.handoffs > 0 ? +(revenue_influenced / vol.handoffs).toFixed(2) : 0;
-
-  // Normalize revenue metrics (benchmarks: 100k influenced, 5k/deal, 20k/handoff, 15k ticket)
-  var revenue_score = +(
-    _norm(revenue_influenced, 100000) * 0.40
-    + _norm(revenue_per_handoff, 20000) * 0.30
-    + _norm(avg_ticket_val, 15000) * 0.15
-    + _norm(revenue_per_deal, 5000) * 0.15
-  ).toFixed(4);
-
-  // ==================================================
-  // BLOCO 7: PIPELINE HYGIENE (V10)
-  // ==================================================
+  // --- BLOCO 7: PIPELINE HYGIENE (V10) ---
   var pipeline_hygiene_score = +(
     (1 - inflated_pipeline_rate) * 0.30
     + (1 - no_context_rate) * 0.25
@@ -4178,27 +4985,15 @@ async function calcOperatorPerformance(periodType, periodKey){
     + (_pct(runtimeDeals.filter(function(r){ return r.next_best_action; }).length, activeDeals)) * 0.10
   ).toFixed(4);
 
-  // ==================================================
-  // SCORE FINAL (7 componentes ponderados)
-  // ==================================================
+  // --- SCORE FINAL (7 componentes ponderados) ---
   var final_score = +(
-    (volume_score * 0.15)
-    + (conversion_score * 0.25)
-    + (speed_score * 0.10)
-    + (discipline_score * 0.10)
-    + (dqi * 0.15)
-    + (forecast_quality_score * 0.15)
-    + (revenue_score * 0.10)
+    (volume_score * 0.15) + (conversion_score * 0.25) + (speed_score * 0.10)
+    + (discipline_score * 0.10) + (dqi * 0.15) + (forecast_quality_score * 0.15) + (revenue_score * 0.10)
   ).toFixed(4);
-
-  // Scale to 0-100
   var final_100 = +(final_score * 100).toFixed(1);
-
   var performance_band = final_100 >= 90 ? 'elite' : final_100 >= 75 ? 'forte' : final_100 >= 60 ? 'estavel' : final_100 >= 45 ? 'atencao' : 'critico';
 
-  // ==================================================
-  // ALERTAS AUTOMATICOS
-  // ==================================================
+  // --- ALERTAS AUTOMATICOS ---
   var alerts = [];
   if(dqi < 0.60) alerts.push({ type:'warning', msg:'DQI abaixo de 60 — melhorar contexto qualitativo dos deals' });
   if(aging_avg > 10) alerts.push({ type:'warning', msg:'Aging medio alto ('+aging_avg+' dias) — acelerar pipeline' });
@@ -4210,78 +5005,28 @@ async function calcOperatorPerformance(periodType, periodKey){
   if(speed_score < 0.40) alerts.push({ type:'alert', msg:'Velocidade critica — ativar modo velocidade' });
 
   var result = {
-    operator_email: email,
-    period_type: periodType,
-    period_key: periodKey,
-    // Bloco 1
-    volume_score: +volume_score,
-    deals_trabalhados: vol.deals_trabalhados,
-    fups_count: vol.fups,
-    dms_count: vol.dms,
-    calls_count: vol.calls,
-    notes_count: vol.notes,
-    analyses_generated: vol.analyses,
-    copies_generated: vol.copies,
-    meetings_booked: vol.meetings_booked,
-    meetings_realized: vol.meetings_realized,
-    handoffs_count: vol.handoffs,
-    // Bloco 2
-    conversion_score: +conversion_score,
-    mql_count: funnel.mql,
-    sal_count: funnel.sal,
-    opp_count: funnel.opp,
-    ganho_count: funnel.won,
-    perdido_count: funnel.lost,
-    cr_mql_sal: +(cr.mql_sal * 100).toFixed(2),
-    cr_sal_conectado: +(cr.sal_conectado * 100).toFixed(2),
-    cr_conectado_agendamento: +(cr.conectado_agendamento * 100).toFixed(2),
-    cr_agendamento_show: +(cr.agendamento_show * 100).toFixed(2),
-    cr_show_opp: +(cr.show_opp * 100).toFixed(2),
-    cr_sal_opp: +(cr.opp_won * 100).toFixed(2),
-    cr_opp_ganho: +(cr.opp_won * 100).toFixed(2),
-    // Bloco 3
-    speed_score: +speed_score,
-    discipline_score: +discipline_score,
-    time_to_first_contact_avg: 0, // requires first_touch tracking
-    touch_delay_avg: touch_delay_avg,
-    aging_avg: aging_avg,
-    sla_risk_rate: +sla_risk_rate,
-    sla_risk_count: slaRisk,
-    inactive_rate: +inactive_rate,
-    // Bloco 4
-    dqi: +dqi,
-    dqi_score: +(dqi * 100).toFixed(1),
-    notes_quality_pct: notes_quality_pct,
-    next_step_pct: next_step_pct,
-    authority_identified_pct: authority_pct,
-    pain_clarity_pct: pain_pct,
-    meeting_logging_pct: meeting_pct,
-    no_show_treatment_pct: noshow_pct,
-    handoff_quality_pct: handoff_pct,
-    // Bloco 5
-    forecast_quality_score: +forecast_quality_score,
-    forecast_confidence_avg: +forecast_confidence_avg,
-    inflated_pipeline_rate: +inflated_pipeline_rate,
-    no_context_rate: +no_context_rate,
-    forecast_error_rate: 0, // requires historical data
-    // Bloco 6
-    revenue_score: +revenue_score,
-    revenue_influenced: revenue_influenced,
-    revenue_per_deal: revenue_per_deal,
-    revenue_per_handoff: revenue_per_handoff,
-    avg_ticket: avg_ticket_val,
-    forecast_value_total: forecast_value_total,
-    pipeline_value: forecast_value_total,
-    ganho_value: revenue_influenced,
-    // Bloco 7 — Pipeline Hygiene (V10)
+    operator_email: email, period_type: periodType, period_key: periodKey,
+    volume_score: +volume_score, deals_trabalhados: vol.deals_trabalhados, fups_count: vol.fups, dms_count: vol.dms,
+    calls_count: vol.calls, notes_count: vol.notes, analyses_generated: vol.analyses, copies_generated: vol.copies,
+    meetings_booked: vol.meetings_booked, meetings_realized: vol.meetings_realized, handoffs_count: vol.handoffs,
+    conversion_score: +conversion_score, mql_count: funnel.mql, sal_count: funnel.sal, opp_count: funnel.opp,
+    ganho_count: funnel.won, perdido_count: funnel.lost,
+    cr_mql_sal: +(cr.mql_sal * 100).toFixed(2), cr_sal_conectado: +(cr.sal_conectado * 100).toFixed(2),
+    cr_conectado_agendamento: +(cr.conectado_agendamento * 100).toFixed(2), cr_agendamento_show: +(cr.agendamento_show * 100).toFixed(2),
+    cr_show_opp: +(cr.show_opp * 100).toFixed(2), cr_sal_opp: +(cr.opp_won * 100).toFixed(2), cr_opp_ganho: +(cr.opp_won * 100).toFixed(2),
+    speed_score: +speed_score, discipline_score: +discipline_score, time_to_first_contact_avg: 0,
+    touch_delay_avg: touch_delay_avg, aging_avg: aging_avg, sla_risk_rate: +sla_risk_rate, sla_risk_count: slaRisk, inactive_rate: +inactive_rate,
+    dqi: +dqi, dqi_score: +(dqi * 100).toFixed(1),
+    notes_quality_pct: b4.notes_quality_pct, next_step_pct: b4.next_step_pct, authority_identified_pct: b4.authority_pct,
+    pain_clarity_pct: b4.pain_pct, meeting_logging_pct: b4.meeting_pct, no_show_treatment_pct: b4.noshow_pct, handoff_quality_pct: b4.handoff_pct,
+    forecast_quality_score: +forecast_quality_score, forecast_confidence_avg: +forecast_confidence_avg,
+    inflated_pipeline_rate: +inflated_pipeline_rate, no_context_rate: +no_context_rate, forecast_error_rate: 0,
+    revenue_score: +revenue_score, revenue_influenced: b6.revenue_influenced, revenue_per_deal: b6.revenue_per_deal,
+    revenue_per_handoff: b6.revenue_per_handoff, avg_ticket: b6.avg_ticket_val, forecast_value_total: b6.forecast_value_total,
+    pipeline_value: b6.forecast_value_total, ganho_value: b6.revenue_influenced,
     pipeline_hygiene_score: +pipeline_hygiene_score,
-    // Final
-    final_score: +final_score,
-    overall_score: final_100,
-    performance_band: performance_band,
-    alerts: alerts,
-    formula_version: 'v10.0',
-    source: 'cockpit_engine'
+    final_score: +final_score, overall_score: final_100, performance_band: performance_band,
+    alerts: alerts, formula_version: 'v10.0', source: 'cockpit_engine'
   };
 
   console.log('[performance] ' + email + ' | score: ' + final_100 + ' (' + performance_band + ') | vol:' + volume_score + ' conv:' + conversion_score + ' spd:' + speed_score + ' disc:' + discipline_score + ' dqi:' + dqi + ' fc:' + forecast_quality_score + ' rev:' + revenue_score);
@@ -4393,6 +5138,143 @@ window.syncOperatorEfficiency = syncOperatorEfficiency;
 // 8 blocos: Meta, Volume, Conversão, Linha, Velocidade, Qualidade, Forecast, Receita
 // ==================================================================
 
+// --- REPORT V3 SUB-FUNCTIONS ---
+function _rpV3CalcVolume(actData){
+  var volume = { deals_worked:0, fups_sent:0, dms_sent:0, analyses_generated:0, notes_created:0, meetings_booked:0, handoffs:0 };
+  var dealsWorkedSet = {};
+  actData.forEach(function(a){
+    if(a.entity_type === 'deal' && a.entity_id) dealsWorkedSet[a.entity_id] = true;
+    var t = a.activity_type || '';
+    if(t === 'fup_sent' || t === 'copy_generated') volume.fups_sent++;
+    if(t === 'dm_generated' || t === 'dm_sent') volume.dms_sent++;
+    if(t === 'analysis_generated') volume.analyses_generated++;
+    if(t === 'note_created' || t === 'note_crm_generated') volume.notes_created++;
+    if(t === 'meeting_booked') volume.meetings_booked++;
+    if(t === 'handoff_done') volume.handoffs++;
+  });
+  volume.deals_worked = Object.keys(dealsWorkedSet).length;
+  return { volume: volume, dealsWorkedSet: dealsWorkedSet };
+}
+
+function _rpV3CalcConversion(deals){
+  var funnel = { mql:0, sal:0, connected:0, scheduled:0, show:0, opp:0, won:0, lost:0 };
+  deals.forEach(function(d){
+    funnel.mql++;
+    var etapa = (d.etapa || d.fase || d.fase_atual_no_processo || '').toLowerCase();
+    if(etapa.includes('dia ') || etapa.includes('conectad') || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade') || etapa.includes('negoc')) funnel.sal++;
+    if(etapa.includes('conectad')) funnel.connected++;
+    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend')) funnel.scheduled++;
+    if(etapa.includes('entrevista')) funnel.show++;
+    if(etapa.includes('oportunidade') || etapa.includes('negoc')) funnel.opp++;
+    var status = (d.statusDeal || d.status_do_deal || '').toLowerCase();
+    if(status === 'ganho' || status === 'won') funnel.won++;
+    if(status === 'perdido' || status === 'lost') funnel.lost++;
+  });
+  return { funnel: funnel, conversion: {
+    mql_sal: funnel.mql > 0 ? funnel.sal / funnel.mql : 0,
+    sal_connected: funnel.sal > 0 ? funnel.connected / funnel.sal : 0,
+    connected_scheduled: funnel.connected > 0 ? funnel.scheduled / funnel.connected : 0,
+    scheduled_show: funnel.scheduled > 0 ? funnel.show / funnel.scheduled : 0,
+    show_opp: funnel.show > 0 ? funnel.opp / funnel.show : 0,
+    opp_won: funnel.opp > 0 ? funnel.won / funnel.opp : 0
+  }};
+}
+
+function _rpV3CalcLinePerf(deals){
+  var linePerf = {};
+  deals.forEach(function(d){
+    var rl = d._revLine || resolveRevenueLine(d);
+    if(!linePerf[rl]) linePerf[rl] = { leads:0, sal:0, connected:0, scheduled:0, show:0, opp:0, won:0, lost:0, tickets:[], aging:[] };
+    var lp = linePerf[rl]; lp.leads++;
+    var etapa = (d.etapa || d.fase || '').toLowerCase();
+    if(etapa.includes('dia ') || etapa.includes('conectad') || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade')) lp.sal++;
+    if(etapa.includes('conectad')) lp.connected++;
+    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend')) lp.scheduled++;
+    if(etapa.includes('entrevista')) lp.show++;
+    if(etapa.includes('oportunidade')) lp.opp++;
+    var status = (d.statusDeal || d.status_do_deal || '').toLowerCase();
+    if(status === 'ganho') lp.won++; if(status === 'perdido') lp.lost++;
+    if(d.revenueRaw) lp.tickets.push(Number(d.revenueRaw) || 0);
+    lp.aging.push(Number(d.delta || d._delta || 0));
+  });
+  return linePerf;
+}
+
+function _rpV3CalcSpeed(deals, runtimeData){
+  var agingArr = deals.map(function(d){ return Number(d.delta || d._delta || 0); });
+  var avgAging = agingArr.length > 0 ? agingArr.reduce(function(a,b){return a+b;},0) / agingArr.length : 0;
+  var slaRiskCount = deals.filter(function(d){ return (d._urgency || 0) >= 60; }).length;
+  var slaRiskRate = deals.length > 0 ? slaRiskCount / deals.length : 0;
+  var inactiveCount = runtimeData.filter(function(r){
+    if(!r.last_touch_at) return true;
+    return (Date.now() - new Date(r.last_touch_at).getTime()) / (1000*60*60*24) > 5;
+  }).length;
+  var inactiveRate = deals.length > 0 ? Math.min(1, inactiveCount / deals.length) : 0;
+  return { speed: {
+    avg_aging_days: Math.round(avgAging * 10) / 10,
+    sla_risk_rate: Math.min(1, Math.round(slaRiskRate * 1000) / 1000),
+    inactive_rate: Math.round(inactiveRate * 1000) / 1000,
+    deals_sla_risk: slaRiskCount, deals_inactive: inactiveCount
+  }, avgAging: avgAging };
+}
+
+function _rpV3CalcQuality(deals, runtimeData){
+  var totalDeals = deals.length || 1;
+  var dn=0, dns=0, da=0, dp=0, dm=0, dnt=0;
+  runtimeData.forEach(function(r){
+    var payload = r.runtime_payload || {};
+    if(typeof payload === 'string') try { payload = JSON.parse(payload); } catch(e){ payload = {}; }
+    if(payload.note_quality === 'good') dn++;
+    if(r.next_best_action) dns++;
+    if(r.persona) da++;
+    if(payload.pain_detected === 'true' || payload.pain_detected === true) dp++;
+    if(r.show_state && r.show_state !== 'unknown') dm++;
+    if(r.show_state === 'no_show' && payload.no_show_treated) dnt++;
+  });
+  var nqr=Math.min(1,dn/totalDeals), nsr=Math.min(1,dns/totalDeals), ar=Math.min(1,da/totalDeals);
+  var pr=Math.min(1,dp/totalDeals), mr=Math.min(1,dm/totalDeals);
+  var nsCount=runtimeData.filter(function(r){return r.show_state==='no_show';}).length;
+  var nstr=nsCount>0?Math.min(1,dnt/nsCount):1;
+  var dqi=Math.min(1,(nqr*0.20)+(nsr*0.20)+(ar*0.15)+(pr*0.15)+(mr*0.10)+(nstr*0.10)+(0.5*0.10));
+  return { dqi:Math.round(dqi*1000)/1000, notes_quality_rate:Math.round(nqr*1000)/1000, next_step_rate:Math.round(nsr*1000)/1000, authority_rate:Math.round(ar*1000)/1000, pain_rate:Math.round(pr*1000)/1000, meeting_logging_rate:Math.round(mr*1000)/1000, no_show_treatment_rate:Math.round(nstr*1000)/1000 };
+}
+
+function _rpV3CalcForecast(forecastData){
+  var fcAvg=0, fcInflated=0, fcLowCtx=0, fcTotal=0, fcValue=0;
+  forecastData.forEach(function(f){
+    fcTotal++; fcAvg+=(f.forecast_confidence||0); fcValue+=(f.forecast_value||0);
+    if(f.forecast_score_adjusted<f.forecast_score_raw) fcInflated++;
+    if(!f.reason_main||f.reason_main==='') fcLowCtx++;
+  });
+  var cAvg=fcTotal>0?fcAvg/fcTotal:0, iR=fcTotal>0?fcInflated/fcTotal:0, lR=fcTotal>0?fcLowCtx/fcTotal:0;
+  var fqs=(cAvg*0.35)+((1-iR)*0.25)+((1-lR)*0.20)+(0.8*0.20);
+  return { forecast:{ forecast_confidence_avg:Math.round(cAvg*1000)/1000, inflated_pipeline_rate:Math.round(iR*1000)/1000, low_context_rate:Math.round(lR*1000)/1000, forecast_value_total:Math.round(fcValue), deals_with_forecast:fcTotal, forecast_quality_score:Math.round(fqs*1000)/1000 }, forecastQualityScore:fqs, fcValue:fcValue };
+}
+
+function _rpV3CalcRevenue(deals){
+  var rev=0;
+  deals.forEach(function(d){
+    var status=(d.statusDeal||d.status_do_deal||'').toLowerCase();
+    if(status==='ganho'||status==='won') rev+=(Number(d.revenueRaw)||0);
+  });
+  return rev;
+}
+
+async function _rpV3Calc3Es(deals, actData, dealsWorkedSet, volume, email, monthStart, sb){
+  var realAdvances=0, totalTransitions=0;
+  deals.forEach(function(d){ if(d._advanceState){ totalTransitions++; if(d._advanceState.state==='advance') realAdvances++; } });
+  var e1=totalTransitions>0?Math.round((realAdvances/totalTransitions)*1000)/1000:null;
+  var tasksCompleted=actData.filter(function(a){ return a.activity_type==='task_completed'||a.activity_type==='fup_sent'||a.activity_type==='analysis_generated'; }).length;
+  var avgDPD=actData.length>0?(Object.keys(dealsWorkedSet).length/Math.max(1,(new Date()-new Date(monthStart))/(1000*60*60*24))):0;
+  var aiReq=0;
+  try { var sb2=window._supabaseClient||(window.getSB&&window.getSB()); if(sb2){ var cr=await sb2.from('cockpit_requests').select('id',{count:'exact',head:true}).eq('operator_email',email).gte('created_at',monthStart+'T00:00:00'); if(cr.count!=null) aiReq=cr.count; } } catch(e){}
+  return {
+    e1_effectiveness:e1, e1_label:e1!=null?(e1>=0.6?'Saudável':e1>=0.35?'Atenção':'Crítico'):'—',
+    e2_efficiency:{ tasks_completed:tasksCompleted, avg_deals_per_day:Math.round(avgDPD*10)/10, tasks_per_deal:volume.deals_worked>0?Math.round((tasksCompleted/volume.deals_worked)*10)/10:0 },
+    e3_economy:{ ai_requests:aiReq, estimated_cost_usd:Math.round(aiReq*0.01*100)/100, cost_per_deal:volume.deals_worked>0?Math.round((aiReq*0.01/volume.deals_worked)*1000)/1000:0 }
+  };
+}
+
 async function calcPerformanceReportV3(periodType, periodKey){
   var sb = window._supabaseClient || (window.supabase && window.supabase.createClient ? null : null);
   if(!sb && window.getSB) sb = window.getSB();
@@ -4455,212 +5337,29 @@ async function calcPerformanceReportV3(periodType, periodKey){
     if(nRes.data) noteData = nRes.data;
   } catch(e){}
 
-  // ── BLOCK 2: VOLUME ──
-  var volume = {
-    deals_worked: 0, fups_sent: 0, dms_sent: 0,
-    analyses_generated: 0, notes_created: 0,
-    meetings_booked: 0, handoffs: 0
-  };
-  var dealsWorkedSet = {};
-  actData.forEach(function(a){
-    if(a.entity_type === 'deal' && a.entity_id) dealsWorkedSet[a.entity_id] = true;
-    var t = a.activity_type || '';
-    if(t === 'fup_sent' || t === 'copy_generated') volume.fups_sent++;
-    if(t === 'dm_generated' || t === 'dm_sent') volume.dms_sent++;
-    if(t === 'analysis_generated') volume.analyses_generated++;
-    if(t === 'note_created' || t === 'note_crm_generated') volume.notes_created++;
-    if(t === 'meeting_booked') volume.meetings_booked++;
-    if(t === 'handoff_done') volume.handoffs++;
-  });
-  volume.deals_worked = Object.keys(dealsWorkedSet).length;
-
-  // ── BLOCK 3: CONVERSÃO ──
-  var funnel = { mql:0, sal:0, connected:0, scheduled:0, show:0, opp:0, won:0, lost:0 };
-  deals.forEach(function(d){
-    funnel.mql++;
-    var etapa = (d.etapa || d.fase || d.fase_atual_no_processo || '').toLowerCase();
-    if(etapa.includes('dia ') || etapa.includes('conectad') || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade') || etapa.includes('negoc')) funnel.sal++;
-    if(etapa.includes('conectad')) funnel.connected++;
-    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend')) funnel.scheduled++;
-    if(etapa.includes('entrevista')) funnel.show++;
-    if(etapa.includes('oportunidade') || etapa.includes('negoc')) funnel.opp++;
-    var status = (d.statusDeal || d.status_do_deal || '').toLowerCase();
-    if(status === 'ganho' || status === 'won') funnel.won++;
-    if(status === 'perdido' || status === 'lost') funnel.lost++;
-  });
-  var conversion = {
-    mql_sal: funnel.mql > 0 ? funnel.sal / funnel.mql : 0,
-    sal_connected: funnel.sal > 0 ? funnel.connected / funnel.sal : 0,
-    connected_scheduled: funnel.connected > 0 ? funnel.scheduled / funnel.connected : 0,
-    scheduled_show: funnel.scheduled > 0 ? funnel.show / funnel.scheduled : 0,
-    show_opp: funnel.show > 0 ? funnel.opp / funnel.show : 0,
-    opp_won: funnel.opp > 0 ? funnel.won / funnel.opp : 0
-  };
-
-  // ── BLOCK 4: EFICIÊNCIA POR LINHA ──
-  var linePerf = {};
-  deals.forEach(function(d){
-    var rl = d._revLine || resolveRevenueLine(d);
-    if(!linePerf[rl]) linePerf[rl] = { leads:0, sal:0, connected:0, scheduled:0, show:0, opp:0, won:0, lost:0, tickets:[], aging:[] };
-    var lp = linePerf[rl];
-    lp.leads++;
-    var etapa = (d.etapa || d.fase || '').toLowerCase();
-    if(etapa.includes('dia ') || etapa.includes('conectad') || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade')) lp.sal++;
-    if(etapa.includes('conectad')) lp.connected++;
-    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend')) lp.scheduled++;
-    if(etapa.includes('entrevista')) lp.show++;
-    if(etapa.includes('oportunidade')) lp.opp++;
-    var status = (d.statusDeal || d.status_do_deal || '').toLowerCase();
-    if(status === 'ganho') lp.won++;
-    if(status === 'perdido') lp.lost++;
-    if(d.revenueRaw) lp.tickets.push(Number(d.revenueRaw) || 0);
-    lp.aging.push(Number(d.delta || d._delta || 0));
-  });
-
-  // ── BLOCK 5: VELOCIDADE / DISCIPLINA ──
-  var agingArr = deals.map(function(d){ return Number(d.delta || d._delta || 0); });
-  var avgAging = agingArr.length > 0 ? agingArr.reduce(function(a,b){return a+b;},0) / agingArr.length : 0;
-  var slaRiskCount = deals.filter(function(d){ return (d._urgency || 0) >= 60; }).length;
-  var slaRiskRate = deals.length > 0 ? slaRiskCount / deals.length : 0;
-  var inactiveCount = runtimeData.filter(function(r){
-    if(!r.last_touch_at) return true;
-    var diff = (Date.now() - new Date(r.last_touch_at).getTime()) / (1000*60*60*24);
-    return diff > 5;
-  }).length;
-  var inactiveRate = deals.length > 0 ? Math.min(1, inactiveCount / deals.length) : 0;
-
-  var speed = {
-    avg_aging_days: Math.round(avgAging * 10) / 10,
-    sla_risk_rate: Math.min(1, Math.round(slaRiskRate * 1000) / 1000),
-    inactive_rate: Math.round(inactiveRate * 1000) / 1000,
-    deals_sla_risk: slaRiskCount,
-    deals_inactive: inactiveCount
-  };
-
-  // ── BLOCK 6: QUALIDADE OPERACIONAL ──
-  var totalDeals = deals.length || 1;
-  var dealsWithNote = 0, dealsWithNextStep = 0, dealsWithAuthority = 0, dealsWithPain = 0;
-  var dealsWithMeeting = 0, dealsWithNoShowTreated = 0;
-
-  runtimeData.forEach(function(r){
-    var payload = r.runtime_payload || {};
-    if(typeof payload === 'string') try { payload = JSON.parse(payload); } catch(e){ payload = {}; }
-    if(payload.note_quality === 'good') dealsWithNote++;
-    if(r.next_best_action) dealsWithNextStep++;
-    if(r.persona) dealsWithAuthority++;
-    if(payload.pain_detected === 'true' || payload.pain_detected === true) dealsWithPain++;
-    if(r.show_state && r.show_state !== 'unknown') dealsWithMeeting++;
-    if(r.show_state === 'no_show' && payload.no_show_treated) dealsWithNoShowTreated++;
-  });
-
-  var notesQualityRate = Math.min(1, dealsWithNote / totalDeals);
-  var nextStepRate = Math.min(1, dealsWithNextStep / totalDeals);
-  var authorityRate = Math.min(1, dealsWithAuthority / totalDeals);
-  var painRate = Math.min(1, dealsWithPain / totalDeals);
-  var meetingRate = Math.min(1, dealsWithMeeting / totalDeals);
-  var noShowTreatRate = runtimeData.filter(function(r){return r.show_state==='no_show';}).length > 0
-    ? Math.min(1, dealsWithNoShowTreated / runtimeData.filter(function(r){return r.show_state==='no_show';}).length) : 1;
-
-  var dqi = (notesQualityRate * 0.20) + (nextStepRate * 0.20) + (authorityRate * 0.15)
-    + (painRate * 0.15) + (meetingRate * 0.10) + (noShowTreatRate * 0.10) + (0.5 * 0.10);
-  dqi = Math.min(1, dqi);
-
-  var quality = {
-    dqi: Math.round(dqi * 1000) / 1000,
-    notes_quality_rate: Math.round(notesQualityRate * 1000) / 1000,
-    next_step_rate: Math.round(nextStepRate * 1000) / 1000,
-    authority_rate: Math.round(authorityRate * 1000) / 1000,
-    pain_rate: Math.round(painRate * 1000) / 1000,
-    meeting_logging_rate: Math.round(meetingRate * 1000) / 1000,
-    no_show_treatment_rate: Math.round(noShowTreatRate * 1000) / 1000
-  };
-
-  // ── BLOCK 7: FORECAST QUALITY ──
-  var fcAvg = 0, fcInflated = 0, fcLowCtx = 0, fcTotal = 0, fcValue = 0;
-  forecastData.forEach(function(f){
-    fcTotal++;
-    fcAvg += (f.forecast_confidence || 0);
-    fcValue += (f.forecast_value || 0);
-    if(f.forecast_score_adjusted < f.forecast_score_raw) fcInflated++;
-    if(!f.reason_main || f.reason_main === '') fcLowCtx++;
-  });
-  var forecastConfidenceAvg = fcTotal > 0 ? fcAvg / fcTotal : 0;
-  var inflatedRate = fcTotal > 0 ? fcInflated / fcTotal : 0;
-  var lowCtxRate = fcTotal > 0 ? fcLowCtx / fcTotal : 0;
-  var forecastQualityScore = (forecastConfidenceAvg * 0.35)
-    + ((1 - inflatedRate) * 0.25) + ((1 - lowCtxRate) * 0.20) + (0.8 * 0.20);
-
-  var forecast = {
-    forecast_confidence_avg: Math.round(forecastConfidenceAvg * 1000) / 1000,
-    inflated_pipeline_rate: Math.round(inflatedRate * 1000) / 1000,
-    low_context_rate: Math.round(lowCtxRate * 1000) / 1000,
-    forecast_value_total: Math.round(fcValue),
-    deals_with_forecast: fcTotal,
-    forecast_quality_score: Math.round(forecastQualityScore * 1000) / 1000
-  };
-
-  // ── BLOCK 8: RECEITA ──
-  var revenueInfluenced = 0;
-  deals.forEach(function(d){
-    var status = (d.statusDeal || d.status_do_deal || '').toLowerCase();
-    if(status === 'ganho' || status === 'won') revenueInfluenced += (Number(d.revenueRaw) || 0);
-  });
+  // ── BLOCKS 2-7: Use sub-functions ──
+  var b2v = _rpV3CalcVolume(actData);
+  var volume = b2v.volume; var dealsWorkedSet = b2v.dealsWorkedSet;
+  var b3c = _rpV3CalcConversion(deals);
+  var funnel = b3c.funnel; var conversion = b3c.conversion;
+  var linePerf = _rpV3CalcLinePerf(deals);
+  var b5s = _rpV3CalcSpeed(deals, runtimeData);
+  var speed = b5s.speed; var avgAging = b5s.avgAging;
+  var b6q = _rpV3CalcQuality(deals, runtimeData);
+  var quality = b6q; var dqi = quality.dqi;
+  var b7f = _rpV3CalcForecast(forecastData);
+  var forecast = b7f.forecast; var forecastQualityScore = b7f.forecastQualityScore; var fcValue = b7f.fcValue;
+  var revenueInfluenced = _rpV3CalcRevenue(deals);
   var revenue = {
     revenue_influenced: Math.round(revenueInfluenced),
     revenue_per_deal: volume.deals_worked > 0 ? Math.round(revenueInfluenced / volume.deals_worked) : 0,
     revenue_per_handoff: volume.handoffs > 0 ? Math.round(revenueInfluenced / volume.handoffs) : 0,
     forecast_value: Math.round(fcValue)
   };
-
-  // ── BLOCK 8B: 3 E's — Effectiveness / Efficiency / Economy (RF·5) ──
-  // E1 — Effectiveness: % avanços reais vs continuações (stage transitions)
-  var realAdvances = 0, totalTransitions = 0;
-  deals.forEach(function(d){
-    if(d._advanceState){
-      totalTransitions++;
-      if(d._advanceState.state === 'advance') realAdvances++;
-    }
-  });
-  var e1_effectiveness = totalTransitions > 0 ? Math.round((realAdvances / totalTransitions) * 1000) / 1000 : null;
-
-  // E2 — Efficiency: tasks completadas / tempo médio por deal (activity_log)
-  var tasksCompleted = actData.filter(function(a){
-    return a.activity_type === 'task_completed' || a.activity_type === 'fup_sent' || a.activity_type === 'analysis_generated';
-  }).length;
-  var avgDealsPerDay = actData.length > 0 ? (Object.keys(dealsWorkedSet).length / Math.max(1, (new Date() - new Date(monthStart)) / (1000*60*60*24))) : 0;
-  var e2_efficiency = {
-    tasks_completed: tasksCompleted,
-    avg_deals_per_day: Math.round(avgDealsPerDay * 10) / 10,
-    tasks_per_deal: volume.deals_worked > 0 ? Math.round((tasksCompleted / volume.deals_worked) * 10) / 10 : 0
-  };
-
-  // E3 — Economy: custo estimado de IA (cockpit_requests × ~$0.01/req)
-  var aiRequestsCount = 0;
-  var COST_PER_REQ = 0.01; // USD — Edge Function com prompt caching ~$0.01
-  try {
-    var sb2 = window._supabaseClient || (window.getSB && window.getSB());
-    if(sb2){
-      var costRes = await sb2.from('cockpit_requests')
-        .select('id', { count: 'exact', head: true })
-        .eq('operator_email', email)
-        .gte('created_at', monthStart + 'T00:00:00');
-      if(costRes.count != null) aiRequestsCount = costRes.count;
-    }
-  } catch(e){}
-  var e3_economy = {
-    ai_requests: aiRequestsCount,
-    estimated_cost_usd: Math.round(aiRequestsCount * COST_PER_REQ * 100) / 100,
-    cost_per_deal: volume.deals_worked > 0 ? Math.round((aiRequestsCount * COST_PER_REQ / volume.deals_worked) * 1000) / 1000 : 0
-  };
-
-  var three_es = {
-    e1_effectiveness: e1_effectiveness,
-    e1_label: e1_effectiveness != null ? (e1_effectiveness >= 0.6 ? 'Saudável' : e1_effectiveness >= 0.35 ? 'Atenção' : 'Crítico') : '—',
-    e2_efficiency: e2_efficiency,
-    e3_economy: e3_economy
-  };
+  var three_es = await _rpV3Calc3Es(deals, actData, dealsWorkedSet, volume, email, monthStart, sb);
 
   // ── SCORES ──
+  var totalDeals = deals.length || 1;
   meta.actual_sal = funnel.sal;
   meta.actual_opp = funnel.opp;
   meta.actual_revenue = revenueInfluenced;
@@ -4764,6 +5463,481 @@ async function calcPerformanceReportV3(periodType, periodKey){
   return report;
 }
 window.calcPerformanceReportV3 = calcPerformanceReportV3;
+
+// ==================================================================
+// AUTO NOTE ANALYSIS — Lightweight keyword-based note analyzer
+// Extracts sentiment, SPIN/SPICED elements, objections, commitments
+// Inserts into note_analysis → DB trigger auto-updates forecast_runtime
+// ==================================================================
+async function analyzeNoteAndPersist(dealId, rawText){
+  var sb = _sb(); if(!sb) return;
+  var email = getOperatorId(); if(!email) return;
+  if(!rawText || rawText.length < 20) return;
+
+  var lower = rawText.toLowerCase();
+
+  // ── SENTIMENT ──
+  var posWords = ['interessado','animado','quer','pronto','gostou','alinhado','positivo','engajado','empolgado','avançar','fechou','confirmou','agendou','ok','sim','topou','aceito','aprovado','ansioso','decidiu'];
+  var negWords = ['não','recusou','desistiu','cancelou','caro','preço','sem verba','sem tempo','não tem','difícil','complicado','negou','reclamou','insatisfeito','frustrado','atrasou','sumiu','ghosting','sem retorno','frio'];
+  var posCount = posWords.filter(function(w){ return lower.includes(w); }).length;
+  var negCount = negWords.filter(function(w){ return lower.includes(w); }).length;
+  var sentiment = posCount > negCount + 1 ? 'positive' : negCount > posCount + 1 ? 'negative' : 'neutral';
+  var confidence = Math.min(1, (Math.abs(posCount - negCount) + 1) * 0.20);
+
+  // ── OBJECTIONS ──
+  var objPatterns = [
+    {re:/pre[çc]o|caro|or[çc]amento|verba|investimento alto/i, type:'price'},
+    {re:/tempo|agenda|momento|timing|agora n[ãa]o/i, type:'timing'},
+    {re:/preciso consultar|falar com|n[ãa]o decid[eo]|aprovação|diretoria/i, type:'authority'},
+    {re:/t[ée]cnic|funcionalidade|plataforma|integra[çc][ãa]o/i, type:'technical'}
+  ];
+  var objections = [];
+  objPatterns.forEach(function(p){ if(p.re.test(rawText)) objections.push(p.type); });
+
+  // ── COMMITMENTS / NEXT STEPS ──
+  var commitPatterns = [/vou.*enviar/i, /agend[ao]/i, /confirm[ao]/i, /combina[do]/i, /pr[óo]xim[oa] (passo|etapa|reuni)/i, /retorn[ao]/i, /ligar/i];
+  var commitments = [];
+  commitPatterns.forEach(function(p){ if(p.test(rawText)) commitments.push(rawText.match(p)[0]); });
+
+  // ── PAIN POINTS ──
+  var painPatterns = [/dor|problema|desafio|dificuldade|gargalo|bloqueio|risco|perda|custo alto|inefici[eê]ncia/i];
+  var painPoints = [];
+  painPatterns.forEach(function(p){
+    var m = rawText.match(new RegExp('.{0,40}' + p.source + '.{0,40}', 'gi'));
+    if(m) painPoints = painPoints.concat(m.map(function(s){ return s.trim(); }));
+  });
+
+  // ── SPICED EXTRACTION (lightweight) ──
+  var spicedSituation = null, spicedPain = null, spicedImpact = null, spicedCritical = null, spicedDecision = null;
+  if(/situa[çc][ãa]o|contexto|cen[áa]rio|empresa.*faz|atua/i.test(rawText)) spicedSituation = rawText.match(/.{0,60}(?:situa[çc][ãa]o|contexto|cen[áa]rio).{0,60}/i)?.[0] || '';
+  if(/dor|problema|desafio|sofr/i.test(rawText)) spicedPain = rawText.match(/.{0,60}(?:dor|problema|desafio).{0,60}/i)?.[0] || '';
+  if(/impacto|consequ[eê]ncia|preju[íi]zo|perd|custo/i.test(rawText)) spicedImpact = rawText.match(/.{0,60}(?:impacto|consequ[eê]ncia|preju[íi]zo).{0,60}/i)?.[0] || '';
+  if(/urgente|prazo|deadline|evento|data/i.test(rawText)) spicedCritical = rawText.match(/.{0,60}(?:urgente|prazo|deadline|evento).{0,60}/i)?.[0] || '';
+  if(/decis[ãa]o|aprovação|quem decide|processo.*compra/i.test(rawText)) spicedDecision = rawText.match(/.{0,60}(?:decis[ãa]o|aprovação|quem decide).{0,60}/i)?.[0] || '';
+
+  // ── SCORES ──
+  var spicedFilled = [spicedSituation, spicedPain, spicedImpact, spicedCritical, spicedDecision].filter(Boolean).length;
+  var depthScore = Math.min(1, (rawText.length / 500) * 0.3 + (spicedFilled / 5) * 0.4 + (painPoints.length > 0 ? 0.15 : 0) + (commitments.length > 0 ? 0.15 : 0));
+  var qualityScore = Math.min(1, depthScore * 0.5 + confidence * 0.3 + (objections.length > 0 ? 0.1 : 0) + (commitments.length > 0 ? 0.1 : 0));
+
+  // Advancement signal: positive + commitments + no blocking objections
+  var advancementSignal = sentiment === 'positive' && commitments.length > 0 && !objections.includes('authority');
+
+  // Forecast impact
+  var forecastImpact = sentiment === 'positive' ? 0.05 + (advancementSignal ? 0.05 : 0) : sentiment === 'negative' ? -0.10 - (objections.length * 0.02) : 0;
+  var forecastDirection = forecastImpact > 0 ? 'up' : forecastImpact < 0 ? 'down' : 'neutral';
+
+  var row = {
+    deal_id: dealId,
+    operator_email: email,
+    source_type: 'crm_note',
+    raw_text: rawText.slice(0, 5000),
+    cleaned_text: rawText.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 3000),
+    sentiment: sentiment,
+    confidence: +confidence.toFixed(2),
+    intent_detected: advancementSignal ? 'advance' : objections.length ? 'objection' : commitments.length ? 'commitment' : 'inform',
+    objections: objections,
+    commitments: commitments.slice(0, 5),
+    next_steps_extracted: commitments.slice(0, 3),
+    pain_points: painPoints.slice(0, 5),
+    decision_criteria: [],
+    spiced_situation: spicedSituation,
+    spiced_pain: spicedPain,
+    spiced_impact: spicedImpact,
+    spiced_critical_event: spicedCritical,
+    spiced_decision: spicedDecision,
+    depth_score: +depthScore.toFixed(2),
+    quality_score: +qualityScore.toFixed(2),
+    advancement_signal: advancementSignal,
+    forecast_impact: +forecastImpact.toFixed(3),
+    forecast_direction: forecastDirection,
+    analyzed_by: 'elucy_auto',
+    analysis_payload: { pos_count: posCount, neg_count: negCount, spiced_filled: spicedFilled }
+  };
+
+  try {
+    var res = await sb.from('note_analysis').insert(row).select('id').single();
+    if(res.error) { _syncErr('note-analysis', res.error); }
+    else {
+      console.log('[note-analysis] auto-analyzed deal=' + dealId + ' sentiment=' + sentiment + ' depth=' + depthScore.toFixed(2));
+      // Auto QC detection: classify this interaction as Quality Conversation (ROA)
+      if(window.detectAndPersistQC){
+        var noteRow = Object.assign({}, row, { id: res.data ? res.data.id : null });
+        window.detectAndPersistQC(dealId, noteRow);
+      }
+    }
+  } catch(e) { _syncErr('note-analysis', e); }
+
+  // ── AUTO FRAMEWORK EXTRACTION from note text ──
+  // If SPICED elements were detected, save as lightweight framework extraction
+  if(spicedFilled >= 2 && window.saveFrameworkExtraction){
+    var fwResult = {
+      spiced: {
+        situation: spicedSituation ? 0.5 : 0,
+        pain: spicedPain ? 0.6 : 0,
+        impact: spicedImpact ? 0.5 : 0,
+        critical_event: spicedCritical ? 0.5 : 0,
+        decision: spicedDecision ? 0.5 : 0
+      },
+      meddic: {
+        metrics: painPoints.length > 0 ? 0.3 : 0,
+        economic_buyer: objections.includes('authority') ? 0.2 : 0,
+        decision_criteria: 0,
+        decision_process: spicedDecision ? 0.3 : 0,
+        identify_pain: spicedPain ? 0.5 : 0,
+        champion: 0
+      },
+      auxiliary: { objections: objections, commitments: commitments },
+      coverage: {
+        spiced: spicedFilled / 5,
+        meddic: [painPoints.length > 0, objections.includes('authority'), false, !!spicedDecision, !!spicedPain, false].filter(Boolean).length / 6
+      },
+      confidence: confidence * depthScore,
+      main_gaps: [],
+      next_best_questions: [],
+      raw_evidence: painPoints.slice(0, 3)
+    };
+    // Identify main gaps
+    if(!spicedPain) fwResult.main_gaps.push('pain_not_quantified');
+    if(!spicedDecision) fwResult.main_gaps.push('decision_process_unknown');
+    if(!objections.includes('authority')) fwResult.main_gaps.push('economic_buyer_unknown');
+    try { await window.saveFrameworkExtraction(dealId, 'auto_note', 'note_' + Date.now(), fwResult); }
+    catch(e){ console.warn('[framework-auto] extraction error:', e.message); }
+  }
+}
+window.analyzeNoteAndPersist = analyzeNoteAndPersist;
+
+// ==================================================================
+// ROA ENGINE — Quality Conversations + Five Whys
+// Core: classifica interacoes como Quality Conversation e progride
+// o buyer pela jornada cognitiva (listen→care→change→you→now)
+// ==================================================================
+
+// ── QC Detection: classifica se uma nota/interacao e Quality Conversation ──
+async function detectAndPersistQC(dealId, noteAnalysisRow){
+  var sb = _sb(); if(!sb) return null;
+  var email = getOperatorId(); if(!email) return null;
+  var n = noteAnalysisRow;
+  if(!n) return null;
+
+  // Core ROA definition: has_new_information AND (pain OR authority OR urgency OR next_step)
+  var hasPain = !!(n.spiced_pain || (n.pain_points && n.pain_points.length > 0));
+  var hasAuthority = !!(n.spiced_decision || (n.objections && n.objections.includes('authority')));
+  var hasUrgency = !!(n.spiced_critical_event);
+  var hasNextStep = !!(n.commitments && n.commitments.length > 0);
+  var hasNewInfo = n.depth_score > 0.2 || hasPain || hasAuthority || hasUrgency;
+
+  // Depth score from note
+  var depth = n.depth_score || 0;
+
+  // Conversation Quality Score (ROA formula)
+  var cqs = (0.30 * depth)
+          + (0.20 * (hasPain ? 1 : 0))
+          + (0.15 * (hasAuthority ? 1 : 0))
+          + (0.15 * (hasUrgency ? 1 : 0))
+          + (0.20 * (hasNextStep ? 1 : 0));
+  cqs = Math.round(cqs * 100) / 100;
+
+  // Five Whys detection from note content
+  var raw = (n.raw_text || n.cleaned_text || '').toLowerCase();
+  var whyListen = /por que|motivo|raz[ãa]o|o que te trouxe|como conheceu/i.test(raw) || depth > 0.15;
+  var whyCare = hasPain || /importante|prioridade|preocupa|afeta/i.test(raw);
+  var whyChange = /mudar|diferente|novo|transformar|resolver|sair d[aeo]/i.test(raw) && hasPain;
+  var whyYou = /g4|imers[ãa]o|metodologia|refer[eê]ncia|caso de sucesso|depoimento/i.test(raw);
+  var whyNow = hasUrgency || /agora|urgente|prazo|jan|fev|mar|abr|mai|jun|esse m[eê]s|essa semana/i.test(raw);
+
+  // Determine stage
+  var whyStage = 'listen';
+  if(whyNow) whyStage = 'now';
+  else if(whyYou) whyStage = 'you';
+  else if(whyChange) whyStage = 'change';
+  else if(whyCare) whyStage = 'care';
+
+  // Infer channel from context
+  var channel = 'call';
+  if(n.source_type === 'dm' || /dm|instagram|direct/i.test(raw)) channel = 'dm';
+  else if(/whatsapp|wpp|zap/i.test(raw)) channel = 'whatsapp';
+  else if(/email|e-mail/i.test(raw)) channel = 'email';
+  else if(/reuni[ãa]o|meeting|call|liga[çc][ãa]o/i.test(raw)) channel = 'call';
+
+  var qcRow = {
+    deal_id: dealId,
+    operator_email: email,
+    note_analysis_id: n.id || null,
+    channel: channel,
+    source_type: 'auto',
+    has_new_information: hasNewInfo,
+    extracted_pain: hasPain,
+    extracted_authority: hasAuthority,
+    extracted_urgency: hasUrgency,
+    extracted_next_step: hasNextStep,
+    depth_score: depth,
+    why_listen: whyListen,
+    why_care: whyCare,
+    why_change: whyChange,
+    why_you: whyYou,
+    why_now: whyNow,
+    why_stage: whyStage,
+    conversation_quality_score: cqs,
+    raw_summary: (n.cleaned_text || '').slice(0, 500),
+    analysis_payload: {
+      sentiment: n.sentiment,
+      objections: n.objections,
+      spiced_filled: n.analysis_payload && n.analysis_payload.spiced_filled || 0
+    }
+  };
+
+  try {
+    var res = await sb.from('quality_conversations').insert(qcRow).select('id').single();
+    if(res.error){ _syncErr('qc-detect', res.error); return null; }
+    var qcId = res.data ? res.data.id : null;
+    var isQC = hasNewInfo && (hasPain || hasAuthority || hasUrgency || hasNextStep);
+    console.log('[roa:qc] deal=' + dealId + ' isQC=' + isQC + ' cqs=' + cqs + ' stage=' + whyStage);
+
+    // Update Five Whys psychological progress
+    if(isQC) await updatePsychologicalProgress(dealId, email, qcRow);
+
+    return { id: qcId, isQC: isQC, cqs: cqs, whyStage: whyStage };
+  } catch(e){ _syncErr('qc-detect', e); return null; }
+}
+window.detectAndPersistQC = detectAndPersistQC;
+
+// ── Five Whys Psychological Progress — upsert por deal ──
+async function updatePsychologicalProgress(dealId, email, qc){
+  var sb = _sb(); if(!sb) return;
+
+  // Fetch current state
+  var cur = null;
+  try {
+    var r = await sb.from('deal_psychological_progress').select('*').eq('deal_id', dealId).single();
+    if(r.data) cur = r.data;
+  } catch(e){}
+
+  // Progressive update: scores only go UP (ratchet), never down
+  var wl = Math.max(cur ? cur.why_listen : 0, qc.why_listen ? 0.6 : 0);
+  var wca = Math.max(cur ? cur.why_care : 0, qc.why_care ? 0.6 : 0);
+  var wch = Math.max(cur ? cur.why_change : 0, qc.why_change ? 0.6 : 0);
+  var wy = Math.max(cur ? cur.why_you : 0, qc.why_you ? 0.6 : 0);
+  var wn = Math.max(cur ? cur.why_now : 0, qc.why_now ? 0.6 : 0);
+
+  // Increment on repeated evidence (max 1.0)
+  if(cur){
+    if(qc.why_listen && cur.why_listen > 0) wl = Math.min(1, wl + 0.15);
+    if(qc.why_care && cur.why_care > 0) wca = Math.min(1, wca + 0.15);
+    if(qc.why_change && cur.why_change > 0) wch = Math.min(1, wch + 0.15);
+    if(qc.why_you && cur.why_you > 0) wy = Math.min(1, wy + 0.15);
+    if(qc.why_now && cur.why_now > 0) wn = Math.min(1, wn + 0.15);
+  }
+
+  // Determine stage
+  var stage = 'listen';
+  if(wn >= 0.5) stage = 'now';
+  else if(wy >= 0.5) stage = 'you';
+  else if(wch >= 0.5) stage = 'change';
+  else if(wca >= 0.5) stage = 'care';
+  var stageConf = Math.min(1, (wl + wca + wch + wy + wn) / 5 * 1.5);
+
+  // Kill switches
+  var prematureMeeting = wca < 0.5 && qc.why_stage !== 'care' && qc.channel === 'meeting';
+  var prematureProposal = wch < 0.5 && /proposta|enviei|material/i.test(qc.raw_summary || '');
+  var skippedStage = false;
+  var scores = [wl, wca, wch, wy, wn];
+  for(var i = 1; i < scores.length; i++){
+    if(scores[i] > 0.5 && scores[i-1] < 0.2) skippedStage = true;
+  }
+
+  var row = {
+    deal_id: dealId,
+    operator_email: email,
+    why_listen: Math.round(wl * 100) / 100,
+    why_care: Math.round(wca * 100) / 100,
+    why_change: Math.round(wch * 100) / 100,
+    why_you: Math.round(wy * 100) / 100,
+    why_now: Math.round(wn * 100) / 100,
+    stage: stage,
+    stage_confidence: Math.round(stageConf * 100) / 100,
+    premature_meeting: prematureMeeting,
+    premature_proposal: prematureProposal,
+    skipped_stage: skippedStage,
+    last_qc_id: qc.note_analysis_id || null,
+    qc_count: (cur ? cur.qc_count : 0) + 1,
+    updated_at: _now()
+  };
+
+  try {
+    await sb.from('deal_psychological_progress').upsert(row, { onConflict: 'deal_id' });
+    if(prematureMeeting || prematureProposal || skippedStage){
+      console.warn('[roa:five-whys] KILL SWITCH deal=' + dealId + ' premature_meeting=' + prematureMeeting + ' premature_proposal=' + prematureProposal + ' skipped=' + skippedStage);
+    }
+  } catch(e){ _syncErr('five-whys', e); }
+}
+
+// ── ROA Metrics Calculator (for dashboard) ──
+function calcROAMetrics(deals, qcData){
+  var totalActivities = 0;
+  var totalQC = 0;
+  var totalOpps = 0;
+  var qcByChannel = {};
+  var qcByOperator = {};
+
+  deals.forEach(function(d){
+    totalActivities += d._touchpoints || d.touchpointCount || 0;
+    var fase = (d._fase || '').toLowerCase();
+    if(fase === 'oportunidade' || fase === 'negociação') totalOpps++;
+  });
+
+  if(qcData && qcData.length){
+    qcData.forEach(function(q){
+      if(q.is_quality_conversation){
+        totalQC++;
+        qcByChannel[q.channel] = (qcByChannel[q.channel] || 0) + 1;
+        qcByOperator[q.operator_email] = (qcByOperator[q.operator_email] || 0) + 1;
+      }
+    });
+  }
+
+  var qcRate = totalActivities > 0 ? totalQC / totalActivities : 0;
+  var qcToOppRate = totalQC > 0 ? totalOpps / totalQC : 0;
+
+  return {
+    activities: totalActivities,
+    quality_conversations: totalQC,
+    qc_rate: Math.round(qcRate * 1000) / 10,
+    qc_to_opp_rate: Math.round(qcToOppRate * 1000) / 10,
+    opportunities: totalOpps,
+    qc_by_channel: qcByChannel,
+    qc_by_operator: qcByOperator,
+    conversions: {
+      activity_to_qc: qcRate,
+      qc_to_opp: qcToOppRate
+    }
+  };
+}
+window.calcROAMetrics = calcROAMetrics;
+
+// ── Time Waster Detector (P3) ──
+async function detectTimeWaster(dealId, deal){
+  var sb = _sb(); if(!sb) return null;
+  var email = getOperatorId(); if(!email) return null;
+
+  var tp = deal._touchpoints || 0;
+  var hasNote = deal._runtime && deal._runtime.last_event === 'note';
+  var hasMeeting = deal._runtime && deal._runtime.meetings_total > 0;
+  var signals = deal._signalSummary || {};
+  var posSignals = signals.top_positive_signals || [];
+  var negSignals = signals.top_negative_signals || [];
+
+  // Reciprocity: info extracted vs info given (proxy via signal balance)
+  var posCount = posSignals.length;
+  var negCount = negSignals.length;
+  var reciprocity = (posCount + 1) / (posCount + negCount + 2); // Laplace smoothing
+
+  // Info extraction ratio: how much new info per touchpoint
+  var spicedFilled = deal._frameworkRuntime ? (deal._frameworkRuntime.spiced_coverage || 0) : 0;
+  var infoRatio = tp > 0 ? spicedFilled / tp : 0;
+
+  // Curiosity risk: many touchpoints, low framework coverage, no meeting
+  var curiosityRisk = tp >= 4 && spicedFilled < 0.3 && !hasMeeting;
+
+  // Classification
+  var classification = 'undetermined';
+  var confidence = 0.3;
+  if(tp >= 3){
+    if(reciprocity > 0.6 && spicedFilled > 0.3){
+      classification = 'buyer';
+      confidence = Math.min(0.9, 0.5 + spicedFilled * 0.3 + reciprocity * 0.2);
+    } else if(curiosityRisk && reciprocity < 0.4){
+      classification = 'time_waster';
+      confidence = Math.min(0.8, 0.4 + (1 - reciprocity) * 0.3);
+    } else if(curiosityRisk){
+      classification = 'curious';
+      confidence = 0.5;
+    }
+  }
+
+  var row = {
+    deal_id: dealId,
+    operator_email: email,
+    reciprocity_score: Math.round(reciprocity * 100) / 100,
+    info_extraction_ratio: Math.round(infoRatio * 100) / 100,
+    curiosity_risk: curiosityRisk,
+    classification: classification,
+    classification_confidence: Math.round(confidence * 100) / 100,
+    signals_used: posSignals.concat(negSignals).map(function(s){ return s.type; }),
+    updated_at: _now()
+  };
+
+  try {
+    await sb.from('lead_intent_analysis').upsert(row, { onConflict: 'deal_id' });
+    console.log('[roa:intent] deal=' + dealId + ' class=' + classification + ' conf=' + confidence.toFixed(2));
+    return row;
+  } catch(e){ _syncErr('intent-analysis', e); return null; }
+}
+window.detectTimeWaster = detectTimeWaster;
+
+// ── Coaching Event Logger (P2) ──
+async function logCoachingEvent(operatorEmail, dealId, type, category, description, durationMin){
+  var sb = _sb(); if(!sb) return;
+  try {
+    await sb.from('coaching_events').insert({
+      operator_email: operatorEmail || getOperatorId(),
+      deal_id: dealId || null,
+      type: type || 'suggestion',
+      category: category || 'framework',
+      description: description || '',
+      duration_equivalent: durationMin || 5,
+      source: 'elucy'
+    });
+  } catch(e){ _syncErr('coaching-log', e); }
+}
+window.logCoachingEvent = logCoachingEvent;
+
+// ==================================================================
+// QUICK MEETING REGISTRATION — Manual meeting logging for SDRs
+// Inserts into meetings table. Updates deal touchpoint count.
+// ==================================================================
+async function registerMeeting(dealId, meetingType, outcome, notes){
+  var sb = _sb(); if(!sb) return null;
+  var email = getOperatorId(); if(!email) return null;
+  var deal = (window._COCKPIT_DEAL_MAP || {})[dealId];
+  if(!deal) return null;
+
+  meetingType = meetingType || 'discovery';
+  outcome = outcome || 'completed';
+
+  var row = {
+    deal_id: dealId,
+    operator_email: email,
+    meeting_type: meetingType,
+    title: (deal.nome || 'Deal') + ' — ' + meetingType,
+    scheduled_at: new Date().toISOString(),
+    duration_min: 30,
+    contact_name: deal.contact_name || deal.nome || null,
+    contact_email: deal.emailLead || null,
+    contact_phone: deal.telefone || null,
+    meeting_status: outcome === 'no_show' ? 'no_show' : 'completed',
+    outcome: outcome,
+    outcome_notes: notes || null,
+    source: 'manual_cockpit'
+  };
+
+  try {
+    var res = await sb.from('meetings').insert(row);
+    if(res.error) { _syncErr('meeting-reg', res.error); return null; }
+    console.log('[meeting] registered deal=' + dealId + ' type=' + meetingType + ' outcome=' + outcome);
+
+    // Log activity
+    await sb.from('activity_log').insert({
+      operator_id: email,
+      activity_type: outcome === 'no_show' ? 'meeting_no_show' : 'meeting_completed',
+      deal_id: dealId,
+      metadata: { meeting_type: meetingType, outcome: outcome }
+    });
+
+    return row;
+  } catch(e) { _syncErr('meeting-reg', e); return null; }
+}
+window.registerMeeting = registerMeeting;
 
 // ── LAYER 15B — NARRATIVE ENGINE ──
 // Compara período atual vs anterior e gera narrativas inteligentes
@@ -5297,6 +6471,40 @@ async function loadFrameworkRuntime(){
   return allRows.length;
 }
 window.loadFrameworkRuntime = loadFrameworkRuntime;
+
+// ── ROA Loaders — attach psychological progress + intent analysis to deal map ──
+async function loadROAData(){
+  var sb = _sb(); if(!sb) return;
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var dealIds = Object.keys(map);
+  if(!dealIds.length) return;
+  var CHUNK = 100;
+
+  // Load deal_psychological_progress
+  var psychRows = [];
+  for(var i = 0; i < dealIds.length; i += CHUNK){
+    var ids = dealIds.slice(i, i + CHUNK);
+    try {
+      var r1 = await sb.from('deal_psychological_progress').select('*').in('deal_id', ids);
+      if(r1.data) psychRows = psychRows.concat(r1.data);
+    } catch(e){ _syncErr('roa-psych', e); }
+  }
+  psychRows.forEach(function(r){ if(map[r.deal_id]) map[r.deal_id]._psychProgress = r; });
+
+  // Load lead_intent_analysis
+  var intentRows = [];
+  for(var j = 0; j < dealIds.length; j += CHUNK){
+    var ids2 = dealIds.slice(j, j + CHUNK);
+    try {
+      var r2 = await sb.from('lead_intent_analysis').select('*').in('deal_id', ids2);
+      if(r2.data) intentRows = intentRows.concat(r2.data);
+    } catch(e){ _syncErr('roa-intent', e); }
+  }
+  intentRows.forEach(function(r){ if(map[r.deal_id]) map[r.deal_id]._intentAnalysis = r; });
+
+  console.log('[roa] loaded ' + psychRows.length + ' psych + ' + intentRows.length + ' intent rows');
+}
+window.loadROAData = loadROAData;
 
 // Calculate qualitative_score from framework runtime data
 // Formula V7.1:
@@ -6044,7 +7252,7 @@ async function persistSignals(dealId, signals, scoreData, operatorEmail){
   runtimeRow.explain_json = JSON.stringify(scoreData.explain_json||{});
 
   var rtRes = await sb.from('deal_signal_runtime').upsert(runtimeRow, { onConflict:'deal_id' });
-  if(rtRes.error){ _syncErr('signals', rtRes.error); }
+  if(rtRes.error && !(rtRes.error.message||'').includes('Could not find the table')){ _syncErr('signals', rtRes.error); }
 
   // Insert individual signals (append-only)
   var rows = signals.map(function(s){
@@ -6065,7 +7273,7 @@ async function persistSignals(dealId, signals, scoreData, operatorEmail){
 
   if(rows.length){
     var insRes = await sb.from('deal_signals').insert(rows);
-    if(insRes.error){ _syncErr('signals', insRes.error); }
+    if(insRes.error && !(insRes.error.message||'').includes('Could not find the table')){ _syncErr('signals', insRes.error); }
   }
 }
 window.persistSignals = persistSignals;
@@ -6233,6 +7441,7 @@ async function loadSignalIntelligence(){
   var res = await sb.from('deal_signal_runtime')
     .select('deal_id,signal_total,risk_level,behavioral_score,framework_score,pipeline_score,quality_score,forecast_score,positive_count,negative_count,signal_count,top_negative_signals,updated_at')
     .eq('operator_email', email);
+  if(res.error && (res.error.message||'').includes('Could not find the table')){ return { total:0, rows:[] }; }
   var rows = res.data || [];
   if(!rows.length) return { total:0, rows:[] };
 
@@ -6656,16 +7865,8 @@ function calcPortfolioPriorityV21(allDeals){
     urgency_score = Math.min(1, Math.max(0, urgency_score));
 
     // 3) Actionability Score (0.25)
-    var actionability_score =
-      ((tr.transition_readiness_score || 0) * 0.35) +
-      ((fr.authority_score || 0) * 0.15) +
-      ((fr.overall_coverage || 0) * 0.15) +
-      ((dq.data_trust_score || 0) * 0.15) +
-      ((fr.qualitative_score || 1.0) >= 1.0 ? 0.5 : (fr.qualitative_score || 0.5) * 0.10 / 0.10) +
-      ((fc.forecast_score_adjusted || 0) * 0.10);
-    // Fix actionability qualitative component
     var qs_norm = fr.qualitative_score ? Math.min(1, Math.max(0, (fr.qualitative_score - 0.20) / 1.10)) : 0.5;
-    actionability_score =
+    var actionability_score =
       ((tr.transition_readiness_score || 0) * 0.35) +
       ((fr.authority_score || 0) * 0.15) +
       ((fr.overall_coverage || 0) * 0.15) +
@@ -7230,6 +8431,7 @@ function calcRFVPortfolio(deals){
 
   return result;
 }
+window.calcRFVPortfolio = calcRFVPortfolio;
 
 // ==================================================================
 // FEATURE 3 — L23 ENTERPRISE QUALIFICATION + L24 TRUSTED ADVISOR
@@ -7782,6 +8984,339 @@ async function syncRFVPortfolioRuntimeV27(){
 window.syncRFVPortfolioRuntimeV27 = syncRFVPortfolioRuntimeV27;
 
 // ==================================================================
+// LAYER 28 — CADENCE ENGINE V1 — Adaptive Temporal Decision System
+// States: HOT_INBOUND, NEW_OUTBOUND, ACTIVE_DIAGNOSIS, AWAITING_RESPONSE,
+//         AWAITING_DECISION, POST_NO_SHOW, REACTIVATION, STALED, HANDOFF_READY, DISQUALIFY_OR_STOP
+// ==================================================================
+
+var CADENCE_BASE_INTERVALS = {
+  HOT_INBOUND:1, NEW_OUTBOUND:24, ACTIVE_DIAGNOSIS:24, AWAITING_RESPONSE:36,
+  AWAITING_DECISION:48, POST_NO_SHOW:4, REACTIVATION:96, STALED:120, HANDOFF_READY:2, DISQUALIFY_OR_STOP:null
+};
+
+var CADENCE_STATE_QUEUE = {
+  HOT_INBOUND:'velocidade', NEW_OUTBOUND:'qualificacao', ACTIVE_DIAGNOSIS:'qualificacao',
+  AWAITING_RESPONSE:'follow_up', AWAITING_DECISION:'alta_performance', POST_NO_SHOW:'no_show_recovery',
+  REACTIVATION:'reativacao', STALED:'reativacao', HANDOFF_READY:'handoff', DISQUALIFY_OR_STOP:null
+};
+
+var CHANNEL_FIT_MAP = {
+  PULL_MEETING_CALL:0.95, PULL_MEETING_WHATSAPP:0.75, DIAGNOSE_PAIN_CALL:0.90, DIAGNOSE_PAIN_WHATSAPP:0.70,
+  OPEN_LOOP_WHATSAPP:0.85, OPEN_LOOP_CALL:0.70, OPEN_LOOP_EMAIL:0.60, OPEN_LOOP_INSTAGRAM_DM:0.80,
+  MAP_AUTHORITY_CALL:0.90, MAP_AUTHORITY_WHATSAPP:0.65, VALIDATE_TIMING_CALL:0.85, VALIDATE_TIMING_WHATSAPP:0.70,
+  CREATE_CRITICAL_EVENT_CALL:0.90, CREATE_CRITICAL_EVENT_EMAIL:0.60, RECOVER_NO_SHOW_WHATSAPP:0.80, RECOVER_NO_SHOW_CALL:0.75,
+  REENGAGE_EMAIL:0.75, REENGAGE_WHATSAPP:0.70, CLOSE_LOOP_WHATSAPP:0.80, CLOSE_LOOP_CALL:0.70,
+  ELEGANT_EXIT_WHATSAPP:0.65, ELEGANT_EXIT_EMAIL:0.70, HANDOFF_PREP_WHATSAPP:0.85, HANDOFF_PREP_CALL:0.80
+};
+
+function _cadResolveCadenceState(deal){
+  if(deal._killSwitchActive) return 'DISQUALIFY_OR_STOP';
+  var status = ((deal.statusDeal||deal.status_do_deal||'')+'').toLowerCase();
+  if(status==='ganho'||status==='perdido'||status==='won'||status==='lost') return 'DISQUALIFY_OR_STOP';
+  var tr = deal._transitionRuntime||{};
+  if(tr.transition_valid && (tr.transition_readiness_score||0)>=0.75) return 'HANDOFF_READY';
+  var showState = ((deal._showState||deal.show_state||'')+'').toLowerCase();
+  if(showState==='no_show') return 'POST_NO_SHOW';
+  var sigState = (deal._signalState||deal._signal||'').toUpperCase();
+  var aging = deal._aging||{};
+  if((sigState==='STALL'||sigState==='DOME') && aging.band==='critical') return 'STALED';
+  var inactDays = deal._inactivityDays||(deal._delta||0);
+  var lastTouch = deal._lastTouch ? new Date(deal._lastTouch) : null;
+  if(lastTouch) inactDays = Math.max(0, Math.floor((Date.now()-lastTouch.getTime())/86400000));
+  if(inactDays >= 7) return 'REACTIVATION';
+  var recentReply = deal._recentReply||false;
+  var intentHot = sigState==='HOT'||sigState==='BUY';
+  if(recentReply && intentHot) return 'HOT_INBOUND';
+  var hasConv = deal._touchpoints>0 || deal._hasConversation;
+  if(!hasConv) return 'NEW_OUTBOUND';
+  var fw = deal._frameworkRuntime||{};
+  if((fw.overall_coverage||0)<0.75) return 'ACTIVE_DIAGNOSIS';
+  if(deal._awaitingDecision||(fw.overall_coverage||0)>=0.75 && (fw.authority_score||0)>=0.5) return 'AWAITING_DECISION';
+  return 'AWAITING_RESPONSE';
+}
+
+function _cadResolveObjective(deal, state){
+  switch(state){
+    case 'HOT_INBOUND': return deal._needMeeting||true ? 'PULL_MEETING' : 'DIAGNOSE_PAIN';
+    case 'NEW_OUTBOUND': return 'OPEN_LOOP';
+    case 'ACTIVE_DIAGNOSIS':
+      var fw=deal._frameworkRuntime||{};
+      if((fw.authority_score||0)<0.5) return 'MAP_AUTHORITY';
+      if((fw.urgency_score||0)<0.5) return 'VALIDATE_TIMING';
+      return 'DIAGNOSE_PAIN';
+    case 'AWAITING_RESPONSE': return 'CLOSE_LOOP';
+    case 'AWAITING_DECISION': return 'CREATE_CRITICAL_EVENT';
+    case 'POST_NO_SHOW': return 'RECOVER_NO_SHOW';
+    case 'REACTIVATION': return 'REENGAGE';
+    case 'STALED': return 'REENGAGE';
+    case 'HANDOFF_READY': return 'HANDOFF_PREP';
+    case 'DISQUALIFY_OR_STOP': return 'ELEGANT_EXIT';
+    default: return 'CLOSE_LOOP';
+  }
+}
+
+function _cadResolveChannel(deal, state, objective){
+  if(state==='DISQUALIFY_OR_STOP') return 'NO_TOUCH';
+  if(state==='POST_NO_SHOW') return 'WHATSAPP';
+  if(objective==='MAP_AUTHORITY'||objective==='CREATE_CRITICAL_EVENT') return 'CALL';
+  if(objective==='HANDOFF_PREP') return 'WHATSAPP';
+  var origin=(deal._originChannel||deal.canal||'').toUpperCase();
+  if(origin.includes('INSTAGRAM')&&state==='NEW_OUTBOUND') return 'INSTAGRAM_DM';
+  if(state==='REACTIVATION') return 'EMAIL';
+  return 'WHATSAPP';
+}
+
+function _cadCalcIntentSignal(deal){
+  var sig=deal._signalRuntime||{};
+  var fw=deal._frameworkRuntime||{};
+  var buy=sig.buy_score||0, urg=fw.urgency_score||sig.urgency_score||0;
+  var auth=fw.authority_score||0, pain=sig.pain_score||(fw.spiced_pain||0);
+  var eng=(deal._touchpoints||0)>=3?0.7:(deal._touchpoints||0)>=1?0.4:0.1;
+  var risk=sig.risk_score||0, stall=sig.stall_score||0;
+  return Math.max(0,Math.min(1,(buy*0.30)+(urg*0.20)+(auth*0.15)+(pain*0.15)+(eng*0.10)+((1-risk)*0.05)+((1-stall)*0.05)));
+}
+
+function _cadCalcStagePressure(deal){
+  var delta=deal._delta||deal.delta||0;
+  var rl=deal._revLine||'nao_definido';
+  var ra=(REVENUE_LINES[rl]||REVENUE_LINES.nao_definido||{}).risk_after||3;
+  var normAging=Math.min(1,delta/(ra*4));
+  var slaW=delta>(ra*2)?0.8:delta>ra?0.5:0.2;
+  var tr=deal._transitionRuntime||{};
+  var trScore=tr.transition_readiness_score||0;
+  var fw=deal._frameworkRuntime||{};
+  var nsc=fw.next_step_clarity||0;
+  return Math.max(0,Math.min(1,(normAging*0.35)+(slaW*0.25)+((1-trScore)*0.20)+((1-nsc)*0.20)));
+}
+
+function _cadCalcResponseHazard(deal){
+  var recentReply=deal._recentReply?0.8:0.2;
+  var recency=deal._lastTouch?Math.max(0,1-Math.floor((Date.now()-new Date(deal._lastTouch).getTime())/86400000)/14):0.1;
+  var sig=deal._signalRuntime||{};
+  var sigStab=1-Math.min(1,Math.abs((sig.positive_score||0)-(sig.negative_score||0)));
+  return Math.max(0,Math.min(1,(recentReply*0.35)+(0.5*0.25)+(recency*0.20)+(sigStab*0.20)));
+}
+
+function _cadCalcChannelFit(objective, channel){
+  var key=objective+'_'+channel;
+  return CHANNEL_FIT_MAP[key]||0.50;
+}
+
+function _cadCalcRelationshipMomentum(deal){
+  var tpRecency=deal._lastTouch?Math.max(0,1-Math.floor((Date.now()-new Date(deal._lastTouch).getTime())/86400000)/10):0.1;
+  var replyRate=deal._recentReply?0.7:0.2;
+  var meetPresence=(deal._meetingCount||0)>=1?0.8:0.2;
+  var fw=deal._frameworkRuntime||{};
+  var noteQ=fw.note_quality_score||0;
+  return Math.max(0,Math.min(1,(tpRecency*0.35)+(replyRate*0.25)+(meetPresence*0.20)+(noteQ*0.20)));
+}
+
+function _cadCalcChannelSaturation(deal, channel){
+  var tp=deal._recentTouchpoints||[];
+  var now=Date.now();
+  var same72=0, same7d=0, noReply=0;
+  tp.forEach(function(t){
+    var age=(now-new Date(t.created_at||t.touch_at||0).getTime())/3600000;
+    if((t.channel||'').toUpperCase()===channel){
+      if(age<=72) same72++;
+      if(age<=168) same7d++;
+    }
+    if(!t.response_received) noReply++;
+  });
+  var negDelta=(deal._negativeDeltaCount||0)/Math.max(tp.length,1);
+  return Math.max(0,Math.min(1,(same72*0.12*0.35)+(same7d*0.06*0.25)+(Math.min(noReply,5)/5*0.25)+(negDelta*0.15)));
+}
+
+function _cadCalcDeltaScore(deal){
+  var fw=deal._frameworkRuntime||{};
+  var newInfo=(fw.overall_coverage||0)*0.4+((deal._noteAnalysis&&deal._noteAnalysis.quality_score||0)/100)*0.3+((deal._meetingCount||0)>=1?0.3:0);
+  var friction=deal._negativeDeltaCount?Math.min(1,(deal._negativeDeltaCount||0)*0.3):0;
+  return Math.max(-1,Math.min(1,newInfo-friction));
+}
+
+function _cadClassifySilence(deal, state){
+  var inact=deal._inactivityDays||0;
+  var fw=deal._frameworkRuntime||{};
+  if(state==='AWAITING_DECISION'&&inact<=2) return 'REFLECTIVE_SILENCE';
+  if((fw.authority_score||0)>=0.5&&inact<=3) return 'APPROVAL_WAIT';
+  if(deal._priceSent&&inact>=2) return 'POST_PRICE_GHOST';
+  if(inact>=5) return 'TOTAL_GHOST';
+  if(state==='AWAITING_DECISION'&&inact>=2) return 'STRATEGIC_SILENCE';
+  return null;
+}
+
+function _cadCalcNextTouchHours(state, channel, responseHazard, saturation, deal){
+  var base=CADENCE_BASE_INTERVALS[state];
+  if(base==null) return null;
+  var fatigue=1.0;
+  if(saturation>0.5) fatigue=1.40;
+  else if(saturation>0.3) fatigue=1.15;
+  if(deal._recentReply) fatigue*=0.90;
+  var chMult=channel==='CALL'?1.10:channel==='WHATSAPP'?0.95:channel==='EMAIL'?1.20:1.00;
+  var fcVal=(deal._forecastV6&&deal._forecastV6.forecast_value)||0;
+  var valMult=Math.max(0.75,1.0-(Math.min(fcVal,50000)/50000)*0.20);
+  var hazAdj=Math.max(0.70,Math.min(1.20,1.20-(responseHazard*0.50)));
+  return Math.max(0.5,+(base*fatigue*chMult*valMult*hazAdj).toFixed(2));
+}
+
+function _cadCalcConfidence(deal){
+  var dq=deal._dataQuality||{};
+  var fc=deal._forecastV6||{};
+  var fw=deal._frameworkRuntime||{};
+  var sig=deal._signalRuntime||{};
+  var sigStab=1-Math.min(1,Math.abs((sig.positive_score||0)-(sig.negative_score||0)));
+  var meetEvidence=(deal._meetingCount||0)>=1?0.7:0.2;
+  return Math.max(0,Math.min(1,
+    (dq.data_trust_score||0.5)*0.35+(fc.forecast_confidence||0)*0.20+
+    (fw.overall_coverage||0)*0.20+(fw.note_quality_score||0)*0.10+
+    meetEvidence*0.10+sigStab*0.05
+  ));
+}
+
+function _cadResolveStopState(deal, state, channel, saturation){
+  var status=((deal.statusDeal||deal.status_do_deal||'')+'').toLowerCase();
+  if(status==='ganho'||status==='perdido'||status==='won'||status==='lost') return 'HARD_STOP';
+  if(deal._killSwitchActive) return 'HARD_STOP';
+  var dq=deal._dataQuality||{};
+  if((dq.data_trust_score||0.5)<0.25) return 'HARD_STOP';
+  if(state==='HANDOFF_READY') return 'HANDOFF_STOP';
+  if(state==='DISQUALIFY_OR_STOP') return 'HARD_STOP';
+  if(saturation>0.70) return 'COOLDOWN';
+  var tp=deal._recentTouchpoints||[];
+  var noReply=tp.filter(function(t){return !t.response_received;}).length;
+  if(noReply>=5) return 'COOLDOWN';
+  if((deal._negativeDeltaCount||0)>=2) return 'COOLDOWN';
+  var silence=_cadClassifySilence(deal,state);
+  if(silence==='REFLECTIVE_SILENCE'||silence==='APPROVAL_WAIT') return 'WAIT_FOR_PROCESSING';
+  return 'NONE';
+}
+
+function calcCadenceEngineV1(deal){
+  var state=_cadResolveCadenceState(deal);
+  var objective=_cadResolveObjective(deal,state);
+  var channel=_cadResolveChannel(deal,state,objective);
+  var intentSignal=_cadCalcIntentSignal(deal);
+  var stagePressure=_cadCalcStagePressure(deal);
+  var responseHazard=_cadCalcResponseHazard(deal);
+  var channelFit=_cadCalcChannelFit(objective,channel);
+  var momentum=_cadCalcRelationshipMomentum(deal);
+  var dataTrust=(deal._dataQuality&&deal._dataQuality.data_trust_score)||0.5;
+  var priorityScore=Math.max(0,Math.min(1,
+    intentSignal*0.25+stagePressure*0.20+responseHazard*0.20+channelFit*0.15+momentum*0.10+dataTrust*0.10
+  ));
+  var saturation=_cadCalcChannelSaturation(deal,channel);
+  var stopState=_cadResolveStopState(deal,state,channel,saturation);
+  var deltaScore=_cadCalcDeltaScore(deal);
+  var silenceType=_cadClassifySilence(deal,state);
+  var delayHours=stopState!=='NONE'?null:_cadCalcNextTouchHours(state,channel,responseHazard,saturation,deal);
+  var nextTouchAt=delayHours==null?null:new Date(Date.now()+delayHours*3600000).toISOString();
+  var confidence=_cadCalcConfidence(deal);
+  // Build reason
+  var reasonMain='';
+  if(stopState==='HARD_STOP') reasonMain='Deal encerrado ou desqualificado';
+  else if(stopState==='COOLDOWN') reasonMain='Saturacao de canal ou sem delta positivo';
+  else if(stopState==='WAIT_FOR_PROCESSING') reasonMain='Silencio reflexivo — aguardar processamento';
+  else if(stopState==='HANDOFF_STOP') reasonMain='Deal pronto para handoff';
+  else if(state==='HOT_INBOUND') reasonMain='Lead quente — prioridade maxima';
+  else if(state==='POST_NO_SHOW') reasonMain='No-show — recuperar em '+Math.round(delayHours||4)+'h';
+  else if(state==='REACTIVATION') reasonMain='Reativacao — deal inativo '+((deal._inactivityDays||deal._delta||0))+'d';
+  else reasonMain=state.replace(/_/g,' ')+' — '+objective.replace(/_/g,' ').toLowerCase();
+  var reasonSec=channel!=='NO_TOUCH'?'Canal: '+channel+' | Prox toque: '+(delayHours?Math.round(delayHours)+'h':'—'):'Sem toque programado';
+
+  return {
+    deal_id:deal.deal_id||deal.id||'',
+    operator_email:deal.operator_email||'',
+    cadence_state:state,
+    cadence_objective:objective,
+    cadence_channel:channel,
+    cadence_next_touch_at:nextTouchAt,
+    cadence_delay_hours:delayHours,
+    cadence_priority_score:+priorityScore.toFixed(4),
+    cadence_confidence:+confidence.toFixed(4),
+    cadence_stop_state:stopState,
+    cadence_reason_main:reasonMain,
+    cadence_reason_secondary:reasonSec,
+    channel_saturation_score:+saturation.toFixed(4),
+    delta_score:+deltaScore.toFixed(4),
+    silence_type:silenceType,
+    queue:CADENCE_STATE_QUEUE[state]||null,
+    explain_json:{
+      intentSignal:+intentSignal.toFixed(4),
+      stagePressure:+stagePressure.toFixed(4),
+      responseHazard:+responseHazard.toFixed(4),
+      channelFit:+channelFit.toFixed(4),
+      relationshipMomentum:+momentum.toFixed(4),
+      dataTrust:+dataTrust.toFixed(4)
+    }
+  };
+}
+window.calcCadenceEngineV1 = calcCadenceEngineV1;
+
+// ── SYNC: Persist cadence runtime to Supabase ──
+async function syncCadenceRuntimeV1(){
+  var sb=_sb(); if(!sb) return;
+  var map=window._COCKPIT_DEAL_MAP||{};
+  var ids=Object.keys(map);
+  if(!ids.length) return;
+  var rows=[];
+  ids.forEach(function(id){
+    var deal=map[id];
+    var cad=calcCadenceEngineV1(deal);
+    deal._cadence=cad; // attach to deal for Task Runner
+    rows.push({
+      deal_id:cad.deal_id, operator_email:cad.operator_email,
+      cadence_state:cad.cadence_state, cadence_objective:cad.cadence_objective,
+      cadence_channel:cad.cadence_channel, cadence_next_touch_at:cad.cadence_next_touch_at,
+      cadence_delay_hours:cad.cadence_delay_hours, cadence_priority_score:cad.cadence_priority_score,
+      cadence_confidence:cad.cadence_confidence, cadence_stop_state:cad.cadence_stop_state,
+      cadence_reason_main:cad.cadence_reason_main, cadence_reason_secondary:cad.cadence_reason_secondary,
+      channel_saturation_score:cad.channel_saturation_score, delta_score:cad.delta_score,
+      silence_type:cad.silence_type, explain_json:cad.explain_json, updated_at:_now()
+    });
+  });
+  // Batch upsert in chunks of 50
+  for(var i=0;i<rows.length;i+=50){
+    var chunk=rows.slice(i,i+50);
+    try{
+      await sb.from('deal_cadence_runtime').upsert(chunk,{onConflict:'deal_id'});
+    }catch(e){ _syncErr('cadence-v1',e); }
+  }
+  console.log('[cadence-v1] synced '+rows.length+' deals');
+}
+window.syncCadenceRuntimeV1 = syncCadenceRuntimeV1;
+
+// ── Policy Metrics Aggregation ──
+async function syncCadencePolicyMetrics(){
+  var sb=_sb(); if(!sb) return;
+  var map=window._COCKPIT_DEAL_MAP||{};
+  var email=getOperatorId(); if(!email) return;
+  var now=new Date();
+  var periodKey=now.toISOString().slice(0,7);
+  var stateCount={}, channelCount={};
+  Object.keys(map).forEach(function(id){
+    var cad=map[id]._cadence;
+    if(!cad) return;
+    var sk=cad.cadence_state+'_'+cad.cadence_channel;
+    if(!stateCount[sk]) stateCount[sk]={state:cad.cadence_state,channel:cad.cadence_channel,count:0,delays:[]};
+    stateCount[sk].count++;
+    if(cad.cadence_delay_hours) stateCount[sk].delays.push(cad.cadence_delay_hours);
+  });
+  var rows=Object.keys(stateCount).map(function(k){
+    var s=stateCount[k];
+    var avgD=s.delays.length>0?s.delays.reduce(function(a,b){return a+b;},0)/s.delays.length:null;
+    return {
+      period_type:'monthly', period_key:periodKey, operator_email:email,
+      cadence_state:s.state, cadence_channel:s.channel, touches_count:s.count,
+      avg_delay_hours:avgD?+avgD.toFixed(2):null
+    };
+  });
+  if(rows.length>0){
+    try{ await sb.from('cadence_policy_metrics').upsert(rows); }catch(e){ _syncErr('cadence-policy',e); }
+  }
+}
+window.syncCadencePolicyMetrics = syncCadencePolicyMetrics;
+
+// ==================================================================
 // DAG ORCHESTRATOR — Executa as 27 layers na ordem correta sem ciclos
 // Fase 1: Base (L1-L3,L6,L8,L10,L11) — já executadas no boot
 // Fase 2: Inteligência Estrutural (L16,L18,L19)
@@ -7800,21 +9335,20 @@ async function runIntelligenceDAG(){
   var t0 = Date.now();
 
   try {
-    // Phase 2: Data Quality (L19) — depends on base data only
-    console.log('[DAG] Phase 2: L19 Data Quality...');
-    await syncDataQualityRuntimeV19();
+    // Phase 2: Data Quality (L19) + Attribution (L22) — independent, run in parallel
+    console.log('[DAG] Phase 2: L19 Data Quality + L22 Attribution (parallel)...');
+    await Promise.all([
+      syncDataQualityRuntimeV19(),
+      syncAttributionRuntimeV22()
+    ]);
 
     // Phase 4: Transition Rules (L20) — depends on L19
     console.log('[DAG] Phase 4: L20 Transition Rules...');
     await syncTransitionRuntimeV20();
 
     // Phase 5: Portfolio Prioritization (L21) — depends on L19, L20
-    console.log('[DAG] Phase 5: L21 Portfolio Prioritization...');
+    console.log('[DAG] Phase 5: L21 Portfolio Prioritization...')
     await syncPortfolioRuntimeV21();
-
-    // Phase 7: Attribution (L22) — retrospective, batch
-    console.log('[DAG] Phase 7: L22 Attribution...');
-    await syncAttributionRuntimeV22();
 
     // Phase 8: SPIN Audit + RFV (L26, L27) — depends on enrichment
     console.log('[DAG] Phase 8: L26 SPIN Audit + L27 RFV Portfolio...');
@@ -7834,13 +9368,655 @@ async function runIntelligenceDAG(){
     console.log('[DAG] Phase 10: L25 Strategic Intelligence...');
     await syncStrategicIntelligenceV25();
 
-    console.log('[DAG] 27-Layer DAG completed in ' + (Date.now() - t0) + 'ms');
+    // Phase 11: Cadence Engine V1 (L28) — depends on all prior layers
+    console.log('[DAG] Phase 11: L28 Cadence Engine V1...');
+    await syncCadenceRuntimeV1();
+
+    // Phase 12: ROA Data Load (L29) — loads psychological progress + intent analysis
+    console.log('[DAG] Phase 12: L29 ROA Data Load...');
+    await loadROAData();
+
+    console.log('[DAG] 29-Layer DAG completed in ' + (Date.now() - t0) + 'ms');
   } catch(err){
     console.error('[DAG] Error:', err);
   }
 }
 window.runIntelligenceDAG = runIntelligenceDAG;
 
-console.log('[cockpit-engine v11.1] 27-Layer Architecture loaded — L19-L22 Quality + L23 Enterprise + L24 Trusted Advisor + L25 Strategic + L26 SPIN Audit + L27 RFV Portfolio');
+// ══════════════════════════════════════════════════════════════════
+// LAYER 30 — Intelligence Requests + Chat Engine (V12)
+// ══════════════════════════════════════════════════════════════════
+
+var ELUCY_CACHE = {};
+
+var REQUEST_PROMPTS = {
+  analyze: 'Gere um [ELUCI REPORT] completo para este deal. Inclua: DIAGNOSTICO (situacao atual com dados do CRM), QUALIFICACAO (ICP fit, tier assessment, persona), RISCO (aging, SLA, sinais), ESTRATEGIA (framework recomendado, proximos 3 passos), PREVISAO (probabilidade ajustada, valor estimado). Formato: backstage para o operador (clinico, bullet points, sem filtro).',
+  copy: 'Gere a proxima mensagem de follow-up para este deal. Canal indicado no context.\n\nFORMATO OBRIGATORIO:\n\nVERSAO WHATSAPP:\n(texto pronto para copiar e colar direto no WhatsApp)\n\nNOTA CRM:\n(nota curta para registrar no CRM)',
+  note: 'Gere uma nota de qualificacao CRM para este deal. Formato canonico do output-schema. Preencha todos os campos com dados disponiveis. Marque NAO_INFORMADO onde faltar dado. Inclua DQI score.',
+  business_analysis: 'Gere uma analise de mercado/setor para o segmento deste deal. Inclua: PANORAMA DO SETOR, TOP PLAYERS, TENDENCIAS, LACUNAS, JOGADAS ESTRATEGICAS.',
+  dm_copy: 'Gere uma copy de Social DM (Instagram) para este deal. Tom do founder. Objetivo: tensao de custo de inacao. PROIBIDO: mencionar G4, produto, preco, call anterior.\n\nFORMATO:\n\nDM PRONTO PARA COLAR:\n(texto da DM direto)\n\nNOTA CRM:\n(nota curta para CRM)',
+  coaching: 'Analise a performance do operador neste deal e gere feedback de coaching. Inclua: o que fez bem, onde errou, proxima acao recomendada, score de execucao.',
+  pipeline_analytics: 'Gere uma analise quantitativa do pipeline deste operador. Inclua: distribuicao por fase, aging medio por faixa, taxa de conversao fase-a-fase, deals em risco (aging >7d), velocidade media de progressao, mix de linhas de receita. Formato: tabela markdown + insights acionaveis.',
+  forecast_deep: 'Gere um deep-dive de forecast para este deal. Inclua: breakdown dos 7 componentes de confidence, comparacao com benchmark da linha de receita, cenarios (otimista/base/pessimista) com probabilidades.',
+  data_quality_report: 'Gere um relatorio de qualidade de dados (DQI) para este deal. Analise: completeness, consistency, recency, evidence. Score 0-100 por dimensao + score composto. Liste os 5 campos mais criticos faltantes.',
+  operator_performance: 'Gere um relatorio de performance do operador baseado nos ultimos 30 dias. Inclua: volume FUPs vs meta, taxa qualificacao, handoffs, win rate, aging medio, DQI medio. Formato: KPIs em tabela + coaching.',
+  deal_comparison: 'Compare este deal com os 5 deals mais similares do pipeline (mesmo grupo_de_receita + tier). Inclua: tabela comparativa, padroes de sucesso, recomendacao.',
+  copy_optimization: 'Analise as copies anteriores e sugira otimizacoes. 3 variacoes (A/B/C test) com justificativa. Canal: WhatsApp.'
+};
+
+async function requestIntelligence(deal_id, requestType, btn){
+  var dealData = window._COCKPIT_DEAL_MAP && window._COCKPIT_DEAL_MAP[deal_id];
+  if(!dealData){window.showSyncToast&&window.showSyncToast('err','Deal nao encontrado no mapa.');return;}
+
+  var origText = btn ? btn.textContent : '';
+  if(btn){btn.disabled=true;btn.textContent='Processando...';}
+
+  var cacheKey = deal_id + '_' + requestType;
+  if(ELUCY_CACHE[cacheKey]){
+    renderIntelligenceOutput(deal_id, requestType, ELUCY_CACHE[cacheKey]);
+    if(btn){btn.disabled=false;btn.textContent=origText;}
+    return;
+  }
+
+  var reportEl = document.getElementById('er-'+deal_id);
+  if(reportEl){
+    reportEl.innerHTML='<div class="er-loading"><span class="elucy-pulse">ELUCY processando '+_escHtml(requestType.replace(/_/g,' '))+'...</span></div>';
+    reportEl.style.display='block';
+  }
+
+  try {
+    var apiResult = await callIntelligenceAPI(dealData, requestType, '');
+    if(apiResult && apiResult.intelligence){
+      var output = typeof apiResult.intelligence === 'string'
+        ? apiResult.intelligence
+        : JSON.stringify(apiResult.intelligence, null, 2);
+      ELUCY_CACHE[cacheKey] = output;
+      renderIntelligenceOutput(deal_id, requestType, output);
+      if(window.logActivity) window.logActivity('intelligence_'+requestType, deal_id);
+      if(window.saveAPIResponse) window.saveAPIResponse(deal_id, requestType, output);
+      if(window.logDealInteraction) window.logDealInteraction(deal_id, requestType, output);
+    } else {
+      throw new Error('Resposta vazia da API');
+    }
+  } catch(err) {
+    console.error('Intelligence request error:', err.message);
+    window.showSyncToast&&window.showSyncToast('err','Erro em '+requestType+': '+err.message);
+    if(reportEl) reportEl.innerHTML='<div class="er-b"><div class="er-bl">ERRO</div><div class="er-bt">'+_escHtml(err.message)+'</div></div>';
+  } finally {
+    if(btn){btn.disabled=false;btn.textContent=origText;}
+  }
+}
+window.requestIntelligence = requestIntelligence;
+
+function renderIntelligenceOutput(dealId, requestType, output){
+  var reportEl = document.getElementById('er-'+dealId);
+  if(!reportEl) return;
+  var typeLabels = {
+    pipeline_analytics: {badge:'PIPELINE ANALYTICS', color:'var(--blue,#3b82f6)', icon:'📊'},
+    forecast_deep: {badge:'FORECAST DEEP-DIVE', color:'var(--green)', icon:'📈'},
+    data_quality_report: {badge:'DQI REPORT', color:'var(--yellow)', icon:'🛡️'},
+    operator_performance: {badge:'OPERATOR PERFORMANCE', color:'var(--accent)', icon:'⚡'},
+    deal_comparison: {badge:'DEAL COMPARISON', color:'var(--accent)', icon:'📋'},
+    copy_optimization: {badge:'COPY LAB', color:'var(--accent2)', icon:'⭐'}
+  };
+  var meta = typeLabels[requestType] || {badge:requestType.toUpperCase(), color:'var(--accent)', icon:'🔍'};
+  reportEl.innerHTML = '<div class="er-h"><span class="er-badge" style="background:'+meta.color+'">'+meta.icon+' '+meta.badge+'</span><span class="er-htitle">Gerado pelo Motor ELUCY</span><span class="er-dqi elucy-live">LIVE</span></div>'
+    + '<div class="er-b"><div class="er-bt">' + (typeof renderMd==='function'?renderMd(output):output) + '</div></div>'
+    + '<div style="padding:8px 14px;display:flex;gap:8px;flex-wrap:wrap">'
+    + '<button class="btn bs btn-sm" onclick="clipCache(this,\''+dealId+'_'+requestType+'\')" style="font-size:10px">Copiar</button>'
+    + '</div>';
+  reportEl.style.display='block';
+}
+
+function clipCache(btn, cacheKey){
+  var text = ELUCY_CACHE[cacheKey] || '';
+  if(!text){window.showSyncToast&&window.showSyncToast('err','Nada para copiar.');return;}
+  navigator.clipboard.writeText(text).then(function(){
+    var orig=btn.textContent;btn.textContent='Copiado!';
+    setTimeout(function(){btn.textContent=orig;},1500);
+  }).catch(function(){window.showSyncToast&&window.showSyncToast('err','Erro ao copiar.');});
+}
+window.clipCache = clipCache;
+
+// ── TEXTUAL REVENUE BRAIN — Chat Engine V2 ─────────────────────
+(function(){
+  /* ─── STATE ─── */
+  var _cs = {
+    conversations: [], filtered: [], activeThread: null, messages: [],
+    channelFilter: 'all', searchTerm: '', initialized: false,
+    realtimeSub: null, slaTimer: null, slaSeconds: 0,
+    linkedDeal: null, analysisCache: {}
+  };
+
+  /* ─── BRAIN: Analysis Pipeline ─── */
+  function analyzeMessage(text, conv){
+    if(!text||!text.trim()) return null;
+    var intent = detectIntent(text);
+    var framework = detectFramework(text);
+    var signals = extractSignals(text);
+    var risk = detectRisk(text, conv);
+    var killSwitch = applyKillSwitch(intent, framework, conv);
+    var impact = calcMessageImpact(intent, signals, framework);
+    var suggestion = killSwitch.blocked ? killSwitch.suggestion : suggestRewrite(text, intent, framework, signals);
+    return {intent:intent, framework:framework, signals:signals, risk:risk, killSwitch:killSwitch, impact:impact, suggestion:suggestion};
+  }
+
+  function detectIntent(text){
+    var t = text.toLowerCase();
+    if(t.match(/\?|como|quando|por que|qual|quem|onde|quanto/)) return 'QUESTION';
+    if(t.match(/agendar|marcar|confirmar|fechar|proposta|contrato/)) return 'CTA';
+    if(t.match(/entendi|faz sentido|exato|concordo|isso mesmo/)) return 'VALIDATION';
+    if(t.match(/conta mais|me fala|explica|detalha|como funciona/)) return 'DISCOVERY';
+    return 'STATEMENT';
+  }
+
+  function detectFramework(text){
+    var t = text.toLowerCase();
+    if(t.match(/situacao|contexto atual|como esta hoje|me conta sobre/)) return 'SPIN_S';
+    if(t.match(/problema|dificuldade|desafio|dor|frustra/)) return 'SPIN_P';
+    if(t.match(/impacto|consequencia|o que acontece se|quanto custa/)) return 'SPIN_I';
+    if(t.match(/e se|imagina|seria util|resolvesse/)) return 'SPIN_N';
+    if(t.match(/snapshot|como esta|cenario atual|panorama/)) return 'SPICED_I';
+    if(t.match(/provoc|desafi|repensar|diferente do que|na verdade/)) return 'CHALLENGER';
+    if(t.match(/decisor|quem decide|processo de compra|comite/)) return 'MEDDICC_D';
+    return null;
+  }
+
+  function extractSignals(text){
+    var t = text.toLowerCase();
+    var pain = 0, urgency = 0, authority = 0, engagement = 0;
+    if(t.match(/problema|dor|frustra|dificil|ruim|perden/)) pain = 0.7;
+    if(t.match(/urgente|rapido|agora|prazo|ontem|ja era/)) urgency = 0.8;
+    if(t.match(/eu decido|minha equipe|meu budget|aprovo|CEO|diretor/)) authority = 0.9;
+    if(t.match(/interessante|quero|preciso|me conta|manda/)) engagement = 0.6;
+    if(text.length > 100) engagement = Math.min(1, engagement + 0.2);
+    return {pain:pain, urgency:urgency, authority:authority, engagement:engagement};
+  }
+
+  function detectRisk(text, conv){
+    var t = text.toLowerCase();
+    var risks = [];
+    if(t.match(/preco|valor|quanto custa|investimento|desconto/) && conv && !conv._qualPhase) risks.push('PREMATURE_PRICE');
+    if(t.match(/concorren|alternativa|outro fornecedor/) && !t.match(/problema|dor|frustra/)) risks.push('COMPETITOR_WITHOUT_PAIN');
+    return risks;
+  }
+
+  function applyKillSwitch(intent, framework, conv){
+    var deal = _cs.linkedDeal;
+    // KS1: Premature CTA without qualification
+    if(intent === 'CTA' && deal){
+      var phase = (deal.fase_atual_no_processo||'').toLowerCase();
+      if(phase.match(/suspect|mql|awareness/)) return {blocked:true, rule:'KS1_PREMATURE_CTA', suggestion:'Prospect ainda em fase inicial. Aprofunde dor antes de CTA.'};
+    }
+    // KS2: Titan persona must use Challenger
+    if(deal && (deal.persona_tag||'').toLowerCase()==='titan' && framework && framework.startsWith('SPIN_'))
+      return {blocked:true, rule:'KS2_TITAN_SPIN', suggestion:'Persona Titan = Challenger obrigatorio. Use provocacao, nao SPIN.'};
+    // KS3: Tier restriction
+    if(deal && deal.tier_da_oportunidade){
+      var tier = (deal.tier_da_oportunidade||'').toLowerCase();
+      if((tier==='silver'||tier==='bronze') && intent==='CTA' && (deal.linha_de_receita_vigente||'').toLowerCase().match(/imersao presencial/))
+        return {blocked:true, rule:'KS3_TIER_BLOCK', suggestion:'Tier '+tier+' bloqueado para Imersoes Presenciais.'};
+    }
+    // KS4: Premature pricing
+    if(intent === 'STATEMENT'){
+      // handled in detectRisk
+    }
+    return {blocked:false, rule:null, suggestion:null};
+  }
+
+  function calcMessageImpact(intent, signals, framework){
+    var score = 0;
+    if(intent==='DISCOVERY') score += 0.3;
+    if(intent==='QUESTION') score += 0.2;
+    if(intent==='CTA') score += 0.1;
+    if(framework) score += 0.2;
+    score += (signals.pain * 0.15) + (signals.urgency * 0.1) + (signals.authority * 0.15) + (signals.engagement * 0.1);
+    return Math.min(1, Math.round(score * 100) / 100);
+  }
+
+  function suggestRewrite(text, intent, framework, signals){
+    if(intent==='CTA' && signals.pain < 0.3) return 'Antes de CTA, explore a dor: "Qual o maior desafio que voce enfrenta com X hoje?"';
+    if(intent==='STATEMENT' && !framework) return 'Transforme em pergunta de descoberta para engajar: "Como isso impacta Y no seu dia-a-dia?"';
+    if(framework==='SPIN_S' && signals.engagement < 0.3) return 'Situacao ok, avance para Problema: "E qual a maior dificuldade nesse processo?"';
+    if(framework==='SPIN_P') return 'Bom! Agora amplifique com Implicacao: "Quanto isso custa por mes em X?"';
+    if(framework==='SPIN_I') return 'Excelente implicacao. Feche com Need-payoff: "Se resolvesse isso, o que mudaria?"';
+    return null;
+  }
+
+  /* ─── REALTIME ANALYSIS BAR ─── */
+  function chatAnalyzeRealtime(){
+    var input = document.getElementById('chat-input');
+    var bar = document.getElementById('chat-analysis-bar');
+    var suggBar = document.getElementById('chat-suggestion-bar');
+    if(!input||!bar) return;
+    var text = input.value;
+    if(!text||text.length < 5){bar.style.display='none';if(suggBar)suggBar.style.display='none';return;}
+    var conv = _cs.conversations.find(function(c){return c.thread_id===_cs.activeThread;});
+    var analysis = analyzeMessage(text, conv);
+    if(!analysis){bar.style.display='none';return;}
+    bar.style.display='flex';
+    var impactColor = analysis.impact >= 0.7 ? '#34c759' : analysis.impact >= 0.4 ? '#ff9f0a' : '#ff453a';
+    var fwLabel = analysis.framework ? '<span class="brain-tag fw">'+analysis.framework+'</span>' : '';
+    var intentLabel = '<span class="brain-tag intent">'+analysis.intent+'</span>';
+    var impactLabel = '<span class="brain-impact" style="background:'+impactColor+'">'+Math.round(analysis.impact*100)+'</span>';
+    var riskHtml = '';
+    if(analysis.risk.length) riskHtml = analysis.risk.map(function(r){return '<span class="brain-tag risk">'+r+'</span>';}).join('');
+    var ksHtml = '';
+    if(analysis.killSwitch.blocked) ksHtml = '<span class="brain-tag ks">BLOCKED: '+analysis.killSwitch.rule+'</span>';
+    bar.innerHTML = impactLabel + intentLabel + fwLabel + riskHtml + ksHtml;
+    // Suggestion bar
+    if(suggBar){
+      var sugg = analysis.suggestion || (analysis.killSwitch.blocked ? analysis.killSwitch.suggestion : null);
+      if(sugg){
+        suggBar.style.display='flex';
+        suggBar.innerHTML='<span class="brain-sugg-icon">&#9889;</span><span class="brain-sugg-text">'+sugg+'</span><button class="brain-sugg-btn" onclick="window.chatRewrite()">Aplicar</button>';
+      } else {
+        suggBar.style.display='none';
+      }
+    }
+    _cs.analysisCache[_cs.activeThread] = analysis;
+  }
+  window.chatAnalyzeRealtime = chatAnalyzeRealtime;
+
+  /* ─── SLA TIMER ─── */
+  function chatStartSLA(){
+    if(_cs.slaTimer) clearInterval(_cs.slaTimer);
+    _cs.slaSeconds = 300; // 5 min
+    var el = document.getElementById('chat-sla-bar');
+    if(!el) return;
+    el.style.display = 'flex';
+    _cs.slaTimer = setInterval(function(){
+      _cs.slaSeconds--;
+      if(_cs.slaSeconds <= 0){clearInterval(_cs.slaTimer);_cs.slaTimer=null;}
+      var min = Math.floor(Math.max(0,_cs.slaSeconds)/60);
+      var sec = Math.max(0,_cs.slaSeconds)%60;
+      var pct = Math.max(0,(_cs.slaSeconds/300)*100);
+      var color = pct > 50 ? '#34c759' : pct > 20 ? '#ff9f0a' : '#ff453a';
+      el.innerHTML = '<div class="sla-label">SLA</div><div class="sla-track"><div class="sla-fill" style="width:'+pct+'%;background:'+color+'"></div></div><div class="sla-time" style="color:'+color+'">'+min+':'+String(sec).padStart(2,'0')+'</div>';
+    }, 1000);
+  }
+  function chatStopSLA(){
+    if(_cs.slaTimer){clearInterval(_cs.slaTimer);_cs.slaTimer=null;}
+    var el = document.getElementById('chat-sla-bar');
+    if(el) el.style.display='none';
+  }
+
+  /* ─── DEAL LINKING ─── */
+  function linkDealToThread(conv){
+    if(!conv) return null;
+    var dealMap = window._COCKPIT_DEAL_MAP||{};
+    var deals = Object.values(dealMap);
+    var phone = (conv.contact_phone||'').replace(/\D/g,'');
+    var match = deals.find(function(d){
+      return (d.telefone||'').replace(/\D/g,'')===phone || (d.celular||'').replace(/\D/g,'')===phone;
+    });
+    _cs.linkedDeal = match || null;
+    return match;
+  }
+
+  /* ─── PRIORITY BUCKET (Reisert) ─── */
+  function getBucket(conv){
+    var deal = linkDealToThread(conv);
+    if(!deal) return 'B1';
+    var etapa = (deal.etapa_atual_no_pipeline||'').toLowerCase();
+    if(etapa.match(/agendado|booked|reuniao marcada/)) return 'B4';
+    if(etapa.match(/conectado|connected|contato feito/)) return 'B3';
+    if(etapa.match(/cadencia|sequence|prospeccao/)) return 'B2';
+    return 'B1';
+  }
+
+  /* ─── INIT ─── */
+  function chatInit(){
+    if(_cs.initialized) return;
+    _cs.initialized = true;
+    chatLoadConversations();
+    chatInitRealtime();
+    // Bind realtime analysis to input
+    setTimeout(function(){
+      var input = document.getElementById('chat-input');
+      if(input) input.addEventListener('input', chatAnalyzeRealtime);
+    }, 500);
+  }
+  window.chatInit = chatInit;
+
+  /* ─── LOAD CONVERSATIONS ─── */
+  async function chatLoadConversations(){
+    try {
+      var sb = window._supabase;
+      if(!sb){console.warn('[Chat] Supabase not available');return;}
+      var {data,error} = await sb.from('chat_conversations').select('*').order('last_message_at',{ascending:false});
+      if(error) throw error;
+      _cs.conversations = data || [];
+      _cs.filtered = _cs.conversations;
+      chatRenderConversations();
+      chatRenderStats();
+    } catch(err){
+      console.error('[Chat] Load error:', err.message);
+    }
+  }
+
+  /* ─── RENDER CONVERSATIONS (Priority Inbox) ─── */
+  function chatRenderConversations(){
+    var el = document.getElementById('chat-conversations');
+    if(!el) return;
+    var convs = _cs.filtered;
+    if(!convs.length){
+      el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text2);font-size:12px">Nenhuma conversa encontrada</div>';
+      return;
+    }
+    // Sort by bucket priority then recency
+    var bucketOrder = {B4:0,B3:1,B2:2,B1:3};
+    convs.sort(function(a,b){
+      var ba = getBucket(a), bb = getBucket(b);
+      if(bucketOrder[ba] !== bucketOrder[bb]) return bucketOrder[ba] - bucketOrder[bb];
+      return new Date(b.last_message_at||0) - new Date(a.last_message_at||0);
+    });
+    el.innerHTML = convs.map(function(c){
+      var isActive = _cs.activeThread === c.thread_id;
+      var chClass = (c.channel||'whatsapp')==='instagram'?'ig':'wa';
+      var initial = (c.contact_name||'?')[0].toUpperCase();
+      var unread = c.unread_count>0?'<span class="chat-conv-badge">'+c.unread_count+'</span>':'';
+      var timeStr = c.last_message_at?new Date(c.last_message_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
+      var bucket = getBucket(c);
+      var bucketColor = bucket==='B4'?'#34c759':bucket==='B3'?'#30d158':bucket==='B2'?'#ff9f0a':'#636366';
+      return '<div class="chat-conv'+(isActive?' active':'')+'" onclick="window.chatOpenThread(\''+c.thread_id+'\')">'
+        +'<div class="chat-conv-av '+chClass+'"><span>'+initial+'</span><span class="bucket-dot" style="background:'+bucketColor+'" title="'+bucket+'"></span></div>'
+        +'<div class="chat-conv-body"><div class="chat-conv-name">'+(c.contact_name||c.contact_phone||'Desconhecido')+'</div>'
+        +'<div class="chat-conv-last">'+(c.last_message_preview||'')+'</div></div>'
+        +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><span class="chat-conv-time">'+timeStr+'</span>'+unread+'</div></div>';
+    }).join('');
+  }
+
+  /* ─── STATS BAR ─── */
+  function chatRenderStats(){
+    var el = document.getElementById('chat-stats');
+    if(!el) return;
+    var total = _cs.conversations.length;
+    var unread = _cs.conversations.reduce(function(s,c){return s+(c.unread_count||0);},0);
+    var wa = _cs.conversations.filter(function(c){return(c.channel||'whatsapp')==='whatsapp';}).length;
+    var ig = _cs.conversations.filter(function(c){return c.channel==='instagram';}).length;
+    el.innerHTML = '<span>'+total+' conversas</span><span>'+unread+' nao lidas</span><span>WA: '+wa+'</span><span>IG: '+ig+'</span>';
+  }
+
+  /* ─── OPEN THREAD ─── */
+  async function chatOpenThread(threadId){
+    _cs.activeThread = threadId;
+    chatRenderConversations();
+    var inputArea = document.getElementById('chat-input-area');
+    if(inputArea) inputArea.style.display='block';
+    var app = document.getElementById('chat-app');
+    if(app) app.classList.add('chat-open');
+
+    var conv = _cs.conversations.find(function(c){return c.thread_id===threadId;});
+    var headerName = document.getElementById('chat-header-name');
+    var headerMeta = document.getElementById('chat-header-meta');
+    if(headerName) headerName.textContent = conv?(conv.contact_name||conv.contact_phone||'Desconhecido'):'';
+    if(headerMeta) headerMeta.textContent = conv?(conv.channel||'whatsapp').toUpperCase():'';
+
+    // Link deal + update context sidebar
+    var deal = linkDealToThread(conv);
+    chatUpdateContext(deal);
+
+    // SLA for inbound
+    if(conv && conv.unread_count > 0) chatStartSLA(); else chatStopSLA();
+
+    try {
+      var sb = window._supabase;
+      if(!sb) return;
+      var {data,error} = await sb.from('chat_messages').select('*').eq('thread_id',threadId).order('sent_at',{ascending:true});
+      if(error) throw error;
+      _cs.messages = data || [];
+      chatRenderMessages();
+    } catch(err){
+      console.error('[Chat] Open thread error:', err.message);
+    }
+  }
+  window.chatOpenThread = chatOpenThread;
+
+  /* ─── RENDER MESSAGES ─── */
+  function chatRenderMessages(){
+    var el = document.getElementById('chat-messages');
+    if(!el) return;
+    var lastDate = '';
+    el.innerHTML = _cs.messages.map(function(m){
+      var dir = m.direction==='outbound'?'out':'in';
+      var timeStr = m.sent_at?new Date(m.sent_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
+      var dateStr = m.sent_at?new Date(m.sent_at).toLocaleDateString('pt-BR'):'';
+      var statusIcon = m.status==='delivered'?' \u2713\u2713':m.status==='sent'?' \u2713':m.status==='read'?' \u2713\u2713':m.status==='failed'?' \u2717':'';
+      var dateSep = '';
+      if(dateStr && dateStr !== lastDate){lastDate = dateStr; dateSep = '<div class="chat-date-sep"><span>'+dateStr+'</span></div>';}
+      return dateSep + '<div style="display:flex;flex-direction:column;align-items:'+(dir==='out'?'flex-end':'flex-start')+'">'
+        +'<div class="chat-msg '+dir+'">'+(m.body||'')+'</div>'
+        +'<div class="chat-msg-time">'+timeStr+(dir==='out'?'<span class="chat-msg-status">'+statusIcon+'</span>':'')+'</div></div>';
+    }).join('');
+    el.scrollTop = el.scrollHeight;
+  }
+
+  /* ─── SEND (with Brain validation) ─── */
+  async function chatSend(){
+    var input = document.getElementById('chat-input');
+    if(!input||!input.value.trim()||!_cs.activeThread) return;
+    var body = input.value.trim();
+
+    // Kill switch check before sending
+    var conv = _cs.conversations.find(function(c){return c.thread_id===_cs.activeThread;});
+    var analysis = analyzeMessage(body, conv);
+    if(analysis && analysis.killSwitch.blocked){
+      window.showSyncToast&&window.showSyncToast('warn','BLOCKED ['+analysis.killSwitch.rule+']: '+analysis.killSwitch.suggestion);
+      return; // Do not send
+    }
+
+    input.value = '';
+    var channel = conv?conv.channel:'whatsapp';
+
+    // Clear analysis bars
+    var bar = document.getElementById('chat-analysis-bar');
+    var suggBar = document.getElementById('chat-suggestion-bar');
+    if(bar) bar.style.display='none';
+    if(suggBar) suggBar.style.display='none';
+
+    // Stop SLA (we responded)
+    chatStopSLA();
+
+    _cs.messages.push({
+      body: body, direction:'outbound', sent_at: new Date().toISOString(), status:'sending', channel: channel
+    });
+    chatRenderMessages();
+
+    try {
+      var sb = window._supabase;
+      if(!sb) return;
+      var session = await sb.auth.getSession();
+      var token = session.data.session?session.data.session.access_token:'';
+      var resp = await fetch(window._SUPABASE_URL+'/functions/v1/chat-proxy', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+        body:JSON.stringify({thread_id:_cs.activeThread,body:body,channel:channel,contact_phone:conv?conv.contact_phone:''})
+      });
+      var result = await resp.json();
+      if(!resp.ok) throw new Error(result.error||'Erro ao enviar');
+      _cs.messages[_cs.messages.length-1].status='sent';
+      chatRenderMessages();
+    } catch(err){
+      console.error('[Chat] Send error:', err.message);
+      _cs.messages[_cs.messages.length-1].status='failed';
+      chatRenderMessages();
+      window.showSyncToast&&window.showSyncToast('err','Erro ao enviar: '+err.message);
+    }
+  }
+  window.chatSend = chatSend;
+
+  /* ─── DEAL CONTEXT SIDEBAR ─── */
+  function chatUpdateContext(deal){
+    var el = document.getElementById('chat-context-content');
+    if(!el) return;
+    if(!deal){el.innerHTML='<div style="color:var(--text2);font-size:12px;padding:12px">Nenhum deal vinculado</div>';return;}
+    var phase = deal.fase_atual_no_processo||'-';
+    var etapa = deal.etapa_atual_no_pipeline||'-';
+    var tier = deal.tier_da_oportunidade||'-';
+    var grupo = deal.grupo_de_receita||'-';
+    var linha = deal.linha_de_receita_vigente||'-';
+    var lastFup = deal.ultima_atividade||'-';
+    var bucket = getBucket({contact_phone:deal.telefone||deal.celular});
+    el.innerHTML = ''
+      +'<div class="ctx-section"><div class="ctx-label">Deal</div><div class="ctx-value">'+(deal.nome_do_negocio||deal.deal_name||'-')+'</div></div>'
+      +'<div class="ctx-section"><div class="ctx-label">Empresa</div><div class="ctx-value">'+(deal.empresa||deal.company||'-')+'</div></div>'
+      +'<div class="ctx-section"><div class="ctx-label">Etapa / Fase</div><div class="ctx-value">'+etapa+' / '+phase+'</div></div>'
+      +'<div class="ctx-section"><div class="ctx-label">Tier</div><div class="ctx-value ctx-tier-'+tier.toLowerCase()+'">'+tier+'</div></div>'
+      +'<div class="ctx-section"><div class="ctx-label">Grupo</div><div class="ctx-value">'+grupo+'</div></div>'
+      +'<div class="ctx-section"><div class="ctx-label">Linha</div><div class="ctx-value">'+linha+'</div></div>'
+      +'<div class="ctx-section"><div class="ctx-label">Bucket</div><div class="ctx-value" style="color:'+(bucket==='B4'?'#34c759':bucket==='B3'?'#30d158':bucket==='B2'?'#ff9f0a':'#636366')+'">'+bucket+'</div></div>'
+      +'<div class="ctx-section"><div class="ctx-label">Ultimo FUP</div><div class="ctx-value">'+lastFup+'</div></div>'
+      +'<button class="ctx-btn" onclick="window.chatHandoff()">Handoff AE</button>';
+  }
+
+  function chatToggleContext(){
+    var panel = document.getElementById('chat-context-panel');
+    if(panel) panel.classList.toggle('ctx-hidden');
+  }
+  window.chatToggleContext = chatToggleContext;
+
+  /* ─── HANDOFF ─── */
+  function chatHandoff(){
+    var deal = _cs.linkedDeal;
+    if(!deal){window.showSyncToast&&window.showSyncToast('warn','Vincule um deal primeiro.');return;}
+    var conv = _cs.conversations.find(function(c){return c.thread_id===_cs.activeThread;});
+    var lastMsgs = _cs.messages.slice(-5).map(function(m){return (m.direction==='outbound'?'SDR: ':'LEAD: ')+(m.body||'');}).join('\n');
+    var briefing = '== HANDOFF BRIEFING ==\n'
+      +'Contato: '+(conv?conv.contact_name||conv.contact_phone:'-')+'\n'
+      +'Empresa: '+(deal.empresa||deal.company||'-')+'\n'
+      +'Etapa: '+(deal.etapa_atual_no_pipeline||'-')+'\n'
+      +'Fase: '+(deal.fase_atual_no_processo||'-')+'\n'
+      +'Tier: '+(deal.tier_da_oportunidade||'-')+'\n'
+      +'Linha: '+(deal.linha_de_receita_vigente||'-')+'\n\n'
+      +'--- Ultimas mensagens ---\n'+lastMsgs+'\n\n'
+      +'--- Why Listen ---\n[Preencher com dor principal identificada]\n\n'
+      +'--- Why Care ---\n[Preencher com impacto quantificado]';
+    navigator.clipboard.writeText(briefing).then(function(){
+      window.showSyncToast&&window.showSyncToast('ok','Briefing copiado para clipboard!');
+    });
+  }
+  window.chatHandoff = chatHandoff;
+
+  /* ─── REWRITE (apply suggestion) ─── */
+  function chatRewrite(){
+    var cached = _cs.analysisCache[_cs.activeThread];
+    if(!cached||!cached.suggestion) return;
+    var input = document.getElementById('chat-input');
+    if(!input) return;
+    // Extract example from suggestion if quoted
+    var match = cached.suggestion.match(/"([^"]+)"/);
+    if(match) input.value = match[1];
+    else input.value = '';
+    input.focus();
+    chatAnalyzeRealtime();
+  }
+  window.chatRewrite = chatRewrite;
+
+  /* ─── CONVERSATION MANAGEMENT ─── */
+  function chatNewMessage(){
+    var phone = prompt('Numero do contato (com DDD):');
+    if(!phone) return;
+    var threadId = 'wa_'+phone.replace(/\D/g,'');
+    _cs.conversations.unshift({
+      thread_id:threadId, contact_phone:phone, contact_name:phone, channel:'whatsapp',
+      last_message_at:new Date().toISOString(), last_message_preview:'', unread_count:0
+    });
+    _cs.filtered = _cs.conversations;
+    chatRenderConversations();
+    chatOpenThread(threadId);
+  }
+  window.chatNewMessage = chatNewMessage;
+
+  function chatBack(){
+    _cs.activeThread = null;
+    _cs.linkedDeal = null;
+    chatStopSLA();
+    var app = document.getElementById('chat-app');
+    if(app) app.classList.remove('chat-open');
+    chatRenderConversations();
+    var bar = document.getElementById('chat-analysis-bar');
+    var suggBar = document.getElementById('chat-suggestion-bar');
+    if(bar) bar.style.display='none';
+    if(suggBar) suggBar.style.display='none';
+  }
+  window.chatBack = chatBack;
+
+  function chatInsertCopy(){
+    var input = document.getElementById('chat-input');
+    if(!input||!_cs.activeThread) return;
+    var deal = _cs.linkedDeal;
+    if(!deal){window.showSyncToast&&window.showSyncToast('warn','Nenhum deal vinculado a este contato.');return;}
+    var cacheKey = deal.deal_id+'_copy';
+    if(ELUCY_CACHE[cacheKey]){
+      var waMatch = ELUCY_CACHE[cacheKey].match(/VERSAO WHATSAPP:\s*([\s\S]*?)(?:NOTA CRM:|$)/i);
+      input.value = waMatch?waMatch[1].trim():ELUCY_CACHE[cacheKey];
+      input.focus();
+      chatAnalyzeRealtime();
+    } else {
+      window.showSyncToast&&window.showSyncToast('info','Gere uma copy primeiro (botao "Gerar Copy" no deal card).');
+    }
+  }
+  window.chatInsertCopy = chatInsertCopy;
+
+  function chatGenCopy(){
+    var deal = _cs.linkedDeal;
+    if(!deal){window.showSyncToast&&window.showSyncToast('warn','Vincule deal para gerar copy.');return;}
+    if(typeof window.requestIntelligence === 'function') window.requestIntelligence(deal.deal_id, 'copy_optimization');
+    else window.showSyncToast&&window.showSyncToast('info','Intelligence engine nao disponivel.');
+  }
+  window.chatGenCopy = chatGenCopy;
+
+  /* ─── FILTERS ─── */
+  function chatFilterChannel(ch, btn){
+    _cs.channelFilter = ch;
+    var chips = document.querySelectorAll('#chat-list-panel .fchip');
+    chips.forEach(function(c){c.classList.remove('fchip-on');});
+    if(btn) btn.classList.add('fchip-on');
+    applyFilters();
+  }
+  window.chatFilterChannel = chatFilterChannel;
+
+  function chatFilterConversations(term){
+    _cs.searchTerm = (term||'').toLowerCase();
+    applyFilters();
+  }
+  window.chatFilterConversations = chatFilterConversations;
+
+  function applyFilters(){
+    _cs.filtered = _cs.conversations.filter(function(c){
+      if(_cs.channelFilter!=='all' && c.channel!==_cs.channelFilter) return false;
+      if(_cs.searchTerm && !(c.contact_name||'').toLowerCase().includes(_cs.searchTerm) && !(c.contact_phone||'').includes(_cs.searchTerm)) return false;
+      return true;
+    });
+    chatRenderConversations();
+  }
+
+  function chatUseTemplate(){window.showSyncToast&&window.showSyncToast('info','Templates em breve.');}
+  window.chatUseTemplate = chatUseTemplate;
+  function chatAttach(){window.showSyncToast&&window.showSyncToast('info','Anexos em breve.');}
+  window.chatAttach = chatAttach;
+
+  /* ─── REALTIME ─── */
+  function chatInitRealtime(){
+    var sb = window._supabase;
+    if(!sb||!sb.channel) return;
+    _cs.realtimeSub = sb.channel('chat-realtime')
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'chat_messages'},function(payload){
+        var msg = payload.new;
+        if(msg.thread_id===_cs.activeThread){
+          if(msg.direction==='inbound'){
+            _cs.messages.push(msg);
+            chatRenderMessages();
+            chatStartSLA(); // Inbound = restart SLA
+          }
+        }
+        chatLoadConversations();
+      })
+      .subscribe();
+  }
+})();
+
+console.log('[cockpit-engine v12.1] Textual Revenue Brain — 30-Layer + Chat V2 (Brain Analysis + Kill Switches + SLA + Priority Buckets + Deal Context)');
 
 })();

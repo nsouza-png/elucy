@@ -8,7 +8,7 @@ const DATABRICKS_HOST = 'https://dbc-8acefaf9-a170.cloud.databricks.com'
 const DATABRICKS_WAREHOUSE = 'bbae754ea44f67e0'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': 'https://nsouza-png.github.io',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
       FROM (
         SELECT *, ROW_NUMBER() OVER (PARTITION BY deal_id ORDER BY event_timestamp DESC) AS rn
         FROM production.diamond.funil_comercial
-        WHERE qualificador_name = '${qualName.replace(/'/g, "''")}'
+        WHERE qualificador_name = :qualName
           AND fase_atual_no_processo NOT IN ('Ganho', 'Perdido', 'Desqualificado')
       ) f
       LEFT JOIN production.diamond.persons_overview p
@@ -142,6 +142,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         warehouse_id: DATABRICKS_WAREHOUSE,
         statement: dbQuery,
+        parameters: [{ name: 'qualName', value: qualName, type: 'STRING' }],
         wait_timeout: '30s',
         on_wait_timeout: 'CONTINUE',
       }),
@@ -255,12 +256,17 @@ Deno.serve(async (req) => {
     }
 
     // Remove deals que saíram do funil (deal_ids que não vieram mais no resultado)
+    // SEC-03: Safety check — never delete if result is suspiciously small (network error protection)
     const activeDealIds = deals.map(d => d.deal_id)
-    await sbAdmin
-      .from('deals')
-      .delete()
-      .eq('operator_email', operatorEmail)
-      .not('deal_id', 'in', `(${activeDealIds.map(id => `"${id}"`).join(',')})`)
+    if (activeDealIds.length >= 3) {
+      await sbAdmin
+        .from('deals')
+        .delete()
+        .eq('operator_email', operatorEmail)
+        .not('deal_id', 'in', `(${activeDealIds.map(id => `"${id}"`).join(',')})`)
+    } else {
+      console.warn(`[sync-deals] Skipping delete: only ${activeDealIds.length} deals returned — possible query error`)
+    }
 
     return new Response(JSON.stringify({ synced: deals.length, operator: operatorEmail }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

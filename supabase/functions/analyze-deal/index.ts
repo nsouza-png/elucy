@@ -6,7 +6,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': 'https://nsouza-png.github.io',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
@@ -109,6 +109,17 @@ Instagram Alfredo: A=7.4%|R$34.2k, B=5.0%|R$108k(outlier), C=5.1%|R$25k, E=6.0%|
 Instagram Nardon: A=6.7%|R$43.4k, C=4.3%|R$21.1k, H=11.1%|R$20.8k, I=3.7%|R$19.7k, J=2.2%|R$14.4k
 Mapeamento tier->perfil: diamond=A/B | gold=C/D | silver=E/F | bronze=G+`
 
+// Sliding window rate limit: 8 req/min per operator
+const _rlMap = new Map<string, number[]>();
+function _checkRL(email: string): boolean {
+  const now = Date.now();
+  const ts = (_rlMap.get(email) || []).filter(t => now - t < 60000);
+  if (ts.length >= 8) { _rlMap.set(email, ts); return false; }
+  ts.push(now);
+  _rlMap.set(email, ts);
+  return true;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -139,6 +150,13 @@ Deno.serve(async (req) => {
       })
     }
 
+    // Rate limit: 8 req/min per operator
+    if (!_checkRL(user.email || '')) {
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded (8/min)' }), {
+        status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     // 2. Verifica aprovacao
     const { data: operator } = await sbAdmin
       .from('operators')
@@ -163,27 +181,32 @@ Deno.serve(async (req) => {
     }
 
     // 4. Monta o prompt com os dados do deal
+    // SEC-05: Sanitize deal_data fields to prevent prompt injection
+    const sanitize = (v: any): string => {
+      const s = String(v || 'N/A').slice(0, 500)
+      return s.replace(/[\r\n]+/g, ' ').replace(/\b(IGNORE|OVERRIDE|SYSTEM|INSTRUCTION)\b/gi, '[FILTERED]')
+    }
     const dealContext = `
 DADOS DO DEAL (vindos do funil_comercial via Supabase):
-- deal_id: ${deal_data.deal_id || deal_id || 'N/A'}
-- Nome do lead: ${deal_data.contact_name || deal_data.nome || 'N/A'}
-- Email: ${deal_data.email_lead || 'N/A'}
-- Cargo: ${deal_data.cargo || 'N/A'}
-- Empresa: ${deal_data.empresa || 'N/A'}
-- Fase atual: ${deal_data.fase_atual_no_processo || 'N/A'}
-- Etapa pipeline: ${deal_data.etapa_atual_no_pipeline || 'N/A'}
-- Tier: ${deal_data.tier_da_oportunidade || 'N/A'}
-- Delta_t (dias na fase): ${deal_data.delta_t || 'N/A'}
-- Produto (linha de receita): ${deal_data.linha_de_receita_vigente || 'N/A'}
-- Grupo de receita: ${deal_data.grupo_de_receita || 'N/A'}
-- Canal de marketing: ${deal_data.canal_de_marketing || 'N/A'}
-- UTM Medium: ${deal_data.utm_medium || 'N/A'}
-- Revenue: ${deal_data.revenue || 'N/A'}
-- Event skipped: ${deal_data.event_skipped || false}
-- Status: ${deal_data.status_do_deal || 'N/A'}
-- Qualificador: ${deal_data.qualificador_name || operator.qualificador_name || 'N/A'}
-- Closer (proprietario): ${deal_data.proprietario_name || 'N/A'}
-- Criado em: ${deal_data.created_at_crm || 'N/A'}
+- deal_id: ${sanitize(deal_data.deal_id || deal_id)}
+- Nome do lead: ${sanitize(deal_data.contact_name || deal_data.nome)}
+- Email: ${sanitize(deal_data.email_lead)}
+- Cargo: ${sanitize(deal_data.cargo)}
+- Empresa: ${sanitize(deal_data.empresa)}
+- Fase atual: ${sanitize(deal_data.fase_atual_no_processo)}
+- Etapa pipeline: ${sanitize(deal_data.etapa_atual_no_pipeline)}
+- Tier: ${sanitize(deal_data.tier_da_oportunidade)}
+- Delta_t (dias na fase): ${sanitize(deal_data.delta_t)}
+- Produto (linha de receita): ${sanitize(deal_data.linha_de_receita_vigente)}
+- Grupo de receita: ${sanitize(deal_data.grupo_de_receita)}
+- Canal de marketing: ${sanitize(deal_data.canal_de_marketing)}
+- UTM Medium: ${sanitize(deal_data.utm_medium)}
+- Revenue: ${sanitize(deal_data.revenue)}
+- Event skipped: ${sanitize(deal_data.event_skipped || false)}
+- Status: ${sanitize(deal_data.status_do_deal)}
+- Qualificador: ${sanitize(deal_data.qualificador_name || operator.qualificador_name)}
+- Closer (proprietario): ${sanitize(deal_data.proprietario_name)}
+- Criado em: ${sanitize(deal_data.created_at_crm)}
 
 BENCHMARKS DE REFERENCIA:
 ${BENCH}

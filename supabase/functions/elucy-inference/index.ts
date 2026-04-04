@@ -6,25 +6,27 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const CORS = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': 'https://nsouza-png.github.io',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 // MCP_MAP — quais documentos injetar por request type
+// Budget: ~25k system tokens max (30k org limit - 5k for deal_context+prompt)
+// eluci-core = 15k (mandatory), mece-intelligence = 4k, so ~6k for extras
 const MCP_MAP: Record<string, string[]> = {
-  analyze: ['eluci-core','lead-profile','output-schema','signals','strategy','cse-engine','behavior','segments','conversion','iron-dome'],
-  copy: ['eluci-core','playbooks','playbook-sdr','cse-engine','blde','fip','sdr-social-dm','behavior','signals','output-schema'],
-  note: ['eluci-core','output-schema','data-contract','validation-forms','funnel','lead-profile','guardrails'],
-  business_analysis: ['eluci-core','strategy','revops-gtm','produtos-g4','bench-canais','segments','revenue-line-matrix','cse-engine'],
-  dm_copy: ['eluci-core','sdr-social-dm','fip','blde','behavior','playbook-sdr','signals'],
-  coaching: ['eluci-core','sdr-coaching','training-scenarios','playbook-sdr','guardrails'],
-  briefing: ['eluci-core','lead-profile','strategy','cse-engine','behavior','segments','signals','output-schema'],
-  batch_classify: ['eluci-core','signals','lead-profile','segments','output-schema'],
-  competitive: ['eluci-core','strategy','revops-gtm','produtos-g4','bench-canais','segments','revenue-line-matrix','cse-engine'],
-  rt_assist: ['eluci-core','playbooks','playbook-sdr','cse-engine','blde','behavior','signals','output-schema'],
-  downsell: ['eluci-core','playbooks','iron-dome','produtos-g4','revenue-line-matrix','output-schema'],
-  conv_enrichment: ['eluci-core','lead-profile','signals','behavior','output-schema'],
+  analyze: ['eluci-core','mece-intelligence','signals','output-schema'],
+  copy: ['eluci-core','mece-intelligence','blde','output-schema'],
+  note: ['eluci-core','output-schema'],
+  business_analysis: ['eluci-core','mece-intelligence','strategy'],
+  dm_copy: ['eluci-core','mece-intelligence','blde','fip'],
+  coaching: ['eluci-core','sdr-coaching'],
+  briefing: ['eluci-core','mece-intelligence','output-schema'],
+  batch_classify: ['eluci-core','signals','output-schema'],
+  competitive: ['eluci-core','mece-intelligence','strategy'],
+  rt_assist: ['eluci-core','mece-intelligence','blde','output-schema'],
+  downsell: ['eluci-core','mece-intelligence','output-schema'],
+  conv_enrichment: ['eluci-core','signals','output-schema'],
 }
 
 // In-memory MCP cache (warm across invocations within same Deno isolate)

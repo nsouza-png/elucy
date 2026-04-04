@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Novidades — ELUCY</title>
+<link rel="icon" href="favicon-e.svg?v=4" type="image/svg+xml">
+<link rel="shortcut icon" href="favicon-e.svg?v=4">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#04080f;--bg2:#080e18;--bg3:#0d1520;--bg4:#131d2b;--bg5:#1a2535;
+  --amber:#f59e0b;--amber2:#fbbf24;--amber3:#fcd34d;--amber-dim:#d97706;
+  --amber-glass:rgba(245,158,11,.08);--amber-glow:rgba(245,158,11,.15);
+  --amber-border:rgba(245,158,11,.18);--amber-border2:rgba(245,158,11,.30);
+  --blue:#0ea5e9;--blue2:#38bdf8;--green:#10b981;--red:#ef4444;--purple:#8b5cf6;
+  --border:rgba(255,255,255,.05);--border2:rgba(255,255,255,.10);--border3:rgba(255,255,255,.16);
+  --text:#f0f4ff;--text2:#8899aa;--text3:#445566;
+  --r:10px;--r2:16px;--r3:24px;
+  --font:-apple-system,'SF Pro Display',Inter,system-ui,sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+
+/* ─ BG ─────────────────────────────────────────── */
+.bg-layer{position:fixed;inset:0;z-index:0;pointer-events:none}
+.bg-dots{background-image:radial-gradient(circle,rgba(245,158,11,.13) 1px,transparent 1px);background-size:28px 28px;mask-image:radial-gradient(ellipse 90% 90% at 50% 40%,rgba(0,0,0,.4) 0%,transparent 100%);-webkit-mask-image:radial-gradient(ellipse 90% 90% at 50% 40%,rgba(0,0,0,.4) 0%,transparent 100%)}
+.bg-noise{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.02'/%3E%3C/svg%3E");opacity:.4}
+.glow-top{position:fixed;top:-200px;left:50%;transform:translateX(-50%);width:900px;height:600px;background:radial-gradient(ellipse at center,rgba(245,158,11,.10) 0%,transparent 65%);z-index:0}
+
+/* ─ NAV ─────────────────────────────────────────── */
+nav{position:sticky;top:0;z-index:50;border-bottom:1px solid var(--border);background:rgba(4,8,15,.7);backdrop-filter:saturate(200%) blur(28px);-webkit-backdrop-filter:saturate(200%) blur(28px)}
+.nav-inner{height:54px;display:flex;align-items:center;gap:0;max-width:900px;margin:0 auto;padding:0 32px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-name{font-size:15px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;color:var(--text)}
+.logo-tag{font-size:8px;font-weight:700;padding:2px 7px;border-radius:4px;background:var(--amber-glass);color:var(--amber2);border:1px solid var(--amber-border);letter-spacing:1px;text-transform:uppercase;margin-left:4px}
+.logo-section{font-size:12px;color:var(--text2);font-weight:500;margin-left:12px;padding-left:12px;border-left:1px solid var(--border2)}
+.nav-links{margin-left:auto;display:flex;align-items:center;gap:20px}
+.nav-link{font-size:12px;color:var(--text2);text-decoration:none;font-weight:500;transition:.2s;cursor:pointer}
+.nav-link:hover{color:var(--amber2)}
+.btn-nav{padding:7px 18px;border-radius:20px;background:var(--amber);color:#000;font-size:12px;font-weight:700;border:none;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:.2s}
+.btn-nav:hover{background:var(--amber2);box-shadow:0 0 20px var(--amber-glow)}
+
+/* ─ LAYOUT ──────────────────────────────────────── */
+main{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:60px 32px 100px}
+
+/* ─ PAGE HEADER ──────────────────────────────────── */
+.page-header{margin-bottom:56px;padding-bottom:32px;border-bottom:1px solid var(--border)}
+.page-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:2px;margin-bottom:14px}
+.page-eyebrow .live{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+.page-title{font-size:38px;font-weight:900;letter-spacing:-1.5px;line-height:1.1;margin-bottom:10px}
+.page-sub{font-size:15px;color:var(--text2);line-height:1.65;max-width:560px}
+
+/* ─ RELEASE ENTRY ────────────────────────────────── */
+.release{margin-bottom:64px;padding-bottom:64px;border-bottom:1px solid var(--border)}
+.release:last-child{border-bottom:none;margin-bottom:0}
+.release-meta{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.release-date{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px}
+.release-bar{width:2px;height:14px;background:var(--amber-border);border-radius:1px}
+.release-version{font-size:11px;font-weight:700;color:var(--amber);background:var(--amber-glass);border:1px solid var(--amber-border);padding:2px 9px;border-radius:5px;letter-spacing:.5px}
+.release-title{font-size:24px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px;line-height:1.2}
+.release-sub{font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:32px;max-width:640px}
+
+/* ─ FEATURE CARD ─────────────────────────────────── */
+.feature-list{display:flex;flex-direction:column;gap:20px}
+.feature{background:rgba(8,14,24,.6);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.07);border-radius:var(--r2);padding:24px 28px;transition:.2s;position:relative;overflow:hidden}
+.feature::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--amber);border-radius:3px 0 0 3px;opacity:0;transition:.2s}
+.feature:hover{border-color:var(--amber-border);transform:translateX(4px)}
+.feature:hover::before{opacity:1}
+.feature.green-line::before{background:var(--green)}
+.feature.blue-line::before{background:var(--blue2)}
+.feature.purple-line::before{background:var(--purple)}
+.feature.red-line::before{background:var(--red)}
+.feature-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}
+.feature-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.feature-icon.amber{background:var(--amber-glass);border:1px solid var(--amber-border)}
+.feature-icon.green{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.18)}
+.feature-icon.blue{background:rgba(14,165,233,.08);border:1px solid rgba(14,165,233,.18)}
+.feature-icon.purple{background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.18)}
+.feature-icon.red{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.15)}
+.feature-meta{flex:1}
+.feature-name{font-size:15px;font-weight:700;letter-spacing:-.2px;margin-bottom:3px}
+.feature-category{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px}
+.feature-why{font-size:13px;color:var(--text2);line-height:1.65;margin-bottom:12px}
+.feature-why b{color:var(--text);font-weight:600}
+.feature-section{margin-bottom:10px}
+.feature-section-label{font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
+.feature-section.green .feature-section-label{color:var(--green)}
+.feature-section.blue .feature-section-label{color:var(--blue2)}
+.feature-bullets{display:flex;flex-direction:column;gap:4px}
+.feature-bullet{font-size:12px;color:var(--text2);display:flex;align-items:flex-start;gap:7px;line-height:1.5}
+.feature-bullet::before{content:'→';color:var(--amber);font-weight:700;font-size:10px;margin-top:2px;flex-shrink:0}
+.feature-section.green .feature-bullet::before{color:var(--green)}
+.feature-section.blue .feature-bullet::before{color:var(--blue2)}
+.feature-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
+.ftag{font-size:9px;font-weight:700;padding:3px 8px;border-radius:5px;text-transform:uppercase;letter-spacing:.5px;border:1px solid}
+.ftag.amber{background:var(--amber-glass);color:var(--amber2);border-color:var(--amber-border)}
+.ftag.green{background:rgba(16,185,129,.08);color:var(--green);border-color:rgba(16,185,129,.2)}
+.ftag.blue{background:rgba(14,165,233,.08);color:var(--blue2);border-color:rgba(14,165,233,.2)}
+.ftag.purple{background:rgba(139,92,246,.08);color:var(--purple);border-color:rgba(139,92,246,.2)}
+.ftag.red{background:rgba(239,68,68,.07);color:var(--red);border-color:rgba(239,68,68,.18)}
+
+/* ─ SECTION DIVIDER INSIDE RELEASE ──────────────── */
+.release-divider{display:flex;align-items:center;gap:12px;margin:28px 0 20px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px}
+.release-divider::before,.release-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ─ FOOTER ───────────────────────────────────────── */
+footer{border-top:1px solid var(--border);padding:24px 32px;text-align:center;position:relative;z-index:1}
+.footer-text{font-size:11px;color:var(--text3);font-weight:500}
+.footer-text b{color:var(--text2)}
+
+/* ─ ANIMATIONS ───────────────────────────────────── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.anim{opacity:0;animation:fadeUp .5s ease forwards}
+.anim.d1{animation-delay:.05s}.anim.d2{animation-delay:.1s}.anim.d3{animation-delay:.15s}
+
+/* ─ RESPONSIVE ───────────────────────────────────── */
+@media(max-width:600px){
+  main{padding:40px 16px 80px}
+  .nav-inner{padding:0 16px}
+  .page-title{font-size:28px}
+  .nav-links .nav-link{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-layer bg-dots"></div>
+<div class="bg-layer bg-noise"></div>
+<div class="glow-top"></div>
+
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="index.html">
+      <span class="logo-name">Elucy</span>
+      <span class="logo-tag">ENTERPRISE</span>
+    </a>
+    <span class="logo-section">Novidades</span>
+    <div class="nav-links">
+      <a class="nav-link" href="index.html">← Início</a>
+      <a class="btn-nav" href="cockpit.html">Cockpit →</a>
+    </div>
+  </div>
+</nav>
+
+<main>
+
+  <!-- PAGE HEADER -->
+  <div class="page-header anim">
+    <div class="page-eyebrow"><span class="live"></span>Changelog</div>
+    <h1 class="page-title">Novidades do Elucy</h1>
+    <p class="page-sub">Atualizações, melhorias e novas funcionalidades do sistema — registradas em ordem cronológica reversa.</p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       RELEASE — 29 MAR 2026
+  ══════════════════════════════════════════════════════ -->
+  <div class="release anim d1">
+    <div class="release-meta">
+      <span class="release-date">Domingo, 29 de Março de 2026</span>
+      <span class="release-bar"></span>
+      <span class="release-version">v11.2</span>
+    </div>
+    <h2 class="release-title">Ambient Design + Tour Guiado + Sistema Operacional</h2>
+    <p class="release-sub">Revisão visual completa com dot grid amber, glassmorphism nos painéis, tour de onboarding corrigido do zero e diagnóstico do sistema de ponta a ponta.</p>
+
+    <div class="feature-list">
+
+      <!-- FEATURE 1 — Dot Grid Ambient -->
+      <div class="feature anim d2">
+        <div class="feature-top">
+          <div class="feature-icon amber">✦</div>
+          <div class="feature-meta">
+            <div class="feature-name">Ambient Design — Dot Grid + Glassmorphism</div>
+            <div class="feature-category">Design System · Cockpit + Landing</div>
+          </div>
+        </div>
+        <div class="feature-why">
+          O cockpit e a landing tinham fundo sólido sem profundidade. <b>Inspirado no padrão de pontos do G4 OS</b>, adicionamos dot grid amber, orbs flutuantes animados e glassmorphism nos painéis — criando coerência visual entre todas as páginas do sistema.
+        </div>
+        <div class="feature-section">
+          <div class="feature-section-label">O que mudou</div>
+          <div class="feature-bullets">
+            <div class="feature-bullet">Cockpit: <b>dot grid radial amber (26px)</b> com mask elíptica + 3 orbs animados (cockpitOrb keyframe, 24s)</div>
+            <div class="feature-bullet">Landing: dot grid amber (28px) com orbs migrados de azul Apple para amber Elucy</div>
+            <div class="feature-bullet">Topbar: glass profundo — <b>blur 32px saturate 200%</b>, borda amber sutil</div>
+            <div class="feature-bullet">Sidebar: glass 50% opacidade, blur 28px, inset amber glow</div>
+            <div class="feature-bullet">Cards <code style="font-size:10px;color:var(--amber2)">.card</code>: glass real — blur 20px saturate 180%, highlight interno</div>
+            <div class="feature-bullet">Deal cards: backdrop-filter + box-shadow por profundidade</div>
+          </div>
+        </div>
+        <div class="feature-tags">
+          <span class="ftag amber">COCKPIT</span>
+          <span class="ftag amber">LANDING</span>
+          <span class="ftag blue">CSS GLASS</span>
+          <span class="ftag blue">AMBIENT</span>
+        </div>
+      </div>
+
+      <!-- FEATURE 2 — Tour -->
+      <div class="feature green-line anim d2">
+        <div class="feature-top">
+          <div class="feature-icon green">🧭</div>
+          <div class="feature-meta">
+            <div class="feature-name">Tour de Onboarding — Revisão Completa</div>
+            <div class="feature-category">UX · Cockpit</div>
+          </div>
+        </div>
+        <div class="feature-why">
+          O tour original tinha <b>duplo render</b> (dois tooltips ao mesmo tempo), seletores CSS quebrados por posição DOM, tooltip saindo fora da tela no último passo e abas inexistentes como "DM War Room". Reescrevemos do zero.
+        </div>
+        <div class="feature-section green">
+          <div class="feature-section-label">Correções</div>
+          <div class="feature-bullets">
+            <div class="feature-bullet"><b>Guard duplo</b>: <code style="font-size:10px;color:var(--green)">_authHandled</code> previne que <code>getSession</code> + <code>onAuthStateChange</code> disparem <code>checkApproval</code> duas vezes</div>
+            <div class="feature-bullet"><b>Seletores infalíveis</b>: trocados de <code>.ntab:nth-child(N)</code> para <code>[onclick*="setScreen('tab"]</code> — não depende de posição DOM</div>
+            <div class="feature-bullet"><b>Clamp de viewport</b>: tooltip nunca sai da tela — flip automático bottom→top se transbordar</div>
+            <div class="feature-bullet"><b>9 passos reais</b>: Home, Deals, Pipeline, Tasks, Reports, Pre-Vendas, Intel, Playbooks, Perfil</div>
+            <div class="feature-bullet"><b>CSS amber</b>: cor das bordas e dots corrigida para <code>#f59e0b</code> (era roxo herdado)</div>
+          </div>
+        </div>
+        <div class="feature-tags">
+          <span class="ftag green">9 PASSOS</span>
+          <span class="ftag green">CLAMP VIEWPORT</span>
+          <span class="ftag red">BUG FIX</span>
+        </div>
+      </div>
+
+      <!-- FEATURE 3 — Favicon -->
+      <div class="feature blue-line anim d3">
+        <div class="feature-top">
+          <div class="feature-icon blue">⚡→E</div>
+          <div class="feature-meta">
+            <div class="feature-name">Favicon — Raio substituído por "E" Amber</div>
+            <div class="feature-category">Identidade Visual · Todas as páginas</div>
+          </div>
+        </div>
+        <div class="feature-why">
+          O ícone de raio amarelo genérico foi substituído pelo logotipo canônico: <b>letra "E" branca em fundo escuro com borda amber</b>. Aplicado em <code>cockpit.html</code>, <code>index.html</code>, <code>elucy-home.html</code> e <code>cockpit-app.html</code> com cache bust via novo arquivo <code>favicon-e.svg</code>.
+        </div>
+        <div class="feature-tags">
+          <span class="ftag blue">FAVICON-E.SVG</span>
+          <span class="ftag blue">CACHE BUST</span>
+          <span class="ftag amber">BRAND</span>
+        </div>
+      </div>
+
+      <!-- FEATURE 4 — Worker + Ops -->
+      <div class="feature purple-line anim d3">
+        <div class="feature-top">
+          <div class="feature-icon purple">⚙️</div>
+          <div class="feature-meta">
+            <div class="feature-name">Diagnóstico e Limpeza do Sistema Operacional</div>
+            <div class="feature-category">Infra · Supabase + Scheduler</div>
+          </div>
+        </div>
+        <div class="feature-why">
+          9 <code>cockpit_requests</code> pendentes acumuladas sem processamento. Worker ativo mas fila travada. Identificado e resolvido em tempo real.
+        </div>
+        <div class="feature-section">
+          <div class="feature-section-label">Ações executadas</div>
+          <div class="feature-bullets">
+            <div class="feature-bullet">9 requests pendentes (sync_pipeline) marcadas como <code>done</code> no Supabase</div>
+            <div class="feature-bullet">Worker <b>Elucy Cockpit Worker (1min)</b> disparado manualmente via scheduler</div>
+            <div class="feature-bullet">Inventário completo dos 4 agendamentos ativos confirmado</div>
+            <div class="feature-bullet"><b>p.marcondes</b> identificado como operador novo sem histórico no Databricks — sem ação necessária</div>
+          </div>
+        </div>
+        <div class="feature-tags">
+          <span class="ftag purple">SCHEDULER</span>
+          <span class="ftag purple">SUPABASE</span>
+          <span class="ftag blue">WORKER</span>
+        </div>
+      </div>
+
+      <!-- FEATURE 5 — Novidades page -->
+      <div class="feature anim d3">
+        <div class="feature-top">
+          <div class="feature-icon amber">✦</div>
+          <div class="feature-meta">
+            <div class="feature-name">Página de Novidades — Esta Página</div>
+            <div class="feature-category">Produto · Site Map</div>
+          </div>
+        </div>
+        <div class="feature-why">
+          Inspirada na sessão Novidades do G4 OS, esta página registra atualizações do Elucy com o formato canônico: <b>Por que isso importa</b>, <b>O que mudou</b> e tags de categoria. Integrada ao site map via nav do <code>index.html</code>.
+        </div>
+        <div class="feature-section green">
+          <div class="feature-section-label">Como usar</div>
+          <div class="feature-bullets">
+            <div class="feature-bullet">Acesse pelo link "Novidades" na nav principal do Elucy</div>
+            <div class="feature-bullet">Para registrar uma nova feature: adicione um bloco <code>.feature</code> dentro do <code>.release</code> mais recente</div>
+            <div class="feature-bullet">Para um novo release: crie um novo <code>.release</code> com <code>.release-meta</code> e <code>.release-version</code> atualizados</div>
+          </div>
+        </div>
+        <div class="feature-tags">
+          <span class="ftag amber">CHANGELOG</span>
+          <span class="ftag green">SITE MAP</span>
+        </div>
+      </div>
+
+    </div><!-- /feature-list -->
+  </div><!-- /release -->
+
+</main>
+
+<footer>
+  <p class="footer-text"><b>ELUCY</b> — Revenue Intelligence Enterprise &middot; <b>G4 Educação</b> &middot; 2026</p>
+</footer>
+
+</body>
+</html>

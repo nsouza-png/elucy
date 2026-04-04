@@ -198,14 +198,14 @@ PASSO 3 — Avançar CQL_STATE
   CQL_INITIATED + Δ = 0 (resposta vaga)           → manter CQL_INITIATED (nova TP1 com ângulo diferente)
   CQL_DEEPENED + Δ > 0 (aprofundou dor)           → CQL_REFRAMED
   CQL_REFRAMED + Δ > 0 (tensão positiva confirmada) → CQL_CONVERTED
-  Qualquer estado + Δ < 0                         → CQL_STALLED ou CQL_KILLED (ver abaixo)
+  Qualquer estado + Δ < 0                         → CQL_STALLED ou CQL_DISQUALIFIED (ver abaixo)
   Silêncio > 48h mencionado pelo SDR              → CQL_STALLED → TP5
 
 PASSO 4 — Kill switches automáticos (sem exceção)
-  Lead perguntou preço / "quanto custa" / "qual o valor"  → CQL_KILLED
-  Lead pediu link, material, proposta, site               → CQL_KILLED
-  Lead foi hostil ou pediu para parar contato             → CQL_KILLED
-  Perfil I/J / MEI / faturamento < R$500k confirmado      → CQL_KILLED + flag TIER_INADEQUADO
+  Lead perguntou preço / "quanto custa" / "qual o valor"  → CQL_DISQUALIFIED
+  Lead pediu link, material, proposta, site               → CQL_DISQUALIFIED
+  Lead foi hostil ou pediu para parar contato             → CQL_DISQUALIFIED
+  Perfil I/J / MEI / faturamento < R$500k confirmado      → CQL_DISQUALIFIED + flag TIER_INADEQUADO
 ```
 
 ### Mapeamento CQL_STATE → TP entregue
@@ -219,9 +219,9 @@ PASSO 4 — Kill switches automáticos (sem exceção)
 | CQL_REFRAMED | TP3→TP4 | Reframe + custo de inação. CTA emergindo. |
 | CQL_CONVERTED | TP4 | CTA imperativo. "manda teu zap" ou meet aberto. |
 | CQL_STALLED | TP5 | Novo ângulo. Fear trigger. Máx 2 tentativas. |
-| CQL_KILLED | — | Encerrar. Zero copy. Mostrar motivo ao SDR. |
+| CQL_DISQUALIFIED | — | Encerrar. Zero copy. Mostrar motivo ao SDR. |
 
-### Detecção de CQL_KILLED
+### Detecção de CQL_DISQUALIFIED
 
 ```
 TRIGGERS DE KILL (avaliar no conteúdo colado pelo SDR):
@@ -232,7 +232,7 @@ TRIGGERS DE KILL (avaliar no conteúdo colado pelo SDR):
   - SDR informa: "é MEI", "fatura menos de 500k", "é pessoa física" → KILL + TIER_INADEQUADO
 
 OUTPUT quando KILLED:
-  [ELUCY — CQL_KILLED]
+  [ELUCY — CQL_DISQUALIFIED]
   Motivo: [razão detectada]
   Ação: encerrar esta conversa. Não enviar mais nada neste perfil.
   [sem copy]
@@ -474,9 +474,9 @@ manda teu zap q o Nathan te mostra o modelo
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-Quando CQL_KILLED:
+Quando CQL_DISQUALIFIED:
 ```
-@handle | CQL_KILLED — [motivo em 1 linha]
+@handle | CQL_DISQUALIFIED — [motivo em 1 linha]
 [sem copy]
 ```
 
@@ -520,7 +520,7 @@ REGRA 3: Black Box absoluto na copy
   Nunca vazar: SPICED, CSE, Challenger, CQL, MQL, TP, Tier, ICP, DQI
   Termos internos ficam no backstage — jamais na copy
 
-REGRA 4: Perfil Tóxico → CQL_KILLED imediato
+REGRA 4: Perfil Tóxico → CQL_DISQUALIFIED imediato
   Empreendedor de Palco detectado (muita exposição, sem empresa real)
   Anti-método detectado ("não acredito em consultoria")
   MEI / Faturamento < R$500k confirmado

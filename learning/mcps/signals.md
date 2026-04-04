@@ -147,7 +147,10 @@ Este MCP define os 10 tipos de sinais que o sistema Elucy v2 identifica, pontua 
 - **Pesos tipicos:** confidence: 0.7-0.9 | recency: maximo | impact: 0.9-1.0
 - **Mapeamento Databricks:** campo de Critical Event no CRM, `aquisicao.data_criacao` (inbound = urgencia implicita)
 
-### 11. CQL_STATE (Sinal Exclusivo Social DM — Conversa Qualificada)
+### 11. CQL_STATE (Estado de Jornada Social DM — Conversa Qualificada)
+> **NOTA TAXONOMICA:** cql_state NAO e um sinal no mesmo nivel semantico dos demais (buy/pain/risk).
+> E um **estado de jornada** da conversa no canal Social DM. Gerenciado separadamente do SIGNAL_REGISTRY.
+> Mantido neste arquivo por proximidade operacional — nao incluir no calculo de deal_score.
 - **Codigo:** `cql_state`
 - **Escopo:** EXCLUSIVO para canal SOCIAL_DM. Nao existe em outros canais.
 - **Definicao:** Estado intermediario de qualificacao pre-MQL no Social DM. Mede o progresso da conversa na DM em relacao ao fluxo de conversao CQL→MQL.
@@ -158,7 +161,7 @@ Este MCP define os 10 tipos de sinais que o sistema Elucy v2 identifica, pontua 
   - `CQL_REFRAMED` — Lead recebeu reframe e demonstrou tensao positiva (TP3 concluido). Pronto para CTA.
   - `CQL_CONVERTED` — Lead aceitou ir para WhatsApp/Call (TP4 executado). CQL → MQL confirmado.
   - `CQL_STALLED` — Silencio > 48h pos-TP1 ou TP2. Reengajamento necessario (TP5).
-  - `CQL_KILLED` — Lead perguntou preco/tecnico na DM OU revelou Perfil Toxico. BLOQUEADO.
+  - `CQL_DISQUALIFIED` — Lead perguntou preco/tecnico na DM OU revelou Perfil Toxico. BLOQUEADO.
 - **Evidencias de CQL_DEEPENED (CQL confirmado):**
   - Lead mencionou empresa, cargo ou faixa de faturamento
   - Lead descreveu um problema de negocio ("meu time nao entrega", "estagnei")
@@ -168,8 +171,8 @@ Este MCP define os 10 tipos de sinais que o sistema Elucy v2 identifica, pontua 
   - `cql_state = CQL_REFRAMED` + tensao positiva detectada → SDR executa CTA imperativo
 - **Pesos tipicos:** confidence: 0.85 (estado e factual, nao inferido) | impact: 0.95 (canal de altissimo RPL)
 - **Kill Switches ativos para Social DM:**
-  - Lead perguntou preco/tecnico: `CQL_KILLED` — resposta: devolver com curiosidade estrategica
-  - Perfil I/J (<500k detectado): `CQL_KILLED` — direcionar automacao, nao gastar tempo senior
+  - Lead perguntou preco/tecnico: `CQL_DISQUALIFIED` — resposta: devolver com curiosidade estrategica
+  - Perfil I/J (<500k detectado): `CQL_DISQUALIFIED` — direcionar automacao, nao gastar tempo senior
   - Resposta tipo "ok"/"show"/emoji: `CQL_STATE` permanece em `CQL_INITIATED` (nao avanca)
 - **Mapeamento Databricks:** canal_origem = 'Social DM' em `aquisicao`, `distribuicao_leads_resultado`
 
@@ -381,19 +384,19 @@ Cada sinal processado gera uma Action Flag que determina a resposta do sistema:
 | **Responder** | Resposta imediata necessaria | Lead fez pergunta direta ou demonstrou sinal de compra |
 | **Silenciar** | Silencio tatico - NAO responder agora | Pos-Challenger com Titan, ou lead processando informacao |
 | **Bloquear** | Bloquear avanço no funil | Perfil incompativel, Tier 2 tentando acesso premium, ou comportamento toxico |
-| **Transbord** | Transbordar para humano (operador/Closer) | Situacao complexa que excede capacidade do sistema automatizado |
+| **Escalar** | Escalar para humano (operador/Closer) | Situacao complexa que excede capacidade do sistema automatizado |
 
 ---
 
-## Zonas Green/Red - Gatilhos de Zona (Canonico - Doc 8)
+## Zonas de Execucao - Gatilhos de Zona (Canonico - Doc 8)
 
-### Green Zone (Zona Verde - Sistema pode agir com autonomia)
+### OPERATING_ZONE_GREEN (Sistema pode agir com autonomia)
 Condicoes que indicam que o sistema/SDR pode operar com confianca:
 - **Persona Titan identificada** - alto valor, framework claro
 - **Contexto de Estagnacao** - lead reconheceu que esta estagnado, pronto para SPICED
 - **Pos-SPICED completo** - diagnostico feito, impacto confirmado, proximo passo claro
 
-### Red Zone (Zona Vermelha - Cautela maxima, risco de erro)
+### OPERATING_ZONE_RED (Cautela maxima, risco de erro)
 Condicoes que exigem supervisao ou mudanca de abordagem:
 - **Eventos de topo de funil** - lead ainda COLD/AWARE, nao forcar venda
 - **SMB / Tier 2 Online** - lead de baixo ticket tentando acesso a produtos premium

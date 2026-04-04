@@ -8,7 +8,7 @@ const DB_HOST = 'https://dbc-8acefaf9-a170.cloud.databricks.com'
 const DB_WH = 'bbae754ea44f67e0'
 
 const CORS = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': 'https://nsouza-png.github.io',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
@@ -139,6 +139,38 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
   try {
+    // AUTH: Require X-Sync-Key header (Supabase Secret) or valid user JWT
+    const syncKey = Deno.env.get('SYNC_API_KEY')
+    const reqSyncKey = req.headers.get('x-sync-key')
+    const authHeader = req.headers.get('Authorization')
+
+    let authorized = false
+
+    // Path 1: Scheduler/admin uses X-Sync-Key
+    if (syncKey && reqSyncKey && reqSyncKey === syncKey) {
+      authorized = true
+    }
+
+    // Path 2: Authenticated operator with admin role
+    if (!authorized && authHeader) {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+      const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+      const { createClient: cc } = await import('https://esm.sh/@supabase/supabase-js@2')
+      const sbUser = cc(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } })
+      const { data: { user } } = await sbUser.auth.getUser()
+      if (user?.email) {
+        const sbAdmin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+        const { data: op } = await sbAdmin.from('operators').select('approved, role').eq('email', user.email).maybeSingle()
+        if (op?.approved && (op.role === 'admin' || op.role === 'manager')) authorized = true
+      }
+    }
+
+    if (!authorized) {
+      return new Response(JSON.stringify({ error: 'Unauthorized — requires X-Sync-Key header or admin JWT' }), {
+        status: 401, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const dbToken = Deno.env.get('DATABRICKS_TOKEN')!
