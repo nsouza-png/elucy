@@ -724,10 +724,20 @@ function buildTaskQueue(filterType, filterRevLine, filterFase, filterCiclo, filt
       }
     }
 
-    // Check if deal has active cadence — cadence overrides default _nextAction
+    // Check if deal has active cadence — Cadence Engine V1 overrides default _nextAction
+    var cadV1 = d._cadence || (calcCadenceEngineV1 ? calcCadenceEngineV1(d) : null);
     var cadStep = cadenceGetCurrentStep(id);
     var action, isCadence = false;
-    if(cadStep){
+    // V1 Engine takes priority when available and not stopped
+    if(cadV1 && cadV1.cadence_stop_state === 'NONE'){
+      var chIcon = cadV1.cadence_channel==='CALL'?'📞 ':cadV1.cadence_channel==='WHATSAPP'?'💬 ':cadV1.cadence_channel==='EMAIL'?'📧 ':cadV1.cadence_channel==='INSTAGRAM_DM'?'📸 ':'';
+      action = {
+        type: cadV1.cadence_objective==='PULL_MEETING'?'agendamento':cadV1.cadence_objective==='DIAGNOSE_PAIN'?'follow_up':cadV1.cadence_objective==='MAP_AUTHORITY'?'follow_up':cadV1.cadence_objective==='RECOVER_NO_SHOW'?'no_show_recovery':cadV1.cadence_objective==='HANDOFF_PREP'?'handoff_prep':cadV1.cadence_objective==='REENGAGE'?'reativacao':cadV1.cadence_objective==='OPEN_LOOP'?'follow_up':'follow_up',
+        label: chIcon + cadV1.cadence_reason_main,
+        priority: cadV1.cadence_priority_score>=0.7?'critical':cadV1.cadence_priority_score>=0.4?'high':'medium'
+      };
+      isCadence = true;
+    } else if(cadStep){
       var channelIcon = (CHANNEL_ICONS[cadStep.step.channel]||'') + ' ';
       action = {
         type: cadStep.step.taskType,
@@ -1178,7 +1188,19 @@ function renderTaskCardFromItem(t, idx){
   // id para texOpen — usa a chave do map (t.id)
   var queueId = _escHtml(String(t.id||idx));
 
-  var cadBadge = t.cadence ? '<span class="tag" style="font-size:9px;color:var(--accent2)">⚡ '+_escHtml(t.cadence.templateName||'Cadência')+'</span>' : '';
+  // Cadence V1 badge — show state, channel, next touch
+  var cadV1 = d._cadence;
+  var cadBadge = '';
+  if(cadV1 && cadV1.cadence_stop_state==='NONE'){
+    var chEmoji=cadV1.cadence_channel==='CALL'?'📞':cadV1.cadence_channel==='WHATSAPP'?'💬':cadV1.cadence_channel==='EMAIL'?'📧':cadV1.cadence_channel==='INSTAGRAM_DM'?'📸':'⏸';
+    var stateShort=cadV1.cadence_state.replace(/_/g,' ');
+    var delayTxt=cadV1.cadence_delay_hours?Math.round(cadV1.cadence_delay_hours)+'h':'—';
+    cadBadge='<span class="tag" style="font-size:9px;color:var(--accent2)" title="'+_escHtml(cadV1.cadence_reason_main)+'">⚡ '+chEmoji+' '+_escHtml(stateShort)+' · '+delayTxt+'</span>';
+  } else if(cadV1 && cadV1.cadence_stop_state!=='NONE'){
+    cadBadge='<span class="tag" style="font-size:9px;color:var(--text3)">⏸ '+_escHtml(cadV1.cadence_stop_state)+'</span>';
+  } else if(t.cadence){
+    cadBadge='<span class="tag" style="font-size:9px;color:var(--accent2)">⚡ '+_escHtml(t.cadence.templateName||'Cadência')+'</span>';
+  }
 
   return '<div class="task-card" data-task-idx="'+idx+'" data-qid="'+queueId+'" style="cursor:pointer" onclick="window.texOpen('+idx+')">'
     + '<div class="task-card-main">'
@@ -1287,7 +1309,26 @@ function renderTaskListFromQueue(queue){
     el.innerHTML = '<div class="task-empty">Nenhuma tarefa para o modo e fila selecionados.</div>';
     return;
   }
-  el.innerHTML = queue.map(function(t, idx){ return renderTaskCardFromItem(t, idx); }).join('');
+  // Virtual pagination: render first 30, lazy-load rest on scroll
+  var TPAGE=30;
+  var _tRendered=0;
+  el.innerHTML='';
+  function _tBatch(count){
+    var end=Math.min(_tRendered+count, queue.length);
+    var html='';
+    for(var i=_tRendered;i<end;i++) html+=renderTaskCardFromItem(queue[i],i);
+    el.insertAdjacentHTML('beforeend', html);
+    _tRendered=end;
+  }
+  _tBatch(TPAGE);
+  var tasksPanel=el.closest('.screen')||el.parentElement;
+  if(tasksPanel && !tasksPanel._tpBound){
+    tasksPanel._tpBound=true;
+    tasksPanel.addEventListener('scroll',function(){
+      if(_tRendered>=queue.length) return;
+      if(tasksPanel.scrollTop+tasksPanel.clientHeight>=tasksPanel.scrollHeight-300) _tBatch(TPAGE);
+    });
+  }
 }
 
 function renderTasksV2(){
@@ -5013,6 +5054,143 @@ window.syncOperatorEfficiency = syncOperatorEfficiency;
 // 8 blocos: Meta, Volume, Conversão, Linha, Velocidade, Qualidade, Forecast, Receita
 // ==================================================================
 
+// --- REPORT V3 SUB-FUNCTIONS ---
+function _rpV3CalcVolume(actData){
+  var volume = { deals_worked:0, fups_sent:0, dms_sent:0, analyses_generated:0, notes_created:0, meetings_booked:0, handoffs:0 };
+  var dealsWorkedSet = {};
+  actData.forEach(function(a){
+    if(a.entity_type === 'deal' && a.entity_id) dealsWorkedSet[a.entity_id] = true;
+    var t = a.activity_type || '';
+    if(t === 'fup_sent' || t === 'copy_generated') volume.fups_sent++;
+    if(t === 'dm_generated' || t === 'dm_sent') volume.dms_sent++;
+    if(t === 'analysis_generated') volume.analyses_generated++;
+    if(t === 'note_created' || t === 'note_crm_generated') volume.notes_created++;
+    if(t === 'meeting_booked') volume.meetings_booked++;
+    if(t === 'handoff_done') volume.handoffs++;
+  });
+  volume.deals_worked = Object.keys(dealsWorkedSet).length;
+  return { volume: volume, dealsWorkedSet: dealsWorkedSet };
+}
+
+function _rpV3CalcConversion(deals){
+  var funnel = { mql:0, sal:0, connected:0, scheduled:0, show:0, opp:0, won:0, lost:0 };
+  deals.forEach(function(d){
+    funnel.mql++;
+    var etapa = (d.etapa || d.fase || d.fase_atual_no_processo || '').toLowerCase();
+    if(etapa.includes('dia ') || etapa.includes('conectad') || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade') || etapa.includes('negoc')) funnel.sal++;
+    if(etapa.includes('conectad')) funnel.connected++;
+    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend')) funnel.scheduled++;
+    if(etapa.includes('entrevista')) funnel.show++;
+    if(etapa.includes('oportunidade') || etapa.includes('negoc')) funnel.opp++;
+    var status = (d.statusDeal || d.status_do_deal || '').toLowerCase();
+    if(status === 'ganho' || status === 'won') funnel.won++;
+    if(status === 'perdido' || status === 'lost') funnel.lost++;
+  });
+  return { funnel: funnel, conversion: {
+    mql_sal: funnel.mql > 0 ? funnel.sal / funnel.mql : 0,
+    sal_connected: funnel.sal > 0 ? funnel.connected / funnel.sal : 0,
+    connected_scheduled: funnel.connected > 0 ? funnel.scheduled / funnel.connected : 0,
+    scheduled_show: funnel.scheduled > 0 ? funnel.show / funnel.scheduled : 0,
+    show_opp: funnel.show > 0 ? funnel.opp / funnel.show : 0,
+    opp_won: funnel.opp > 0 ? funnel.won / funnel.opp : 0
+  }};
+}
+
+function _rpV3CalcLinePerf(deals){
+  var linePerf = {};
+  deals.forEach(function(d){
+    var rl = d._revLine || resolveRevenueLine(d);
+    if(!linePerf[rl]) linePerf[rl] = { leads:0, sal:0, connected:0, scheduled:0, show:0, opp:0, won:0, lost:0, tickets:[], aging:[] };
+    var lp = linePerf[rl]; lp.leads++;
+    var etapa = (d.etapa || d.fase || '').toLowerCase();
+    if(etapa.includes('dia ') || etapa.includes('conectad') || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade')) lp.sal++;
+    if(etapa.includes('conectad')) lp.connected++;
+    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend')) lp.scheduled++;
+    if(etapa.includes('entrevista')) lp.show++;
+    if(etapa.includes('oportunidade')) lp.opp++;
+    var status = (d.statusDeal || d.status_do_deal || '').toLowerCase();
+    if(status === 'ganho') lp.won++; if(status === 'perdido') lp.lost++;
+    if(d.revenueRaw) lp.tickets.push(Number(d.revenueRaw) || 0);
+    lp.aging.push(Number(d.delta || d._delta || 0));
+  });
+  return linePerf;
+}
+
+function _rpV3CalcSpeed(deals, runtimeData){
+  var agingArr = deals.map(function(d){ return Number(d.delta || d._delta || 0); });
+  var avgAging = agingArr.length > 0 ? agingArr.reduce(function(a,b){return a+b;},0) / agingArr.length : 0;
+  var slaRiskCount = deals.filter(function(d){ return (d._urgency || 0) >= 60; }).length;
+  var slaRiskRate = deals.length > 0 ? slaRiskCount / deals.length : 0;
+  var inactiveCount = runtimeData.filter(function(r){
+    if(!r.last_touch_at) return true;
+    return (Date.now() - new Date(r.last_touch_at).getTime()) / (1000*60*60*24) > 5;
+  }).length;
+  var inactiveRate = deals.length > 0 ? Math.min(1, inactiveCount / deals.length) : 0;
+  return { speed: {
+    avg_aging_days: Math.round(avgAging * 10) / 10,
+    sla_risk_rate: Math.min(1, Math.round(slaRiskRate * 1000) / 1000),
+    inactive_rate: Math.round(inactiveRate * 1000) / 1000,
+    deals_sla_risk: slaRiskCount, deals_inactive: inactiveCount
+  }, avgAging: avgAging };
+}
+
+function _rpV3CalcQuality(deals, runtimeData){
+  var totalDeals = deals.length || 1;
+  var dn=0, dns=0, da=0, dp=0, dm=0, dnt=0;
+  runtimeData.forEach(function(r){
+    var payload = r.runtime_payload || {};
+    if(typeof payload === 'string') try { payload = JSON.parse(payload); } catch(e){ payload = {}; }
+    if(payload.note_quality === 'good') dn++;
+    if(r.next_best_action) dns++;
+    if(r.persona) da++;
+    if(payload.pain_detected === 'true' || payload.pain_detected === true) dp++;
+    if(r.show_state && r.show_state !== 'unknown') dm++;
+    if(r.show_state === 'no_show' && payload.no_show_treated) dnt++;
+  });
+  var nqr=Math.min(1,dn/totalDeals), nsr=Math.min(1,dns/totalDeals), ar=Math.min(1,da/totalDeals);
+  var pr=Math.min(1,dp/totalDeals), mr=Math.min(1,dm/totalDeals);
+  var nsCount=runtimeData.filter(function(r){return r.show_state==='no_show';}).length;
+  var nstr=nsCount>0?Math.min(1,dnt/nsCount):1;
+  var dqi=Math.min(1,(nqr*0.20)+(nsr*0.20)+(ar*0.15)+(pr*0.15)+(mr*0.10)+(nstr*0.10)+(0.5*0.10));
+  return { dqi:Math.round(dqi*1000)/1000, notes_quality_rate:Math.round(nqr*1000)/1000, next_step_rate:Math.round(nsr*1000)/1000, authority_rate:Math.round(ar*1000)/1000, pain_rate:Math.round(pr*1000)/1000, meeting_logging_rate:Math.round(mr*1000)/1000, no_show_treatment_rate:Math.round(nstr*1000)/1000 };
+}
+
+function _rpV3CalcForecast(forecastData){
+  var fcAvg=0, fcInflated=0, fcLowCtx=0, fcTotal=0, fcValue=0;
+  forecastData.forEach(function(f){
+    fcTotal++; fcAvg+=(f.forecast_confidence||0); fcValue+=(f.forecast_value||0);
+    if(f.forecast_score_adjusted<f.forecast_score_raw) fcInflated++;
+    if(!f.reason_main||f.reason_main==='') fcLowCtx++;
+  });
+  var cAvg=fcTotal>0?fcAvg/fcTotal:0, iR=fcTotal>0?fcInflated/fcTotal:0, lR=fcTotal>0?fcLowCtx/fcTotal:0;
+  var fqs=(cAvg*0.35)+((1-iR)*0.25)+((1-lR)*0.20)+(0.8*0.20);
+  return { forecast:{ forecast_confidence_avg:Math.round(cAvg*1000)/1000, inflated_pipeline_rate:Math.round(iR*1000)/1000, low_context_rate:Math.round(lR*1000)/1000, forecast_value_total:Math.round(fcValue), deals_with_forecast:fcTotal, forecast_quality_score:Math.round(fqs*1000)/1000 }, forecastQualityScore:fqs, fcValue:fcValue };
+}
+
+function _rpV3CalcRevenue(deals){
+  var rev=0;
+  deals.forEach(function(d){
+    var status=(d.statusDeal||d.status_do_deal||'').toLowerCase();
+    if(status==='ganho'||status==='won') rev+=(Number(d.revenueRaw)||0);
+  });
+  return rev;
+}
+
+async function _rpV3Calc3Es(deals, actData, dealsWorkedSet, volume, email, monthStart, sb){
+  var realAdvances=0, totalTransitions=0;
+  deals.forEach(function(d){ if(d._advanceState){ totalTransitions++; if(d._advanceState.state==='advance') realAdvances++; } });
+  var e1=totalTransitions>0?Math.round((realAdvances/totalTransitions)*1000)/1000:null;
+  var tasksCompleted=actData.filter(function(a){ return a.activity_type==='task_completed'||a.activity_type==='fup_sent'||a.activity_type==='analysis_generated'; }).length;
+  var avgDPD=actData.length>0?(Object.keys(dealsWorkedSet).length/Math.max(1,(new Date()-new Date(monthStart))/(1000*60*60*24))):0;
+  var aiReq=0;
+  try { var sb2=window._supabaseClient||(window.getSB&&window.getSB()); if(sb2){ var cr=await sb2.from('cockpit_requests').select('id',{count:'exact',head:true}).eq('operator_email',email).gte('created_at',monthStart+'T00:00:00'); if(cr.count!=null) aiReq=cr.count; } } catch(e){}
+  return {
+    e1_effectiveness:e1, e1_label:e1!=null?(e1>=0.6?'Saudável':e1>=0.35?'Atenção':'Crítico'):'—',
+    e2_efficiency:{ tasks_completed:tasksCompleted, avg_deals_per_day:Math.round(avgDPD*10)/10, tasks_per_deal:volume.deals_worked>0?Math.round((tasksCompleted/volume.deals_worked)*10)/10:0 },
+    e3_economy:{ ai_requests:aiReq, estimated_cost_usd:Math.round(aiReq*0.01*100)/100, cost_per_deal:volume.deals_worked>0?Math.round((aiReq*0.01/volume.deals_worked)*1000)/1000:0 }
+  };
+}
+
 async function calcPerformanceReportV3(periodType, periodKey){
   var sb = window._supabaseClient || (window.supabase && window.supabase.createClient ? null : null);
   if(!sb && window.getSB) sb = window.getSB();
@@ -5075,212 +5253,29 @@ async function calcPerformanceReportV3(periodType, periodKey){
     if(nRes.data) noteData = nRes.data;
   } catch(e){}
 
-  // ── BLOCK 2: VOLUME ──
-  var volume = {
-    deals_worked: 0, fups_sent: 0, dms_sent: 0,
-    analyses_generated: 0, notes_created: 0,
-    meetings_booked: 0, handoffs: 0
-  };
-  var dealsWorkedSet = {};
-  actData.forEach(function(a){
-    if(a.entity_type === 'deal' && a.entity_id) dealsWorkedSet[a.entity_id] = true;
-    var t = a.activity_type || '';
-    if(t === 'fup_sent' || t === 'copy_generated') volume.fups_sent++;
-    if(t === 'dm_generated' || t === 'dm_sent') volume.dms_sent++;
-    if(t === 'analysis_generated') volume.analyses_generated++;
-    if(t === 'note_created' || t === 'note_crm_generated') volume.notes_created++;
-    if(t === 'meeting_booked') volume.meetings_booked++;
-    if(t === 'handoff_done') volume.handoffs++;
-  });
-  volume.deals_worked = Object.keys(dealsWorkedSet).length;
-
-  // ── BLOCK 3: CONVERSÃO ──
-  var funnel = { mql:0, sal:0, connected:0, scheduled:0, show:0, opp:0, won:0, lost:0 };
-  deals.forEach(function(d){
-    funnel.mql++;
-    var etapa = (d.etapa || d.fase || d.fase_atual_no_processo || '').toLowerCase();
-    if(etapa.includes('dia ') || etapa.includes('conectad') || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade') || etapa.includes('negoc')) funnel.sal++;
-    if(etapa.includes('conectad')) funnel.connected++;
-    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend')) funnel.scheduled++;
-    if(etapa.includes('entrevista')) funnel.show++;
-    if(etapa.includes('oportunidade') || etapa.includes('negoc')) funnel.opp++;
-    var status = (d.statusDeal || d.status_do_deal || '').toLowerCase();
-    if(status === 'ganho' || status === 'won') funnel.won++;
-    if(status === 'perdido' || status === 'lost') funnel.lost++;
-  });
-  var conversion = {
-    mql_sal: funnel.mql > 0 ? funnel.sal / funnel.mql : 0,
-    sal_connected: funnel.sal > 0 ? funnel.connected / funnel.sal : 0,
-    connected_scheduled: funnel.connected > 0 ? funnel.scheduled / funnel.connected : 0,
-    scheduled_show: funnel.scheduled > 0 ? funnel.show / funnel.scheduled : 0,
-    show_opp: funnel.show > 0 ? funnel.opp / funnel.show : 0,
-    opp_won: funnel.opp > 0 ? funnel.won / funnel.opp : 0
-  };
-
-  // ── BLOCK 4: EFICIÊNCIA POR LINHA ──
-  var linePerf = {};
-  deals.forEach(function(d){
-    var rl = d._revLine || resolveRevenueLine(d);
-    if(!linePerf[rl]) linePerf[rl] = { leads:0, sal:0, connected:0, scheduled:0, show:0, opp:0, won:0, lost:0, tickets:[], aging:[] };
-    var lp = linePerf[rl];
-    lp.leads++;
-    var etapa = (d.etapa || d.fase || '').toLowerCase();
-    if(etapa.includes('dia ') || etapa.includes('conectad') || etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend') || etapa.includes('oportunidade')) lp.sal++;
-    if(etapa.includes('conectad')) lp.connected++;
-    if(etapa.includes('agend') || etapa.includes('entrevista') || etapa.includes('reagend')) lp.scheduled++;
-    if(etapa.includes('entrevista')) lp.show++;
-    if(etapa.includes('oportunidade')) lp.opp++;
-    var status = (d.statusDeal || d.status_do_deal || '').toLowerCase();
-    if(status === 'ganho') lp.won++;
-    if(status === 'perdido') lp.lost++;
-    if(d.revenueRaw) lp.tickets.push(Number(d.revenueRaw) || 0);
-    lp.aging.push(Number(d.delta || d._delta || 0));
-  });
-
-  // ── BLOCK 5: VELOCIDADE / DISCIPLINA ──
-  var agingArr = deals.map(function(d){ return Number(d.delta || d._delta || 0); });
-  var avgAging = agingArr.length > 0 ? agingArr.reduce(function(a,b){return a+b;},0) / agingArr.length : 0;
-  var slaRiskCount = deals.filter(function(d){ return (d._urgency || 0) >= 60; }).length;
-  var slaRiskRate = deals.length > 0 ? slaRiskCount / deals.length : 0;
-  var inactiveCount = runtimeData.filter(function(r){
-    if(!r.last_touch_at) return true;
-    var diff = (Date.now() - new Date(r.last_touch_at).getTime()) / (1000*60*60*24);
-    return diff > 5;
-  }).length;
-  var inactiveRate = deals.length > 0 ? Math.min(1, inactiveCount / deals.length) : 0;
-
-  var speed = {
-    avg_aging_days: Math.round(avgAging * 10) / 10,
-    sla_risk_rate: Math.min(1, Math.round(slaRiskRate * 1000) / 1000),
-    inactive_rate: Math.round(inactiveRate * 1000) / 1000,
-    deals_sla_risk: slaRiskCount,
-    deals_inactive: inactiveCount
-  };
-
-  // ── BLOCK 6: QUALIDADE OPERACIONAL ──
-  var totalDeals = deals.length || 1;
-  var dealsWithNote = 0, dealsWithNextStep = 0, dealsWithAuthority = 0, dealsWithPain = 0;
-  var dealsWithMeeting = 0, dealsWithNoShowTreated = 0;
-
-  runtimeData.forEach(function(r){
-    var payload = r.runtime_payload || {};
-    if(typeof payload === 'string') try { payload = JSON.parse(payload); } catch(e){ payload = {}; }
-    if(payload.note_quality === 'good') dealsWithNote++;
-    if(r.next_best_action) dealsWithNextStep++;
-    if(r.persona) dealsWithAuthority++;
-    if(payload.pain_detected === 'true' || payload.pain_detected === true) dealsWithPain++;
-    if(r.show_state && r.show_state !== 'unknown') dealsWithMeeting++;
-    if(r.show_state === 'no_show' && payload.no_show_treated) dealsWithNoShowTreated++;
-  });
-
-  var notesQualityRate = Math.min(1, dealsWithNote / totalDeals);
-  var nextStepRate = Math.min(1, dealsWithNextStep / totalDeals);
-  var authorityRate = Math.min(1, dealsWithAuthority / totalDeals);
-  var painRate = Math.min(1, dealsWithPain / totalDeals);
-  var meetingRate = Math.min(1, dealsWithMeeting / totalDeals);
-  var noShowTreatRate = runtimeData.filter(function(r){return r.show_state==='no_show';}).length > 0
-    ? Math.min(1, dealsWithNoShowTreated / runtimeData.filter(function(r){return r.show_state==='no_show';}).length) : 1;
-
-  var dqi = (notesQualityRate * 0.20) + (nextStepRate * 0.20) + (authorityRate * 0.15)
-    + (painRate * 0.15) + (meetingRate * 0.10) + (noShowTreatRate * 0.10) + (0.5 * 0.10);
-  dqi = Math.min(1, dqi);
-
-  var quality = {
-    dqi: Math.round(dqi * 1000) / 1000,
-    notes_quality_rate: Math.round(notesQualityRate * 1000) / 1000,
-    next_step_rate: Math.round(nextStepRate * 1000) / 1000,
-    authority_rate: Math.round(authorityRate * 1000) / 1000,
-    pain_rate: Math.round(painRate * 1000) / 1000,
-    meeting_logging_rate: Math.round(meetingRate * 1000) / 1000,
-    no_show_treatment_rate: Math.round(noShowTreatRate * 1000) / 1000
-  };
-
-  // ── BLOCK 7: FORECAST QUALITY ──
-  var fcAvg = 0, fcInflated = 0, fcLowCtx = 0, fcTotal = 0, fcValue = 0;
-  forecastData.forEach(function(f){
-    fcTotal++;
-    fcAvg += (f.forecast_confidence || 0);
-    fcValue += (f.forecast_value || 0);
-    if(f.forecast_score_adjusted < f.forecast_score_raw) fcInflated++;
-    if(!f.reason_main || f.reason_main === '') fcLowCtx++;
-  });
-  var forecastConfidenceAvg = fcTotal > 0 ? fcAvg / fcTotal : 0;
-  var inflatedRate = fcTotal > 0 ? fcInflated / fcTotal : 0;
-  var lowCtxRate = fcTotal > 0 ? fcLowCtx / fcTotal : 0;
-  var forecastQualityScore = (forecastConfidenceAvg * 0.35)
-    + ((1 - inflatedRate) * 0.25) + ((1 - lowCtxRate) * 0.20) + (0.8 * 0.20);
-
-  var forecast = {
-    forecast_confidence_avg: Math.round(forecastConfidenceAvg * 1000) / 1000,
-    inflated_pipeline_rate: Math.round(inflatedRate * 1000) / 1000,
-    low_context_rate: Math.round(lowCtxRate * 1000) / 1000,
-    forecast_value_total: Math.round(fcValue),
-    deals_with_forecast: fcTotal,
-    forecast_quality_score: Math.round(forecastQualityScore * 1000) / 1000
-  };
-
-  // ── BLOCK 8: RECEITA ──
-  var revenueInfluenced = 0;
-  deals.forEach(function(d){
-    var status = (d.statusDeal || d.status_do_deal || '').toLowerCase();
-    if(status === 'ganho' || status === 'won') revenueInfluenced += (Number(d.revenueRaw) || 0);
-  });
+  // ── BLOCKS 2-7: Use sub-functions ──
+  var b2v = _rpV3CalcVolume(actData);
+  var volume = b2v.volume; var dealsWorkedSet = b2v.dealsWorkedSet;
+  var b3c = _rpV3CalcConversion(deals);
+  var funnel = b3c.funnel; var conversion = b3c.conversion;
+  var linePerf = _rpV3CalcLinePerf(deals);
+  var b5s = _rpV3CalcSpeed(deals, runtimeData);
+  var speed = b5s.speed; var avgAging = b5s.avgAging;
+  var b6q = _rpV3CalcQuality(deals, runtimeData);
+  var quality = b6q; var dqi = quality.dqi;
+  var b7f = _rpV3CalcForecast(forecastData);
+  var forecast = b7f.forecast; var forecastQualityScore = b7f.forecastQualityScore; var fcValue = b7f.fcValue;
+  var revenueInfluenced = _rpV3CalcRevenue(deals);
   var revenue = {
     revenue_influenced: Math.round(revenueInfluenced),
     revenue_per_deal: volume.deals_worked > 0 ? Math.round(revenueInfluenced / volume.deals_worked) : 0,
     revenue_per_handoff: volume.handoffs > 0 ? Math.round(revenueInfluenced / volume.handoffs) : 0,
     forecast_value: Math.round(fcValue)
   };
-
-  // ── BLOCK 8B: 3 E's — Effectiveness / Efficiency / Economy (RF·5) ──
-  // E1 — Effectiveness: % avanços reais vs continuações (stage transitions)
-  var realAdvances = 0, totalTransitions = 0;
-  deals.forEach(function(d){
-    if(d._advanceState){
-      totalTransitions++;
-      if(d._advanceState.state === 'advance') realAdvances++;
-    }
-  });
-  var e1_effectiveness = totalTransitions > 0 ? Math.round((realAdvances / totalTransitions) * 1000) / 1000 : null;
-
-  // E2 — Efficiency: tasks completadas / tempo médio por deal (activity_log)
-  var tasksCompleted = actData.filter(function(a){
-    return a.activity_type === 'task_completed' || a.activity_type === 'fup_sent' || a.activity_type === 'analysis_generated';
-  }).length;
-  var avgDealsPerDay = actData.length > 0 ? (Object.keys(dealsWorkedSet).length / Math.max(1, (new Date() - new Date(monthStart)) / (1000*60*60*24))) : 0;
-  var e2_efficiency = {
-    tasks_completed: tasksCompleted,
-    avg_deals_per_day: Math.round(avgDealsPerDay * 10) / 10,
-    tasks_per_deal: volume.deals_worked > 0 ? Math.round((tasksCompleted / volume.deals_worked) * 10) / 10 : 0
-  };
-
-  // E3 — Economy: custo estimado de IA (cockpit_requests × ~$0.01/req)
-  var aiRequestsCount = 0;
-  var COST_PER_REQ = 0.01; // USD — Edge Function com prompt caching ~$0.01
-  try {
-    var sb2 = window._supabaseClient || (window.getSB && window.getSB());
-    if(sb2){
-      var costRes = await sb2.from('cockpit_requests')
-        .select('id', { count: 'exact', head: true })
-        .eq('operator_email', email)
-        .gte('created_at', monthStart + 'T00:00:00');
-      if(costRes.count != null) aiRequestsCount = costRes.count;
-    }
-  } catch(e){}
-  var e3_economy = {
-    ai_requests: aiRequestsCount,
-    estimated_cost_usd: Math.round(aiRequestsCount * COST_PER_REQ * 100) / 100,
-    cost_per_deal: volume.deals_worked > 0 ? Math.round((aiRequestsCount * COST_PER_REQ / volume.deals_worked) * 1000) / 1000 : 0
-  };
-
-  var three_es = {
-    e1_effectiveness: e1_effectiveness,
-    e1_label: e1_effectiveness != null ? (e1_effectiveness >= 0.6 ? 'Saudável' : e1_effectiveness >= 0.35 ? 'Atenção' : 'Crítico') : '—',
-    e2_efficiency: e2_efficiency,
-    e3_economy: e3_economy
-  };
+  var three_es = await _rpV3Calc3Es(deals, actData, dealsWorkedSet, volume, email, monthStart, sb);
 
   // ── SCORES ──
+  var totalDeals = deals.length || 1;
   meta.actual_sal = funnel.sal;
   meta.actual_opp = funnel.opp;
   meta.actual_revenue = revenueInfluenced;
@@ -8395,6 +8390,339 @@ async function syncRFVPortfolioRuntimeV27(){
 window.syncRFVPortfolioRuntimeV27 = syncRFVPortfolioRuntimeV27;
 
 // ==================================================================
+// LAYER 28 — CADENCE ENGINE V1 — Adaptive Temporal Decision System
+// States: HOT_INBOUND, NEW_OUTBOUND, ACTIVE_DIAGNOSIS, AWAITING_RESPONSE,
+//         AWAITING_DECISION, POST_NO_SHOW, REACTIVATION, STALED, HANDOFF_READY, DISQUALIFY_OR_STOP
+// ==================================================================
+
+var CADENCE_BASE_INTERVALS = {
+  HOT_INBOUND:1, NEW_OUTBOUND:24, ACTIVE_DIAGNOSIS:24, AWAITING_RESPONSE:36,
+  AWAITING_DECISION:48, POST_NO_SHOW:4, REACTIVATION:96, STALED:120, HANDOFF_READY:2, DISQUALIFY_OR_STOP:null
+};
+
+var CADENCE_STATE_QUEUE = {
+  HOT_INBOUND:'velocidade', NEW_OUTBOUND:'qualificacao', ACTIVE_DIAGNOSIS:'qualificacao',
+  AWAITING_RESPONSE:'follow_up', AWAITING_DECISION:'alta_performance', POST_NO_SHOW:'no_show_recovery',
+  REACTIVATION:'reativacao', STALED:'reativacao', HANDOFF_READY:'handoff', DISQUALIFY_OR_STOP:null
+};
+
+var CHANNEL_FIT_MAP = {
+  PULL_MEETING_CALL:0.95, PULL_MEETING_WHATSAPP:0.75, DIAGNOSE_PAIN_CALL:0.90, DIAGNOSE_PAIN_WHATSAPP:0.70,
+  OPEN_LOOP_WHATSAPP:0.85, OPEN_LOOP_CALL:0.70, OPEN_LOOP_EMAIL:0.60, OPEN_LOOP_INSTAGRAM_DM:0.80,
+  MAP_AUTHORITY_CALL:0.90, MAP_AUTHORITY_WHATSAPP:0.65, VALIDATE_TIMING_CALL:0.85, VALIDATE_TIMING_WHATSAPP:0.70,
+  CREATE_CRITICAL_EVENT_CALL:0.90, CREATE_CRITICAL_EVENT_EMAIL:0.60, RECOVER_NO_SHOW_WHATSAPP:0.80, RECOVER_NO_SHOW_CALL:0.75,
+  REENGAGE_EMAIL:0.75, REENGAGE_WHATSAPP:0.70, CLOSE_LOOP_WHATSAPP:0.80, CLOSE_LOOP_CALL:0.70,
+  ELEGANT_EXIT_WHATSAPP:0.65, ELEGANT_EXIT_EMAIL:0.70, HANDOFF_PREP_WHATSAPP:0.85, HANDOFF_PREP_CALL:0.80
+};
+
+function _cadResolveCadenceState(deal){
+  if(deal._killSwitchActive) return 'DISQUALIFY_OR_STOP';
+  var status = ((deal.statusDeal||deal.status_do_deal||'')+'').toLowerCase();
+  if(status==='ganho'||status==='perdido'||status==='won'||status==='lost') return 'DISQUALIFY_OR_STOP';
+  var tr = deal._transitionRuntime||{};
+  if(tr.transition_valid && (tr.transition_readiness_score||0)>=0.75) return 'HANDOFF_READY';
+  var showState = ((deal._showState||deal.show_state||'')+'').toLowerCase();
+  if(showState==='no_show') return 'POST_NO_SHOW';
+  var sigState = (deal._signalState||deal._signal||'').toUpperCase();
+  var aging = deal._aging||{};
+  if((sigState==='STALL'||sigState==='DOME') && aging.band==='critical') return 'STALED';
+  var inactDays = deal._inactivityDays||(deal._delta||0);
+  var lastTouch = deal._lastTouch ? new Date(deal._lastTouch) : null;
+  if(lastTouch) inactDays = Math.max(0, Math.floor((Date.now()-lastTouch.getTime())/86400000));
+  if(inactDays >= 7) return 'REACTIVATION';
+  var recentReply = deal._recentReply||false;
+  var intentHot = sigState==='HOT'||sigState==='BUY';
+  if(recentReply && intentHot) return 'HOT_INBOUND';
+  var hasConv = deal._touchpoints>0 || deal._hasConversation;
+  if(!hasConv) return 'NEW_OUTBOUND';
+  var fw = deal._frameworkRuntime||{};
+  if((fw.overall_coverage||0)<0.75) return 'ACTIVE_DIAGNOSIS';
+  if(deal._awaitingDecision||(fw.overall_coverage||0)>=0.75 && (fw.authority_score||0)>=0.5) return 'AWAITING_DECISION';
+  return 'AWAITING_RESPONSE';
+}
+
+function _cadResolveObjective(deal, state){
+  switch(state){
+    case 'HOT_INBOUND': return deal._needMeeting||true ? 'PULL_MEETING' : 'DIAGNOSE_PAIN';
+    case 'NEW_OUTBOUND': return 'OPEN_LOOP';
+    case 'ACTIVE_DIAGNOSIS':
+      var fw=deal._frameworkRuntime||{};
+      if((fw.authority_score||0)<0.5) return 'MAP_AUTHORITY';
+      if((fw.urgency_score||0)<0.5) return 'VALIDATE_TIMING';
+      return 'DIAGNOSE_PAIN';
+    case 'AWAITING_RESPONSE': return 'CLOSE_LOOP';
+    case 'AWAITING_DECISION': return 'CREATE_CRITICAL_EVENT';
+    case 'POST_NO_SHOW': return 'RECOVER_NO_SHOW';
+    case 'REACTIVATION': return 'REENGAGE';
+    case 'STALED': return 'REENGAGE';
+    case 'HANDOFF_READY': return 'HANDOFF_PREP';
+    case 'DISQUALIFY_OR_STOP': return 'ELEGANT_EXIT';
+    default: return 'CLOSE_LOOP';
+  }
+}
+
+function _cadResolveChannel(deal, state, objective){
+  if(state==='DISQUALIFY_OR_STOP') return 'NO_TOUCH';
+  if(state==='POST_NO_SHOW') return 'WHATSAPP';
+  if(objective==='MAP_AUTHORITY'||objective==='CREATE_CRITICAL_EVENT') return 'CALL';
+  if(objective==='HANDOFF_PREP') return 'WHATSAPP';
+  var origin=(deal._originChannel||deal.canal||'').toUpperCase();
+  if(origin.includes('INSTAGRAM')&&state==='NEW_OUTBOUND') return 'INSTAGRAM_DM';
+  if(state==='REACTIVATION') return 'EMAIL';
+  return 'WHATSAPP';
+}
+
+function _cadCalcIntentSignal(deal){
+  var sig=deal._signalRuntime||{};
+  var fw=deal._frameworkRuntime||{};
+  var buy=sig.buy_score||0, urg=fw.urgency_score||sig.urgency_score||0;
+  var auth=fw.authority_score||0, pain=sig.pain_score||(fw.spiced_pain||0);
+  var eng=(deal._touchpoints||0)>=3?0.7:(deal._touchpoints||0)>=1?0.4:0.1;
+  var risk=sig.risk_score||0, stall=sig.stall_score||0;
+  return Math.max(0,Math.min(1,(buy*0.30)+(urg*0.20)+(auth*0.15)+(pain*0.15)+(eng*0.10)+((1-risk)*0.05)+((1-stall)*0.05)));
+}
+
+function _cadCalcStagePressure(deal){
+  var delta=deal._delta||deal.delta||0;
+  var rl=deal._revLine||'nao_definido';
+  var ra=(REVENUE_LINES[rl]||REVENUE_LINES.nao_definido||{}).risk_after||3;
+  var normAging=Math.min(1,delta/(ra*4));
+  var slaW=delta>(ra*2)?0.8:delta>ra?0.5:0.2;
+  var tr=deal._transitionRuntime||{};
+  var trScore=tr.transition_readiness_score||0;
+  var fw=deal._frameworkRuntime||{};
+  var nsc=fw.next_step_clarity||0;
+  return Math.max(0,Math.min(1,(normAging*0.35)+(slaW*0.25)+((1-trScore)*0.20)+((1-nsc)*0.20)));
+}
+
+function _cadCalcResponseHazard(deal){
+  var recentReply=deal._recentReply?0.8:0.2;
+  var recency=deal._lastTouch?Math.max(0,1-Math.floor((Date.now()-new Date(deal._lastTouch).getTime())/86400000)/14):0.1;
+  var sig=deal._signalRuntime||{};
+  var sigStab=1-Math.min(1,Math.abs((sig.positive_score||0)-(sig.negative_score||0)));
+  return Math.max(0,Math.min(1,(recentReply*0.35)+(0.5*0.25)+(recency*0.20)+(sigStab*0.20)));
+}
+
+function _cadCalcChannelFit(objective, channel){
+  var key=objective+'_'+channel;
+  return CHANNEL_FIT_MAP[key]||0.50;
+}
+
+function _cadCalcRelationshipMomentum(deal){
+  var tpRecency=deal._lastTouch?Math.max(0,1-Math.floor((Date.now()-new Date(deal._lastTouch).getTime())/86400000)/10):0.1;
+  var replyRate=deal._recentReply?0.7:0.2;
+  var meetPresence=(deal._meetingCount||0)>=1?0.8:0.2;
+  var fw=deal._frameworkRuntime||{};
+  var noteQ=fw.note_quality_score||0;
+  return Math.max(0,Math.min(1,(tpRecency*0.35)+(replyRate*0.25)+(meetPresence*0.20)+(noteQ*0.20)));
+}
+
+function _cadCalcChannelSaturation(deal, channel){
+  var tp=deal._recentTouchpoints||[];
+  var now=Date.now();
+  var same72=0, same7d=0, noReply=0;
+  tp.forEach(function(t){
+    var age=(now-new Date(t.created_at||t.touch_at||0).getTime())/3600000;
+    if((t.channel||'').toUpperCase()===channel){
+      if(age<=72) same72++;
+      if(age<=168) same7d++;
+    }
+    if(!t.response_received) noReply++;
+  });
+  var negDelta=(deal._negativeDeltaCount||0)/Math.max(tp.length,1);
+  return Math.max(0,Math.min(1,(same72*0.12*0.35)+(same7d*0.06*0.25)+(Math.min(noReply,5)/5*0.25)+(negDelta*0.15)));
+}
+
+function _cadCalcDeltaScore(deal){
+  var fw=deal._frameworkRuntime||{};
+  var newInfo=(fw.overall_coverage||0)*0.4+((deal._noteAnalysis&&deal._noteAnalysis.quality_score||0)/100)*0.3+((deal._meetingCount||0)>=1?0.3:0);
+  var friction=deal._negativeDeltaCount?Math.min(1,(deal._negativeDeltaCount||0)*0.3):0;
+  return Math.max(-1,Math.min(1,newInfo-friction));
+}
+
+function _cadClassifySilence(deal, state){
+  var inact=deal._inactivityDays||0;
+  var fw=deal._frameworkRuntime||{};
+  if(state==='AWAITING_DECISION'&&inact<=2) return 'REFLECTIVE_SILENCE';
+  if((fw.authority_score||0)>=0.5&&inact<=3) return 'APPROVAL_WAIT';
+  if(deal._priceSent&&inact>=2) return 'POST_PRICE_GHOST';
+  if(inact>=5) return 'TOTAL_GHOST';
+  if(state==='AWAITING_DECISION'&&inact>=2) return 'STRATEGIC_SILENCE';
+  return null;
+}
+
+function _cadCalcNextTouchHours(state, channel, responseHazard, saturation, deal){
+  var base=CADENCE_BASE_INTERVALS[state];
+  if(base==null) return null;
+  var fatigue=1.0;
+  if(saturation>0.5) fatigue=1.40;
+  else if(saturation>0.3) fatigue=1.15;
+  if(deal._recentReply) fatigue*=0.90;
+  var chMult=channel==='CALL'?1.10:channel==='WHATSAPP'?0.95:channel==='EMAIL'?1.20:1.00;
+  var fcVal=(deal._forecastV6&&deal._forecastV6.forecast_value)||0;
+  var valMult=Math.max(0.75,1.0-(Math.min(fcVal,50000)/50000)*0.20);
+  var hazAdj=Math.max(0.70,Math.min(1.20,1.20-(responseHazard*0.50)));
+  return Math.max(0.5,+(base*fatigue*chMult*valMult*hazAdj).toFixed(2));
+}
+
+function _cadCalcConfidence(deal){
+  var dq=deal._dataQuality||{};
+  var fc=deal._forecastV6||{};
+  var fw=deal._frameworkRuntime||{};
+  var sig=deal._signalRuntime||{};
+  var sigStab=1-Math.min(1,Math.abs((sig.positive_score||0)-(sig.negative_score||0)));
+  var meetEvidence=(deal._meetingCount||0)>=1?0.7:0.2;
+  return Math.max(0,Math.min(1,
+    (dq.data_trust_score||0.5)*0.35+(fc.forecast_confidence||0)*0.20+
+    (fw.overall_coverage||0)*0.20+(fw.note_quality_score||0)*0.10+
+    meetEvidence*0.10+sigStab*0.05
+  ));
+}
+
+function _cadResolveStopState(deal, state, channel, saturation){
+  var status=((deal.statusDeal||deal.status_do_deal||'')+'').toLowerCase();
+  if(status==='ganho'||status==='perdido'||status==='won'||status==='lost') return 'HARD_STOP';
+  if(deal._killSwitchActive) return 'HARD_STOP';
+  var dq=deal._dataQuality||{};
+  if((dq.data_trust_score||0.5)<0.25) return 'HARD_STOP';
+  if(state==='HANDOFF_READY') return 'HANDOFF_STOP';
+  if(state==='DISQUALIFY_OR_STOP') return 'HARD_STOP';
+  if(saturation>0.70) return 'COOLDOWN';
+  var tp=deal._recentTouchpoints||[];
+  var noReply=tp.filter(function(t){return !t.response_received;}).length;
+  if(noReply>=5) return 'COOLDOWN';
+  if((deal._negativeDeltaCount||0)>=2) return 'COOLDOWN';
+  var silence=_cadClassifySilence(deal,state);
+  if(silence==='REFLECTIVE_SILENCE'||silence==='APPROVAL_WAIT') return 'WAIT_FOR_PROCESSING';
+  return 'NONE';
+}
+
+function calcCadenceEngineV1(deal){
+  var state=_cadResolveCadenceState(deal);
+  var objective=_cadResolveObjective(deal,state);
+  var channel=_cadResolveChannel(deal,state,objective);
+  var intentSignal=_cadCalcIntentSignal(deal);
+  var stagePressure=_cadCalcStagePressure(deal);
+  var responseHazard=_cadCalcResponseHazard(deal);
+  var channelFit=_cadCalcChannelFit(objective,channel);
+  var momentum=_cadCalcRelationshipMomentum(deal);
+  var dataTrust=(deal._dataQuality&&deal._dataQuality.data_trust_score)||0.5;
+  var priorityScore=Math.max(0,Math.min(1,
+    intentSignal*0.25+stagePressure*0.20+responseHazard*0.20+channelFit*0.15+momentum*0.10+dataTrust*0.10
+  ));
+  var saturation=_cadCalcChannelSaturation(deal,channel);
+  var stopState=_cadResolveStopState(deal,state,channel,saturation);
+  var deltaScore=_cadCalcDeltaScore(deal);
+  var silenceType=_cadClassifySilence(deal,state);
+  var delayHours=stopState!=='NONE'?null:_cadCalcNextTouchHours(state,channel,responseHazard,saturation,deal);
+  var nextTouchAt=delayHours==null?null:new Date(Date.now()+delayHours*3600000).toISOString();
+  var confidence=_cadCalcConfidence(deal);
+  // Build reason
+  var reasonMain='';
+  if(stopState==='HARD_STOP') reasonMain='Deal encerrado ou desqualificado';
+  else if(stopState==='COOLDOWN') reasonMain='Saturacao de canal ou sem delta positivo';
+  else if(stopState==='WAIT_FOR_PROCESSING') reasonMain='Silencio reflexivo — aguardar processamento';
+  else if(stopState==='HANDOFF_STOP') reasonMain='Deal pronto para handoff';
+  else if(state==='HOT_INBOUND') reasonMain='Lead quente — prioridade maxima';
+  else if(state==='POST_NO_SHOW') reasonMain='No-show — recuperar em '+Math.round(delayHours||4)+'h';
+  else if(state==='REACTIVATION') reasonMain='Reativacao — deal inativo '+((deal._inactivityDays||deal._delta||0))+'d';
+  else reasonMain=state.replace(/_/g,' ')+' — '+objective.replace(/_/g,' ').toLowerCase();
+  var reasonSec=channel!=='NO_TOUCH'?'Canal: '+channel+' | Prox toque: '+(delayHours?Math.round(delayHours)+'h':'—'):'Sem toque programado';
+
+  return {
+    deal_id:deal.deal_id||deal.id||'',
+    operator_email:deal.operator_email||'',
+    cadence_state:state,
+    cadence_objective:objective,
+    cadence_channel:channel,
+    cadence_next_touch_at:nextTouchAt,
+    cadence_delay_hours:delayHours,
+    cadence_priority_score:+priorityScore.toFixed(4),
+    cadence_confidence:+confidence.toFixed(4),
+    cadence_stop_state:stopState,
+    cadence_reason_main:reasonMain,
+    cadence_reason_secondary:reasonSec,
+    channel_saturation_score:+saturation.toFixed(4),
+    delta_score:+deltaScore.toFixed(4),
+    silence_type:silenceType,
+    queue:CADENCE_STATE_QUEUE[state]||null,
+    explain_json:{
+      intentSignal:+intentSignal.toFixed(4),
+      stagePressure:+stagePressure.toFixed(4),
+      responseHazard:+responseHazard.toFixed(4),
+      channelFit:+channelFit.toFixed(4),
+      relationshipMomentum:+momentum.toFixed(4),
+      dataTrust:+dataTrust.toFixed(4)
+    }
+  };
+}
+window.calcCadenceEngineV1 = calcCadenceEngineV1;
+
+// ── SYNC: Persist cadence runtime to Supabase ──
+async function syncCadenceRuntimeV1(){
+  var sb=_sb(); if(!sb) return;
+  var map=window._COCKPIT_DEAL_MAP||{};
+  var ids=Object.keys(map);
+  if(!ids.length) return;
+  var rows=[];
+  ids.forEach(function(id){
+    var deal=map[id];
+    var cad=calcCadenceEngineV1(deal);
+    deal._cadence=cad; // attach to deal for Task Runner
+    rows.push({
+      deal_id:cad.deal_id, operator_email:cad.operator_email,
+      cadence_state:cad.cadence_state, cadence_objective:cad.cadence_objective,
+      cadence_channel:cad.cadence_channel, cadence_next_touch_at:cad.cadence_next_touch_at,
+      cadence_delay_hours:cad.cadence_delay_hours, cadence_priority_score:cad.cadence_priority_score,
+      cadence_confidence:cad.cadence_confidence, cadence_stop_state:cad.cadence_stop_state,
+      cadence_reason_main:cad.cadence_reason_main, cadence_reason_secondary:cad.cadence_reason_secondary,
+      channel_saturation_score:cad.channel_saturation_score, delta_score:cad.delta_score,
+      silence_type:cad.silence_type, explain_json:cad.explain_json, updated_at:_now()
+    });
+  });
+  // Batch upsert in chunks of 50
+  for(var i=0;i<rows.length;i+=50){
+    var chunk=rows.slice(i,i+50);
+    try{
+      await sb.from('deal_cadence_runtime').upsert(chunk,{onConflict:'deal_id'});
+    }catch(e){ _syncErr('cadence-v1',e); }
+  }
+  console.log('[cadence-v1] synced '+rows.length+' deals');
+}
+window.syncCadenceRuntimeV1 = syncCadenceRuntimeV1;
+
+// ── Policy Metrics Aggregation ──
+async function syncCadencePolicyMetrics(){
+  var sb=_sb(); if(!sb) return;
+  var map=window._COCKPIT_DEAL_MAP||{};
+  var email=getOperatorId(); if(!email) return;
+  var now=new Date();
+  var periodKey=now.toISOString().slice(0,7);
+  var stateCount={}, channelCount={};
+  Object.keys(map).forEach(function(id){
+    var cad=map[id]._cadence;
+    if(!cad) return;
+    var sk=cad.cadence_state+'_'+cad.cadence_channel;
+    if(!stateCount[sk]) stateCount[sk]={state:cad.cadence_state,channel:cad.cadence_channel,count:0,delays:[]};
+    stateCount[sk].count++;
+    if(cad.cadence_delay_hours) stateCount[sk].delays.push(cad.cadence_delay_hours);
+  });
+  var rows=Object.keys(stateCount).map(function(k){
+    var s=stateCount[k];
+    var avgD=s.delays.length>0?s.delays.reduce(function(a,b){return a+b;},0)/s.delays.length:null;
+    return {
+      period_type:'monthly', period_key:periodKey, operator_email:email,
+      cadence_state:s.state, cadence_channel:s.channel, touches_count:s.count,
+      avg_delay_hours:avgD?+avgD.toFixed(2):null
+    };
+  });
+  if(rows.length>0){
+    try{ await sb.from('cadence_policy_metrics').upsert(rows); }catch(e){ _syncErr('cadence-policy',e); }
+  }
+}
+window.syncCadencePolicyMetrics = syncCadencePolicyMetrics;
+
+// ==================================================================
 // DAG ORCHESTRATOR — Executa as 27 layers na ordem correta sem ciclos
 // Fase 1: Base (L1-L3,L6,L8,L10,L11) — já executadas no boot
 // Fase 2: Inteligência Estrutural (L16,L18,L19)
@@ -8446,13 +8774,17 @@ async function runIntelligenceDAG(){
     console.log('[DAG] Phase 10: L25 Strategic Intelligence...');
     await syncStrategicIntelligenceV25();
 
-    console.log('[DAG] 27-Layer DAG completed in ' + (Date.now() - t0) + 'ms');
+    // Phase 11: Cadence Engine V1 (L28) — depends on all prior layers
+    console.log('[DAG] Phase 11: L28 Cadence Engine V1...');
+    await syncCadenceRuntimeV1();
+
+    console.log('[DAG] 28-Layer DAG completed in ' + (Date.now() - t0) + 'ms');
   } catch(err){
     console.error('[DAG] Error:', err);
   }
 }
 window.runIntelligenceDAG = runIntelligenceDAG;
 
-console.log('[cockpit-engine v11.1] 27-Layer Architecture loaded — L19-L22 Quality + L23 Enterprise + L24 Trusted Advisor + L25 Strategic + L26 SPIN Audit + L27 RFV Portfolio');
+console.log('[cockpit-engine v11.2] 28-Layer Architecture loaded — L19-L22 Quality + L23 Enterprise + L24 Trusted Advisor + L25 Strategic + L26 SPIN Audit + L27 RFV + L28 Cadence V1');
 
 })();
