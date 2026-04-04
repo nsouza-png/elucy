@@ -5333,32 +5333,45 @@ function renderIntelligence(){
     window._intelAutoLoading=true;
     ct.innerHTML='<div class="intel-empty" style="color:var(--amber2)">Carregando inteligência...</div>';
     var email=window._currentUserEmail||window.getOperatorId&&window.getOperatorId()||'';
-    var tryLoad = function(){
-      if(email && window.loadDealsFromSupabase){
-        window.loadDealsFromSupabase(email).then(function(){
-          window._intelAutoLoading=false;
-          _intelRender();
-        }).catch(function(){
-          window._intelAutoLoading=false;
-          // Fallback: usa mock se disponivel
-          if(window._injectMockDeals){ window._injectMockDeals(); _intelRender(); }
-          else ct.innerHTML='<div class="intel-empty">Sem conexão. Recarregue ou vá para Pipeline.</div>';
-        });
-      } else if(window._injectMockDeals){
+    // Safety timeout: se depois de 4s ainda sem deals, força mock
+    var _safetyTimer=setTimeout(function(){
+      if(!window._COCKPIT_DEAL_MAP||!Object.keys(window._COCKPIT_DEAL_MAP).length){
         window._intelAutoLoading=false;
-        window._injectMockDeals();
+        if(window._injectMockDeals){ window._injectMockDeals(); _intelRender(); }
+        else { ct.innerHTML='<div class="intel-empty">Timeout ao carregar dados. Recarregue a página.</div>'; }
+      }
+    },4000);
+    var _finishLoad=function(fromMock){
+      clearTimeout(_safetyTimer);
+      window._intelAutoLoading=false;
+      // Verifica se deals realmente foram carregados
+      var m=window._COCKPIT_DEAL_MAP;
+      if(m&&Object.keys(m).length){
         _intelRender();
+      } else if(window._injectMockDeals){
+        window._injectMockDeals(); _intelRender();
       } else {
-        // Aguarda 1s pela auth e tenta novamente
-        setTimeout(function(){
-          window._intelAutoLoading=false;
-          email=window._currentUserEmail||'';
-          if(email||window._MOCK_READY) _intelRender();
-          else ct.innerHTML='<div class="intel-empty">Aguardando autenticação...</div>';
-        },1200);
+        ct.innerHTML='<div class="intel-empty">Nenhum deal disponível. Vá para Pipeline.</div>';
       }
     };
-    tryLoad();
+    if(email && window.loadDealsFromSupabase){
+      window.loadDealsFromSupabase(email).then(function(){ _finishLoad(false); }).catch(function(){ _finishLoad(true); });
+    } else if(window._injectMockDeals){
+      clearTimeout(_safetyTimer);
+      window._intelAutoLoading=false;
+      window._injectMockDeals();
+      _intelRender();
+    } else {
+      // Aguarda 1.5s pela auth/mock e tenta novamente
+      setTimeout(function(){
+        clearTimeout(_safetyTimer);
+        window._intelAutoLoading=false;
+        email=window._currentUserEmail||'';
+        if(window._COCKPIT_DEAL_MAP&&Object.keys(window._COCKPIT_DEAL_MAP).length){ _intelRender(); }
+        else if(window._injectMockDeals){ window._injectMockDeals(); _intelRender(); }
+        else ct.innerHTML='<div class="intel-empty">Aguardando autenticação...</div>';
+      },1500);
+    }
     return;
   }
   const allDeals=Object.values(map);

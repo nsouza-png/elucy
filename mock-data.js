@@ -238,7 +238,26 @@ function _showMockBanner(){
   setTimeout(tryPatch, 400);
 })();
 
-// ── Auto-inject se ?mock=1 na URL ─────────────────────────────────────
+// ── Auto-inject: sempre que nao ha dados reais apos 2.5s ──────────────
+// Garante que Intel nunca fica em branco mesmo sem Supabase/deals reais
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(function(){
+    // Injeta apenas se nao ha dados reais carregados
+    var map = window._COCKPIT_DEAL_MAP;
+    var keys = map ? Object.keys(map) : [];
+    var hasReal = keys.length > 0 && !keys[0].startsWith('mock-');
+    if(!hasReal){
+      window._injectMockDeals();
+      // Re-render Intel se estiver ativo
+      var si = document.getElementById('screen-intelligence');
+      if(si && si.classList.contains('on') && typeof _intelRender !== 'undefined'){
+        setTimeout(function(){ _intelRender(); }, 100);
+      }
+    }
+  }, 1800);
+});
+
+// ── Auto-inject imediato se ?mock=1 na URL ───────────────────────────
 if(location.search.indexOf('mock=1') >= 0){
   document.addEventListener('DOMContentLoaded', function(){
     setTimeout(function(){
