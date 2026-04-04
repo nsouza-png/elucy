@@ -2880,8 +2880,9 @@ function calcElucyValor({tier,cargo,etapa,delta,skipped}){
 
   // Penalidade por tempo parado
   const agePenalty=delta>20?0.5:delta>10?0.7:delta>5?0.85:1.0;
-  // Bônus por sem gaps (event_skipped=false = lead respondeu fluxo normal)
-  const flowBonus=skipped?1.0:1.08;
+  // Bônus por event_skipped=true — lead pulou etapa = engajamento ativo maior
+  // CORREÇÃO: dados históricos mostram skipped=true tem +10~25pp de win rate
+  const flowBonus=skipped?1.08:1.0;
 
   return Math.round(base * authMult * prob * agePenalty * flowBonus);
 }
