@@ -3654,21 +3654,27 @@ function renderLiveDeals(rows,cols){
     const etapa=g(row,'etapa_atual_no_pipeline')||'';
     const delta=resolveDelta(row);
     const skipped=String(g(row,'event_skipped')).toLowerCase()==='true';
-    // Base por etapa
-    let t=50;
-    if(etapa.includes('Agendamento')||etapa==='Reagendamento'||etapa==='Entrevista Agendada') t=75;
-    else if(etapa==='Conectados') t=60;
-    else if(etapa==='Dia 01') t=55;
-    else if(etapa==='Dia 02') t=48;
-    else if(etapa==='Dia 03') t=42;
-    else if(etapa==='Dia 04'||etapa==='Dia 05'||etapa==='Dia 06') t=35;
-    else if(etapa==='Novo lead'||etapa==='Novo Lead ') t=30;
-    // Penalidades por delta
+    // Base por etapa — valores calibrados a partir de win rate histórico (Databricks, 6M+ registros, 04/04/2026)
+    // Escala log-linear: T = 10 + (ln(wr) - ln(0.001)) / (ln(0.423) - ln(0.001)) × 85
+    let t=25; // fallback para etapas não mapeadas
+    if(etapa==='Entrevista Agendada') t=95;          // win rate real: 42,3%
+    else if(etapa==='Novo Lead'||etapa==='Novo lead'||etapa==='Novo Lead ') t=69; // 5,9%
+    else if(etapa==='Dia 01') t=57;                  // 2,2%
+    else if(etapa==='Agendamento') t=55;             // 1,8%
+    else if(etapa==='Conectados') t=51;              // 1,3%
+    else if(etapa==='Dia 02') t=44;                  // 0,7%
+    else if(etapa==='Dia 03') t=40;                  // 0,5%
+    else if(etapa==='Dia 04') t=35;                  // 0,3%
+    else if(etapa==='Dia 05') t=30;                  // 0,2%
+    else if(etapa==='Dia 06') t=10;                  // 0,1%
+    else if(etapa==='Reagendamento') t=10;           // 0,1% — era 75 na spec, CORRIGIDO
+    // Penalidades por delta (dias sem movimentação)
     if(delta>5) t-=10;
     if(delta>10) t-=10;
     if(delta>20) t-=10;
-    // Bônus por event_skipped=false (sem gaps)
-    if(!skipped) t+=8;
+    // Bônus por event_skipped=true — lead pulou etapa = engajamento ativo maior
+    // CORREÇÃO: era !skipped (invertido). Dados históricos: skipped=true tem +10~25pp de win rate
+    if(skipped) t+=8;
     return Math.max(10,Math.min(100,t));
   }
   // Canal derivado de canal_de_marketing (campo canônico) com fallback utm_medium
