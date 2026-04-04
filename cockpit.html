@@ -488,6 +488,7 @@ window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false'
         <button class="intel-macro" data-macro="pipeline">Pipeline</button>
         <button class="intel-macro" data-macro="engines">Engines</button>
         <button class="intel-macro" data-macro="strategic">Strategic</button>
+        <button class="intel-macro" data-macro="roa">ROA</button>
       </div>
       <div class="intel-sub-tabs" id="intel-sub-tabs"></div>
       <div id="intel-content">
@@ -4925,7 +4926,8 @@ var _INTEL_SUBS={
   performance:[{id:'resumo',label:'Resumo'},{id:'metas',label:'Metas'},{id:'conversao',label:'Conversão'},{id:'qualidade',label:'Qualidade'},{id:'forecast',label:'Forecast'},{id:'receita',label:'Receita'}],
   pipeline:[{id:'linha',label:'Linha'},{id:'etapa',label:'Etapa'},{id:'canal',label:'Canal'},{id:'valor',label:'Valor'}],
   engines:[{id:'forecast',label:'Forecast'},{id:'framework',label:'Framework'},{id:'signals',label:'Signals'},{id:'tasks',label:'Tasks'},{id:'dataquality',label:'Data Quality'},{id:'priority',label:'Priority'}],
-  strategic:[{id:'enterprise',label:'Enterprise'},{id:'advisor',label:'Trusted Advisor'},{id:'rfv',label:'RFV'},{id:'bowtie',label:'Bowtie'},{id:'audit',label:'Audit'}]
+  strategic:[{id:'enterprise',label:'Enterprise'},{id:'advisor',label:'Trusted Advisor'},{id:'rfv',label:'RFV'},{id:'bowtie',label:'Bowtie'},{id:'audit',label:'Audit'}],
+  roa:[{id:'dashboard',label:'Dashboard'},{id:'fivewhys',label:'Five Whys'},{id:'intent',label:'Intent'},{id:'coaching',label:'Coaching'}]
 };
 
 // Map macro+sub to legacy dim for backward compat
@@ -4955,6 +4957,13 @@ function _intelResolveDim(macro,sub){
     if(sub==='bowtie') return 'bowtie';
     if(sub==='audit') return 'spin';
     return 'enterprise';
+  }
+  if(macro==='roa'){
+    if(sub==='dashboard') return 'roa_dashboard';
+    if(sub==='fivewhys') return 'roa_fivewhys';
+    if(sub==='intent') return 'roa_intent';
+    if(sub==='coaching') return 'roa_coaching';
+    return 'roa_dashboard';
   }
   return 'overview';
 }
@@ -5085,6 +5094,11 @@ function renderIntelligence(){
     else if(dim==='rfv') _renderRFV(ct,deals);
     else if(dim==='bowtie') _renderBowtie(ct,deals);
     else if(dim==='spin') _renderSpinAudit(ct,deals);
+    // ── ROA subtabs ──
+    else if(dim==='roa_dashboard') _renderROADashboard(ct,AE,deals);
+    else if(dim==='roa_fivewhys') _renderROAFiveWhys(ct,deals);
+    else if(dim==='roa_intent') _renderROAIntent(ct,deals);
+    else if(dim==='roa_coaching') _renderROACoaching(ct,deals);
     // ── Legacy fallback ──
     else if(dim==='global') _renderOverview(ct,AE,allDeals,deals);
     else if(dim==='operator') _renderOperator(ct,AE);
@@ -5331,6 +5345,44 @@ function _renderOverview(ct,AE,allDeals,deals){
       }
     }
     html+=renderSection(4,'Alertas do Motor',sigHtml);
+
+    // Bloco 5 — ROA: Quality Conversations + Five Whys
+    var roaHtml='';
+    var roaMetrics = window.calcROAMetrics ? window.calcROAMetrics(deals, []) : null;
+    if(roaMetrics){
+      roaHtml+='<div class="intel-kpi-row">';
+      roaHtml+=_iKpi(roaMetrics.activities,'Atividades','var(--accent2)');
+      roaHtml+=_iKpi(roaMetrics.quality_conversations,'Quality Conversations','var(--green)');
+      roaHtml+=_iKpi(roaMetrics.qc_rate+'%','QC Rate',roaMetrics.qc_rate>20?'var(--green)':roaMetrics.qc_rate>10?'var(--yellow)':'var(--red)');
+      roaHtml+=_iKpi(roaMetrics.qc_to_opp_rate+'%','QC → OPP',roaMetrics.qc_to_opp_rate>30?'var(--green)':'var(--yellow)');
+      roaHtml+=_iKpi(roaMetrics.opportunities,'Oportunidades','var(--green)');
+      roaHtml+='</div>';
+      // Five Whys distribution
+      var whyStages={listen:0,care:0,change:0,you:0,now:0};
+      deals.forEach(function(d){
+        if(d._whyStage && whyStages[d._whyStage] !== undefined) whyStages[d._whyStage]++;
+      });
+      var whyTotal=Object.values(whyStages).reduce(function(s,v){return s+v;},0);
+      if(whyTotal>0){
+        roaHtml+='<div style="margin-top:8px;font-size:11px;color:var(--text2);font-weight:600">Five Whys — Progressao Cognitiva do Buyer</div>';
+        roaHtml+='<div style="display:flex;gap:2px;margin-top:4px;height:20px;border-radius:4px;overflow:hidden">';
+        var whyColors={listen:'var(--text3)',care:'var(--yellow)',change:'var(--accent)',you:'var(--accent2)',now:'var(--green)'};
+        var whyLabels={listen:'Why Listen',care:'Why Care',change:'Why Change',you:'Why You',now:'Why Now'};
+        Object.keys(whyStages).forEach(function(k){
+          var pct=Math.round(whyStages[k]/Math.max(whyTotal,1)*100);
+          if(pct>0) roaHtml+='<div style="flex:'+pct+';background:'+whyColors[k]+';display:flex;align-items:center;justify-content:center;font-size:8px;color:#000;font-weight:700" title="'+whyLabels[k]+': '+whyStages[k]+' deals ('+pct+'%)">'+whyLabels[k]+' '+pct+'%</div>';
+        });
+        roaHtml+='</div>';
+      }
+      // Kill switch warnings
+      var prematureCount=deals.filter(function(d){return d._prematureMeeting;}).length;
+      if(prematureCount>0){
+        roaHtml+='<div style="margin-top:6px;background:var(--rdim);border:1px solid var(--red);border-radius:5px;padding:6px 10px;font-size:11px;color:var(--red)">! '+prematureCount+' deal'+(prematureCount>1?'s':'')+' com reuniao prematura (Why Care < 50%) — buyer nao entendeu o problema ainda</div>';
+      }
+    } else {
+      roaHtml='<div style="font-size:11px;color:var(--text3)">ROA Engine carregando... Dados de Quality Conversations serao populados automaticamente conforme notas CRM sao geradas.</div>';
+    }
+    html+=renderSection(5,'ROA — Quality Conversations',roaHtml);
 
     ct.innerHTML=html;
   });
@@ -6018,6 +6070,211 @@ function _renderSpinAudit(ct,deals){
   }
 
   ct.innerHTML=html;
+}
+
+// ── ROA RENDERS ──────────────────────────────────────────────────
+
+function _renderROADashboard(ct,AE,deals){
+  var sb=window.getSB?window.getSB():null;
+  var html='';
+
+  // Fetch QC data from Supabase
+  var email=window.getOperatorId?window.getOperatorId():'';
+  var qcPromise=sb?sb.from('quality_conversations').select('*').eq('operator_email',email).order('created_at',{ascending:false}).limit(200):Promise.resolve({data:[]});
+
+  qcPromise.then(function(res){
+    var qcData=(res&&res.data)||[];
+    var roa=window.calcROAMetrics?window.calcROAMetrics(deals,qcData):null;
+    if(!roa){ct.innerHTML='<div class="intel-empty">ROA Engine nao carregado.</div>';return;}
+
+    // Section 1 — ROA Funnel
+    html+=renderSection(1,'Funil ROA',
+      '<div class="intel-kpi-row">'+
+      _iKpi(roa.activities,'Atividades','var(--accent2)')+
+      _iKpi(roa.quality_conversations,'Quality Conversations','var(--green)')+
+      _iKpi(roa.opportunities,'Oportunidades','var(--accent2)')+
+      _iKpi(roa.qc_rate+'%','Activity → QC',roa.qc_rate>15?'var(--green)':roa.qc_rate>8?'var(--yellow)':'var(--red)')+
+      _iKpi(roa.qc_to_opp_rate+'%','QC → OPP',roa.qc_to_opp_rate>25?'var(--green)':'var(--yellow)')+
+      '</div>'+
+      '<div style="margin-top:6px;font-size:10px;color:var(--text3)">KPI principal do sistema: QC → OPP rate. Conversas de qualidade que geram oportunidades reais.</div>');
+
+    // Section 2 — QC by Channel
+    var chKeys=Object.keys(roa.qc_by_channel);
+    if(chKeys.length){
+      var maxCh=Math.max.apply(null,chKeys.map(function(k){return roa.qc_by_channel[k];}));
+      var totalCh=roa.quality_conversations;
+      html+=renderSection(2,'QC por Canal',
+        chKeys.sort(function(a,b){return roa.qc_by_channel[b]-roa.qc_by_channel[a];}).map(function(k){
+          return _iBar(k,roa.qc_by_channel[k],maxCh,totalCh);
+        }).join(''));
+    }
+
+    // Section 3 — Recent QCs
+    var recentQCs=qcData.filter(function(q){return q.is_quality_conversation;}).slice(0,10);
+    if(recentQCs.length){
+      html+=renderSection(3,'Quality Conversations Recentes ('+recentQCs.length+')',
+        '<table class="intel-table"><thead><tr><th>Deal</th><th>Canal</th><th>QC Score</th><th>Why Stage</th><th>Data</th></tr></thead><tbody>'+
+        recentQCs.map(function(q){
+          var stColor=q.why_stage==='now'?'var(--green)':q.why_stage==='you'?'var(--accent2)':q.why_stage==='change'?'var(--accent)':q.why_stage==='care'?'var(--yellow)':'var(--text2)';
+          return '<tr><td>'+_escHtml(q.deal_id)+'</td><td>'+_escHtml(q.channel)+'</td><td style="font-weight:700;color:'+(q.conversation_quality_score>=0.6?'var(--green)':q.conversation_quality_score>=0.3?'var(--yellow)':'var(--red)')+'">'+Math.round(q.conversation_quality_score*100)+'%</td><td style="color:'+stColor+'">'+_escHtml(q.why_stage||'—')+'</td><td style="font-size:10px;color:var(--text3)">'+new Date(q.created_at).toLocaleDateString('pt-BR')+'</td></tr>';
+        }).join('')+'</tbody></table>');
+    } else {
+      html+=renderSection(3,'Quality Conversations','<div class="intel-empty">Nenhuma QC registrada ainda. Gere notas CRM ou ELUCI Reports — o sistema classifica automaticamente.</div>');
+    }
+
+    ct.innerHTML=html;
+  }).catch(function(e){
+    ct.innerHTML='<div class="intel-empty">Erro ao carregar dados ROA: '+_escHtml(e.message)+'</div>';
+  });
+}
+
+function _renderROAFiveWhys(ct,deals){
+  var html='';
+  var dealsWithWhys=deals.filter(function(d){return d._fiveWhys;});
+
+  // Distribution
+  var stages={listen:0,care:0,change:0,you:0,now:0,ready:0};
+  var killSwitches={premature_meeting:0,premature_proposal:0,skipped_stage:0};
+  dealsWithWhys.forEach(function(d){
+    var p=d._fiveWhys;
+    stages[p.stage||'listen']++;
+    if(p.premature_meeting) killSwitches.premature_meeting++;
+    if(p.premature_proposal) killSwitches.premature_proposal++;
+    if(p.skipped_stage) killSwitches.skipped_stage++;
+  });
+
+  var totalKills=killSwitches.premature_meeting+killSwitches.premature_proposal+killSwitches.skipped_stage;
+
+  html+=renderSection(1,'Five Whys — Progressao Cognitiva',
+    '<div class="intel-kpi-row">'+
+    _iKpi(dealsWithWhys.length,'Deals Mapeados','var(--accent2)')+
+    _iKpi(stages.now+stages.ready,'Why Now/Ready','var(--green)')+
+    _iKpi(stages.listen+stages.care,'Early Stage','var(--yellow)')+
+    _iKpi(totalKills,'Kill Switches','var(--red)')+
+    '</div>');
+
+  // Stacked bar
+  var totalStages=dealsWithWhys.length||1;
+  var whyColors={listen:'#666',care:'#eab308',change:'#f59e0b',you:'#3b82f6',now:'#22c55e',ready:'#10b981'};
+  var whyLabels={listen:'Why Listen',care:'Why Care',change:'Why Change',you:'Why You',now:'Why Now',ready:'Ready'};
+  html+=renderSection(2,'Distribuicao por Stage',
+    '<div style="display:flex;gap:2px;height:28px;border-radius:6px;overflow:hidden;margin-bottom:8px">'+
+    Object.keys(stages).map(function(k){
+      var pct=Math.round(stages[k]/totalStages*100);
+      return pct>0?'<div style="flex:'+pct+';background:'+whyColors[k]+';display:flex;align-items:center;justify-content:center;font-size:9px;color:#000;font-weight:700" title="'+whyLabels[k]+': '+stages[k]+' ('+pct+'%)">'+whyLabels[k]+' '+pct+'%</div>':'';
+    }).join('')+
+    '</div>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;font-size:10px">'+
+    Object.keys(stages).map(function(k){return '<span style="color:'+whyColors[k]+'">● '+whyLabels[k]+': '+stages[k]+'</span>';}).join('')+
+    '</div>');
+
+  // Kill switches
+  if(totalKills>0){
+    html+=renderSection(3,'Kill Switches Ativados',
+      '<div style="display:flex;flex-direction:column;gap:4px">'+
+      (killSwitches.premature_meeting?'<div style="background:var(--rdim);border:1px solid var(--red);border-radius:5px;padding:6px 10px;font-size:11px;color:var(--red)">! '+killSwitches.premature_meeting+' deal(s) com reuniao prematura — Why Care < 50%</div>':'')+
+      (killSwitches.premature_proposal?'<div style="background:var(--rdim);border:1px solid var(--red);border-radius:5px;padding:6px 10px;font-size:11px;color:var(--red)">! '+killSwitches.premature_proposal+' deal(s) com proposta prematura — Why Change < 50%</div>':'')+
+      (killSwitches.skipped_stage?'<div style="background:var(--ydim);border:1px solid var(--yellow);border-radius:5px;padding:6px 10px;font-size:11px;color:var(--yellow)">! '+killSwitches.skipped_stage+' deal(s) pularam stage cognitivo</div>':'')+
+      '</div>');
+  }
+
+  // Deal table
+  if(dealsWithWhys.length){
+    html+=renderSection(4,'Deals com Five Whys',
+      '<table class="intel-table"><thead><tr><th>Deal</th><th>Stage</th><th>Listen</th><th>Care</th><th>Change</th><th>You</th><th>Now</th><th>QCs</th></tr></thead><tbody>'+
+      dealsWithWhys.sort(function(a,b){
+        var order={now:5,ready:5,you:4,change:3,care:2,listen:1};
+        return (order[b._fiveWhys.stage]||0)-(order[a._fiveWhys.stage]||0);
+      }).slice(0,20).map(function(d){
+        var p=d._fiveWhys;
+        function pctCell(v){var c=v>=0.7?'var(--green)':v>=0.4?'var(--yellow)':'var(--text3)';return '<td style="text-align:center;color:'+c+';font-weight:600">'+Math.round((v||0)*100)+'%</td>';}
+        return '<tr><td title="'+_escHtml(d.deal_id)+'">'+_escHtml(d.nome||d.contact_name||d.deal_id)+'</td><td style="color:'+whyColors[p.stage]+'">'+whyLabels[p.stage||'listen']+'</td>'+pctCell(p.why_listen)+pctCell(p.why_care)+pctCell(p.why_change)+pctCell(p.why_you)+pctCell(p.why_now)+'<td style="text-align:center">'+p.qc_count+'</td></tr>';
+      }).join('')+'</tbody></table>');
+  } else {
+    html+=renderSection(4,'Deals','<div class="intel-empty">Nenhum deal com Five Whys mapeado. Gere notas CRM para popular automaticamente.</div>');
+  }
+
+  ct.innerHTML=html;
+}
+
+function _renderROAIntent(ct,deals){
+  var html='';
+  var dealsWithIntent=deals.filter(function(d){return d._intentClass && d._intentClass!=='undetermined';});
+  var buyers=dealsWithIntent.filter(function(d){return d._intentClass==='buyer';}).length;
+  var curious=dealsWithIntent.filter(function(d){return d._intentClass==='curious';}).length;
+  var timeWasters=dealsWithIntent.filter(function(d){return d._intentClass==='time_waster';}).length;
+
+  html+=renderSection(1,'Intent Classification',
+    '<div class="intel-kpi-row">'+
+    _iKpi(dealsWithIntent.length,'Classificados','var(--accent2)')+
+    _iKpi(buyers,'Buyers','var(--green)')+
+    _iKpi(curious,'Curious','var(--yellow)')+
+    _iKpi(timeWasters,'Time Wasters','var(--red)')+
+    _iKpi(deals.length-dealsWithIntent.length,'Pendentes','var(--text3)')+
+    '</div>');
+
+  if(dealsWithIntent.length){
+    html+=renderSection(2,'Deals Classificados',
+      '<table class="intel-table"><thead><tr><th>Deal</th><th>Intent</th><th>Reciprocidade</th><th>Curiosidade</th><th>Confianca</th></tr></thead><tbody>'+
+      dealsWithIntent.sort(function(a,b){
+        var order={time_waster:3,curious:2,buyer:1};
+        return (order[b._intentClass]||0)-(order[a._intentClass]||0);
+      }).slice(0,20).map(function(d){
+        var ia=d._intentAnalysis||{};
+        var clColor=d._intentClass==='buyer'?'var(--green)':d._intentClass==='time_waster'?'var(--red)':'var(--yellow)';
+        return '<tr><td>'+_escHtml(d.nome||d.contact_name||d.deal_id)+'</td><td style="color:'+clColor+';font-weight:700">'+_escHtml(d._intentClass)+'</td><td>'+Math.round((ia.reciprocity_score||0)*100)+'%</td><td>'+(ia.curiosity_risk?'<span style="color:var(--red)">SIM</span>':'<span style="color:var(--green)">NAO</span>')+'</td><td>'+Math.round((ia.classification_confidence||0)*100)+'%</td></tr>';
+      }).join('')+'</tbody></table>');
+  } else {
+    html+=renderSection(2,'Deals','<div class="intel-empty">Intent analysis sera populado automaticamente conforme deals acumulam touchpoints (minimo 3).</div>');
+  }
+
+  ct.innerHTML=html;
+}
+
+function _renderROACoaching(ct,deals){
+  var sb=window.getSB?window.getSB():null;
+  if(!sb){ct.innerHTML='<div class="intel-empty">Supabase nao conectado.</div>';return;}
+
+  var email=window.getOperatorId?window.getOperatorId():'';
+  sb.from('coaching_events').select('*').eq('operator_email',email).order('created_at',{ascending:false}).limit(50).then(function(res){
+    var events=(res&&res.data)||[];
+    var html='';
+
+    var totalHours=events.reduce(function(s,e){return s+(e.duration_equivalent||0);},0)/60;
+    var byCategory={};
+    events.forEach(function(e){byCategory[e.category||'other']=(byCategory[e.category||'other']||0)+1;});
+
+    html+=renderSection(1,'Coaching ROI',
+      '<div class="intel-kpi-row">'+
+      _iKpi(events.length,'Eventos','var(--accent2)')+
+      _iKpi(totalHours.toFixed(1)+'h','Horas Coaching','var(--green)')+
+      _iKpi(Object.keys(byCategory).length,'Categorias','var(--accent2)')+
+      '</div>');
+
+    if(Object.keys(byCategory).length){
+      var maxCat=Math.max.apply(null,Object.values(byCategory));
+      var catLabels={tone:'Tom',questions:'Perguntas',framework:'Framework',objection_handling:'Objecoes',closing:'Fechamento',other:'Outro'};
+      html+=renderSection(2,'Por Categoria',
+        Object.keys(byCategory).sort(function(a,b){return byCategory[b]-byCategory[a];}).map(function(k){
+          return _iBar(catLabels[k]||k,byCategory[k],maxCat,events.length);
+        }).join(''));
+    }
+
+    if(events.length){
+      html+=renderSection(3,'Eventos Recentes',
+        '<table class="intel-table"><thead><tr><th>Tipo</th><th>Categoria</th><th>Deal</th><th>Data</th></tr></thead><tbody>'+
+        events.slice(0,15).map(function(e){
+          var typeColor=e.type==='correction'?'var(--red)':e.type==='alert'?'var(--yellow)':'var(--green)';
+          return '<tr><td style="color:'+typeColor+'">'+_escHtml(e.type)+'</td><td>'+_escHtml(e.category||'—')+'</td><td style="font-size:10px">'+_escHtml(e.deal_id||'—')+'</td><td style="font-size:10px;color:var(--text3)">'+new Date(e.created_at).toLocaleDateString('pt-BR')+'</td></tr>';
+        }).join('')+'</tbody></table>');
+    } else {
+      html+=renderSection(3,'Eventos','<div class="intel-empty">Nenhum evento de coaching registrado. O sistema registra automaticamente correcoes e sugestoes.</div>');
+    }
+
+    ct.innerHTML=html;
+  }).catch(function(e){
+    ct.innerHTML='<div class="intel-empty">Erro: '+_escHtml(e.message)+'</div>';
+  });
 }
 
 // ── TRUSTED ADVISOR (L24) ──

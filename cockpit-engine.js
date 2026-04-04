@@ -1,5 +1,5 @@
 // ==================================================================
-// ELUCY COCKPIT ENGINE v9.1 — 18-Layer Architecture
+// ELUCY COCKPIT ENGINE v11.3 — 29-Layer Architecture
 // 1. Operator Context | 2. Taxonomy Core | 3. Runtime Deal Context
 // 4. Task Execution | 5. Analytics | 6. UI State | 7. Product Intelligence
 // 8. Cadence Engine | 9. Runtime Sync | 10. Taxonomy Loader
@@ -7,6 +7,9 @@
 // 14. Operator Performance Model | 15. Performance Report V3
 // 16. Framework Extractor Engine | 17. Framework UI
 // 18. Signal Engine (V8) — detect, score, persist, route to tasks + UI
+// 19-22. Data Quality + Attribution | 23-25. Enterprise + Strategic
+// 26-27. SPIN Audit + RFV | 28. Cadence V1
+// 29. ROA Engine — Quality Conversations + Five Whys + Intent + Coaching
 // Incluir APOS cockpit.html carregar (antes do </body>)
 // ==================================================================
 
@@ -554,6 +557,31 @@ window.calcEfficiencyByChannel = calcEfficiencyByChannel;
 // Camada viva por deal. Enriquece deal com estado derivado.
 // ==================================================================
 
+// ── Derive fase_atual_no_processo from etapa_atual_no_pipeline ──
+// Mapeamento determinístico D1→D2 (ref: G4 RevOps Taxonomy)
+function _deriveFaseFromEtapa(etapa, status){
+  if(!etapa) return '';
+  var e = etapa.toLowerCase().trim();
+  var s = (status||'').toLowerCase();
+  if(s === 'ganho') return 'Ganho';
+  if(s === 'perdido') return 'Perdido';
+  if(s === 'desqualificado') return 'Desqualificado';
+  // Pipeline SDR (prospecção)
+  if(e === 'novo lead') return 'MQL';
+  if(e.match(/^dia\s*0[1-5]$/) || e.match(/^d[1-5]$/)) return 'SAL';
+  if(e === 'conectados') return 'Conectado';
+  if(e === 'agendamento' || e.includes('entrevista agendada')) return 'Agendado';
+  if(e === 'reagendamento') return 'Agendado';
+  // Pipeline Closer (negociação)
+  if(e.includes('negocia')) return 'Negociação';
+  if(e.includes('proposta')) return 'Negociação';
+  if(e.includes('oportunidade')) return 'Oportunidade';
+  // Fallback por posição no funil
+  if(e === 'lost') return 'Perdido';
+  if(e === 'won' || e === 'ganho') return 'Ganho';
+  return 'SAL'; // default para etapas não mapeadas = qualificação ativa
+}
+
 // Memoization: skip re-enrichment if already done this render cycle
 var _enrichBatchId = 0;
 function enrichDealContext(deal){
@@ -564,10 +592,17 @@ function enrichDealContext(deal){
   if(!deal.statusDeal && deal.status_do_deal) deal.statusDeal = deal.status_do_deal;
   if(!deal.status_do_deal && deal.statusDeal) deal.status_do_deal = deal.statusDeal;
   // Normalizar fase/etapa — campos canônicos para uso interno (ambos os nomes usados no codebase)
-  if(!deal._fase) deal._fase = deal.fase_atual_no_processo || deal.fase || '';
-  if(!deal.fase) deal.fase = deal._fase;
   if(!deal._etapa) deal._etapa = deal.etapa_atual_no_pipeline || deal.etapa || '';
   if(!deal.etapa) deal.etapa = deal._etapa;
+  // Derivar fase_atual_no_processo de etapa quando vazia (cobertura 11.5% → 100%)
+  if(!deal._fase){
+    deal._fase = deal.fase_atual_no_processo || deal.fase || '';
+    if(!deal._fase && deal._etapa){
+      deal._fase = _deriveFaseFromEtapa(deal._etapa, deal.status_do_deal || deal.statusDeal);
+      deal.fase_atual_no_processo = deal._fase;
+    }
+  }
+  if(!deal.fase) deal.fase = deal._fase;
   if(!deal._revLine) deal._revLine = resolveRevenueLine(deal);
   // Resolve delta real antes de aging/opp (usa created_at_crm → created_at → fallback 0)
   if(!deal._delta && !deal.delta) deal._delta = resolveRealDelta(deal);
@@ -620,6 +655,17 @@ function enrichDealContext(deal){
   if(deal._channelConversion !== undefined) deal._gtmMisaligned = checkGTMMisalignment(deal);
   // RF·2: Bowtie leg (ACQ / RET / EXP)
   if(!deal._bowtieLeg) deal._bowtieLeg = calcBowtiegLeg(deal);
+  // ROA: Five Whys psychological progress (from cached _psychProgress loaded by loadPsychProgress)
+  if(!deal._fiveWhys && deal._psychProgress){
+    deal._fiveWhys = deal._psychProgress;
+    deal._whyStage = deal._psychProgress.stage || 'listen';
+    deal._prematureMeeting = deal._psychProgress.premature_meeting || false;
+  }
+  // ROA: Intent classification (from cached _intentAnalysis)
+  if(!deal._intentClass && deal._intentAnalysis){
+    deal._intentClass = deal._intentAnalysis.classification || 'undetermined';
+    deal._curiosityRisk = deal._intentAnalysis.curiosity_risk || false;
+  }
   // RF·3: Framework compliance score (0-100) derivado do qualitativeScore calculado no L16
   if(!deal._frameworkCompliance){
     var fr = deal._frameworkRuntime || deal._forecastV6 && deal._forecastV6.explain_json && deal._forecastV6.explain_json.framework;
@@ -5510,9 +5556,16 @@ async function analyzeNoteAndPersist(dealId, rawText){
   };
 
   try {
-    var res = await sb.from('note_analysis').insert(row);
+    var res = await sb.from('note_analysis').insert(row).select('id').single();
     if(res.error) { _syncErr('note-analysis', res.error); }
-    else { console.log('[note-analysis] auto-analyzed deal=' + dealId + ' sentiment=' + sentiment + ' depth=' + depthScore.toFixed(2)); }
+    else {
+      console.log('[note-analysis] auto-analyzed deal=' + dealId + ' sentiment=' + sentiment + ' depth=' + depthScore.toFixed(2));
+      // Auto QC detection: classify this interaction as Quality Conversation (ROA)
+      if(window.detectAndPersistQC){
+        var noteRow = Object.assign({}, row, { id: res.data ? res.data.id : null });
+        window.detectAndPersistQC(dealId, noteRow);
+      }
+    }
   } catch(e) { _syncErr('note-analysis', e); }
 
   // ── AUTO FRAMEWORK EXTRACTION from note text ──
@@ -5553,6 +5606,291 @@ async function analyzeNoteAndPersist(dealId, rawText){
   }
 }
 window.analyzeNoteAndPersist = analyzeNoteAndPersist;
+
+// ==================================================================
+// ROA ENGINE — Quality Conversations + Five Whys
+// Core: classifica interacoes como Quality Conversation e progride
+// o buyer pela jornada cognitiva (listen→care→change→you→now)
+// ==================================================================
+
+// ── QC Detection: classifica se uma nota/interacao e Quality Conversation ──
+async function detectAndPersistQC(dealId, noteAnalysisRow){
+  var sb = _sb(); if(!sb) return null;
+  var email = getOperatorId(); if(!email) return null;
+  var n = noteAnalysisRow;
+  if(!n) return null;
+
+  // Core ROA definition: has_new_information AND (pain OR authority OR urgency OR next_step)
+  var hasPain = !!(n.spiced_pain || (n.pain_points && n.pain_points.length > 0));
+  var hasAuthority = !!(n.spiced_decision || (n.objections && n.objections.includes('authority')));
+  var hasUrgency = !!(n.spiced_critical_event);
+  var hasNextStep = !!(n.commitments && n.commitments.length > 0);
+  var hasNewInfo = n.depth_score > 0.2 || hasPain || hasAuthority || hasUrgency;
+
+  // Depth score from note
+  var depth = n.depth_score || 0;
+
+  // Conversation Quality Score (ROA formula)
+  var cqs = (0.30 * depth)
+          + (0.20 * (hasPain ? 1 : 0))
+          + (0.15 * (hasAuthority ? 1 : 0))
+          + (0.15 * (hasUrgency ? 1 : 0))
+          + (0.20 * (hasNextStep ? 1 : 0));
+  cqs = Math.round(cqs * 100) / 100;
+
+  // Five Whys detection from note content
+  var raw = (n.raw_text || n.cleaned_text || '').toLowerCase();
+  var whyListen = /por que|motivo|raz[ãa]o|o que te trouxe|como conheceu/i.test(raw) || depth > 0.15;
+  var whyCare = hasPain || /importante|prioridade|preocupa|afeta/i.test(raw);
+  var whyChange = /mudar|diferente|novo|transformar|resolver|sair d[aeo]/i.test(raw) && hasPain;
+  var whyYou = /g4|imers[ãa]o|metodologia|refer[eê]ncia|caso de sucesso|depoimento/i.test(raw);
+  var whyNow = hasUrgency || /agora|urgente|prazo|jan|fev|mar|abr|mai|jun|esse m[eê]s|essa semana/i.test(raw);
+
+  // Determine stage
+  var whyStage = 'listen';
+  if(whyNow) whyStage = 'now';
+  else if(whyYou) whyStage = 'you';
+  else if(whyChange) whyStage = 'change';
+  else if(whyCare) whyStage = 'care';
+
+  // Infer channel from context
+  var channel = 'call';
+  if(n.source_type === 'dm' || /dm|instagram|direct/i.test(raw)) channel = 'dm';
+  else if(/whatsapp|wpp|zap/i.test(raw)) channel = 'whatsapp';
+  else if(/email|e-mail/i.test(raw)) channel = 'email';
+  else if(/reuni[ãa]o|meeting|call|liga[çc][ãa]o/i.test(raw)) channel = 'call';
+
+  var qcRow = {
+    deal_id: dealId,
+    operator_email: email,
+    note_analysis_id: n.id || null,
+    channel: channel,
+    source_type: 'auto',
+    has_new_information: hasNewInfo,
+    extracted_pain: hasPain,
+    extracted_authority: hasAuthority,
+    extracted_urgency: hasUrgency,
+    extracted_next_step: hasNextStep,
+    depth_score: depth,
+    why_listen: whyListen,
+    why_care: whyCare,
+    why_change: whyChange,
+    why_you: whyYou,
+    why_now: whyNow,
+    why_stage: whyStage,
+    conversation_quality_score: cqs,
+    raw_summary: (n.cleaned_text || '').slice(0, 500),
+    analysis_payload: {
+      sentiment: n.sentiment,
+      objections: n.objections,
+      spiced_filled: n.analysis_payload && n.analysis_payload.spiced_filled || 0
+    }
+  };
+
+  try {
+    var res = await sb.from('quality_conversations').insert(qcRow).select('id').single();
+    if(res.error){ _syncErr('qc-detect', res.error); return null; }
+    var qcId = res.data ? res.data.id : null;
+    var isQC = hasNewInfo && (hasPain || hasAuthority || hasUrgency || hasNextStep);
+    console.log('[roa:qc] deal=' + dealId + ' isQC=' + isQC + ' cqs=' + cqs + ' stage=' + whyStage);
+
+    // Update Five Whys psychological progress
+    if(isQC) await updatePsychologicalProgress(dealId, email, qcRow);
+
+    return { id: qcId, isQC: isQC, cqs: cqs, whyStage: whyStage };
+  } catch(e){ _syncErr('qc-detect', e); return null; }
+}
+window.detectAndPersistQC = detectAndPersistQC;
+
+// ── Five Whys Psychological Progress — upsert por deal ──
+async function updatePsychologicalProgress(dealId, email, qc){
+  var sb = _sb(); if(!sb) return;
+
+  // Fetch current state
+  var cur = null;
+  try {
+    var r = await sb.from('deal_psychological_progress').select('*').eq('deal_id', dealId).single();
+    if(r.data) cur = r.data;
+  } catch(e){}
+
+  // Progressive update: scores only go UP (ratchet), never down
+  var wl = Math.max(cur ? cur.why_listen : 0, qc.why_listen ? 0.6 : 0);
+  var wca = Math.max(cur ? cur.why_care : 0, qc.why_care ? 0.6 : 0);
+  var wch = Math.max(cur ? cur.why_change : 0, qc.why_change ? 0.6 : 0);
+  var wy = Math.max(cur ? cur.why_you : 0, qc.why_you ? 0.6 : 0);
+  var wn = Math.max(cur ? cur.why_now : 0, qc.why_now ? 0.6 : 0);
+
+  // Increment on repeated evidence (max 1.0)
+  if(cur){
+    if(qc.why_listen && cur.why_listen > 0) wl = Math.min(1, wl + 0.15);
+    if(qc.why_care && cur.why_care > 0) wca = Math.min(1, wca + 0.15);
+    if(qc.why_change && cur.why_change > 0) wch = Math.min(1, wch + 0.15);
+    if(qc.why_you && cur.why_you > 0) wy = Math.min(1, wy + 0.15);
+    if(qc.why_now && cur.why_now > 0) wn = Math.min(1, wn + 0.15);
+  }
+
+  // Determine stage
+  var stage = 'listen';
+  if(wn >= 0.5) stage = 'now';
+  else if(wy >= 0.5) stage = 'you';
+  else if(wch >= 0.5) stage = 'change';
+  else if(wca >= 0.5) stage = 'care';
+  var stageConf = Math.min(1, (wl + wca + wch + wy + wn) / 5 * 1.5);
+
+  // Kill switches
+  var prematureMeeting = wca < 0.5 && qc.why_stage !== 'care' && qc.channel === 'meeting';
+  var prematureProposal = wch < 0.5 && /proposta|enviei|material/i.test(qc.raw_summary || '');
+  var skippedStage = false;
+  var scores = [wl, wca, wch, wy, wn];
+  for(var i = 1; i < scores.length; i++){
+    if(scores[i] > 0.5 && scores[i-1] < 0.2) skippedStage = true;
+  }
+
+  var row = {
+    deal_id: dealId,
+    operator_email: email,
+    why_listen: Math.round(wl * 100) / 100,
+    why_care: Math.round(wca * 100) / 100,
+    why_change: Math.round(wch * 100) / 100,
+    why_you: Math.round(wy * 100) / 100,
+    why_now: Math.round(wn * 100) / 100,
+    stage: stage,
+    stage_confidence: Math.round(stageConf * 100) / 100,
+    premature_meeting: prematureMeeting,
+    premature_proposal: prematureProposal,
+    skipped_stage: skippedStage,
+    last_qc_id: qc.note_analysis_id || null,
+    qc_count: (cur ? cur.qc_count : 0) + 1,
+    updated_at: _now()
+  };
+
+  try {
+    await sb.from('deal_psychological_progress').upsert(row, { onConflict: 'deal_id' });
+    if(prematureMeeting || prematureProposal || skippedStage){
+      console.warn('[roa:five-whys] KILL SWITCH deal=' + dealId + ' premature_meeting=' + prematureMeeting + ' premature_proposal=' + prematureProposal + ' skipped=' + skippedStage);
+    }
+  } catch(e){ _syncErr('five-whys', e); }
+}
+
+// ── ROA Metrics Calculator (for dashboard) ──
+function calcROAMetrics(deals, qcData){
+  var totalActivities = 0;
+  var totalQC = 0;
+  var totalOpps = 0;
+  var qcByChannel = {};
+  var qcByOperator = {};
+
+  deals.forEach(function(d){
+    totalActivities += d._touchpoints || d.touchpointCount || 0;
+    var fase = (d._fase || '').toLowerCase();
+    if(fase === 'oportunidade' || fase === 'negociação') totalOpps++;
+  });
+
+  if(qcData && qcData.length){
+    qcData.forEach(function(q){
+      if(q.is_quality_conversation){
+        totalQC++;
+        qcByChannel[q.channel] = (qcByChannel[q.channel] || 0) + 1;
+        qcByOperator[q.operator_email] = (qcByOperator[q.operator_email] || 0) + 1;
+      }
+    });
+  }
+
+  var qcRate = totalActivities > 0 ? totalQC / totalActivities : 0;
+  var qcToOppRate = totalQC > 0 ? totalOpps / totalQC : 0;
+
+  return {
+    activities: totalActivities,
+    quality_conversations: totalQC,
+    qc_rate: Math.round(qcRate * 1000) / 10,
+    qc_to_opp_rate: Math.round(qcToOppRate * 1000) / 10,
+    opportunities: totalOpps,
+    qc_by_channel: qcByChannel,
+    qc_by_operator: qcByOperator,
+    conversions: {
+      activity_to_qc: qcRate,
+      qc_to_opp: qcToOppRate
+    }
+  };
+}
+window.calcROAMetrics = calcROAMetrics;
+
+// ── Time Waster Detector (P3) ──
+async function detectTimeWaster(dealId, deal){
+  var sb = _sb(); if(!sb) return null;
+  var email = getOperatorId(); if(!email) return null;
+
+  var tp = deal._touchpoints || 0;
+  var hasNote = deal._runtime && deal._runtime.last_event === 'note';
+  var hasMeeting = deal._runtime && deal._runtime.meetings_total > 0;
+  var signals = deal._signalSummary || {};
+  var posSignals = signals.top_positive_signals || [];
+  var negSignals = signals.top_negative_signals || [];
+
+  // Reciprocity: info extracted vs info given (proxy via signal balance)
+  var posCount = posSignals.length;
+  var negCount = negSignals.length;
+  var reciprocity = (posCount + 1) / (posCount + negCount + 2); // Laplace smoothing
+
+  // Info extraction ratio: how much new info per touchpoint
+  var spicedFilled = deal._frameworkRuntime ? (deal._frameworkRuntime.spiced_coverage || 0) : 0;
+  var infoRatio = tp > 0 ? spicedFilled / tp : 0;
+
+  // Curiosity risk: many touchpoints, low framework coverage, no meeting
+  var curiosityRisk = tp >= 4 && spicedFilled < 0.3 && !hasMeeting;
+
+  // Classification
+  var classification = 'undetermined';
+  var confidence = 0.3;
+  if(tp >= 3){
+    if(reciprocity > 0.6 && spicedFilled > 0.3){
+      classification = 'buyer';
+      confidence = Math.min(0.9, 0.5 + spicedFilled * 0.3 + reciprocity * 0.2);
+    } else if(curiosityRisk && reciprocity < 0.4){
+      classification = 'time_waster';
+      confidence = Math.min(0.8, 0.4 + (1 - reciprocity) * 0.3);
+    } else if(curiosityRisk){
+      classification = 'curious';
+      confidence = 0.5;
+    }
+  }
+
+  var row = {
+    deal_id: dealId,
+    operator_email: email,
+    reciprocity_score: Math.round(reciprocity * 100) / 100,
+    info_extraction_ratio: Math.round(infoRatio * 100) / 100,
+    curiosity_risk: curiosityRisk,
+    classification: classification,
+    classification_confidence: Math.round(confidence * 100) / 100,
+    signals_used: posSignals.concat(negSignals).map(function(s){ return s.type; }),
+    updated_at: _now()
+  };
+
+  try {
+    await sb.from('lead_intent_analysis').upsert(row, { onConflict: 'deal_id' });
+    console.log('[roa:intent] deal=' + dealId + ' class=' + classification + ' conf=' + confidence.toFixed(2));
+    return row;
+  } catch(e){ _syncErr('intent-analysis', e); return null; }
+}
+window.detectTimeWaster = detectTimeWaster;
+
+// ── Coaching Event Logger (P2) ──
+async function logCoachingEvent(operatorEmail, dealId, type, category, description, durationMin){
+  var sb = _sb(); if(!sb) return;
+  try {
+    await sb.from('coaching_events').insert({
+      operator_email: operatorEmail || getOperatorId(),
+      deal_id: dealId || null,
+      type: type || 'suggestion',
+      category: category || 'framework',
+      description: description || '',
+      duration_equivalent: durationMin || 5,
+      source: 'elucy'
+    });
+  } catch(e){ _syncErr('coaching-log', e); }
+}
+window.logCoachingEvent = logCoachingEvent;
 
 // ==================================================================
 // QUICK MEETING REGISTRATION — Manual meeting logging for SDRs
@@ -6133,6 +6471,40 @@ async function loadFrameworkRuntime(){
   return allRows.length;
 }
 window.loadFrameworkRuntime = loadFrameworkRuntime;
+
+// ── ROA Loaders — attach psychological progress + intent analysis to deal map ──
+async function loadROAData(){
+  var sb = _sb(); if(!sb) return;
+  var map = window._COCKPIT_DEAL_MAP || {};
+  var dealIds = Object.keys(map);
+  if(!dealIds.length) return;
+  var CHUNK = 100;
+
+  // Load deal_psychological_progress
+  var psychRows = [];
+  for(var i = 0; i < dealIds.length; i += CHUNK){
+    var ids = dealIds.slice(i, i + CHUNK);
+    try {
+      var r1 = await sb.from('deal_psychological_progress').select('*').in('deal_id', ids);
+      if(r1.data) psychRows = psychRows.concat(r1.data);
+    } catch(e){ _syncErr('roa-psych', e); }
+  }
+  psychRows.forEach(function(r){ if(map[r.deal_id]) map[r.deal_id]._psychProgress = r; });
+
+  // Load lead_intent_analysis
+  var intentRows = [];
+  for(var j = 0; j < dealIds.length; j += CHUNK){
+    var ids2 = dealIds.slice(j, j + CHUNK);
+    try {
+      var r2 = await sb.from('lead_intent_analysis').select('*').in('deal_id', ids2);
+      if(r2.data) intentRows = intentRows.concat(r2.data);
+    } catch(e){ _syncErr('roa-intent', e); }
+  }
+  intentRows.forEach(function(r){ if(map[r.deal_id]) map[r.deal_id]._intentAnalysis = r; });
+
+  console.log('[roa] loaded ' + psychRows.length + ' psych + ' + intentRows.length + ' intent rows');
+}
+window.loadROAData = loadROAData;
 
 // Calculate qualitative_score from framework runtime data
 // Formula V7.1:
@@ -9000,13 +9372,17 @@ async function runIntelligenceDAG(){
     console.log('[DAG] Phase 11: L28 Cadence Engine V1...');
     await syncCadenceRuntimeV1();
 
-    console.log('[DAG] 28-Layer DAG completed in ' + (Date.now() - t0) + 'ms');
+    // Phase 12: ROA Data Load (L29) — loads psychological progress + intent analysis
+    console.log('[DAG] Phase 12: L29 ROA Data Load...');
+    await loadROAData();
+
+    console.log('[DAG] 29-Layer DAG completed in ' + (Date.now() - t0) + 'ms');
   } catch(err){
     console.error('[DAG] Error:', err);
   }
 }
 window.runIntelligenceDAG = runIntelligenceDAG;
 
-console.log('[cockpit-engine v11.2] 28-Layer Architecture loaded — L19-L22 Quality + L23 Enterprise + L24 Trusted Advisor + L25 Strategic + L26 SPIN Audit + L27 RFV + L28 Cadence V1');
+console.log('[cockpit-engine v11.3] 29-Layer Architecture loaded — L19-L22 Quality + L23 Enterprise + L24 Trusted Advisor + L25 Strategic + L26 SPIN + L27 RFV + L28 Cadence + L29 ROA');
 
 })();
