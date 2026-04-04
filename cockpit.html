@@ -74,7 +74,6 @@ window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false'
   <button class="ntab" role="tab" aria-selected="false" aria-label="Pre-Vendas" tabindex="-1" onclick="setScreen('prevendas',this)">Pre-Vendas</button>
   <button class="ntab" role="tab" aria-selected="false" aria-label="Intel" tabindex="-1" onclick="setScreen('intelligence',this)">Intel</button>
   <button class="ntab" role="tab" aria-selected="false" aria-label="Playbooks" tabindex="-1" onclick="setScreen('playbooks',this)">Playbooks</button>
-  <button class="ntab" role="tab" aria-selected="false" aria-label="Chat" tabindex="-1" onclick="setScreen('chat',this)">Chat</button>
   </nav>
   <div class="tbr">
     <span id="sync-dot" class="sync-dot sync-dot-ok" title="Sincronizado"></span>
@@ -502,299 +501,6 @@ window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false'
     <div class="screen" id="screen-playbooks">
       <div id="pb-root"><div style="font-size:12px;color:var(--text2);padding:20px;text-align:center">Carregando Playbooks...</div></div>
     </div>
-    <div class="screen" id="screen-chat">
-      <div id="chat-app" class="chat-app">
-        <!-- LEFT: Priority Inbox -->
-        <div id="chat-list-panel" class="chat-panel-left">
-          <div class="chat-inbox-header">
-            <div class="chat-inbox-title">Inbox</div>
-            <button class="chat-btn-new" onclick="window.chatNewMessage()" title="Nova conversa">+</button>
-          </div>
-          <div class="chat-inbox-search">
-            <input id="chat-search" class="chat-search-input" placeholder="Buscar conversa..." oninput="window.chatFilterConversations(this.value)">
-          </div>
-          <div class="chat-inbox-filters">
-            <button class="chat-filter on" onclick="window.chatFilterChannel('all',this)" data-ch="all">Todos</button>
-            <button class="chat-filter" onclick="window.chatFilterChannel('whatsapp',this)" data-ch="whatsapp">WA</button>
-            <button class="chat-filter" onclick="window.chatFilterChannel('instagram',this)" data-ch="instagram">IG</button>
-            <button class="chat-filter" onclick="window.chatFilterChannel('priority',this)" data-ch="priority">SLA</button>
-          </div>
-          <div id="chat-conversations" class="chat-conv-list"></div>
-          <div class="chat-inbox-stats" id="chat-inbox-stats"></div>
-        </div>
-        <!-- CENTER: Thread + Brain -->
-        <div id="chat-main-panel" class="chat-panel-center">
-          <div id="chat-header" class="chat-header">
-            <button class="chat-back-btn" onclick="window.chatBack()" title="Voltar">&#8592;</button>
-            <div class="chat-header-info">
-              <div class="chat-header-name" id="chat-header-name">Selecione uma conversa</div>
-              <div class="chat-header-meta" id="chat-header-meta"></div>
-            </div>
-            <div class="chat-header-tags" id="chat-header-tags"></div>
-            <div class="chat-header-actions">
-              <button class="chat-btn-icon" onclick="window.chatHandoff()" title="Handoff para AE">&#9889;</button>
-              <button class="chat-btn-icon" onclick="window.chatToggleContext()" title="Deal Context">&#9776;</button>
-            </div>
-          </div>
-          <!-- SLA Timer Bar -->
-          <div class="chat-sla-bar" id="chat-sla-bar" style="display:none">
-            <div class="chat-sla-icon">&#9200;</div>
-            <div class="chat-sla-text" id="chat-sla-text">SLA: responda em 5 min</div>
-            <div class="chat-sla-timer" id="chat-sla-timer"></div>
-            <div class="chat-sla-fill" id="chat-sla-fill"></div>
-          </div>
-          <!-- Messages Thread -->
-          <div id="chat-messages" class="chat-thread"></div>
-          <!-- Analysis Bar (real-time) -->
-          <div id="chat-analysis" class="chat-analysis" style="display:none"></div>
-          <!-- Suggestion Bar -->
-          <div id="chat-suggestion" class="chat-suggestion" style="display:none"></div>
-          <!-- Input Area -->
-          <div id="chat-input-area" class="chat-input-wrap" style="display:none">
-            <div class="chat-input-row">
-              <textarea id="chat-input" class="chat-textarea" rows="1" placeholder="Digite sua mensagem..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();window.chatSend()}" oninput="window.chatAnalyzeRealtime(this.value)"></textarea>
-              <button class="chat-btn-send" onclick="window.chatSend()" title="Enviar">&#10148;</button>
-            </div>
-            <div class="chat-input-actions">
-              <button class="chat-btn-action" onclick="window.chatRewrite()">Reescrever</button>
-              <button class="chat-btn-action" onclick="window.chatInsertCopy()">Inserir Copy</button>
-              <button class="chat-btn-action" onclick="window.chatUseTemplate()">Template</button>
-              <span class="chat-impact-badge" id="chat-impact-badge" style="display:none">Impact: 0.00</span>
-              <span id="chat-typing-indicator" class="chat-typing" style="display:none">digitando...</span>
-            </div>
-          </div>
-        </div>
-        <!-- RIGHT: Deal Context Sidebar (3-C) -->
-        <div id="chat-context-panel" class="chat-panel-right" style="display:none">
-          <div class="chat-ctx-header">
-            <span>Deal Context</span>
-            <button class="chat-btn-icon" onclick="window.chatToggleContext()" title="Fechar">&#10005;</button>
-          </div>
-          <div id="chat-ctx-deal" class="chat-ctx-section">
-            <div class="chat-ctx-label">Deal</div>
-            <div id="chat-ctx-deal-name" class="chat-ctx-value">--</div>
-            <div id="chat-ctx-deal-value" class="chat-ctx-sub">--</div>
-          </div>
-          <div class="chat-ctx-section">
-            <div class="chat-ctx-label">Pipeline</div>
-            <div id="chat-ctx-etapa" class="chat-ctx-value">--</div>
-            <div id="chat-ctx-fase" class="chat-ctx-sub">--</div>
-          </div>
-          <div class="chat-ctx-section">
-            <div class="chat-ctx-label">Timing</div>
-            <div id="chat-ctx-aging" class="chat-ctx-value">--</div>
-            <div id="chat-ctx-cadence" class="chat-ctx-sub">--</div>
-          </div>
-          <div class="chat-ctx-section">
-            <div class="chat-ctx-label">Persona</div>
-            <div id="chat-ctx-persona" class="chat-ctx-value">--</div>
-            <div id="chat-ctx-framework" class="chat-ctx-sub">--</div>
-          </div>
-          <div class="chat-ctx-section">
-            <div class="chat-ctx-label">Forecast</div>
-            <div id="chat-ctx-forecast" class="chat-ctx-value">--</div>
-            <div id="chat-ctx-trust" class="chat-ctx-sub">--</div>
-          </div>
-          <div class="chat-ctx-section">
-            <div class="chat-ctx-label">Sinais</div>
-            <div id="chat-ctx-signals" class="chat-ctx-signals"></div>
-          </div>
-          <div class="chat-ctx-section">
-            <div class="chat-ctx-label">Chat Intel</div>
-            <div id="chat-ctx-intel" class="chat-ctx-intel"></div>
-          </div>
-          <div class="chat-ctx-actions">
-            <button class="chat-btn-action" onclick="window.chatHandoff()">Gerar Handoff</button>
-            <button class="chat-btn-action" onclick="window.chatGenCopy()">Gerar Copy</button>
-          </div>
-        </div>
-      </div>
-    </div>
-<!-- ── SCREEN: DM WAR ROOM — REMOVIDO (touchpoint lógica migrada para CSE engine) -->
-<div class="screen" id="screen-dm" style="display:none!important">
-  <div class="dm-center" style="position:relative">
-    <div class="dm-drop-wrap">
-      <div class="dm-drop" id="dm-drop-zone"
-           onclick="dmStartCapture()"
-           ondragover="event.preventDefault();this.classList.add('active')"
-           ondragleave="this.classList.remove('active')"
-           ondrop="event.preventDefault();this.classList.remove('active');dmStartCapture()">
-        <div class="dm-drop-icon">&#128248;</div>
-        <div class="dm-drop-title">Soltar screenshot de DM para analisar</div>
-        <div class="dm-drop-sub" id="dm-ocr-status">OCR ENGINE: PRONTO</div>
-      </div>
-      <div class="dm-ocr-bar-wrap" id="dm-ocr-bar-wrap">
-        <div class="dm-ocr-bar-bg"><div class="dm-ocr-bar-fill" id="dm-ocr-fill"></div></div>
-        <div class="dm-ocr-labels">
-          <span class="dm-ocr-step" id="dm-ocr-step">OCR — SCANNING</span>
-          <span class="dm-ocr-pct" id="dm-ocr-pct">0%</span>
-        </div>
-      </div>
-    </div>
-    <div class="dm-gamif">
-      <div class="dm-gamif-badge dm-gb-green"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2z"/></svg> COMBO: 3 FAST</div>
-      <div class="dm-gamif-badge dm-gb-accent"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2z"/></svg> STREAK: 12H</div>
-    </div>
-    <div class="dm-chat" id="dm-chat-area">
-      <div class="dm-msg-lead">
-        <div class="dm-msg-sender lead"><span>LEAD</span><span class="dm-msg-ts">14:02</span></div>
-        <div class="dm-msg-bubble">
-          "Já tentei outras soluções mas os resultados sempre demoravam. Como sei que é diferente aqui?"
-          <div class="dm-msg-meta">
-            <span class="dm-signal-dot dm-signal-green"></span>
-            <span class="dm-signal-label" style="color:var(--green);font-size:9px">TOM: CÉTICO</span>
-          </div>
-        </div>
-      </div>
-      <div class="dm-msg-op">
-        <div class="dm-msg-sender op"><span class="dm-msg-ts">14:03</span><span>VOCÊ (OPERADOR)</span></div>
-        <div class="dm-msg-bubble">
-          "Entendo. Posso te mostrar resultados reais de clientes no mesmo perfil em 3 minutos?"
-        </div>
-      </div>
-      <div class="dm-msg-lead">
-        <div class="dm-msg-sender lead"><span>LEAD</span><span class="dm-msg-ts">14:05</span></div>
-        <div class="dm-msg-bubble" style="border-left:2px solid var(--green)">
-          "Ok. Manda. Se os dados baterem, fecho hoje."
-          <div class="dm-msg-meta">
-            <span class="dm-signal-dot dm-signal-blue"></span>
-            <span style="font-size:9px;color:var(--green);font-weight:700;text-transform:uppercase">SINAL: INTENÇÃO DE COMPRA</span>
-          </div>
-        </div>
-      </div>
-      <div id="dm-ocr-messages"></div>
-    </div>
-    <div class="dm-footer">
-      <div class="dm-footer-left">
-        <span class="dm-footer-item">ELUCY v2.4</span>
-        <span class="dm-footer-item">LATÊNCIA: 14MS</span>
-      </div>
-      <div class="dm-footer-right">
-        <span class="dm-footer-dot"></span>
-        AI ANALYZER ATIVO
-      </div>
-    </div>
-  </div>
-
-  <div class="dm-right">
-    <div class="dm-right-inner">
-      <div class="dm-section-title">&#129504; Próxima Melhor Ação</div>
-      <div class="dm-ai-card">
-        <div class="dm-ai-label">AI SUGGESTION</div>
-        <div class="dm-ai-text" id="dm-suggestion-text">
-          "Perfeito. Aqui está o resultado real de um cliente com perfil similar ao seu. Posso reservar uma vaga para começar essa semana."
-        </div>
-        <div class="dm-ai-actions">
-          <button class="dm-copy-btn" onclick="dmCopySuggestion()">&#128203; Copiar DM</button>
-          <button class="dm-edit-btn" onclick="dmEditSuggestion()" title="Editar">&#9999;</button>
-        </div>
-      </div>
-      <div class="dm-action-btns">
-        <button class="dm-action-btn" onclick="dmSendToCRM()">&#128506; Enviar ao CRM</button>
-        <button class="dm-action-btn">&#128197; Agendar Follow-up</button>
-      </div>
-
-      <div class="dm-insights-wrap" id="dm-insights-wrap">
-        <div class="dm-panel-header">
-          <span class="dm-panel-handle" id="dm-lead-handle">@ — Selecione um deal</span>
-          <span class="dm-enr-badge" id="dm-enr-badge">AGUARDANDO</span>
-        </div>
-        <div class="dm-empty-state" id="dm-insights-empty">
-          <div class="dm-empty-icon">&#128070;</div>
-          <div class="dm-empty-text">Selecione um deal no pipeline<br>para ver os insights do lead</div>
-        </div>
-
-        <!-- BLOCO A: PERFIL -->
-        <div class="li-blk" id="dm-bloco-a" style="display:none">
-          <div class="li-blk-hdr">
-            <span>&#128100;</span>
-            <span class="li-blk-title">PERFIL</span>
-            <span class="li-blk-src">persons_overview</span>
-          </div>
-          <div class="li-fld"><span class="li-lbl">Nome</span><span class="li-val" id="dm-li-nome">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Cargo</span><span class="li-val" id="dm-li-cargo">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Faturamento</span><span class="li-val" id="dm-li-fat">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Segmento</span><span class="li-val" id="dm-li-seg">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Perfil ICP</span><span class="li-badge li-badge-accent" id="dm-li-perfil">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Status G4</span><span class="li-badge li-badge-gray" id="dm-li-status">Prospect</span></div>
-          <div class="li-fld"><span class="li-lbl">LTV Total</span><span class="li-val-hi" id="dm-li-ltv">—</span></div>
-        </div>
-
-        <!-- BLOCO B: ECOSSISTEMA G4 -->
-        <div class="li-blk" id="dm-bloco-b" style="display:none">
-          <div class="li-blk-hdr">
-            <span>&#128230;</span>
-            <span class="li-blk-title">ECOSSISTEMA G4</span>
-            <span class="li-blk-src">persons_overview</span>
-          </div>
-          <div class="li-fld"><span class="li-lbl">1&#186; Produto</span><span class="li-val" id="dm-li-prod1">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Último</span><span class="li-val" id="dm-li-prodult">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Cluster RFM</span><span class="li-badge li-badge-gray" id="dm-li-rfm">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Scale</span><span class="li-badge li-badge-gray" id="dm-li-scale">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Club</span><span class="li-badge li-badge-gray" id="dm-li-club">—</span></div>
-        </div>
-
-        <!-- BLOCO C: DEAL ATUAL -->
-        <div class="li-blk" id="dm-bloco-c" style="display:none">
-          <div class="li-blk-hdr">
-            <span>&#128200;</span>
-            <span class="li-blk-title">DEAL ATUAL</span>
-            <span class="li-blk-src">funil_comercial</span>
-          </div>
-          <div class="li-fld"><span class="li-lbl">Fase Atual</span><span class="li-phase-pill li-phase-hot" id="dm-li-fase">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Fase Anterior</span><span class="li-val-sec" id="dm-li-fase-ant">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Tempo na Fase</span><span class="li-val" id="dm-li-delta">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Receita</span><span class="li-val-hi" id="dm-li-receita">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Produto</span><span class="li-val" id="dm-li-linha">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Origem</span><span class="li-val" id="dm-li-origem">—</span></div>
-          <div class="li-fld"><span class="li-lbl">SDR</span><span class="li-val" id="dm-li-sdr">—</span></div>
-          <div class="li-fld"><span class="li-lbl">Closer</span><span class="li-val" id="dm-li-closer">—</span></div>
-          <div id="dm-skip-warn" class="li-skip-warn" style="display:none">&#9888; Etapa pulada — revisar jornada</div>
-        </div>
-
-        <!-- BLOCO D: HISTÓRICO -->
-        <div class="li-blk" id="dm-bloco-d" style="display:none">
-          <div class="li-blk-hdr">
-            <span>&#128336;</span>
-            <span class="li-blk-title">HISTÓRICO</span>
-            <span class="li-blk-src">aquisicao</span>
-          </div>
-          <div class="li-timeline-wrap" id="dm-timeline">
-            <span style="font-size:9px;color:var(--text4);font-style:italic">Nenhuma negociação anterior</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- ELUCI REPORT inside DM panel -->
-      <div class="dm-er-panel" id="dm-er-panel">
-        <div class="dm-er-hdr">
-          <div style="display:flex;align-items:center;gap:6px">
-            <span>&#129504;</span>
-            <span class="dm-er-label">ELUCI REPORT</span>
-            <span class="dm-er-ref" id="dm-er-ref">—</span>
-          </div>
-          <button onclick="document.getElementById('dm-er-panel').style.display='none'" style="background:none;border:none;color:var(--text3);cursor:pointer">&#10005;</button>
-        </div>
-        <div id="dm-er-content"></div>
-        <button class="dm-request-btn" onclick="dmRequestElucy()" id="dm-btn-request">
-          &#10024; Gerar Análise ELUCI
-        </button>
-      </div>
-
-      <!-- XP Bar -->
-      <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-          <span style="font-size:9px;font-weight:700;color:var(--accent2);text-transform:uppercase">LVL 42 OPERADOR</span>
-          <span style="font-size:9px;color:var(--text4)">750 / 1000 XP</span>
-        </div>
-        <div style="height:2px;background:var(--bg5);border-radius:99px;overflow:hidden">
-          <div style="height:100%;width:75%;background:var(--accent);box-shadow:0 0 6px rgba(99,102,241,.4)"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div><!-- /screen-dm -->
-  </div><!-- /ct -->
   <div id="rp">
   <div class="rps"><div class="rps-t">Nível SDR</div><div class="lvl-n">Hunter</div><div class="lvl-s">Nível 3 de 5</div><div class="lvl-bar"><div class="lvl-fill" style="width:68%"></div></div><div class="lvl-xp">2.340 / 3.500 XP</div></div>
   <div class="rps"><div class="rps-t">Score</div><div class="score-big">847</div><div class="score-l">pontos hoje</div></div>
@@ -824,7 +530,7 @@ function setScreen(n,el,skipHash){
   document.querySelectorAll('#ct > .screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(t=>{t.classList.remove('on');t.setAttribute('aria-selected','false');t.setAttribute('tabindex','-1');});
   var ct=document.getElementById('ct'); if(ct) ct.scrollTop=0;
-  const screenMap={home:'screen-home',pipeline:'screen-pipeline',tasks:'screen-tasks',reports:'screen-reports',prevendas:'screen-prevendas',intelligence:'screen-intelligence',playbooks:'screen-playbooks',dm:'screen-dm',chat:'screen-chat'};
+  const screenMap={home:'screen-home',pipeline:'screen-pipeline',tasks:'screen-tasks',reports:'screen-reports',prevendas:'screen-prevendas',intelligence:'screen-intelligence',playbooks:'screen-playbooks'};
   const validScreens=Object.keys(screenMap);
   const name=validScreens.includes(n)?n:'home';
   const target=document.getElementById(screenMap[name]);
@@ -832,7 +538,7 @@ function setScreen(n,el,skipHash){
   if(el){ el.classList.add('on');el.setAttribute('aria-selected','true');el.setAttribute('tabindex','0'); }
   else {
     const tabs=document.querySelectorAll('.ntab');
-    const tabMap={home:0,pipeline:1,tasks:2,reports:3,prevendas:4,intelligence:5,playbooks:6,chat:7};
+    const tabMap={home:0,pipeline:1,tasks:2,reports:3,prevendas:4,intelligence:5,playbooks:6};
     const idx=tabMap[name]!=null?tabMap[name]:0;
     if(tabs[idx]){tabs[idx].classList.add('on');tabs[idx].setAttribute('aria-selected','true');tabs[idx].setAttribute('tabindex','0');}
   }
@@ -843,12 +549,11 @@ function setScreen(n,el,skipHash){
   if(name==='reports') loadReportsScreen();
   if(name==='prevendas' && window.ReportsV4) window.ReportsV4.renderReportsV4('screen-reports-v4');
   if(name==='playbooks') renderPlaybooks();
-  if(name==='chat' && window.chatInit) window.chatInit();
 }
 // Hash routing — abre a seção correta ao carregar URL direta ou navegar pelo histórico
 function _routeFromHash(){
   const hash=(location.hash||'').replace('#','').toLowerCase().trim();
-  const valid=['home','pipeline','tasks','reports','prevendas','intelligence','playbooks','dm','chat'];
+  const valid=['home','pipeline','tasks','reports','prevendas','intelligence','playbooks'];
   setScreen(valid.includes(hash)?hash:'home',null,true);
 }
 window.addEventListener('hashchange',_routeFromHash);
@@ -2143,108 +1848,6 @@ function openSettings(section){
 @media(max-width:640px){#settings-panel{flex-direction:column;max-height:96vh}#settings-nav{width:100%;min-width:0;flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid var(--border)}#settings-nav-status{display:none}#settings-body{padding:14px}}
 /* ── COLLAPSIBLE DEAL CARD ── */
 .deal-actions-toggle{display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--t2);cursor:pointer;transition:all .2s ease}.deal-actions-toggle:hover{border-color:var(--accent);color:var(--accent)}.deal-actions-toggle .tgl-chevron{transition:transform .25s ease;display:inline-block}.deal-actions-toggle.open .tgl-chevron{transform:rotate(180deg)}.deal-actions-advanced{display:flex;align-items:center;gap:9px;flex-wrap:wrap;overflow:hidden;max-height:0;opacity:0;transition:max-height .3s ease,opacity .25s ease,margin .2s ease;margin-top:0}.deal-actions-advanced.show{max-height:120px;opacity:1;margin-top:8px}
-/* ── CHAT V2 — Textual Revenue Brain (Apple HIG dark) ── */
-.chat-app{display:flex;height:calc(100vh - 56px);gap:0;background:var(--bg)}
-.chat-panel-left{width:300px;min-width:260px;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
-.chat-panel-center{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-.chat-panel-right{width:280px;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;background:var(--bg);padding:0}
-/* Inbox */
-.chat-inbox-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px;border-bottom:1px solid var(--border)}
-.chat-inbox-title{font-size:15px;font-weight:700;letter-spacing:-.3px}
-.chat-btn-new{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
-.chat-btn-new:hover{border-color:var(--accent);color:var(--accent)}
-.chat-inbox-search{padding:8px 12px}
-.chat-search-input{width:100%;padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;outline:none;transition:border-color .15s}
-.chat-search-input:focus{border-color:var(--accent)}
-.chat-inbox-filters{display:flex;gap:4px;padding:4px 12px 8px}
-.chat-filter{padding:4px 10px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
-.chat-filter.on{background:var(--accent);color:#000;border-color:var(--accent)}
-.chat-filter:hover:not(.on){border-color:var(--accent);color:var(--accent)}
-.chat-conv-list{flex:1;overflow-y:auto}
-.chat-inbox-stats{padding:8px 12px;border-top:1px solid var(--border);font-size:10px;color:var(--text3);display:flex;gap:12px}
-/* Conversation items */
-.chat-conv{padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.04);display:flex;gap:10px;align-items:center;transition:background .12s}
-.chat-conv:hover{background:var(--bg2)}
-.chat-conv.active{background:var(--bg3)}
-.chat-conv.sla-warn{border-left:3px solid var(--yellow)}
-.chat-conv.sla-crit{border-left:3px solid var(--red)}
-.chat-conv-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
-.chat-conv-av.wa{background:#25d366;color:#fff}
-.chat-conv-av.ig{background:linear-gradient(135deg,#f09433,#dc2743,#bc1888);color:#fff}
-.chat-conv-body{flex:1;min-width:0}
-.chat-conv-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chat-conv-preview{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
-.chat-conv-meta{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
-.chat-conv-time{font-size:10px;color:var(--text3)}
-.chat-conv-badge{background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:10px;padding:1px 6px;min-width:16px;text-align:center}
-.chat-conv-bucket{font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px}
-.chat-conv-bucket.b4{background:var(--red);color:#fff}
-.chat-conv-bucket.b3{background:var(--yellow);color:#000}
-.chat-conv-bucket.b2{background:var(--accent);color:#000}
-.chat-conv-bucket.b1{background:var(--bg3);color:var(--text2)}
-/* Header */
-.chat-header{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);min-height:52px}
-.chat-back-btn{display:none;background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;padding:4px}
-.chat-header-info{flex:1;min-width:0}
-.chat-header-name{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chat-header-meta{font-size:11px;color:var(--text2);margin-top:1px}
-.chat-header-tags{display:flex;gap:4px;flex-wrap:wrap}
-.chat-btn-icon{background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:all .15s}
-.chat-btn-icon:hover{border-color:var(--accent);color:var(--accent)}
-/* SLA Bar */
-.chat-sla-bar{display:flex;align-items:center;gap:8px;padding:6px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:relative;overflow:hidden}
-.chat-sla-icon{font-size:14px}
-.chat-sla-text{font-size:11px;font-weight:600;flex:1}
-.chat-sla-timer{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
-.chat-sla-fill{position:absolute;bottom:0;left:0;height:2px;background:var(--green);transition:width 1s linear}
-.chat-sla-bar.warn .chat-sla-fill{background:var(--yellow)}
-.chat-sla-bar.crit .chat-sla-fill{background:var(--red)}
-.chat-sla-bar.crit .chat-sla-timer{color:var(--red)}
-/* Thread */
-.chat-thread{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:6px}
-.chat-date-sep{text-align:center;font-size:10px;color:var(--text3);padding:8px 0;font-weight:600}
-.chat-msg-row{display:flex;flex-direction:column}
-.chat-msg-row.out{align-items:flex-end}
-.chat-msg-row.in{align-items:flex-start}
-.chat-msg{max-width:72%;padding:9px 13px;border-radius:18px;font-size:13px;line-height:1.45;word-wrap:break-word}
-.chat-msg.out{background:var(--accent);color:#000;border-bottom-right-radius:4px}
-.chat-msg.in{background:var(--bg3);color:var(--text);border-bottom-left-radius:4px}
-.chat-msg.blocked{background:var(--red);color:#fff;opacity:.7}
-.chat-msg-footer{font-size:10px;color:var(--text3);margin-top:2px;display:flex;gap:4px;align-items:center}
-.chat-msg-status{font-size:10px}
-/* Analysis Bar */
-.chat-analysis{display:flex;flex-wrap:wrap;gap:5px;padding:8px 16px;border-top:1px solid var(--border);background:var(--bg)}
-.chat-tag{padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.3px}
-.chat-tag.ok{background:rgba(52,199,89,.15);color:var(--green)}
-.chat-tag.warn{background:rgba(255,204,0,.15);color:var(--yellow)}
-.chat-tag.danger{background:rgba(255,69,58,.15);color:var(--red)}
-.chat-tag.info{background:rgba(10,132,255,.15);color:var(--accent)}
-/* Suggestion */
-.chat-suggestion{padding:8px 16px;border-top:1px solid var(--border);border-left:3px solid var(--accent);background:var(--bg2);font-size:12px;color:var(--text);line-height:1.4;cursor:pointer;transition:background .12s}
-.chat-suggestion:hover{background:var(--bg3)}
-/* Input */
-.chat-input-wrap{padding:10px 16px;border-top:1px solid var(--border);background:var(--bg)}
-.chat-input-row{display:flex;gap:8px;align-items:flex-end}
-.chat-textarea{flex:1;resize:none;padding:10px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;max-height:120px;overflow-y:auto;outline:none;transition:border-color .15s;font-family:inherit}
-.chat-textarea:focus{border-color:var(--accent)}
-.chat-btn-send{border-radius:50%;width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;background:var(--accent);color:#000;border:none;font-size:16px;cursor:pointer;transition:opacity .15s;flex-shrink:0}
-.chat-btn-send:hover{opacity:.85}
-.chat-input-actions{display:flex;gap:6px;margin-top:6px;align-items:center}
-.chat-btn-action{padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
-.chat-btn-action:hover{border-color:var(--accent);color:var(--accent)}
-.chat-impact-badge{margin-left:auto;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(52,199,89,.15);color:var(--green)}
-.chat-typing{font-size:11px;color:var(--accent);margin-left:auto}
-/* Deal Context Sidebar */
-.chat-ctx-header{display:flex;align-items:center;justify-content:space-between;padding:14px 14px 10px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700}
-.chat-ctx-section{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.04)}
-.chat-ctx-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:3px}
-.chat-ctx-value{font-size:13px;font-weight:600}
-.chat-ctx-sub{font-size:11px;color:var(--text2);margin-top:1px}
-.chat-ctx-signals{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
-.chat-ctx-intel{font-size:11px;color:var(--text2);margin-top:4px}
-.chat-ctx-actions{padding:12px 14px;display:flex;flex-direction:column;gap:6px}
-/* Responsive */
-@media(max-width:768px){.chat-panel-left{width:100%!important;min-width:0!important}.chat-panel-center{display:none!important}.chat-panel-right{display:none!important}.chat-app.chat-open .chat-panel-left{display:none!important}.chat-app.chat-open .chat-panel-center{display:flex!important}.chat-back-btn{display:block!important}}
 </style>
 <div id="settings-panel">
   <div id="settings-nav">
