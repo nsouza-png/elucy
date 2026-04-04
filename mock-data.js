@@ -1,260 +1,251 @@
 // ======================================================================
-// ELUCY COCKPIT — MOCK DATA LAYER (MVP)
-// Injeta dados simulados para desenvolvimento e demo quando o pipeline
-// real nao esta disponivel. Ativado via ?mock=1 na URL ou flag abaixo.
-// NUNCA enviar dados reais por aqui. Apenas estrutura simulada.
+// ELUCY COCKPIT — MOCK DATA LAYER v2
+// Expoe window._injectMockDeals() — chamado pelo Intel auto-load quando
+// Supabase nao responde. Tambem disponivel via ?mock=1 na URL.
 // ======================================================================
-
 (function(){
 'use strict';
 
-// ── Ativa mock automaticamente se pipeline nao carregou em 3s ────────
-// Ou forcado via URL: nsouza-png.github.io/elucy/?mock=1
-var FORCE_MOCK = location.search.includes('mock=1');
+// ── Dataset de deals simulados ────────────────────────────────────────
+var MOCK_DEALS = [
+  // Diamond (8 ativos)
+  {n:'Rafael Mendonça Lima',   c:'CEO',              t:'diamond', e:'Entrevista Agendada', f:'Oportunidade', s:'ativo',  l:'aquisicao',        g:'Aquisição',          ch:'Outbound',   d:2,  r:38000, fat:'R$ 50M - R$ 200M', seg:'Tecnologia'},
+  {n:'Carla Bittencourt',      c:'Sócia ou Fundadora',t:'diamond',e:'Entrevista Agendada', f:'Oportunidade', s:'ativo',  l:'expansao',         g:'Expansão',           ch:'Social DM',  d:4,  r:45000, fat:'R$ 100M+',         seg:'Varejo'},
+  {n:'Thiago Drummond',        c:'Presidente ou CEO', t:'diamond',e:'Agendamento',          f:'Agendado',     s:'ativo',  l:'turmas',           g:'Turmas',             ch:'Inbound',    d:1,  r:32000, fat:'R$ 50M - R$ 200M', seg:'Construção Civil'},
+  {n:'Fernanda Queiroz',       c:'CEO',              t:'diamond', e:'Conectados',           f:'Conectado',    s:'ativo',  l:'field_sales',      g:'Field Sales',        ch:'Field Sales',d:6,  r:41000, fat:'R$ 200M+',         seg:'Saúde'},
+  {n:'Eduardo Salomão',        c:'Sócio ou Fundador', t:'diamond',e:'Reagendamento',        f:'Reagendamento',s:'ativo',  l:'aquisicao',        g:'Aquisição',          ch:'Outbound',   d:17, r:38000, fat:'R$ 50M - R$ 200M', seg:'Industria'},
+  {n:'Patricia Volpe',         c:'Presidente ou CEO', t:'diamond',e:'Entrevista Agendada',  f:'Oportunidade', s:'ativo',  l:'renovacao',        g:'Renovação',          ch:'CRM',        d:3,  r:52000, fat:'R$ 100M+',         seg:'Educação'},
+  {n:'Marcelo Furtado',        c:'CEO',              t:'diamond', e:'Agendamento',          f:'Agendado',     s:'ativo',  l:'projetos_eventos', g:'Projetos & Eventos', ch:'Outbound',   d:5,  r:29000, fat:'R$ 50M - R$ 200M', seg:'Agronegócio'},
+  {n:'Isabela Ramos Torres',   c:'Sócia ou Fundadora',t:'diamond',e:'Conectados',           f:'Conectado',    s:'ativo',  l:'aquisicao',        g:'Aquisição',          ch:'Social DM',  d:8,  r:35000, fat:'R$ 100M+',         seg:'Financeiro'},
+  // Gold (9 ativos)
+  {n:'Gustavo Paiva Neto',     c:'Diretor',           t:'gold',   e:'Entrevista Agendada',  f:'Oportunidade', s:'ativo',  l:'turmas',           g:'Turmas',             ch:'Inbound',    d:2,  r:18000, fat:'R$ 10M - R$ 50M',  seg:'Tecnologia'},
+  {n:'Larissa Mendes',         c:'CEO',               t:'gold',   e:'Agendamento',          f:'Agendado',     s:'ativo',  l:'aquisicao',        g:'Aquisição',          ch:'Outbound',   d:4,  r:15000, fat:'R$ 5M - R$ 10M',   seg:'Varejo'},
+  {n:'Diego Cavalcante',       c:'Sócio ou Fundador', t:'gold',   e:'Conectados',           f:'Conectado',    s:'ativo',  l:'social_dm',        g:'Social DM',          ch:'Social DM',  d:3,  r:17000, fat:'R$ 10M - R$ 50M',  seg:'Serviços'},
+  {n:'Amanda Rocha',           c:'Diretora Comercial',t:'gold',   e:'Reagendamento',        f:'Reagendamento',s:'ativo',  l:'reativacao',       g:'Reativação',         ch:'CRM',        d:15, r:19000, fat:'R$ 50M - R$ 200M', seg:'Logística'},
+  {n:'Bruno Teixeira',         c:'CEO',               t:'gold',   e:'Entrevista Agendada',  f:'Oportunidade', s:'ativo',  l:'expansao',         g:'Expansão',           ch:'CRM',        d:2,  r:22000, fat:'R$ 10M - R$ 50M',  seg:'Saúde'},
+  {n:'Juliana Castelo',        c:'Sócia ou Fundadora',t:'gold',   e:'Agendamento',          f:'Agendado',     s:'ativo',  l:'turmas',           g:'Turmas',             ch:'Inbound',    d:6,  r:14000, fat:'R$ 5M - R$ 10M',   seg:'Educação'},
+  {n:'Felipe Monteiro',        c:'Presidente',        t:'gold',   e:'Conectados',           f:'Conectado',    s:'ativo',  l:'projetos_eventos', g:'Projetos & Eventos', ch:'Outbound',   d:9,  r:16000, fat:'R$ 10M - R$ 50M',  seg:'Construção Civil'},
+  {n:'Renata Sobral',          c:'CEO',               t:'gold',   e:'Dia 01',               f:'MQL',          s:'ativo',  l:'aquisicao',        g:'Aquisição',          ch:'Outbound',   d:11, r:18000, fat:'R$ 5M - R$ 10M',   seg:'Industria'},
+  {n:'Paulo Henrique Vilas',   c:'Diretor',           t:'gold',   e:'Entrevista Agendada',  f:'Oportunidade', s:'ativo',  l:'field_sales',      g:'Field Sales',        ch:'Field Sales',d:3,  r:21000, fat:'R$ 10M - R$ 50M',  seg:'Agronegócio'},
+  // Silver (9 ativos)
+  {n:'Mariana Lopes',          c:'Gerente',           t:'silver', e:'Agendamento',          f:'Agendado',     s:'ativo',  l:'turmas',           g:'Turmas',             ch:'Inbound',    d:2,  r:9000,  fat:'R$ 1M - R$ 5M',    seg:'Tecnologia'},
+  {n:'Roberto Cunha',          c:'Sócio ou Fundador', t:'silver', e:'Conectados',           f:'Conectado',    s:'ativo',  l:'social_dm',        g:'Social DM',          ch:'Social DM',  d:5,  r:8500,  fat:'R$ 1M - R$ 5M',    seg:'Varejo'},
+  {n:'Camila Faria',           c:'CEO',               t:'silver', e:'Dia 01',               f:'MQL',          s:'ativo',  l:'aquisicao',        g:'Aquisição',          ch:'Outbound',   d:7,  r:9500,  fat:'R$ 1M - R$ 5M',    seg:'Serviços'},
+  {n:'Leonardo Assis',         c:'Diretor',           t:'silver', e:'Entrevista Agendada',  f:'Oportunidade', s:'ativo',  l:'renovacao',        g:'Renovação',          ch:'CRM',        d:1,  r:11000, fat:'R$ 5M - R$ 10M',   seg:'Saúde'},
+  {n:'Tatiana Vidal',          c:'Gerente Comercial', t:'silver', e:'Reagendamento',        f:'Reagendamento',s:'ativo',  l:'reativacao',       g:'Reativação',         ch:'CRM',        d:18, r:8000,  fat:'R$ 1M - R$ 5M',    seg:'Logística'},
+  {n:'Henrique Bastos',        c:'Sócio ou Fundador', t:'silver', e:'Agendamento',          f:'Agendado',     s:'ativo',  l:'turmas',           g:'Turmas',             ch:'Inbound',    d:4,  r:9200,  fat:'R$ 1M - R$ 5M',    seg:'Educação'},
+  {n:'Adriana Pinto',          c:'CEO',               t:'silver', e:'Conectados',           f:'Conectado',    s:'ativo',  l:'projetos_eventos', g:'Projetos & Eventos', ch:'Outbound',   d:6,  r:10000, fat:'R$ 5M - R$ 10M',   seg:'Construção Civil'},
+  {n:'Marcos Alves',           c:'Diretor',           t:'silver', e:'Dia 02',               f:'SAL',          s:'ativo',  l:'social_dm',        g:'Social DM',          ch:'Social DM',  d:3,  r:8800,  fat:'R$ 1M - R$ 5M',    seg:'Industria'},
+  {n:'Priscila Mendonça',      c:'CEO',               t:'silver', e:'Entrevista Agendada',  f:'Oportunidade', s:'ativo',  l:'aquisicao',        g:'Aquisição',          ch:'Outbound',   d:2,  r:9600,  fat:'R$ 5M - R$ 10M',   seg:'Financeiro'},
+  // Bronze (9 ativos)
+  {n:'Gabriel Novaes',         c:'Gerente',           t:'bronze', e:'Dia 01',               f:'MQL',          s:'ativo',  l:'aquisicao',        g:'Aquisição',          ch:'Outbound',   d:4,  r:4500,  fat:'Até R$ 1M',        seg:'Tecnologia'},
+  {n:'Nathalia Costa',         c:'Coordenadora',      t:'bronze', e:'Dia 02',               f:'SAL',          s:'ativo',  l:'turmas',           g:'Turmas',             ch:'Inbound',    d:2,  r:4000,  fat:'Até R$ 1M',        seg:'Varejo'},
+  {n:'Vinicius Correia',       c:'Gerente',           t:'bronze', e:'Conectados',           f:'Conectado',    s:'ativo',  l:'social_dm',        g:'Social DM',          ch:'Social DM',  d:8,  r:3800,  fat:'Até R$ 1M',        seg:'Serviços'},
+  {n:'Leticia Campos',         c:'Sócia ou Fundadora',t:'bronze', e:'Dia 03',               f:'MQL',          s:'ativo',  l:'selfcheckout',     g:'Self Checkout',      ch:'Self Checkout',d:3, r:3500,  fat:'Até R$ 1M',        seg:'Saúde'},
+  {n:'Andre Freitas',          c:'Gerente Comercial', t:'bronze', e:'Reagendamento',        f:'Reagendamento',s:'ativo',  l:'reativacao',       g:'Reativação',         ch:'CRM',        d:16, r:4200,  fat:'Até R$ 1M',        seg:'Logística'},
+  {n:'Sabrina Luz',            c:'Coordenadora',      t:'bronze', e:'Agendamento',          f:'Agendado',     s:'ativo',  l:'turmas',           g:'Turmas',             ch:'Inbound',    d:5,  r:4800,  fat:'R$ 1M - R$ 5M',    seg:'Educação'},
+  {n:'Carlos Batista',         c:'Gerente',           t:'bronze', e:'Dia 01',               f:'MQL',          s:'ativo',  l:'aquisicao',        g:'Aquisição',          ch:'Outbound',   d:9,  r:3900,  fat:'Até R$ 1M',        seg:'Construção Civil'},
+  {n:'Joana Maciel',           c:'CEO',               t:'bronze', e:'Conectados',           f:'Conectado',    s:'ativo',  l:'social_dm_segment_k',g:'Social DM K',     ch:'Social DM',  d:6,  r:4100,  fat:'Até R$ 1M',        seg:'Industria'},
+  {n:'Rodrigo Lacerda',        c:'Gerente',           t:'bronze', e:'Dia 02',               f:'SAL',          s:'ativo',  l:'aquisicao',        g:'Aquisição',          ch:'Outbound',   d:4,  r:4300,  fat:'Até R$ 1M',        seg:'Agronegócio'},
+  // Fechados — ganho/perdido (para Bowtie, Three Es, GTM)
+  {n:'Sandra Mota',            c:'CEO',               t:'gold',   e:'Won', f:'Won',         s:'ganho',        l:'turmas',          g:'Turmas',          ch:'Inbound',    d:0, r:16000, fat:'R$ 10M - R$ 50M',  seg:'Tecnologia'},
+  {n:'Flavio Ribeiro',         c:'Diretor',           t:'silver', e:'Lost',f:'Lost',        s:'perdido',      l:'aquisicao',       g:'Aquisição',       ch:'Outbound',   d:0, r:9000,  fat:'R$ 1M - R$ 5M',    seg:'Varejo',      ml:'Sem budget'},
+  {n:'Cristiane Melo',         c:'Sócia ou Fundadora',t:'diamond',e:'Won', f:'Won',         s:'ganho',        l:'renovacao',       g:'Renovação',       ch:'CRM',        d:0, r:42000, fat:'R$ 100M+',         seg:'Saúde'},
+  {n:'Alexandre Dias',         c:'Presidente',        t:'gold',   e:'Won', f:'Won',         s:'ganho',        l:'expansao',        g:'Expansão',        ch:'CRM',        d:0, r:23000, fat:'R$ 50M - R$ 200M', seg:'Financeiro'},
+  {n:'Roberta Nunes',          c:'Gerente',           t:'bronze', e:'Lost',f:'Lost',        s:'perdido',      l:'social_dm',       g:'Social DM',       ch:'Social DM',  d:0, r:3800,  fat:'Até R$ 1M',        seg:'Serviços',    ml:'Timing'},
+  {n:'Danilo Pires',           c:'CEO',               t:'silver', e:'Won', f:'Won',         s:'ganho',        l:'turmas',          g:'Turmas',          ch:'Inbound',    d:0, r:10500, fat:'R$ 5M - R$ 10M',   seg:'Construção Civil'},
+  {n:'Viviane Torres',         c:'Diretora',          t:'gold',   e:'Won', f:'Won',         s:'ganho',        l:'projetos_eventos',g:'Projetos & Eventos',ch:'Outbound', d:0, r:19500, fat:'R$ 10M - R$ 50M',  seg:'Agronegócio'},
+  {n:'Mateus Carvalho',        c:'Gerente',           t:'bronze', e:'Lost',f:'Lost',        s:'perdido',      l:'aquisicao',       g:'Aquisição',       ch:'Outbound',   d:0, r:4000,  fat:'Até R$ 1M',        seg:'Logística',   ml:'Concorrência'},
+  {n:'Erica Fontes',           c:'Sócia ou Fundadora',t:'diamond',e:'Won', f:'Won',         s:'ganho',        l:'field_sales',     g:'Field Sales',     ch:'Field Sales',d:0, r:47000, fat:'R$ 200M+',         seg:'Educação'},
+  {n:'Sergio Leal',            c:'Presidente',        t:'silver', e:'Lost',f:'Lost',        s:'perdido',      l:'reativacao',      g:'Reativação',      ch:'CRM',        d:0, r:9200,  fat:'R$ 1M - R$ 5M',    seg:'Industria',   ml:'Sem budget'}
+];
 
-if(!FORCE_MOCK){
-  // Aguarda 3s e verifica se o pipeline carregou
-  setTimeout(function(){
-    var map = window._COCKPIT_DEAL_MAP || {};
-    if(Object.keys(map).length === 0){
-      console.log('[mock] Pipeline vazio apos 3s — ativando mock data layer');
-      _injectMock();
-    }
-  }, 3000);
-  return;
+// ── Activity log mock (180 eventos / 30 dias) ─────────────────────────
+var ACT_TYPES = ['copy_generated','copy_sent_wa','analysis_generated','dvl_confirmed','note_crm_copied','dm_generated','enrichment_added','copy_sent_ig'];
+var ACT_WEIGHTS = [30, 20, 25, 10, 15, 12, 8, 10]; // probabilidade relativa
+
+function _pickWeighted(items, weights){
+  var total = weights.reduce(function(a,b){return a+b;},0);
+  var r = Math.random() * total;
+  var sum = 0;
+  for(var i=0;i<items.length;i++){ sum+=weights[i]; if(r<sum) return items[i]; }
+  return items[0];
 }
 
-// Injeta imediatamente se forcado
-console.log('[mock] Mock data layer forcado via URL param');
-_injectMock();
-
-// ──────────────────────────────────────────────────────────────────────
-function _injectMock(){
-  _buildDealMap();
-  _mockActivityLog();
-  _mockSupabase();
-  _showMockBanner();
-  // Re-render Intel se ja estiver ativo
-  setTimeout(function(){
-    if(typeof _intelRender !== 'undefined') _intelRender();
-    if(window.renderHome) window.renderHome();
-  }, 100);
-}
-
-// ── 1. BUILD _COCKPIT_DEAL_MAP ────────────────────────────────────────
-function _buildDealMap(){
-  var now = new Date('2026-04-04');
-
-  // Templates de deals por segmento
-  var templates = [
-    // Diamond — Titan persona — alto valor
-    {nome:'Rafael Mendonça Lima',cargo:'CEO',tier:'diamond',etapa:'Entrevista Agendada',fase:'Oportunidade',linha:'aquisicao',grupo:'Aquisição',canal:'Outbound',delta:2,revenue:38000,fat:'R$ 50M - R$ 200M',seg:'Tecnologia'},
-    {nome:'Carla Bittencourt',cargo:'Sócia ou Fundadora',tier:'diamond',etapa:'Entrevista Agendada',fase:'Oportunidade',linha:'expansao',grupo:'Expansão',canal:'Social DM',delta:4,revenue:45000,fat:'R$ 100M+',seg:'Varejo'},
-    {nome:'Thiago Drummond',cargo:'Presidente ou CEO',tier:'diamond',etapa:'Agendamento',fase:'Agendado',linha:'turmas',grupo:'Turmas',canal:'Inbound',delta:1,revenue:32000,fat:'R$ 50M - R$ 200M',seg:'Construção Civil'},
-    {nome:'Fernanda Queiroz',cargo:'CEO',tier:'diamond',etapa:'Conectados',fase:'Conectado',linha:'field_sales',grupo:'Field Sales',canal:'Field Sales',delta:6,revenue:41000,fat:'R$ 200M+',seg:'Saúde'},
-    {nome:'Eduardo Salomão',cargo:'Sócio ou Fundador',tier:'diamond',etapa:'Reagendamento',fase:'Reagendamento',linha:'aquisicao',grupo:'Aquisição',canal:'Outbound',delta:17,revenue:38000,fat:'R$ 50M - R$ 200M',seg:'Industria'},
-    {nome:'Patricia Volpe',cargo:'Presidente ou CEO',tier:'diamond',etapa:'Entrevista Agendada',fase:'Oportunidade',linha:'renovacao',grupo:'Renovação',canal:'CRM',delta:3,revenue:52000,fat:'R$ 100M+',seg:'Educação'},
-    {nome:'Marcelo Furtado',cargo:'CEO',tier:'diamond',etapa:'Agendamento',fase:'Agendado',linha:'projetos_eventos',grupo:'Projetos & Eventos',canal:'Outbound',delta:5,revenue:29000,fat:'R$ 50M - R$ 200M',seg:'Agronegócio'},
-    {nome:'Isabela Ramos Torres',cargo:'Sócia ou Fundadora',tier:'diamond',etapa:'Conectados',fase:'Conectado',linha:'aquisicao',grupo:'Aquisição',canal:'Social DM',delta:8,revenue:35000,fat:'R$ 100M+',seg:'Financeiro'},
-    // Gold — Titan/Builder
-    {nome:'Gustavo Paiva Neto',cargo:'Diretor',tier:'gold',etapa:'Entrevista Agendada',fase:'Oportunidade',linha:'turmas',grupo:'Turmas',canal:'Inbound',delta:2,revenue:18000,fat:'R$ 10M - R$ 50M',seg:'Tecnologia'},
-    {nome:'Larissa Mendes',cargo:'CEO',tier:'gold',etapa:'Agendamento',fase:'Agendado',linha:'aquisicao',grupo:'Aquisição',canal:'Outbound',delta:4,revenue:15000,fat:'R$ 5M - R$ 10M',seg:'Varejo'},
-    {nome:'Diego Cavalcante',cargo:'Sócio ou Fundador',tier:'gold',etapa:'Conectados',fase:'Conectado',linha:'social_dm',grupo:'Social DM',canal:'Social DM',delta:3,revenue:17000,fat:'R$ 10M - R$ 50M',seg:'Serviços'},
-    {nome:'Amanda Rocha',cargo:'Diretora Comercial',tier:'gold',etapa:'Reagendamento',fase:'Reagendamento',linha:'reativacao',grupo:'Reativação',canal:'CRM',delta:15,revenue:19000,fat:'R$ 50M - R$ 200M',seg:'Logística'},
-    {nome:'Bruno Teixeira',cargo:'CEO',tier:'gold',etapa:'Entrevista Agendada',fase:'Oportunidade',linha:'expansao',grupo:'Expansão',canal:'CRM',delta:2,revenue:22000,fat:'R$ 10M - R$ 50M',seg:'Saúde'},
-    {nome:'Juliana Castelo',cargo:'Sócia ou Fundadora',tier:'gold',etapa:'Agendamento',fase:'Agendado',linha:'turmas',grupo:'Turmas',canal:'Inbound',delta:6,revenue:14000,fat:'R$ 5M - R$ 10M',seg:'Educação'},
-    {nome:'Felipe Monteiro',cargo:'Presidente',tier:'gold',etapa:'Conectados',fase:'Conectado',linha:'projetos_eventos',grupo:'Projetos & Eventos',canal:'Outbound',delta:9,revenue:16000,fat:'R$ 10M - R$ 50M',seg:'Construção Civil'},
-    {nome:'Renata Sobral',cargo:'CEO',tier:'gold',etapa:'Dia 01',fase:'MQL',linha:'aquisicao',grupo:'Aquisição',canal:'Outbound',delta:11,revenue:18000,fat:'R$ 5M - R$ 10M',seg:'Industria'},
-    {nome:'Paulo Henrique Vilas',cargo:'Diretor',tier:'gold',etapa:'Entrevista Agendada',fase:'Oportunidade',linha:'field_sales',grupo:'Field Sales',canal:'Field Sales',delta:3,revenue:21000,fat:'R$ 10M - R$ 50M',seg:'Agronegócio'},
-    // Silver — Builder persona
-    {nome:'Mariana Lopes',cargo:'Gerente',tier:'silver',etapa:'Agendamento',fase:'Agendado',linha:'turmas',grupo:'Turmas',canal:'Inbound',delta:2,revenue:9000,fat:'R$ 1M - R$ 5M',seg:'Tecnologia'},
-    {nome:'Roberto Cunha',cargo:'Sócio ou Fundador',tier:'silver',etapa:'Conectados',fase:'Conectado',linha:'social_dm',grupo:'Social DM',canal:'Social DM',delta:5,revenue:8500,fat:'R$ 1M - R$ 5M',seg:'Varejo'},
-    {nome:'Camila Faria',cargo:'CEO',tier:'silver',etapa:'Dia 01',fase:'MQL',linha:'aquisicao',grupo:'Aquisição',canal:'Outbound',delta:7,revenue:9500,fat:'R$ 1M - R$ 5M',seg:'Serviços'},
-    {nome:'Leonardo Assis',cargo:'Diretor',tier:'silver',etapa:'Entrevista Agendada',fase:'Oportunidade',linha:'renovacao',grupo:'Renovação',canal:'CRM',delta:1,revenue:11000,fat:'R$ 5M - R$ 10M',seg:'Saúde'},
-    {nome:'Tatiana Vidal',cargo:'Gerente Comercial',tier:'silver',etapa:'Reagendamento',fase:'Reagendamento',linha:'reativacao',grupo:'Reativação',canal:'CRM',delta:18,revenue:8000,fat:'R$ 1M - R$ 5M',seg:'Logística'},
-    {nome:'Henrique Bastos',cargo:'Sócio ou Fundador',tier:'silver',etapa:'Agendamento',fase:'Agendado',linha:'turmas',grupo:'Turmas',canal:'Inbound',delta:4,revenue:9200,fat:'R$ 1M - R$ 5M',seg:'Educação'},
-    {nome:'Adriana Pinto',cargo:'CEO',tier:'silver',etapa:'Conectados',fase:'Conectado',linha:'projetos_eventos',grupo:'Projetos & Eventos',canal:'Outbound',delta:6,revenue:10000,fat:'R$ 5M - R$ 10M',seg:'Construção Civil'},
-    {nome:'Marcos Alves',cargo:'Diretor',tier:'silver',etapa:'Dia 02',fase:'SAL',linha:'social_dm',grupo:'Social DM',canal:'Social DM',delta:3,revenue:8800,fat:'R$ 1M - R$ 5M',seg:'Industria'},
-    {nome:'Priscila Mendonça',cargo:'CEO',tier:'silver',etapa:'Entrevista Agendada',fase:'Oportunidade',linha:'aquisicao',grupo:'Aquisição',canal:'Outbound',delta:2,revenue:9600,fat:'R$ 5M - R$ 10M',seg:'Financeiro'},
-    // Bronze — Executor persona
-    {nome:'Gabriel Novaes',cargo:'Gerente',tier:'bronze',etapa:'Dia 01',fase:'MQL',linha:'aquisicao',grupo:'Aquisição',canal:'Outbound',delta:4,revenue:4500,fat:'Até R$ 1M',seg:'Tecnologia'},
-    {nome:'Nathalia Costa',cargo:'Coordenadora',tier:'bronze',etapa:'Dia 02',fase:'SAL',linha:'turmas',grupo:'Turmas',canal:'Inbound',delta:2,revenue:4000,fat:'Até R$ 1M',seg:'Varejo'},
-    {nome:'Vinicius Correia',cargo:'Gerente',tier:'bronze',etapa:'Conectados',fase:'Conectado',linha:'social_dm',grupo:'Social DM',canal:'Social DM',delta:8,revenue:3800,fat:'Até R$ 1M',seg:'Serviços'},
-    {nome:'Leticia Campos',cargo:'Sócia ou Fundadora',tier:'bronze',etapa:'Dia 03',fase:'MQL',linha:'selfcheckout',grupo:'Self Checkout',canal:'Self Checkout',delta:3,revenue:3500,fat:'Até R$ 1M',seg:'Saúde'},
-    {nome:'Andre Freitas',cargo:'Gerente Comercial',tier:'bronze',etapa:'Reagendamento',fase:'Reagendamento',linha:'reativacao',grupo:'Reativação',canal:'CRM',delta:16,revenue:4200,fat:'Até R$ 1M',seg:'Logística'},
-    {nome:'Sabrina Luz',cargo:'Coordenadora',tier:'bronze',etapa:'Agendamento',fase:'Agendado',linha:'turmas',grupo:'Turmas',canal:'Inbound',delta:5,revenue:4800,fat:'R$ 1M - R$ 5M',seg:'Educação'},
-    {nome:'Carlos Batista',cargo:'Gerente',tier:'bronze',etapa:'Dia 01',fase:'MQL',linha:'aquisicao',grupo:'Aquisição',canal:'Outbound',delta:9,revenue:3900,fat:'Até R$ 1M',seg:'Construção Civil'},
-    {nome:'Joana Maciel',cargo:'CEO',tier:'bronze',etapa:'Conectados',fase:'Conectado',linha:'social_dm_segment_k',grupo:'Social DM K',canal:'Social DM',delta:6,revenue:4100,fat:'Até R$ 1M',seg:'Industria'},
-    {nome:'Rodrigo Lacerda',cargo:'Gerente',tier:'bronze',etapa:'Dia 02',fase:'SAL',linha:'aquisicao',grupo:'Aquisição',canal:'Outbound',delta:4,revenue:4300,fat:'Até R$ 1M',seg:'Agronegócio'},
-    // Deals fechados (ganho/perdido) para histórico Bowtie / Three Es
-    {nome:'Sandra Mota',cargo:'CEO',tier:'gold',etapa:'Won',fase:'Won',statusDeal:'ganho',linha:'turmas',grupo:'Turmas',canal:'Inbound',delta:0,revenue:16000,fat:'R$ 10M - R$ 50M',seg:'Tecnologia'},
-    {nome:'Flavio Ribeiro',cargo:'Diretor',tier:'silver',etapa:'Lost',fase:'Lost',statusDeal:'perdido',linha:'aquisicao',grupo:'Aquisição',canal:'Outbound',delta:0,revenue:9000,fat:'R$ 1M - R$ 5M',seg:'Varejo',motivoLost:'Sem budget'},
-    {nome:'Cristiane Melo',cargo:'Sócia ou Fundadora',tier:'diamond',etapa:'Won',fase:'Won',statusDeal:'ganho',linha:'renovacao',grupo:'Renovação',canal:'CRM',delta:0,revenue:42000,fat:'R$ 100M+',seg:'Saúde'},
-    {nome:'Alexandre Dias',cargo:'Presidente',tier:'gold',etapa:'Won',fase:'Won',statusDeal:'ganho',linha:'expansao',grupo:'Expansão',canal:'CRM',delta:0,revenue:23000,fat:'R$ 50M - R$ 200M',seg:'Financeiro'},
-    {nome:'Roberta Nunes',cargo:'Gerente',tier:'bronze',etapa:'Lost',fase:'Lost',statusDeal:'perdido',linha:'social_dm',grupo:'Social DM',canal:'Social DM',delta:0,revenue:3800,fat:'Até R$ 1M',seg:'Serviços',motivoLost:'Timing'},
-    {nome:'Danilo Pires',cargo:'CEO',tier:'silver',etapa:'Won',fase:'Won',statusDeal:'ganho',linha:'turmas',grupo:'Turmas',canal:'Inbound',delta:0,revenue:10500,fat:'R$ 5M - R$ 10M',seg:'Construção Civil'},
-    {nome:'Viviane Torres',cargo:'Diretora',tier:'gold',etapa:'Won',fase:'Won',statusDeal:'ganho',linha:'projetos_eventos',grupo:'Projetos & Eventos',canal:'Outbound',delta:0,revenue:19500,fat:'R$ 10M - R$ 50M',seg:'Agronegócio'},
-    {nome:'Mateus Carvalho',cargo:'Gerente',tier:'bronze',etapa:'Lost',fase:'Lost',statusDeal:'perdido',linha:'aquisicao',grupo:'Aquisição',canal:'Outbound',delta:0,revenue:4000,fat:'Até R$ 1M',seg:'Logística',motivoLost:'Concorrência'},
-    {nome:'Erica Fontes',cargo:'Sócia ou Fundadora',tier:'diamond',etapa:'Won',fase:'Won',statusDeal:'ganho',linha:'field_sales',grupo:'Field Sales',canal:'Field Sales',delta:0,revenue:47000,fat:'R$ 200M+',seg:'Educação'},
-    {nome:'Sergio Leal',cargo:'Presidente',tier:'silver',etapa:'Lost',fase:'Lost',statusDeal:'perdido',linha:'reativacao',grupo:'Reativação',canal:'CRM',delta:0,revenue:9200,fat:'R$ 1M - R$ 5M',seg:'Industria',motivoLost:'Sem budget'}
-  ];
-
-  if(!window._COCKPIT_DEAL_MAP) window._COCKPIT_DEAL_MAP = {};
-
-  templates.forEach(function(t, idx){
-    var id = 'mock-' + idx;
-    var emailLead = (t.nome.toLowerCase().replace(/\s+/g,'.').replace(/[ãâàáä]/g,'a').replace(/[êé]/g,'e').replace(/[íî]/g,'i').replace(/[óô]/g,'o').replace(/[úù]/g,'u').replace(/[ç]/g,'c')) + '@empresa.com.br';
-    var status = t.statusDeal || 'ativo';
-    var isAtRisk = (t.delta || 0) > 10;
-    var irondome = (t.delta || 0) > 14;
-    var tierMap = {diamond:'Titan',gold:'Titan',silver:'Builder',bronze:'Executor'};
-
-    var deal = {
-      // Identidade
-      id: id, deal_id: 'deal-mock-' + idx,
-      nome: t.nome, contact_name: t.nome, nomeNegocio: t.nome,
-      empresa: emailLead, emailLead: emailLead,
-      cargo: t.cargo,
-      // Taxonomia
-      tier: t.tier, _tier: t.tier,
-      etapa: t.etapa, _etapa: t.etapa, etapa_atual_no_pipeline: t.etapa,
-      fase: t.fase, _fase: t.fase, fase_atual_no_processo: t.fase,
-      statusDeal: status, status_do_deal: status,
-      motivoLost: t.motivoLost || '',
-      // Revenue
-      linhaReceita: t.linha, linha_de_receita_vigente: t.linha,
-      grupo_de_receita: t.grupo,
-      _revLine: t.linha,
-      revenueRaw: t.revenue, revenue: t.revenue,
-      elucyValor: t.revenue,
-      valor_da_oportunidade: t.revenue,
-      // Canal
-      canal: t.canal, canal_de_marketing: t.canal,
-      utm_medium: t.canal.toLowerCase().replace(/\s/g,'_'),
-      // Aging
-      delta: t.delta, _delta: t.delta,
-      _aging: {band: t.delta<=2?'fresh':t.delta<=5?'normal':t.delta<=10?'aging':'critical', days: t.delta, isAtRisk: isAtRisk, riskLevel: isAtRisk?'high':'normal'},
-      // Perfil empresa
-      faixa_de_faturamento: t.fat || '',
-      p_segmento: t.seg || '',
-      faixaFunc: '',
-      // Scores simulados
-      _forecastV6: { score: t.tier==='diamond'?0.72:t.tier==='gold'?0.58:t.tier==='silver'?0.44:0.31, confidence: 0.65, band: t.tier==='diamond'?'A':'B' },
-      _dataQuality: { data_trust_score: t.tier==='diamond'?0.82:t.tier==='gold'?0.68:t.tier==='silver'?0.55:0.41, completeness: 0.75, consistency: 0.80, recency: 0.70, evidence: 0.60 },
-      _frameworkRuntime: { qualitative_score: t.tier==='diamond'?0.78:t.tier==='gold'?0.62:0.48, coverage_pct: t.tier==='diamond'?80:t.tier==='gold'?65:50 },
-      _trustedAdvisor: { score: t.tier==='diamond'?0.75:t.tier==='gold'?0.60:0.45 },
-      _spinAudit: { applicable: true, score: t.tier==='diamond'?0.77:t.tier==='gold'?0.61:0.46 },
-      _signal: irondome?'DOME':isAtRisk?'RISK':t.delta<=3?'BUY':'STALL',
-      _urgency: t.tier==='diamond'?(irondome?95:80):t.tier==='gold'?65:45,
-      _persona: tierMap[t.tier] || 'Builder',
-      _touchpoints: Math.floor(3 + Math.random()*8),
-      p_negociacoes_ganhas: status==='ganho'?1:0,
-      p_receita_total: status==='ganho'?t.revenue:0,
-      p_cluster_rfm: t.tier==='diamond'?'Champions':t.tier==='gold'?'Loyal':t.tier==='silver'?'Potential':'At Risk',
-      operator_email: window._currentUserEmail || 'n.souza@g4educacao.com',
-      qualificador_name: 'Nathan Souza',
-      proprietario_name: 'Nathan Souza',
-      created_at_crm: new Date(now - t.delta * 86400000).toISOString(),
-      createdAtCrm: new Date(now - t.delta * 86400000).toISOString(),
-      closed_at: status==='ganho'||status==='perdido' ? new Date(now - 2 * 86400000).toISOString() : '',
-      // Bowtie / GTM
-      _bowtiegLeg: t.grupo.toLowerCase().includes('expan')||t.grupo.toLowerCase().includes('renov')||t.grupo.toLowerCase().includes('reativ')||t.linha==='g4_tools' ? (t.linha==='expansao'||t.linha==='g4_tools'?'EXP':'RET') : 'ACQ',
-      _intentSignal: { reciprocidade: Math.random()*0.3+0.5, curiosidade: Math.random()*0.3+0.5, confianca: Math.random()*0.3+0.4 },
-      _trustedAdvisorScore: t.tier==='diamond'?75:t.tier==='gold'?60:45,
-      temp: t.tier==='diamond'?85:t.tier==='gold'?65:t.tier==='silver'?48:32,
-      tc: t.tier==='diamond'?'hot':t.tier==='gold'?'warm':'cold',
-      tl: t.tier==='diamond'?'Hot':t.tier==='gold'?'Warm':'Cold',
-      dd: t.delta > 7 ? '⚠ '+t.delta+'d' : t.delta+'d'
-    };
-
-    window._COCKPIT_DEAL_MAP[id] = deal;
-  });
-
-  // Expoe _allDeals para compatibilidade
-  window._allDeals = Object.values(window._COCKPIT_DEAL_MAP);
-  console.log('[mock] _COCKPIT_DEAL_MAP populado com', Object.keys(window._COCKPIT_DEAL_MAP).length, 'deals');
-}
-
-// ── 2. MOCK ACTIVITY LOG ──────────────────────────────────────────────
-function _mockActivityLog(){
-  var activities = [];
-  var types = ['copy_generated','copy_sent_wa','analysis_generated','dvl_confirmed','note_crm_copied','dm_generated','enrichment_added'];
-  var dealIds = Object.keys(window._COCKPIT_DEAL_MAP || {});
-  var now = new Date('2026-04-04');
-
-  // Gera 180 atividades nos ultimos 30 dias
-  for(var i=0; i<180; i++){
-    var daysAgo = Math.floor(Math.random() * 30);
-    var date = new Date(now - daysAgo * 86400000);
-    var type = types[Math.floor(Math.random() * types.length)];
-    var dealId = dealIds[Math.floor(Math.random() * dealIds.length)];
-    activities.push({
-      activity_type: type,
-      deal_id: dealId,
+function _buildActivityLog(dealIds){
+  var acts = [];
+  var base = new Date('2026-04-04');
+  for(var i=0;i<200;i++){
+    var daysAgo = Math.floor(Math.random()*30);
+    var dt = new Date(base - daysAgo*86400000);
+    acts.push({
+      activity_type: _pickWeighted(ACT_TYPES, ACT_WEIGHTS),
+      deal_id: dealIds[Math.floor(Math.random()*dealIds.length)],
       metadata: {},
-      created_at: date.toISOString()
+      created_at: dt.toISOString()
     });
   }
-
-  // Substitui _loadActivity no analytics-engine pelo mock
-  window._MOCK_ACTIVITY_LOG = activities;
+  return acts;
 }
 
-// ── 3. MOCK SUPABASE SHIM ─────────────────────────────────────────────
-// Intercept getSB() para retornar um objeto fake que serve os dados mock
-function _mockSupabase(){
-  var _realGetSB = window.getSB;
+// ── Constrói um dealObj completo a partir de um template ──────────────
+function _buildDeal(t, idx){
+  var id = 'mock-' + idx;
+  var slug = (t.n||'').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]+/g,'.');
+  var email = slug + '@empresa.com.br';
+  var isAtRisk = (t.d||0) > 10;
+  var isDome   = (t.d||0) > 14;
+  var personaMap = {diamond:'Titan', gold:'Titan', silver:'Builder', bronze:'Executor'};
+  var bowtieMap  = {
+    expansao:'EXP', renovacao:'RET', reativacao:'RET', g4_tools:'EXP',
+    turmas:'ACQ', aquisicao:'ACQ', field_sales:'ACQ', social_dm:'ACQ',
+    social_dm_segment_k:'ACQ', projetos_eventos:'ACQ', selfcheckout:'ACQ'
+  };
+  var scoreBase = {diamond:0.78, gold:0.62, silver:0.50, bronze:0.36};
+  var base = scoreBase[t.t] || 0.50;
+  var now = new Date('2026-04-04');
 
-  window.getSB = function(){
-    var real = _realGetSB ? _realGetSB() : null;
-    if(real) return real; // usa real se disponivel
-
-    // Retorna fake minimal para analytics
-    return {
-      from: function(table){
-        return {
-          select: function(){ return this; },
-          eq: function(){ return this; },
-          gte: function(){ return this; },
-          order: function(){ return this; },
-          limit: function(){ return this; },
-          maybeSingle: function(){ return Promise.resolve({data:null,error:null}); },
-          then: function(cb){ return Promise.resolve({data:window._MOCK_ACTIVITY_LOG||[],error:null}).then(cb); }
-        };
-      },
-      auth: { getSession: function(){ return Promise.resolve({data:{session:null}}); } }
-    };
+  return {
+    id: id, deal_id: 'deal-'+id,
+    nome: t.n, contact_name: t.n, nomeNegocio: t.n,
+    empresa: email, emailLead: email,
+    cargo: t.c,
+    tier: t.t, _tier: t.t,
+    etapa: t.e, _etapa: t.e, etapa_atual_no_pipeline: t.e,
+    fase: t.f, _fase: t.f, fase_atual_no_processo: t.f,
+    statusDeal: t.s, status_do_deal: t.s,
+    motivoLost: t.ml || '',
+    linhaReceita: t.l, linha_de_receita_vigente: t.l, _revLine: t.l,
+    grupo_de_receita: t.g,
+    canal: t.ch, canal_de_marketing: t.ch,
+    utm_medium: t.ch.toLowerCase().replace(/[\s\/]/g,'_'),
+    utm_source: t.ch.toLowerCase().includes('social')?'instagram':'google',
+    utm_campaign: '',
+    delta: t.d, _delta: t.d,
+    revenueRaw: t.r, revenue: t.r, elucyValor: t.r,
+    valor_da_oportunidade: t.r,
+    faixa_de_faturamento: t.fat||'',
+    p_segmento: t.seg||'',
+    p_negociacoes_ganhas: t.s==='ganho'?1:0,
+    p_receita_total: t.s==='ganho'?t.r:0,
+    p_cluster_rfm: {diamond:'Champions',gold:'Loyal',silver:'Potential',bronze:'At Risk'}[t.t]||'Potential',
+    p_pa_cliente: '',
+    _aging: {
+      band: t.d<=2?'fresh':t.d<=5?'normal':t.d<=10?'aging':'critical',
+      days: t.d, isAtRisk: isAtRisk, riskLevel: isAtRisk?'high':'normal'
+    },
+    temp: {diamond:85, gold:65, silver:48, bronze:32}[t.t]||50,
+    tc: {diamond:'hot',gold:'warm',silver:'warm',bronze:'cold'}[t.t]||'cold',
+    tl: {diamond:'Hot',gold:'Warm',silver:'Warm',bronze:'Cold'}[t.t]||'Cold',
+    dd: t.d>7?'⚠ '+t.d+'d':t.d+'d',
+    _signal: isDome?'DOME':isAtRisk?'RISK':t.d<=3?'BUY':'STALL',
+    _urgency: {diamond:isDome?95:80, gold:65, silver:50, bronze:35}[t.t]||50,
+    _persona: personaMap[t.t]||'Builder',
+    _touchpoints: 3 + Math.floor(Math.random()*7),
+    _bowtiegLeg: bowtieMap[t.l]||'ACQ',
+    _forecastV6:      { score: base+0.05, confidence: 0.65, band: t.t==='diamond'?'A':'B' },
+    _dataQuality:     { data_trust_score: base+0.04, completeness: base+0.02, consistency: base+0.07, recency: base-0.02, evidence: base-0.05 },
+    _frameworkRuntime:{ qualitative_score: base, coverage_pct: Math.round((base+0.02)*100) },
+    _trustedAdvisor:  { score: base+0.02 },
+    _spinAudit:       { applicable: true, score: base+0.01 },
+    _intentSignal:    { reciprocidade: base+0.10, curiosidade: base+0.05, confianca: base },
+    qualificador_name: 'Nathan Souza',
+    proprietario_name: 'Nathan Souza',
+    operator_email: window._currentUserEmail||'n.souza@g4educacao.com',
+    created_at_crm: new Date(now - t.d*86400000).toISOString(),
+    createdAtCrm:   new Date(now - t.d*86400000).toISOString(),
+    closed_at: (t.s==='ganho'||t.s==='perdido')?new Date(now-2*86400000).toISOString():'',
+    conta_founder: ''
   };
 }
 
-// ── Patch _loadActivity no analytics-engine para usar mock ────────────
-// Aguarda o analytics-engine carregar e substitui _loadActivity
+// ── Funcao principal exposta globalmente ──────────────────────────────
+window._injectMockDeals = function(){
+  window._COCKPIT_DEAL_MAP = window._COCKPIT_DEAL_MAP || {};
+
+  // Nao reinjeta se ja tem dados reais
+  var existing = Object.keys(window._COCKPIT_DEAL_MAP);
+  if(existing.length > 0 && !existing[0].startsWith('mock-')) return;
+
+  MOCK_DEALS.forEach(function(t, i){
+    var deal = _buildDeal(t, i);
+    window._COCKPIT_DEAL_MAP[deal.id] = deal;
+  });
+
+  var ids = Object.keys(window._COCKPIT_DEAL_MAP);
+  window._MOCK_ACTIVITY_LOG = _buildActivityLog(ids);
+  window._MOCK_READY = true;
+  window._allDeals = Object.values(window._COCKPIT_DEAL_MAP);
+
+  console.log('[mock] Injetado: ' + ids.length + ' deals + 200 atividades');
+  _showMockBanner();
+};
+
+// ── Banner MVP ────────────────────────────────────────────────────────
+function _showMockBanner(){
+  var old = document.getElementById('mock-mvp-banner');
+  if(old) old.remove();
+  var b = document.createElement('div');
+  b.id = 'mock-mvp-banner';
+  b.innerHTML = '⚡ MVP — dados simulados (45 deals) &nbsp;·&nbsp; <a href="javascript:void(0)" onclick="document.getElementById(\'mock-mvp-banner\').remove()" style="color:inherit;opacity:.6">fechar</a>';
+  b.style.cssText = [
+    'position:fixed','bottom:14px','left:50%','transform:translateX(-50%)',
+    'background:rgba(245,158,11,0.12)','border:1px solid rgba(245,158,11,0.35)',
+    'color:#f59e0b','font-size:11px','padding:5px 18px','border-radius:20px',
+    'z-index:9999','backdrop-filter:blur(6px)','white-space:nowrap','pointer-events:auto'
+  ].join(';');
+  if(document.body) document.body.appendChild(b);
+  else document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(b); });
+}
+
+// ── Patch analytics-engine: _loadActivity usa mock quando disponivel ─
+// Aguarda analytics-engine estar pronto e injeta shim no cache interno
 (function patchAnalytics(){
   function tryPatch(){
-    if(window.AnalyticsEngine && window._MOCK_ACTIVITY_LOG){
-      // Injetamos o mock diretamente no cache interno
-      // O analytics-engine usa _activityCache — precisamos setar via closure
-      // Como nao temos acesso direto, sobrescrevemos o from('activity_log')
-      // que ja foi tratado no mock supabase shim acima
-      console.log('[mock] AnalyticsEngine disponivel — mock ativo');
-    } else {
-      setTimeout(tryPatch, 200);
-    }
+    if(!window.AnalyticsEngine){ setTimeout(tryPatch, 300); return; }
+    // Sobrescreve getSB para servir activity_log mock
+    var _realGetSB = window.getSB;
+    window.getSB = function(){
+      var sb = _realGetSB ? _realGetSB() : null;
+      if(sb) return sb;
+      if(!window._MOCK_READY) return null;
+      // Retorna shim minimal com suporte a from('activity_log')
+      return {
+        from: function(table){
+          var self = {
+            _filters: {},
+            select: function(){ return self; },
+            eq:     function(){ return self; },
+            gte:    function(){ return self; },
+            lte:    function(){ return self; },
+            order:  function(){ return self; },
+            limit:  function(){ return self; },
+            maybeSingle: function(){ return Promise.resolve({data:null,error:null}); },
+            then: function(cb){
+              var data = table==='activity_log' ? (window._MOCK_ACTIVITY_LOG||[]) : [];
+              return Promise.resolve({data:data,error:null}).then(cb);
+            }
+          };
+          return self;
+        },
+        auth: { getSession: function(){ return Promise.resolve({data:{session:null}}); } }
+      };
+    };
+    console.log('[mock] AnalyticsEngine patched');
   }
-  setTimeout(tryPatch, 500);
+  setTimeout(tryPatch, 400);
 })();
 
-// ── 4. BANNER MVP ─────────────────────────────────────────────────────
-function _showMockBanner(){
-  // Remove banner anterior se existir
-  var old = document.getElementById('mock-banner');
-  if(old) old.remove();
-
-  var b = document.createElement('div');
-  b.id = 'mock-banner';
-  b.innerHTML = '⚡ MODO MVP — Dados simulados (45 deals) · <a href="javascript:void(0)" onclick="document.getElementById(\'mock-banner\').remove()" style="color:var(--accent);text-decoration:none">Fechar</a>';
-  b.style.cssText = 'position:fixed;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:var(--amber,#f59e0b);font-size:11px;padding:6px 16px;border-radius:20px;z-index:9999;backdrop-filter:blur(8px);white-space:nowrap;';
-  document.body.appendChild(b);
+// ── Auto-inject se ?mock=1 na URL ─────────────────────────────────────
+if(location.search.indexOf('mock=1') >= 0){
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){
+      window._injectMockDeals();
+      if(typeof _intelRender !== 'undefined') _intelRender();
+    }, 600);
+  });
 }
 
 })();

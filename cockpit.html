@@ -5269,6 +5269,8 @@ function _intelSetSub(sub){
 function _intelRender(){
   var perfEl=document.getElementById('perf-report-v3');
   var intelEl=document.getElementById('intel-content');
+  // Reset auto-loading flag para evitar travamento
+  window._intelAutoLoading=false;
   // Performance subtabs use the perf-report-v3 container
   if(_intelCurrentMacro==='performance' && _intelCurrentSub==='resumo'){
     if(intelEl) intelEl.style.display='none';
@@ -5329,20 +5331,34 @@ function renderIntelligence(){
   if(!map||!Object.keys(map).length){
     if(window._intelAutoLoading) return;
     window._intelAutoLoading=true;
-    ct.innerHTML='<div class="intel-empty" style="color:var(--amber2)">Carregando deals automaticamente...</div>';
+    ct.innerHTML='<div class="intel-empty" style="color:var(--amber2)">Carregando inteligência...</div>';
     var email=window._currentUserEmail||window.getOperatorId&&window.getOperatorId()||'';
-    if(email && window.loadDealsFromSupabase){
-      window.loadDealsFromSupabase(email).then(function(){
+    var tryLoad = function(){
+      if(email && window.loadDealsFromSupabase){
+        window.loadDealsFromSupabase(email).then(function(){
+          window._intelAutoLoading=false;
+          _intelRender();
+        }).catch(function(){
+          window._intelAutoLoading=false;
+          // Fallback: usa mock se disponivel
+          if(window._injectMockDeals){ window._injectMockDeals(); _intelRender(); }
+          else ct.innerHTML='<div class="intel-empty">Sem conexão. Recarregue ou vá para Pipeline.</div>';
+        });
+      } else if(window._injectMockDeals){
         window._intelAutoLoading=false;
+        window._injectMockDeals();
         _intelRender();
-      }).catch(function(){
-        window._intelAutoLoading=false;
-        ct.innerHTML='<div class="intel-empty">Erro ao carregar deals. Vá para Pipeline e sincronize.</div>';
-      });
-    } else {
-      window._intelAutoLoading=false;
-      ct.innerHTML='<div class="intel-empty">Nenhum deal carregado. Vá para Pipeline primeiro para carregar.</div>';
-    }
+      } else {
+        // Aguarda 1s pela auth e tenta novamente
+        setTimeout(function(){
+          window._intelAutoLoading=false;
+          email=window._currentUserEmail||'';
+          if(email||window._MOCK_READY) _intelRender();
+          else ct.innerHTML='<div class="intel-empty">Aguardando autenticação...</div>';
+        },1200);
+      }
+    };
+    tryLoad();
     return;
   }
   const allDeals=Object.values(map);
