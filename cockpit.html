@@ -4926,7 +4926,7 @@ var _INTEL_SUBS={
   performance:[{id:'resumo',label:'Resumo'},{id:'metas',label:'Metas'},{id:'conversao',label:'Conversão'},{id:'qualidade',label:'Qualidade'},{id:'forecast',label:'Forecast'},{id:'receita',label:'Receita'}],
   pipeline:[{id:'linha',label:'Linha'},{id:'etapa',label:'Etapa'},{id:'canal',label:'Canal'},{id:'valor',label:'Valor'}],
   engines:[{id:'forecast',label:'Forecast'},{id:'framework',label:'Framework'},{id:'signals',label:'Signals'},{id:'tasks',label:'Tasks'},{id:'dataquality',label:'Data Quality'},{id:'priority',label:'Priority'}],
-  strategic:[{id:'enterprise',label:'Enterprise'},{id:'advisor',label:'Trusted Advisor'},{id:'rfv',label:'RFV'},{id:'bowtie',label:'Bowtie'},{id:'audit',label:'Audit'}],
+  strategic:[{id:'enterprise',label:'Enterprise'},{id:'advisor',label:'Trusted Advisor'},{id:'rfv',label:'RFV'},{id:'bowtie',label:'Bowtie'},{id:'3es',label:'3Es'},{id:'simulator',label:'Simulator'},{id:'gtm',label:'GTM Health'},{id:'audit',label:'Audit'}],
   roa:[{id:'dashboard',label:'Dashboard'},{id:'fivewhys',label:'Five Whys'},{id:'intent',label:'Intent'},{id:'coaching',label:'Coaching'}]
 };
 
@@ -4955,6 +4955,9 @@ function _intelResolveDim(macro,sub){
     if(sub==='advisor') return 'advisor';
     if(sub==='rfv') return 'rfv';
     if(sub==='bowtie') return 'bowtie';
+    if(sub==='3es') return 'three_es';
+    if(sub==='simulator') return 'rev_simulator';
+    if(sub==='gtm') return 'gtm_health';
     if(sub==='audit') return 'spin';
     return 'enterprise';
   }
@@ -5094,6 +5097,10 @@ function renderIntelligence(){
     else if(dim==='rfv') _renderRFV(ct,deals);
     else if(dim==='bowtie') _renderBowtie(ct,deals);
     else if(dim==='spin') _renderSpinAudit(ct,deals);
+    // ── Revenue Architecture subtabs ──
+    else if(dim==='three_es') _renderThreeEs(ct,AE,allDeals,deals);
+    else if(dim==='rev_simulator') _renderRevenueSimulator(ct,deals);
+    else if(dim==='gtm_health') _renderGTMHealth(ct,AE,allDeals,deals);
     // ── ROA subtabs ──
     else if(dim==='roa_dashboard') _renderROADashboard(ct,AE,deals);
     else if(dim==='roa_fivewhys') _renderROAFiveWhys(ct,deals);
@@ -6430,6 +6437,263 @@ function _renderBowtie(ct,deals){
 
   html+=renderSection(legs.null_leg.length>0?3:2,'Deals por Perna do Bowtie',
     '<table class="intel-table"><thead><tr><th>Perna</th><th>Deal</th><th>Linha</th><th>Etapa</th><th>Forecast</th><th>Aging</th></tr></thead><tbody>'+tableRows+'</tbody></table>');
+
+  // Section: Lifecycle Health (Revenue Architecture — Mutual Commit → Onboarding → Adoption)
+  var retDeals=legs.RET.concat(legs.EXP);
+  var rebuyers=retDeals.filter(function(d){return d.p_negociacoes_ganhas>0||d.p_receita_total>0;});
+  var highLTV=rebuyers.filter(function(d){return (d.p_receita_total||0)>20000;});
+  var churnRisk=retDeals.filter(function(d){
+    return (d._aging&&d._aging.riskLevel==='critical')||(d._delta||d.delta||0)>15;
+  });
+  var expansionReady=retDeals.filter(function(d){
+    return (d.p_receita_total||0)>10000&&(d._trustedAdvisor||0)>50;
+  });
+
+  var lcSec=legs.null_leg.length>0?4:3;
+  html+=renderSection(lcSec,'Lifecycle Health — Revenue Architecture',
+    '<div class="intel-kpi-row">'+
+    _iKpi(rebuyers.length,'Recompradores','var(--accent2)')+
+    _iKpi(highLTV.length,'High LTV (>20k)','var(--green)')+
+    _iKpi(churnRisk.length,'Churn Risk','var(--red)')+
+    _iKpi(expansionReady.length,'Expansion Ready','var(--green)')+
+    _iKpi(fmtBRL(rebuyers.reduce(function(s,d){return s+(d.p_receita_total||0);},0)),'LTV Acumulado','var(--accent2)')+
+    '</div>'+
+    (churnRisk.length?'<div style="margin-top:6px;background:var(--rdim);border:1px solid var(--red);border-radius:5px;padding:6px 10px;font-size:11px;color:var(--red)">! '+churnRisk.length+' deal(s) de Retencao/Expansao com aging critico — risco de churn iminente</div>':'')+
+    (expansionReady.length?'<div style="margin-top:4px;background:rgba(16,185,129,.08);border:1px solid var(--green);border-radius:5px;padding:6px 10px;font-size:11px;color:var(--green)">'+expansionReady.length+' deal(s) com LTV alto + Trusted Advisor Score >50 — prontos para expansion play</div>':''));
+
+  ct.innerHTML=html;
+}
+
+// ── 3Es DASHBOARD — Eficácia + Eficiência + Economia ────────────
+function _renderThreeEs(ct,AE,allDeals,deals){
+  var html='';
+
+  // EFICÁCIA: grau de atingimento de metas
+  var meta=window._COCKPIT_OPERATOR?window._COCKPIT_OPERATOR.meta_mensal:null;
+  var o=window._COCKPIT_OPERATOR||{};
+  var wonDeals=allDeals.filter(function(d){return (d.statusDeal||d.status_do_deal||'').toLowerCase()==='ganho';});
+  var lostDeals=allDeals.filter(function(d){return (d.statusDeal||d.status_do_deal||'').toLowerCase()==='perdido';});
+  var winRate=wonDeals.length+lostDeals.length>0?Math.round(wonDeals.length/(wonDeals.length+lostDeals.length)*100):0;
+  var totalRevenue=wonDeals.reduce(function(s,d){return s+(Number(d.revenue||d.revenueRaw||0));},0);
+  var enterpriseDeals=deals.filter(function(d){return (d._enterpriseScore||0)>0;});
+  var entNoKill=enterpriseDeals.filter(function(d){return !d._prematureMeeting;});
+
+  html+=renderSection(1,'Eficacia — Atingimento de Metas (Crescimento Escalavel)',
+    '<div class="intel-kpi-row">'+
+    _iKpi(wonDeals.length,'Deals Ganhos','var(--green)')+
+    _iKpi(winRate+'%','Win Rate',winRate>30?'var(--green)':winRate>15?'var(--yellow)':'var(--red)')+
+    _iKpi(fmtBRL(totalRevenue),'Receita Fechada','var(--green)')+
+    _iKpi(enterpriseDeals.length,'Enterprise 5M+','var(--accent2)')+
+    _iKpi(entNoKill.length+'/'+enterpriseDeals.length,'Sem Kill Switch','var(--green)')+
+    '</div>'+
+    '<div style="margin-top:6px;font-size:10px;color:var(--text3)">Eficácia mede <b>o quê</b> foi atingido — revenue gerada, deals enterprise fechados sem violações de framework.</div>');
+
+  // EFICIÊNCIA: resultado com mínimo desperdício
+  var avgAging=deals.length?Math.round(deals.reduce(function(s,d){return s+(d._delta||d.delta||0);},0)/deals.length*10)/10:0;
+  var avgTouchpoints=deals.length?Math.round(deals.reduce(function(s,d){return s+(d._touchpoints||0);},0)/deals.length*10)/10:0;
+  var qcDeals=deals.filter(function(d){return d._fiveWhys&&d._fiveWhys.qc_count>0;});
+  var avgQCPerDeal=qcDeals.length?Math.round(qcDeals.reduce(function(s,d){return s+d._fiveWhys.qc_count;},0)/qcDeals.length*10)/10:0;
+  var stalledDeals=deals.filter(function(d){return d._stallFlag||d._timeline&&d._timeline.stall_flag;}).length;
+  var velocityAbove50=deals.filter(function(d){return d._velocityScore&&d._velocityScore>0.5;}).length;
+
+  html+=renderSection(2,'Eficiencia — Minimo Desperdicio (Crescimento Sustentavel)',
+    '<div class="intel-kpi-row">'+
+    _iKpi(avgAging+'d','Aging Medio',avgAging>7?'var(--red)':avgAging>4?'var(--yellow)':'var(--green)')+
+    _iKpi(avgTouchpoints,'Touchpoints/Deal','var(--accent2)')+
+    _iKpi(avgQCPerDeal,'QC/Deal','var(--green)')+
+    _iKpi(stalledDeals,'Deals Stalled','var(--red)')+
+    _iKpi(velocityAbove50,'Velocity >50%','var(--green)')+
+    '</div>'+
+    '<div style="margin-top:6px;font-size:10px;color:var(--text3)">Eficiência mede <b>como</b> — aging baixo = ciclo rápido, QC/Deal alto = conversas produtivas, poucos stalls = sem desperdício.</div>');
+
+  // ECONOMIA: custo-benefício + produtividade
+  var operScore=o.scores?o.scores.overall:0;
+  var dqiScore=o.scores?o.scores.dqi:0;
+  var taDeals=deals.filter(function(d){return (d._trustedAdvisor||0)>0;});
+  var avgTA=taDeals.length?Math.round(taDeals.reduce(function(s,d){return s+(d._trustedAdvisor||0);},0)/taDeals.length):0;
+  var highTAHighValue=taDeals.filter(function(d){return (d._trustedAdvisor||0)>60&&(d.tier_da_oportunidade||'').toLowerCase()==='diamond';}).length;
+  var lowTAHighValue=taDeals.filter(function(d){return (d._trustedAdvisor||0)<30&&((d.tier_da_oportunidade||'').toLowerCase()==='diamond'||(d.tier_da_oportunidade||'').toLowerCase()==='gold');}).length;
+
+  html+=renderSection(3,'Economia — Custo-Beneficio e Produtividade (Metricas de Qualidade)',
+    '<div class="intel-kpi-row">'+
+    _iKpi(operScore+'/100','Score Operador',operScore>70?'var(--green)':operScore>40?'var(--yellow)':'var(--red)')+
+    _iKpi(dqiScore+'/100','DQI','var(--green)')+
+    _iKpi(avgTA+'/100','Trusted Advisor Medio',avgTA>50?'var(--green)':'var(--yellow)')+
+    _iKpi(highTAHighValue,'TA Alto + Diamond','var(--green)')+
+    _iKpi(lowTAHighValue,'TA Baixo + Alto Valor','var(--red)')+
+    '</div>'+
+    (lowTAHighValue>0?'<div style="margin-top:6px;background:var(--rdim);border:1px solid var(--red);border-radius:5px;padding:6px 10px;font-size:11px;color:var(--red)">! '+lowTAHighValue+' deal(s) de alto valor com Trusted Advisor baixo — melhor closer deveria estar nessas contas</div>':'')+
+    '<div style="margin-top:6px;font-size:10px;color:var(--text3)">Economia mede <b>quanto custa</b> — alinha os melhores operadores nas contas de maior valor, otimizando CAC implícito.</div>');
+
+  ct.innerHTML=html;
+}
+
+// ── REVENUE SIMULATOR — Projeção não-linear CR × Volume × Tempo ──
+function _renderRevenueSimulator(ct,deals){
+  var html='';
+
+  // Calcular taxas de conversão atuais por estágio
+  var stageFlow=['MQL','SAL','Conectado','Agendado','Oportunidade','Negociação','Ganho'];
+  var stageCounts={};
+  var allDs=Object.values(window._COCKPIT_DEAL_MAP||{});
+  allDs.forEach(function(d){
+    var fase=d._fase||d.fase_atual_no_processo||d.fase||'';
+    stageFlow.forEach(function(s){
+      if(fase.toLowerCase().includes(s.toLowerCase())) stageCounts[s]=(stageCounts[s]||0)+1;
+    });
+  });
+  // Fallback: count from etapa if fase empty
+  allDs.forEach(function(d){
+    if(d._fase) return;
+    var etapa=(d._etapa||d.etapa||'').toLowerCase();
+    if(etapa==='novo lead') stageCounts['MQL']=(stageCounts['MQL']||0)+1;
+    else if(etapa.match(/dia\s*0/)) stageCounts['SAL']=(stageCounts['SAL']||0)+1;
+    else if(etapa==='conectados') stageCounts['Conectado']=(stageCounts['Conectado']||0)+1;
+    else if(etapa.includes('agend')||etapa.includes('entrevista')) stageCounts['Agendado']=(stageCounts['Agendado']||0)+1;
+    else if(etapa.includes('negocia')) stageCounts['Negociação']=(stageCounts['Negociação']||0)+1;
+  });
+  // Won deals
+  var wonCount=allDs.filter(function(d){return (d.statusDeal||d.status_do_deal||'').toLowerCase()==='ganho';}).length;
+  stageCounts['Ganho']=wonCount;
+
+  // Compute conversion rates between stages
+  var convRates=[];
+  for(var i=0;i<stageFlow.length-1;i++){
+    var from=stageCounts[stageFlow[i]]||0;
+    var to=stageCounts[stageFlow[i+1]]||0;
+    var cr=from>0?to/from:0;
+    convRates.push({from:stageFlow[i],to:stageFlow[i+1],cr:cr,fromCount:from,toCount:to});
+  }
+
+  // Section 1: Current Conversion Funnel
+  html+=renderSection(1,'Funil de Conversao Atual — CR × Volume × Tempo',
+    '<table class="intel-table"><thead><tr><th>De</th><th>Para</th><th>Volume</th><th>CR</th><th>Impacto +5%</th></tr></thead><tbody>'+
+    convRates.map(function(r){
+      var crPct=Math.round(r.cr*100);
+      var crColor=crPct>50?'var(--green)':crPct>25?'var(--yellow)':'var(--red)';
+      // Simulate: if we improve this CR by 5pp, how many more reach end?
+      var improvedCr=Math.min(1,r.cr+0.05);
+      var deltaDeals=Math.round((improvedCr-r.cr)*r.fromCount);
+      return '<tr><td>'+r.from+' <span style="color:var(--text3);font-size:10px">('+r.fromCount+')</span></td><td>'+r.to+' <span style="color:var(--text3);font-size:10px">('+r.toCount+')</span></td><td style="color:'+crColor+';font-weight:700">'+crPct+'%</td><td>'+crPct+'%</td><td style="color:var(--green)">+'+deltaDeals+' deals</td></tr>';
+    }).join('')+'</tbody></table>');
+
+  // Section 2: Non-linear revenue projection
+  var avgTicket=deals.length?deals.reduce(function(s,d){return s+(Number(d.revenue||d.valor_da_oportunidade||d._oppValue||0));},0)/deals.length:0;
+  var currentMQLs=stageCounts['MQL']||0;
+  var endToEndCR=convRates.reduce(function(p,r){return p*r.cr;},1);
+  var projectedWon=Math.round(currentMQLs*endToEndCR);
+  var projectedRevenue=projectedWon*avgTicket;
+
+  // Simulate: improve worst CR by 5pp
+  var worstIdx=0;var worstCR=1;
+  convRates.forEach(function(r,i){if(r.cr<worstCR){worstCR=r.cr;worstIdx=i;}});
+  var improvedEndCR=convRates.reduce(function(p,r,i){return p*(i===worstIdx?Math.min(1,r.cr+0.05):r.cr);},1);
+  var improvedWon=Math.round(currentMQLs*improvedEndCR);
+  var improvedRevenue=improvedWon*avgTicket;
+  var revenueUplift=improvedRevenue-projectedRevenue;
+
+  html+=renderSection(2,'Simulador de Receita Nao-Linear',
+    '<div class="intel-kpi-row">'+
+    _iKpi(currentMQLs,'MQLs Atuais','var(--accent2)')+
+    _iKpi((endToEndCR*100).toFixed(1)+'%','CR End-to-End',endToEndCR>0.05?'var(--green)':'var(--red)')+
+    _iKpi(projectedWon,'Projected Won','var(--accent2)')+
+    _iKpi(fmtBRL(projectedRevenue),'Revenue Projetada','var(--green)')+
+    '</div>'+
+    '<div style="margin-top:10px;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px">'+
+    '<div style="font-size:11px;font-weight:700;color:var(--amber2);margin-bottom:4px">Simulacao: +5pp no pior gargalo ('+convRates[worstIdx].from+' → '+convRates[worstIdx].to+', de '+Math.round(worstCR*100)+'% para '+Math.round(Math.min(1,worstCR+0.05)*100)+'%)</div>'+
+    '<div class="intel-kpi-row">'+
+    _iKpi(improvedWon,'Won Simulado','var(--green)')+
+    _iKpi(fmtBRL(improvedRevenue),'Revenue Simulada','var(--green)')+
+    _iKpi('+'+fmtBRL(revenueUplift),'Uplift','var(--green)')+
+    _iKpi('+'+(improvedWon-projectedWon),'Deals a Mais','var(--green)')+
+    '</div>'+
+    '</div>'+
+    '<div style="margin-top:6px;font-size:10px;color:var(--text3)">O modelo matematico do Revenue Architecture mostra que melhorar 5pp em um ponto de conversao gera impacto exponencial no resultado final — nao linear.</div>');
+
+  // Section 3: Bottleneck identification
+  var bottleneck=convRates[worstIdx];
+  var killsAtBottleneck=deals.filter(function(d){
+    var fase=(d._fase||'').toLowerCase();
+    return fase.includes(bottleneck.from.toLowerCase())||fase.includes(bottleneck.to.toLowerCase());
+  }).filter(function(d){return d._prematureMeeting||d._stallFlag;}).length;
+
+  html+=renderSection(3,'Gargalo Principal: '+bottleneck.from+' → '+bottleneck.to,
+    '<div style="padding:10px;background:var(--bg3);border:1px solid var(--red);border-radius:8px">'+
+    '<div style="display:flex;align-items:center;gap:12px">'+
+    '<div style="font-size:36px;font-weight:900;color:var(--red)">'+Math.round(bottleneck.cr*100)+'%</div>'+
+    '<div style="font-size:11px;color:var(--text2)">'+
+    '<div>'+bottleneck.fromCount+' deals entram em <b>'+bottleneck.from+'</b></div>'+
+    '<div>Apenas '+bottleneck.toCount+' avancam para <b>'+bottleneck.to+'</b></div>'+
+    (killsAtBottleneck>0?'<div style="color:var(--red);margin-top:4px">'+killsAtBottleneck+' deal(s) com kill switch ou stall nesse trecho</div>':'')+
+    '</div></div></div>');
+
+  ct.innerHTML=html;
+}
+
+// ── GTM HEALTH — Attribution → LTV → Churn prediction ───────────
+function _renderGTMHealth(ct,AE,allDeals,deals){
+  var html='';
+
+  // Revenue by source (Attribution)
+  var bySource={};
+  allDeals.forEach(function(d){
+    var src=d.canal_de_marketing||d.utm_source||d.utm_medium||'Desconhecido';
+    if(!bySource[src]) bySource[src]={deals:0,won:0,revenue:0,ltv:0};
+    bySource[src].deals++;
+    if((d.statusDeal||d.status_do_deal||'').toLowerCase()==='ganho'){
+      bySource[src].won++;
+      bySource[src].revenue+=Number(d.revenue||d.valor_da_oportunidade||0);
+    }
+    bySource[src].ltv+=Number(d.p_receita_total||0);
+  });
+
+  var srcKeys=Object.keys(bySource).sort(function(a,b){return bySource[b].revenue-bySource[a].revenue;});
+  var totalRev=srcKeys.reduce(function(s,k){return s+bySource[k].revenue;},0);
+  var totalLTV=srcKeys.reduce(function(s,k){return s+bySource[k].ltv;},0);
+
+  html+=renderSection(1,'Saude do GTM — Revenue por Fonte',
+    '<div class="intel-kpi-row">'+
+    _iKpi(srcKeys.length,'Canais Ativos','var(--accent2)')+
+    _iKpi(fmtBRL(totalRev),'Revenue Total','var(--green)')+
+    _iKpi(fmtBRL(totalLTV),'LTV Acumulado','var(--accent2)')+
+    '</div>'+
+    '<table class="intel-table" style="margin-top:8px"><thead><tr><th>Fonte</th><th>Deals</th><th>Won</th><th>Win Rate</th><th>Revenue</th><th>LTV</th></tr></thead><tbody>'+
+    srcKeys.slice(0,12).map(function(k){
+      var s=bySource[k];
+      var wr=s.deals>0?Math.round(s.won/s.deals*100):0;
+      return '<tr><td style="font-weight:600">'+_escHtml(k)+'</td><td>'+s.deals+'</td><td>'+s.won+'</td><td style="color:'+(wr>20?'var(--green)':'var(--yellow)')+'">'+wr+'%</td><td>'+fmtBRL(s.revenue)+'</td><td>'+fmtBRL(s.ltv)+'</td></tr>';
+    }).join('')+'</tbody></table>');
+
+  // Section 2: LTV vs Quality of Sale (Churn prediction proxy)
+  var rebuyers=allDeals.filter(function(d){return (d.p_negociacoes_ganhas||0)>1;});
+  var singleBuy=allDeals.filter(function(d){return (d.p_negociacoes_ganhas||0)===1;});
+  var neverBought=allDeals.filter(function(d){return (d.p_negociacoes_ganhas||0)===0;});
+  var avgLTVRebuyer=rebuyers.length?rebuyers.reduce(function(s,d){return s+(d.p_receita_total||0);},0)/rebuyers.length:0;
+  var avgLTVSingle=singleBuy.length?singleBuy.reduce(function(s,d){return s+(d.p_receita_total||0);},0)/singleBuy.length:0;
+
+  html+=renderSection(2,'LTV × Qualidade da Venda — Predicao de Churn',
+    '<div class="intel-kpi-row">'+
+    _iKpi(rebuyers.length,'Recompradores (2+)','var(--green)')+
+    _iKpi(singleBuy.length,'Compra Unica','var(--yellow)')+
+    _iKpi(neverBought.length,'Nunca Compraram','var(--text3)')+
+    _iKpi(fmtBRL(avgLTVRebuyer),'LTV Medio Rebuyer','var(--green)')+
+    _iKpi(fmtBRL(avgLTVSingle),'LTV Medio Single','var(--yellow)')+
+    '</div>'+
+    '<div style="margin-top:6px;font-size:10px;color:var(--text3)">Rebuyers tem LTV '+Math.round(avgLTVSingle>0?avgLTVRebuyer/avgLTVSingle:0)+'x maior que single-buy. A qualidade da venda inicial (auditada pelo Elucy) determina recompra.</div>');
+
+  // Section 3: Attribution → TA alignment
+  var highTAWon=allDeals.filter(function(d){return (d.statusDeal||d.status_do_deal||'').toLowerCase()==='ganho'&&(d._trustedAdvisor||0)>50;}).length;
+  var lowTAWon=allDeals.filter(function(d){return (d.statusDeal||d.status_do_deal||'').toLowerCase()==='ganho'&&(d._trustedAdvisor||0)<=50;}).length;
+  var totalWon=highTAWon+lowTAWon;
+
+  html+=renderSection(3,'Qualidade da Venda vs Retencao',
+    '<div class="intel-kpi-row">'+
+    _iKpi(highTAWon,'Won c/ TA Alto','var(--green)')+
+    _iKpi(lowTAWon,'Won c/ TA Baixo','var(--red)')+
+    _iKpi(totalWon>0?Math.round(highTAWon/totalWon*100)+'%':'—','% Alta Qualidade',totalWon>0&&highTAWon/totalWon>0.5?'var(--green)':'var(--red)')+
+    '</div>'+
+    (lowTAWon>totalWon*0.4&&totalWon>3?'<div style="margin-top:6px;background:var(--rdim);border:1px solid var(--red);border-radius:5px;padding:6px 10px;font-size:11px;color:var(--red)">! Mais de 40% dos deals ganhos tiveram Trusted Advisor baixo — risco de churn futuro. A equipe pode estar fechando deals desalinhados.</div>':'')+
+    '<div style="margin-top:6px;font-size:10px;color:var(--text3)">O Revenue Architecture prova: deals fechados com alta qualidade de venda (TA Score) geram clientes fieis. Deals desalinhados geram churn.</div>');
 
   ct.innerHTML=html;
 }
