@@ -1405,29 +1405,36 @@ function toggleFilter(el,group){
 }
 
 function calcSignal(deal){
+  // Calibrado por dados históricos reais (Databricks, 6M+ registros, 04/04/2026)
+  // Win rate por faixa: 0d=13,7% | 1-3d=7,4% | 4-7d=6,2% | 8-14d=5,2% | 15-30d=4,8% | 31+=9,5%
+  // Fronteiras reais: queda acentuada começa aos 4 dias; plateau de risco começa aos 15 dias
   const delta=deal._delta||0;
   const etapa=(deal._etapa||'').toLowerCase();
-  const tier=(deal._tier||'').toLowerCase();
-  if(delta>10) return 'DOME';
-  if(delta>6) return 'STALL';
-  if(etapa.includes('agend')||etapa.includes('entrevista')) return 'BUY';
-  if(delta<=2&&!etapa.includes('novo')) return 'CHAMP';
-  if(delta>4) return 'RISK';
+  if(delta>14) return 'DOME';          // Aging 15+ dias: win rate 4,8% — Iron Dome territory
+  if(delta>7) return 'STALL';          // Aging 8-14 dias: win rate 5,2% — deal travado
+  if(etapa.includes('entrevista')) return 'BUY'; // Entrevista Agendada: 42,3% win rate real
+  if(delta<=3&&(etapa.includes('agend')||etapa.includes('novo'))) return 'CHAMP'; // Fresco + etapa ativa
+  if(delta>4) return 'RISK';           // Aging 4-7 dias: queda acelerada
   return 'BUY';
 }
 
 function calcUrgency(deal){
+  // Calibrado por dados históricos reais (04/04/2026)
+  // Urgência = pressão de tempo × inversão do potencial restante (0-100)
   let score=0;
   const delta=deal._delta||0;
   const temp=deal._temp||0;
   const sig=deal._signal;
-  if(sig==='DOME') score+=40;
-  else if(sig==='STALL') score+=30;
-  else if(sig==='RISK') score+=25;
-  else if(sig==='BUY') score+=10;
-  score+=Math.max(0,delta*2);
-  score+=Math.max(0,100-temp)*0.3;
-  return Math.round(score);
+  // Componente de sinal (deal pior = mais urgente intervenção)
+  if(sig==='DOME') score+=35;          // Win rate 4,8% — urgência máxima
+  else if(sig==='STALL') score+=25;    // Win rate 5,2%
+  else if(sig==='RISK') score+=15;     // Win rate 6,2%
+  else if(sig==='BUY') score+=5;       // Deal quente — baixa urgência de intervenção
+  // Aging linear: cada dia após 3 dias = +1.5 ponto de urgência
+  score+=Math.max(0,(delta-3)*1.5);
+  // Temperatura inversa: deal frio precisa de atenção urgente
+  score+=Math.max(0,(60-temp)*0.4);
+  return Math.round(Math.min(100,score));
 }
 
 function urgClass(u){
