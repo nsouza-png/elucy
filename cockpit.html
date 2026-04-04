@@ -5323,6 +5323,7 @@ function renderIntelligence(){
   const ct=document.getElementById('intel-content');
   const sub=document.getElementById('intel-subtitle');
   if(!ct) return;
+  ct.style.display='block';
   // Auto-load deals if not yet loaded
   var map=window._COCKPIT_DEAL_MAP;
   if(!map||!Object.keys(map).length){
@@ -5333,7 +5334,7 @@ function renderIntelligence(){
     if(email && window.loadDealsFromSupabase){
       window.loadDealsFromSupabase(email).then(function(){
         window._intelAutoLoading=false;
-        renderIntelligence();
+        _intelRender();
       }).catch(function(){
         window._intelAutoLoading=false;
         ct.innerHTML='<div class="intel-empty">Erro ao carregar deals. Vá para Pipeline e sincronize.</div>';
