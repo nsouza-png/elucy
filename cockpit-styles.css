@@ -85,18 +85,21 @@ body{background:var(--surface);color:var(--on-surface);font-family:var(--font-bo
 #sidenav-logo{padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,.04);flex-shrink:0}
 .logo{display:flex;align-items:center;gap:8px}.logo-name{font-family:var(--font-display);font-size:15px;font-weight:800;color:var(--on-surface);text-transform:uppercase;letter-spacing:3px}.logo-badge-ent{border:1px solid rgba(255,193,116,.4);color:var(--primary);background:transparent;font-size:8px;font-weight:800;padding:2px 7px;border-radius:var(--r);letter-spacing:1.5px;text-transform:uppercase;line-height:1.4;font-family:var(--font-display)}
 #sidenav-nav{flex:1;padding:10px 10px;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
-.ntab{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r);font-size:13px;color:var(--text2);cursor:pointer;transition:all .15s ease;border:none;background:none;font-family:var(--font-body);font-weight:500;width:100%;text-align:left;white-space:nowrap}.ntab svg{flex-shrink:0;opacity:.6;transition:opacity .15s}.ntab:hover{color:var(--on-surface);background:var(--surface-mid)}.ntab:hover svg{opacity:.9}.ntab.on{color:var(--primary);background:rgba(255,193,116,.08);border-left:2px solid var(--primary);padding-left:10px;font-weight:600}.ntab.on svg{opacity:1;color:var(--primary)}
-.ntab-label{flex:1}.tab-count{background:rgba(239,68,68,.15);color:var(--red);font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;margin-left:auto;flex-shrink:0}.tab-count:empty{display:none}
+/* .sntab = sidebar nav tab (novo). .ntab = topbar tab original (mantido) */
+.sntab{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r);font-size:13px;color:var(--text2);cursor:pointer;transition:all .15s ease;border:none;border-left:2px solid transparent;background:none;font-family:var(--font-body);font-weight:500;width:100%;text-align:left;white-space:nowrap}.sntab svg{flex-shrink:0;opacity:.55;transition:opacity .15s}.sntab:hover{color:var(--on-surface);background:var(--surface-mid)}.sntab:hover svg{opacity:.85}.sntab.on{color:var(--primary);background:rgba(255,193,116,.08);border-left-color:var(--primary);padding-left:10px;font-weight:600}.sntab.on svg{opacity:1}
+.sntab-label{flex:1}
+/* Esconder .ntab no topbar (nav original — mantido no DOM para compatibilidade com o engine) */
+#topbar .ntab{display:none}
 #sidenav-footer{padding:14px 10px;border-top:1px solid rgba(255,255,255,.04);flex-shrink:0;display:flex;flex-direction:column;gap:8px}
 .sidenav-user{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r);cursor:pointer;transition:background .15s}.sidenav-user:hover{background:var(--surface-mid)}
 .av{width:28px;height:28px;border-radius:50%;background:var(--gradient-cta);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#0e141b;flex-shrink:0}
 .sidenav-user-info{flex:1;min-width:0}.chip-name{font-weight:600;color:var(--on-surface);font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.chip-lvl{color:var(--text2);font-size:10px}
-.sidenav-utils{display:flex;align-items:center;gap:4px}
+.sidenav-utils{display:flex;align-items:center;gap:6px;padding:0 10px}
 .streak-badge{background:var(--surface-mid);border:none;border-radius:var(--r);padding:4px 8px;font-size:11px;color:var(--text2);font-weight:600;display:inline-flex;align-items:center;gap:4px;cursor:default}
-/* ── COLUNA DIREITA: topbar slim + content ──────────────────── */
+/* ── COLUNA DIREITA ───────────────────────────────────────────── */
 #app-column{display:flex;flex-direction:column;flex:1;overflow:hidden;min-width:0}
-/* ── TOPBAR SLIM (apenas utilidades) ─────────────────────────── */
-#topbar{height:48px;background:rgba(14,20,27,.90);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.04);display:flex;align-items:center;padding:0 20px;gap:10px;flex-shrink:0;z-index:10}
+/* ── TOPBAR SLIM ──────────────────────────────────────────────── */
+#topbar{height:48px;background:rgba(14,20,27,.90);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.04);display:flex;align-items:center;padding:0 16px;gap:10px;flex-shrink:0;z-index:10}
 .tbr{display:flex;align-items:center;gap:8px;margin-left:auto}
 .chip{display:none}
 #main{display:flex;flex:1;overflow:hidden}
