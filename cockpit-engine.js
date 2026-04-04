@@ -9478,83 +9478,294 @@ function clipCache(btn, cacheKey){
 }
 window.clipCache = clipCache;
 
-// ── CHAT ENGINE ─────────────────────────────────────────────────
+// ── TEXTUAL REVENUE BRAIN — Chat Engine V2 ─────────────────────
 (function(){
-  var _chatState = {
-    conversations: [],
-    filtered: [],
-    activeThread: null,
-    messages: [],
-    channelFilter: 'all',
-    searchTerm: '',
-    initialized: false,
-    realtimeSub: null
+  /* ─── STATE ─── */
+  var _cs = {
+    conversations: [], filtered: [], activeThread: null, messages: [],
+    channelFilter: 'all', searchTerm: '', initialized: false,
+    realtimeSub: null, slaTimer: null, slaSeconds: 0,
+    linkedDeal: null, analysisCache: {}
   };
 
+  /* ─── BRAIN: Analysis Pipeline ─── */
+  function analyzeMessage(text, conv){
+    if(!text||!text.trim()) return null;
+    var intent = detectIntent(text);
+    var framework = detectFramework(text);
+    var signals = extractSignals(text);
+    var risk = detectRisk(text, conv);
+    var killSwitch = applyKillSwitch(intent, framework, conv);
+    var impact = calcMessageImpact(intent, signals, framework);
+    var suggestion = killSwitch.blocked ? killSwitch.suggestion : suggestRewrite(text, intent, framework, signals);
+    return {intent:intent, framework:framework, signals:signals, risk:risk, killSwitch:killSwitch, impact:impact, suggestion:suggestion};
+  }
+
+  function detectIntent(text){
+    var t = text.toLowerCase();
+    if(t.match(/\?|como|quando|por que|qual|quem|onde|quanto/)) return 'QUESTION';
+    if(t.match(/agendar|marcar|confirmar|fechar|proposta|contrato/)) return 'CTA';
+    if(t.match(/entendi|faz sentido|exato|concordo|isso mesmo/)) return 'VALIDATION';
+    if(t.match(/conta mais|me fala|explica|detalha|como funciona/)) return 'DISCOVERY';
+    return 'STATEMENT';
+  }
+
+  function detectFramework(text){
+    var t = text.toLowerCase();
+    if(t.match(/situacao|contexto atual|como esta hoje|me conta sobre/)) return 'SPIN_S';
+    if(t.match(/problema|dificuldade|desafio|dor|frustra/)) return 'SPIN_P';
+    if(t.match(/impacto|consequencia|o que acontece se|quanto custa/)) return 'SPIN_I';
+    if(t.match(/e se|imagina|seria util|resolvesse/)) return 'SPIN_N';
+    if(t.match(/snapshot|como esta|cenario atual|panorama/)) return 'SPICED_I';
+    if(t.match(/provoc|desafi|repensar|diferente do que|na verdade/)) return 'CHALLENGER';
+    if(t.match(/decisor|quem decide|processo de compra|comite/)) return 'MEDDICC_D';
+    return null;
+  }
+
+  function extractSignals(text){
+    var t = text.toLowerCase();
+    var pain = 0, urgency = 0, authority = 0, engagement = 0;
+    if(t.match(/problema|dor|frustra|dificil|ruim|perden/)) pain = 0.7;
+    if(t.match(/urgente|rapido|agora|prazo|ontem|ja era/)) urgency = 0.8;
+    if(t.match(/eu decido|minha equipe|meu budget|aprovo|CEO|diretor/)) authority = 0.9;
+    if(t.match(/interessante|quero|preciso|me conta|manda/)) engagement = 0.6;
+    if(text.length > 100) engagement = Math.min(1, engagement + 0.2);
+    return {pain:pain, urgency:urgency, authority:authority, engagement:engagement};
+  }
+
+  function detectRisk(text, conv){
+    var t = text.toLowerCase();
+    var risks = [];
+    if(t.match(/preco|valor|quanto custa|investimento|desconto/) && conv && !conv._qualPhase) risks.push('PREMATURE_PRICE');
+    if(t.match(/concorren|alternativa|outro fornecedor/) && !t.match(/problema|dor|frustra/)) risks.push('COMPETITOR_WITHOUT_PAIN');
+    return risks;
+  }
+
+  function applyKillSwitch(intent, framework, conv){
+    var deal = _cs.linkedDeal;
+    // KS1: Premature CTA without qualification
+    if(intent === 'CTA' && deal){
+      var phase = (deal.fase_atual_no_processo||'').toLowerCase();
+      if(phase.match(/suspect|mql|awareness/)) return {blocked:true, rule:'KS1_PREMATURE_CTA', suggestion:'Prospect ainda em fase inicial. Aprofunde dor antes de CTA.'};
+    }
+    // KS2: Titan persona must use Challenger
+    if(deal && (deal.persona_tag||'').toLowerCase()==='titan' && framework && framework.startsWith('SPIN_'))
+      return {blocked:true, rule:'KS2_TITAN_SPIN', suggestion:'Persona Titan = Challenger obrigatorio. Use provocacao, nao SPIN.'};
+    // KS3: Tier restriction
+    if(deal && deal.tier_da_oportunidade){
+      var tier = (deal.tier_da_oportunidade||'').toLowerCase();
+      if((tier==='silver'||tier==='bronze') && intent==='CTA' && (deal.linha_de_receita_vigente||'').toLowerCase().match(/imersao presencial/))
+        return {blocked:true, rule:'KS3_TIER_BLOCK', suggestion:'Tier '+tier+' bloqueado para Imersoes Presenciais.'};
+    }
+    // KS4: Premature pricing
+    if(intent === 'STATEMENT'){
+      // handled in detectRisk
+    }
+    return {blocked:false, rule:null, suggestion:null};
+  }
+
+  function calcMessageImpact(intent, signals, framework){
+    var score = 0;
+    if(intent==='DISCOVERY') score += 0.3;
+    if(intent==='QUESTION') score += 0.2;
+    if(intent==='CTA') score += 0.1;
+    if(framework) score += 0.2;
+    score += (signals.pain * 0.15) + (signals.urgency * 0.1) + (signals.authority * 0.15) + (signals.engagement * 0.1);
+    return Math.min(1, Math.round(score * 100) / 100);
+  }
+
+  function suggestRewrite(text, intent, framework, signals){
+    if(intent==='CTA' && signals.pain < 0.3) return 'Antes de CTA, explore a dor: "Qual o maior desafio que voce enfrenta com X hoje?"';
+    if(intent==='STATEMENT' && !framework) return 'Transforme em pergunta de descoberta para engajar: "Como isso impacta Y no seu dia-a-dia?"';
+    if(framework==='SPIN_S' && signals.engagement < 0.3) return 'Situacao ok, avance para Problema: "E qual a maior dificuldade nesse processo?"';
+    if(framework==='SPIN_P') return 'Bom! Agora amplifique com Implicacao: "Quanto isso custa por mes em X?"';
+    if(framework==='SPIN_I') return 'Excelente implicacao. Feche com Need-payoff: "Se resolvesse isso, o que mudaria?"';
+    return null;
+  }
+
+  /* ─── REALTIME ANALYSIS BAR ─── */
+  function chatAnalyzeRealtime(){
+    var input = document.getElementById('chat-input');
+    var bar = document.getElementById('chat-analysis-bar');
+    var suggBar = document.getElementById('chat-suggestion-bar');
+    if(!input||!bar) return;
+    var text = input.value;
+    if(!text||text.length < 5){bar.style.display='none';if(suggBar)suggBar.style.display='none';return;}
+    var conv = _cs.conversations.find(function(c){return c.thread_id===_cs.activeThread;});
+    var analysis = analyzeMessage(text, conv);
+    if(!analysis){bar.style.display='none';return;}
+    bar.style.display='flex';
+    var impactColor = analysis.impact >= 0.7 ? '#34c759' : analysis.impact >= 0.4 ? '#ff9f0a' : '#ff453a';
+    var fwLabel = analysis.framework ? '<span class="brain-tag fw">'+analysis.framework+'</span>' : '';
+    var intentLabel = '<span class="brain-tag intent">'+analysis.intent+'</span>';
+    var impactLabel = '<span class="brain-impact" style="background:'+impactColor+'">'+Math.round(analysis.impact*100)+'</span>';
+    var riskHtml = '';
+    if(analysis.risk.length) riskHtml = analysis.risk.map(function(r){return '<span class="brain-tag risk">'+r+'</span>';}).join('');
+    var ksHtml = '';
+    if(analysis.killSwitch.blocked) ksHtml = '<span class="brain-tag ks">BLOCKED: '+analysis.killSwitch.rule+'</span>';
+    bar.innerHTML = impactLabel + intentLabel + fwLabel + riskHtml + ksHtml;
+    // Suggestion bar
+    if(suggBar){
+      var sugg = analysis.suggestion || (analysis.killSwitch.blocked ? analysis.killSwitch.suggestion : null);
+      if(sugg){
+        suggBar.style.display='flex';
+        suggBar.innerHTML='<span class="brain-sugg-icon">&#9889;</span><span class="brain-sugg-text">'+sugg+'</span><button class="brain-sugg-btn" onclick="window.chatRewrite()">Aplicar</button>';
+      } else {
+        suggBar.style.display='none';
+      }
+    }
+    _cs.analysisCache[_cs.activeThread] = analysis;
+  }
+  window.chatAnalyzeRealtime = chatAnalyzeRealtime;
+
+  /* ─── SLA TIMER ─── */
+  function chatStartSLA(){
+    if(_cs.slaTimer) clearInterval(_cs.slaTimer);
+    _cs.slaSeconds = 300; // 5 min
+    var el = document.getElementById('chat-sla-bar');
+    if(!el) return;
+    el.style.display = 'flex';
+    _cs.slaTimer = setInterval(function(){
+      _cs.slaSeconds--;
+      if(_cs.slaSeconds <= 0){clearInterval(_cs.slaTimer);_cs.slaTimer=null;}
+      var min = Math.floor(Math.max(0,_cs.slaSeconds)/60);
+      var sec = Math.max(0,_cs.slaSeconds)%60;
+      var pct = Math.max(0,(_cs.slaSeconds/300)*100);
+      var color = pct > 50 ? '#34c759' : pct > 20 ? '#ff9f0a' : '#ff453a';
+      el.innerHTML = '<div class="sla-label">SLA</div><div class="sla-track"><div class="sla-fill" style="width:'+pct+'%;background:'+color+'"></div></div><div class="sla-time" style="color:'+color+'">'+min+':'+String(sec).padStart(2,'0')+'</div>';
+    }, 1000);
+  }
+  function chatStopSLA(){
+    if(_cs.slaTimer){clearInterval(_cs.slaTimer);_cs.slaTimer=null;}
+    var el = document.getElementById('chat-sla-bar');
+    if(el) el.style.display='none';
+  }
+
+  /* ─── DEAL LINKING ─── */
+  function linkDealToThread(conv){
+    if(!conv) return null;
+    var dealMap = window._COCKPIT_DEAL_MAP||{};
+    var deals = Object.values(dealMap);
+    var phone = (conv.contact_phone||'').replace(/\D/g,'');
+    var match = deals.find(function(d){
+      return (d.telefone||'').replace(/\D/g,'')===phone || (d.celular||'').replace(/\D/g,'')===phone;
+    });
+    _cs.linkedDeal = match || null;
+    return match;
+  }
+
+  /* ─── PRIORITY BUCKET (Reisert) ─── */
+  function getBucket(conv){
+    var deal = linkDealToThread(conv);
+    if(!deal) return 'B1';
+    var etapa = (deal.etapa_atual_no_pipeline||'').toLowerCase();
+    if(etapa.match(/agendado|booked|reuniao marcada/)) return 'B4';
+    if(etapa.match(/conectado|connected|contato feito/)) return 'B3';
+    if(etapa.match(/cadencia|sequence|prospeccao/)) return 'B2';
+    return 'B1';
+  }
+
+  /* ─── INIT ─── */
   function chatInit(){
-    if(_chatState.initialized) return;
-    _chatState.initialized = true;
+    if(_cs.initialized) return;
+    _cs.initialized = true;
     chatLoadConversations();
     chatInitRealtime();
+    // Bind realtime analysis to input
+    setTimeout(function(){
+      var input = document.getElementById('chat-input');
+      if(input) input.addEventListener('input', chatAnalyzeRealtime);
+    }, 500);
   }
   window.chatInit = chatInit;
 
+  /* ─── LOAD CONVERSATIONS ─── */
   async function chatLoadConversations(){
     try {
       var sb = window._supabase;
       if(!sb){console.warn('[Chat] Supabase not available');return;}
       var {data,error} = await sb.from('chat_conversations').select('*').order('last_message_at',{ascending:false});
       if(error) throw error;
-      _chatState.conversations = data || [];
-      _chatState.filtered = _chatState.conversations;
+      _cs.conversations = data || [];
+      _cs.filtered = _cs.conversations;
       chatRenderConversations();
+      chatRenderStats();
     } catch(err){
       console.error('[Chat] Load error:', err.message);
     }
   }
 
+  /* ─── RENDER CONVERSATIONS (Priority Inbox) ─── */
   function chatRenderConversations(){
     var el = document.getElementById('chat-conversations');
     if(!el) return;
-    var convs = _chatState.filtered;
+    var convs = _cs.filtered;
     if(!convs.length){
       el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text2);font-size:12px">Nenhuma conversa encontrada</div>';
       return;
     }
+    // Sort by bucket priority then recency
+    var bucketOrder = {B4:0,B3:1,B2:2,B1:3};
+    convs.sort(function(a,b){
+      var ba = getBucket(a), bb = getBucket(b);
+      if(bucketOrder[ba] !== bucketOrder[bb]) return bucketOrder[ba] - bucketOrder[bb];
+      return new Date(b.last_message_at||0) - new Date(a.last_message_at||0);
+    });
     el.innerHTML = convs.map(function(c){
-      var isActive = _chatState.activeThread === c.thread_id;
+      var isActive = _cs.activeThread === c.thread_id;
       var chClass = (c.channel||'whatsapp')==='instagram'?'ig':'wa';
       var initial = (c.contact_name||'?')[0].toUpperCase();
       var unread = c.unread_count>0?'<span class="chat-conv-badge">'+c.unread_count+'</span>':'';
       var timeStr = c.last_message_at?new Date(c.last_message_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
+      var bucket = getBucket(c);
+      var bucketColor = bucket==='B4'?'#34c759':bucket==='B3'?'#30d158':bucket==='B2'?'#ff9f0a':'#636366';
       return '<div class="chat-conv'+(isActive?' active':'')+'" onclick="window.chatOpenThread(\''+c.thread_id+'\')">'
-        +'<div class="chat-conv-av '+chClass+'">'+initial+'</div>'
+        +'<div class="chat-conv-av '+chClass+'"><span>'+initial+'</span><span class="bucket-dot" style="background:'+bucketColor+'" title="'+bucket+'"></span></div>'
         +'<div class="chat-conv-body"><div class="chat-conv-name">'+(c.contact_name||c.contact_phone||'Desconhecido')+'</div>'
         +'<div class="chat-conv-last">'+(c.last_message_preview||'')+'</div></div>'
         +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><span class="chat-conv-time">'+timeStr+'</span>'+unread+'</div></div>';
     }).join('');
   }
 
+  /* ─── STATS BAR ─── */
+  function chatRenderStats(){
+    var el = document.getElementById('chat-stats');
+    if(!el) return;
+    var total = _cs.conversations.length;
+    var unread = _cs.conversations.reduce(function(s,c){return s+(c.unread_count||0);},0);
+    var wa = _cs.conversations.filter(function(c){return(c.channel||'whatsapp')==='whatsapp';}).length;
+    var ig = _cs.conversations.filter(function(c){return c.channel==='instagram';}).length;
+    el.innerHTML = '<span>'+total+' conversas</span><span>'+unread+' nao lidas</span><span>WA: '+wa+'</span><span>IG: '+ig+'</span>';
+  }
+
+  /* ─── OPEN THREAD ─── */
   async function chatOpenThread(threadId){
-    _chatState.activeThread = threadId;
+    _cs.activeThread = threadId;
     chatRenderConversations();
     var inputArea = document.getElementById('chat-input-area');
     if(inputArea) inputArea.style.display='block';
     var app = document.getElementById('chat-app');
     if(app) app.classList.add('chat-open');
 
-    var conv = _chatState.conversations.find(function(c){return c.thread_id===threadId;});
+    var conv = _cs.conversations.find(function(c){return c.thread_id===threadId;});
     var headerName = document.getElementById('chat-header-name');
     var headerMeta = document.getElementById('chat-header-meta');
     if(headerName) headerName.textContent = conv?(conv.contact_name||conv.contact_phone||'Desconhecido'):'';
     if(headerMeta) headerMeta.textContent = conv?(conv.channel||'whatsapp').toUpperCase():'';
+
+    // Link deal + update context sidebar
+    var deal = linkDealToThread(conv);
+    chatUpdateContext(deal);
+
+    // SLA for inbound
+    if(conv && conv.unread_count > 0) chatStartSLA(); else chatStopSLA();
 
     try {
       var sb = window._supabase;
       if(!sb) return;
       var {data,error} = await sb.from('chat_messages').select('*').eq('thread_id',threadId).order('sent_at',{ascending:true});
       if(error) throw error;
-      _chatState.messages = data || [];
+      _cs.messages = data || [];
       chatRenderMessages();
     } catch(err){
       console.error('[Chat] Open thread error:', err.message);
@@ -9562,30 +9773,52 @@ window.clipCache = clipCache;
   }
   window.chatOpenThread = chatOpenThread;
 
+  /* ─── RENDER MESSAGES ─── */
   function chatRenderMessages(){
     var el = document.getElementById('chat-messages');
     if(!el) return;
-    el.innerHTML = _chatState.messages.map(function(m){
+    var lastDate = '';
+    el.innerHTML = _cs.messages.map(function(m){
       var dir = m.direction==='outbound'?'out':'in';
       var timeStr = m.sent_at?new Date(m.sent_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
-      var statusIcon = m.status==='delivered'?' ✓✓':m.status==='sent'?' ✓':m.status==='read'?' ✓✓':m.status==='failed'?' ✗':'';
-      return '<div style="display:flex;flex-direction:column;align-items:'+(dir==='out'?'flex-end':'flex-start')+'">'
+      var dateStr = m.sent_at?new Date(m.sent_at).toLocaleDateString('pt-BR'):'';
+      var statusIcon = m.status==='delivered'?' \u2713\u2713':m.status==='sent'?' \u2713':m.status==='read'?' \u2713\u2713':m.status==='failed'?' \u2717':'';
+      var dateSep = '';
+      if(dateStr && dateStr !== lastDate){lastDate = dateStr; dateSep = '<div class="chat-date-sep"><span>'+dateStr+'</span></div>';}
+      return dateSep + '<div style="display:flex;flex-direction:column;align-items:'+(dir==='out'?'flex-end':'flex-start')+'">'
         +'<div class="chat-msg '+dir+'">'+(m.body||'')+'</div>'
         +'<div class="chat-msg-time">'+timeStr+(dir==='out'?'<span class="chat-msg-status">'+statusIcon+'</span>':'')+'</div></div>';
     }).join('');
     el.scrollTop = el.scrollHeight;
   }
 
+  /* ─── SEND (with Brain validation) ─── */
   async function chatSend(){
     var input = document.getElementById('chat-input');
-    if(!input||!input.value.trim()||!_chatState.activeThread) return;
+    if(!input||!input.value.trim()||!_cs.activeThread) return;
     var body = input.value.trim();
-    input.value = '';
 
-    var conv = _chatState.conversations.find(function(c){return c.thread_id===_chatState.activeThread;});
+    // Kill switch check before sending
+    var conv = _cs.conversations.find(function(c){return c.thread_id===_cs.activeThread;});
+    var analysis = analyzeMessage(body, conv);
+    if(analysis && analysis.killSwitch.blocked){
+      window.showSyncToast&&window.showSyncToast('warn','BLOCKED ['+analysis.killSwitch.rule+']: '+analysis.killSwitch.suggestion);
+      return; // Do not send
+    }
+
+    input.value = '';
     var channel = conv?conv.channel:'whatsapp';
 
-    _chatState.messages.push({
+    // Clear analysis bars
+    var bar = document.getElementById('chat-analysis-bar');
+    var suggBar = document.getElementById('chat-suggestion-bar');
+    if(bar) bar.style.display='none';
+    if(suggBar) suggBar.style.display='none';
+
+    // Stop SLA (we responded)
+    chatStopSLA();
+
+    _cs.messages.push({
       body: body, direction:'outbound', sent_at: new Date().toISOString(), status:'sending', channel: channel
     });
     chatRenderMessages();
@@ -9598,60 +9831,145 @@ window.clipCache = clipCache;
       var resp = await fetch(window._SUPABASE_URL+'/functions/v1/chat-proxy', {
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-        body:JSON.stringify({thread_id:_chatState.activeThread,body:body,channel:channel,contact_phone:conv?conv.contact_phone:''})
+        body:JSON.stringify({thread_id:_cs.activeThread,body:body,channel:channel,contact_phone:conv?conv.contact_phone:''})
       });
       var result = await resp.json();
       if(!resp.ok) throw new Error(result.error||'Erro ao enviar');
-      _chatState.messages[_chatState.messages.length-1].status='sent';
+      _cs.messages[_cs.messages.length-1].status='sent';
       chatRenderMessages();
     } catch(err){
       console.error('[Chat] Send error:', err.message);
-      _chatState.messages[_chatState.messages.length-1].status='failed';
+      _cs.messages[_cs.messages.length-1].status='failed';
       chatRenderMessages();
       window.showSyncToast&&window.showSyncToast('err','Erro ao enviar: '+err.message);
     }
   }
   window.chatSend = chatSend;
 
+  /* ─── DEAL CONTEXT SIDEBAR ─── */
+  function chatUpdateContext(deal){
+    var el = document.getElementById('chat-context-content');
+    if(!el) return;
+    if(!deal){el.innerHTML='<div style="color:var(--text2);font-size:12px;padding:12px">Nenhum deal vinculado</div>';return;}
+    var phase = deal.fase_atual_no_processo||'-';
+    var etapa = deal.etapa_atual_no_pipeline||'-';
+    var tier = deal.tier_da_oportunidade||'-';
+    var grupo = deal.grupo_de_receita||'-';
+    var linha = deal.linha_de_receita_vigente||'-';
+    var lastFup = deal.ultima_atividade||'-';
+    var bucket = getBucket({contact_phone:deal.telefone||deal.celular});
+    el.innerHTML = ''
+      +'<div class="ctx-section"><div class="ctx-label">Deal</div><div class="ctx-value">'+(deal.nome_do_negocio||deal.deal_name||'-')+'</div></div>'
+      +'<div class="ctx-section"><div class="ctx-label">Empresa</div><div class="ctx-value">'+(deal.empresa||deal.company||'-')+'</div></div>'
+      +'<div class="ctx-section"><div class="ctx-label">Etapa / Fase</div><div class="ctx-value">'+etapa+' / '+phase+'</div></div>'
+      +'<div class="ctx-section"><div class="ctx-label">Tier</div><div class="ctx-value ctx-tier-'+tier.toLowerCase()+'">'+tier+'</div></div>'
+      +'<div class="ctx-section"><div class="ctx-label">Grupo</div><div class="ctx-value">'+grupo+'</div></div>'
+      +'<div class="ctx-section"><div class="ctx-label">Linha</div><div class="ctx-value">'+linha+'</div></div>'
+      +'<div class="ctx-section"><div class="ctx-label">Bucket</div><div class="ctx-value" style="color:'+(bucket==='B4'?'#34c759':bucket==='B3'?'#30d158':bucket==='B2'?'#ff9f0a':'#636366')+'">'+bucket+'</div></div>'
+      +'<div class="ctx-section"><div class="ctx-label">Ultimo FUP</div><div class="ctx-value">'+lastFup+'</div></div>'
+      +'<button class="ctx-btn" onclick="window.chatHandoff()">Handoff AE</button>';
+  }
+
+  function chatToggleContext(){
+    var panel = document.getElementById('chat-context-panel');
+    if(panel) panel.classList.toggle('ctx-hidden');
+  }
+  window.chatToggleContext = chatToggleContext;
+
+  /* ─── HANDOFF ─── */
+  function chatHandoff(){
+    var deal = _cs.linkedDeal;
+    if(!deal){window.showSyncToast&&window.showSyncToast('warn','Vincule um deal primeiro.');return;}
+    var conv = _cs.conversations.find(function(c){return c.thread_id===_cs.activeThread;});
+    var lastMsgs = _cs.messages.slice(-5).map(function(m){return (m.direction==='outbound'?'SDR: ':'LEAD: ')+(m.body||'');}).join('\n');
+    var briefing = '== HANDOFF BRIEFING ==\n'
+      +'Contato: '+(conv?conv.contact_name||conv.contact_phone:'-')+'\n'
+      +'Empresa: '+(deal.empresa||deal.company||'-')+'\n'
+      +'Etapa: '+(deal.etapa_atual_no_pipeline||'-')+'\n'
+      +'Fase: '+(deal.fase_atual_no_processo||'-')+'\n'
+      +'Tier: '+(deal.tier_da_oportunidade||'-')+'\n'
+      +'Linha: '+(deal.linha_de_receita_vigente||'-')+'\n\n'
+      +'--- Ultimas mensagens ---\n'+lastMsgs+'\n\n'
+      +'--- Why Listen ---\n[Preencher com dor principal identificada]\n\n'
+      +'--- Why Care ---\n[Preencher com impacto quantificado]';
+    navigator.clipboard.writeText(briefing).then(function(){
+      window.showSyncToast&&window.showSyncToast('ok','Briefing copiado para clipboard!');
+    });
+  }
+  window.chatHandoff = chatHandoff;
+
+  /* ─── REWRITE (apply suggestion) ─── */
+  function chatRewrite(){
+    var cached = _cs.analysisCache[_cs.activeThread];
+    if(!cached||!cached.suggestion) return;
+    var input = document.getElementById('chat-input');
+    if(!input) return;
+    // Extract example from suggestion if quoted
+    var match = cached.suggestion.match(/"([^"]+)"/);
+    if(match) input.value = match[1];
+    else input.value = '';
+    input.focus();
+    chatAnalyzeRealtime();
+  }
+  window.chatRewrite = chatRewrite;
+
+  /* ─── CONVERSATION MANAGEMENT ─── */
   function chatNewMessage(){
     var phone = prompt('Numero do contato (com DDD):');
     if(!phone) return;
     var threadId = 'wa_'+phone.replace(/\D/g,'');
-    _chatState.conversations.unshift({
+    _cs.conversations.unshift({
       thread_id:threadId, contact_phone:phone, contact_name:phone, channel:'whatsapp',
       last_message_at:new Date().toISOString(), last_message_preview:'', unread_count:0
     });
-    _chatState.filtered = _chatState.conversations;
+    _cs.filtered = _cs.conversations;
     chatRenderConversations();
     chatOpenThread(threadId);
   }
   window.chatNewMessage = chatNewMessage;
 
+  function chatBack(){
+    _cs.activeThread = null;
+    _cs.linkedDeal = null;
+    chatStopSLA();
+    var app = document.getElementById('chat-app');
+    if(app) app.classList.remove('chat-open');
+    chatRenderConversations();
+    var bar = document.getElementById('chat-analysis-bar');
+    var suggBar = document.getElementById('chat-suggestion-bar');
+    if(bar) bar.style.display='none';
+    if(suggBar) suggBar.style.display='none';
+  }
+  window.chatBack = chatBack;
+
   function chatInsertCopy(){
     var input = document.getElementById('chat-input');
-    if(!input||!_chatState.activeThread) return;
-    var conv = _chatState.conversations.find(function(c){return c.thread_id===_chatState.activeThread;});
-    if(!conv) return;
-    var dealMap = window._COCKPIT_DEAL_MAP||{};
-    var deals = Object.values(dealMap);
-    var match = deals.find(function(d){
-      var phone = (conv.contact_phone||'').replace(/\D/g,'');
-      return (d.telefone||'').replace(/\D/g,'')===phone || (d.celular||'').replace(/\D/g,'')===phone;
-    });
-    if(!match){window.showSyncToast&&window.showSyncToast('warn','Nenhum deal vinculado a este contato.');return;}
-    var cacheKey = match.deal_id+'_copy';
+    if(!input||!_cs.activeThread) return;
+    var deal = _cs.linkedDeal;
+    if(!deal){window.showSyncToast&&window.showSyncToast('warn','Nenhum deal vinculado a este contato.');return;}
+    var cacheKey = deal.deal_id+'_copy';
     if(ELUCY_CACHE[cacheKey]){
       var waMatch = ELUCY_CACHE[cacheKey].match(/VERSAO WHATSAPP:\s*([\s\S]*?)(?:NOTA CRM:|$)/i);
       input.value = waMatch?waMatch[1].trim():ELUCY_CACHE[cacheKey];
       input.focus();
+      chatAnalyzeRealtime();
     } else {
       window.showSyncToast&&window.showSyncToast('info','Gere uma copy primeiro (botao "Gerar Copy" no deal card).');
     }
   }
   window.chatInsertCopy = chatInsertCopy;
 
+  function chatGenCopy(){
+    var deal = _cs.linkedDeal;
+    if(!deal){window.showSyncToast&&window.showSyncToast('warn','Vincule deal para gerar copy.');return;}
+    if(typeof window.requestIntelligence === 'function') window.requestIntelligence(deal.deal_id, 'copy_optimization');
+    else window.showSyncToast&&window.showSyncToast('info','Intelligence engine nao disponivel.');
+  }
+  window.chatGenCopy = chatGenCopy;
+
+  /* ─── FILTERS ─── */
   function chatFilterChannel(ch, btn){
-    _chatState.channelFilter = ch;
+    _cs.channelFilter = ch;
     var chips = document.querySelectorAll('#chat-list-panel .fchip');
     chips.forEach(function(c){c.classList.remove('fchip-on');});
     if(btn) btn.classList.add('fchip-on');
@@ -9660,41 +9978,45 @@ window.clipCache = clipCache;
   window.chatFilterChannel = chatFilterChannel;
 
   function chatFilterConversations(term){
-    _chatState.searchTerm = (term||'').toLowerCase();
+    _cs.searchTerm = (term||'').toLowerCase();
     applyFilters();
   }
   window.chatFilterConversations = chatFilterConversations;
 
   function applyFilters(){
-    _chatState.filtered = _chatState.conversations.filter(function(c){
-      if(_chatState.channelFilter!=='all' && c.channel!==_chatState.channelFilter) return false;
-      if(_chatState.searchTerm && !(c.contact_name||'').toLowerCase().includes(_chatState.searchTerm) && !(c.contact_phone||'').includes(_chatState.searchTerm)) return false;
+    _cs.filtered = _cs.conversations.filter(function(c){
+      if(_cs.channelFilter!=='all' && c.channel!==_cs.channelFilter) return false;
+      if(_cs.searchTerm && !(c.contact_name||'').toLowerCase().includes(_cs.searchTerm) && !(c.contact_phone||'').includes(_cs.searchTerm)) return false;
       return true;
     });
     chatRenderConversations();
   }
 
+  function chatUseTemplate(){window.showSyncToast&&window.showSyncToast('info','Templates em breve.');}
+  window.chatUseTemplate = chatUseTemplate;
+  function chatAttach(){window.showSyncToast&&window.showSyncToast('info','Anexos em breve.');}
+  window.chatAttach = chatAttach;
+
+  /* ─── REALTIME ─── */
   function chatInitRealtime(){
     var sb = window._supabase;
     if(!sb||!sb.channel) return;
-    _chatState.realtimeSub = sb.channel('chat-realtime')
+    _cs.realtimeSub = sb.channel('chat-realtime')
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'chat_messages'},function(payload){
         var msg = payload.new;
-        if(msg.thread_id===_chatState.activeThread && msg.direction==='inbound'){
-          _chatState.messages.push(msg);
-          chatRenderMessages();
+        if(msg.thread_id===_cs.activeThread){
+          if(msg.direction==='inbound'){
+            _cs.messages.push(msg);
+            chatRenderMessages();
+            chatStartSLA(); // Inbound = restart SLA
+          }
         }
         chatLoadConversations();
       })
       .subscribe();
   }
-
-  function chatAttach(){window.showSyncToast&&window.showSyncToast('info','Anexos em breve.');}
-  window.chatAttach = chatAttach;
-  function chatUseTemplate(){window.showSyncToast&&window.showSyncToast('info','Templates em breve.');}
-  window.chatUseTemplate = chatUseTemplate;
 })();
 
-console.log('[cockpit-engine v12.0] 30-Layer Architecture loaded — L19-L22 Quality + L23 Enterprise + L24 Trusted Advisor + L25 Strategic + L26 SPIN + L27 RFV + L28 Cadence + L29 ROA + L30 Chat+Intel');
+console.log('[cockpit-engine v12.1] Textual Revenue Brain — 30-Layer + Chat V2 (Brain Analysis + Kill Switches + SLA + Priority Buckets + Deal Context)');
 
 })();

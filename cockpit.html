@@ -503,39 +503,109 @@ window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false'
       <div id="pb-root"><div style="font-size:12px;color:var(--text2);padding:20px;text-align:center">Carregando Playbooks...</div></div>
     </div>
     <div class="screen" id="screen-chat">
-      <div id="chat-app" style="display:flex;height:calc(100vh - 56px);gap:0">
-        <div id="chat-list-panel" style="width:320px;min-width:280px;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden">
-          <div style="padding:12px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center">
-            <input id="chat-search" class="srch" placeholder="Buscar conversa..." oninput="window.chatFilterConversations(this.value)" style="flex:1">
-            <button class="btn bs" onclick="window.chatNewMessage()" title="Nova mensagem" style="padding:4px 8px;font-size:14px">+</button>
+      <div id="chat-app" class="chat-app">
+        <!-- LEFT: Priority Inbox -->
+        <div id="chat-list-panel" class="chat-panel-left">
+          <div class="chat-inbox-header">
+            <div class="chat-inbox-title">Inbox</div>
+            <button class="chat-btn-new" onclick="window.chatNewMessage()" title="Nova conversa">+</button>
           </div>
-          <div style="padding:8px 12px;display:flex;gap:6px">
-            <button class="fchip fchip-on" onclick="window.chatFilterChannel('all',this)" data-ch="all">Todos</button>
-            <button class="fchip" onclick="window.chatFilterChannel('whatsapp',this)" data-ch="whatsapp">WhatsApp</button>
-            <button class="fchip" onclick="window.chatFilterChannel('instagram',this)" data-ch="instagram">Instagram</button>
+          <div class="chat-inbox-search">
+            <input id="chat-search" class="chat-search-input" placeholder="Buscar conversa..." oninput="window.chatFilterConversations(this.value)">
           </div>
-          <div id="chat-conversations" style="flex:1;overflow-y:auto;padding:4px 0"></div>
+          <div class="chat-inbox-filters">
+            <button class="chat-filter on" onclick="window.chatFilterChannel('all',this)" data-ch="all">Todos</button>
+            <button class="chat-filter" onclick="window.chatFilterChannel('whatsapp',this)" data-ch="whatsapp">WA</button>
+            <button class="chat-filter" onclick="window.chatFilterChannel('instagram',this)" data-ch="instagram">IG</button>
+            <button class="chat-filter" onclick="window.chatFilterChannel('priority',this)" data-ch="priority">SLA</button>
+          </div>
+          <div id="chat-conversations" class="chat-conv-list"></div>
+          <div class="chat-inbox-stats" id="chat-inbox-stats"></div>
         </div>
-        <div id="chat-main-panel" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
-          <div id="chat-header" style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;min-height:56px">
-            <div id="chat-header-info" style="flex:1">
-              <div style="font-weight:600;font-size:14px" id="chat-header-name">Selecione uma conversa</div>
-              <div style="font-size:11px;color:var(--text2)" id="chat-header-meta"></div>
+        <!-- CENTER: Thread + Brain -->
+        <div id="chat-main-panel" class="chat-panel-center">
+          <div id="chat-header" class="chat-header">
+            <button class="chat-back-btn" onclick="window.chatBack()" title="Voltar">&#8592;</button>
+            <div class="chat-header-info">
+              <div class="chat-header-name" id="chat-header-name">Selecione uma conversa</div>
+              <div class="chat-header-meta" id="chat-header-meta"></div>
             </div>
-            <div id="chat-header-actions" style="display:flex;gap:6px"></div>
+            <div class="chat-header-tags" id="chat-header-tags"></div>
+            <div class="chat-header-actions">
+              <button class="chat-btn-icon" onclick="window.chatHandoff()" title="Handoff para AE">&#9889;</button>
+              <button class="chat-btn-icon" onclick="window.chatToggleContext()" title="Deal Context">&#9776;</button>
+            </div>
           </div>
-          <div id="chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px"></div>
-          <div id="chat-input-area" style="padding:12px 16px;border-top:1px solid var(--border);display:none">
-            <div style="display:flex;gap:8px;align-items:flex-end">
-              <textarea id="chat-input" rows="1" placeholder="Digite sua mensagem..." style="flex:1;resize:none;padding:10px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;max-height:120px;overflow-y:auto" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();window.chatSend()}"></textarea>
-              <button class="btn bp" onclick="window.chatSend()" style="border-radius:50%;width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center" title="Enviar">&#10148;</button>
+          <!-- SLA Timer Bar -->
+          <div class="chat-sla-bar" id="chat-sla-bar" style="display:none">
+            <div class="chat-sla-icon">&#9200;</div>
+            <div class="chat-sla-text" id="chat-sla-text">SLA: responda em 5 min</div>
+            <div class="chat-sla-timer" id="chat-sla-timer"></div>
+            <div class="chat-sla-fill" id="chat-sla-fill"></div>
+          </div>
+          <!-- Messages Thread -->
+          <div id="chat-messages" class="chat-thread"></div>
+          <!-- Analysis Bar (real-time) -->
+          <div id="chat-analysis" class="chat-analysis" style="display:none"></div>
+          <!-- Suggestion Bar -->
+          <div id="chat-suggestion" class="chat-suggestion" style="display:none"></div>
+          <!-- Input Area -->
+          <div id="chat-input-area" class="chat-input-wrap" style="display:none">
+            <div class="chat-input-row">
+              <textarea id="chat-input" class="chat-textarea" rows="1" placeholder="Digite sua mensagem..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();window.chatSend()}" oninput="window.chatAnalyzeRealtime(this.value)"></textarea>
+              <button class="chat-btn-send" onclick="window.chatSend()" title="Enviar">&#10148;</button>
             </div>
-            <div style="display:flex;gap:8px;margin-top:6px;padding:0 4px">
-              <button class="btn bs" onclick="window.chatAttach()" style="font-size:11px;padding:2px 8px">Anexar</button>
-              <button class="btn bs" onclick="window.chatInsertCopy()" style="font-size:11px;padding:2px 8px">Inserir Copy</button>
-              <button class="btn bs" onclick="window.chatUseTemplate()" style="font-size:11px;padding:2px 8px">Template</button>
-              <span id="chat-typing-indicator" style="font-size:11px;color:var(--accent);margin-left:auto;display:none">digitando...</span>
+            <div class="chat-input-actions">
+              <button class="chat-btn-action" onclick="window.chatRewrite()">Reescrever</button>
+              <button class="chat-btn-action" onclick="window.chatInsertCopy()">Inserir Copy</button>
+              <button class="chat-btn-action" onclick="window.chatUseTemplate()">Template</button>
+              <span class="chat-impact-badge" id="chat-impact-badge" style="display:none">Impact: 0.00</span>
+              <span id="chat-typing-indicator" class="chat-typing" style="display:none">digitando...</span>
             </div>
+          </div>
+        </div>
+        <!-- RIGHT: Deal Context Sidebar (3-C) -->
+        <div id="chat-context-panel" class="chat-panel-right" style="display:none">
+          <div class="chat-ctx-header">
+            <span>Deal Context</span>
+            <button class="chat-btn-icon" onclick="window.chatToggleContext()" title="Fechar">&#10005;</button>
+          </div>
+          <div id="chat-ctx-deal" class="chat-ctx-section">
+            <div class="chat-ctx-label">Deal</div>
+            <div id="chat-ctx-deal-name" class="chat-ctx-value">--</div>
+            <div id="chat-ctx-deal-value" class="chat-ctx-sub">--</div>
+          </div>
+          <div class="chat-ctx-section">
+            <div class="chat-ctx-label">Pipeline</div>
+            <div id="chat-ctx-etapa" class="chat-ctx-value">--</div>
+            <div id="chat-ctx-fase" class="chat-ctx-sub">--</div>
+          </div>
+          <div class="chat-ctx-section">
+            <div class="chat-ctx-label">Timing</div>
+            <div id="chat-ctx-aging" class="chat-ctx-value">--</div>
+            <div id="chat-ctx-cadence" class="chat-ctx-sub">--</div>
+          </div>
+          <div class="chat-ctx-section">
+            <div class="chat-ctx-label">Persona</div>
+            <div id="chat-ctx-persona" class="chat-ctx-value">--</div>
+            <div id="chat-ctx-framework" class="chat-ctx-sub">--</div>
+          </div>
+          <div class="chat-ctx-section">
+            <div class="chat-ctx-label">Forecast</div>
+            <div id="chat-ctx-forecast" class="chat-ctx-value">--</div>
+            <div id="chat-ctx-trust" class="chat-ctx-sub">--</div>
+          </div>
+          <div class="chat-ctx-section">
+            <div class="chat-ctx-label">Sinais</div>
+            <div id="chat-ctx-signals" class="chat-ctx-signals"></div>
+          </div>
+          <div class="chat-ctx-section">
+            <div class="chat-ctx-label">Chat Intel</div>
+            <div id="chat-ctx-intel" class="chat-ctx-intel"></div>
+          </div>
+          <div class="chat-ctx-actions">
+            <button class="chat-btn-action" onclick="window.chatHandoff()">Gerar Handoff</button>
+            <button class="chat-btn-action" onclick="window.chatGenCopy()">Gerar Copy</button>
           </div>
         </div>
       </div>
@@ -2063,24 +2133,108 @@ function openSettings(section){
 @media(max-width:640px){#settings-panel{flex-direction:column;max-height:96vh}#settings-nav{width:100%;min-width:0;flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid var(--border)}#settings-nav-status{display:none}#settings-body{padding:14px}}
 /* ── COLLAPSIBLE DEAL CARD ── */
 .deal-actions-toggle{display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--t2);cursor:pointer;transition:all .2s ease}.deal-actions-toggle:hover{border-color:var(--accent);color:var(--accent)}.deal-actions-toggle .tgl-chevron{transition:transform .25s ease;display:inline-block}.deal-actions-toggle.open .tgl-chevron{transform:rotate(180deg)}.deal-actions-advanced{display:flex;align-items:center;gap:9px;flex-wrap:wrap;overflow:hidden;max-height:0;opacity:0;transition:max-height .3s ease,opacity .25s ease,margin .2s ease;margin-top:0}.deal-actions-advanced.show{max-height:120px;opacity:1;margin-top:8px}
-/* ── CHAT ── */
-.chat-conv{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--bg3);display:flex;gap:10px;align-items:center;transition:background .15s}
+/* ── CHAT V2 — Textual Revenue Brain (Apple HIG dark) ── */
+.chat-app{display:flex;height:calc(100vh - 56px);gap:0;background:var(--bg)}
+.chat-panel-left{width:300px;min-width:260px;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.chat-panel-center{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.chat-panel-right{width:280px;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;background:var(--bg);padding:0}
+/* Inbox */
+.chat-inbox-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px;border-bottom:1px solid var(--border)}
+.chat-inbox-title{font-size:15px;font-weight:700;letter-spacing:-.3px}
+.chat-btn-new{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.chat-btn-new:hover{border-color:var(--accent);color:var(--accent)}
+.chat-inbox-search{padding:8px 12px}
+.chat-search-input{width:100%;padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;outline:none;transition:border-color .15s}
+.chat-search-input:focus{border-color:var(--accent)}
+.chat-inbox-filters{display:flex;gap:4px;padding:4px 12px 8px}
+.chat-filter{padding:4px 10px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+.chat-filter.on{background:var(--accent);color:#000;border-color:var(--accent)}
+.chat-filter:hover:not(.on){border-color:var(--accent);color:var(--accent)}
+.chat-conv-list{flex:1;overflow-y:auto}
+.chat-inbox-stats{padding:8px 12px;border-top:1px solid var(--border);font-size:10px;color:var(--text3);display:flex;gap:12px}
+/* Conversation items */
+.chat-conv{padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.04);display:flex;gap:10px;align-items:center;transition:background .12s}
 .chat-conv:hover{background:var(--bg2)}
 .chat-conv.active{background:var(--bg3)}
-.chat-conv-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+.chat-conv.sla-warn{border-left:3px solid var(--yellow)}
+.chat-conv.sla-crit{border-left:3px solid var(--red)}
+.chat-conv-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
 .chat-conv-av.wa{background:#25d366;color:#fff}
-.chat-conv-av.ig{background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:#fff}
+.chat-conv-av.ig{background:linear-gradient(135deg,#f09433,#dc2743,#bc1888);color:#fff}
 .chat-conv-body{flex:1;min-width:0}
 .chat-conv-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chat-conv-last{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chat-conv-time{font-size:10px;color:var(--text3);white-space:nowrap}
-.chat-conv-badge{background:var(--accent);color:#fff;font-size:10px;border-radius:10px;padding:1px 6px;min-width:18px;text-align:center}
-.chat-msg{max-width:70%;padding:8px 12px;border-radius:16px;font-size:13px;line-height:1.4;word-wrap:break-word}
-.chat-msg.out{background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
-.chat-msg.in{background:var(--bg3);color:var(--text);align-self:flex-start;border-bottom-left-radius:4px}
-.chat-msg-time{font-size:10px;opacity:.6;margin-top:2px}
-.chat-msg-status{font-size:10px;opacity:.6;margin-left:4px}
-@media(max-width:768px){#chat-list-panel{width:100%!important;min-width:0!important}#chat-main-panel{display:none!important}#chat-app.chat-open #chat-list-panel{display:none!important}#chat-app.chat-open #chat-main-panel{display:flex!important}}
+.chat-conv-preview{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.chat-conv-meta{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
+.chat-conv-time{font-size:10px;color:var(--text3)}
+.chat-conv-badge{background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:10px;padding:1px 6px;min-width:16px;text-align:center}
+.chat-conv-bucket{font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px}
+.chat-conv-bucket.b4{background:var(--red);color:#fff}
+.chat-conv-bucket.b3{background:var(--yellow);color:#000}
+.chat-conv-bucket.b2{background:var(--accent);color:#000}
+.chat-conv-bucket.b1{background:var(--bg3);color:var(--text2)}
+/* Header */
+.chat-header{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);min-height:52px}
+.chat-back-btn{display:none;background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;padding:4px}
+.chat-header-info{flex:1;min-width:0}
+.chat-header-name{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-header-meta{font-size:11px;color:var(--text2);margin-top:1px}
+.chat-header-tags{display:flex;gap:4px;flex-wrap:wrap}
+.chat-btn-icon{background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:all .15s}
+.chat-btn-icon:hover{border-color:var(--accent);color:var(--accent)}
+/* SLA Bar */
+.chat-sla-bar{display:flex;align-items:center;gap:8px;padding:6px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.chat-sla-icon{font-size:14px}
+.chat-sla-text{font-size:11px;font-weight:600;flex:1}
+.chat-sla-timer{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+.chat-sla-fill{position:absolute;bottom:0;left:0;height:2px;background:var(--green);transition:width 1s linear}
+.chat-sla-bar.warn .chat-sla-fill{background:var(--yellow)}
+.chat-sla-bar.crit .chat-sla-fill{background:var(--red)}
+.chat-sla-bar.crit .chat-sla-timer{color:var(--red)}
+/* Thread */
+.chat-thread{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:6px}
+.chat-date-sep{text-align:center;font-size:10px;color:var(--text3);padding:8px 0;font-weight:600}
+.chat-msg-row{display:flex;flex-direction:column}
+.chat-msg-row.out{align-items:flex-end}
+.chat-msg-row.in{align-items:flex-start}
+.chat-msg{max-width:72%;padding:9px 13px;border-radius:18px;font-size:13px;line-height:1.45;word-wrap:break-word}
+.chat-msg.out{background:var(--accent);color:#000;border-bottom-right-radius:4px}
+.chat-msg.in{background:var(--bg3);color:var(--text);border-bottom-left-radius:4px}
+.chat-msg.blocked{background:var(--red);color:#fff;opacity:.7}
+.chat-msg-footer{font-size:10px;color:var(--text3);margin-top:2px;display:flex;gap:4px;align-items:center}
+.chat-msg-status{font-size:10px}
+/* Analysis Bar */
+.chat-analysis{display:flex;flex-wrap:wrap;gap:5px;padding:8px 16px;border-top:1px solid var(--border);background:var(--bg)}
+.chat-tag{padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.3px}
+.chat-tag.ok{background:rgba(52,199,89,.15);color:var(--green)}
+.chat-tag.warn{background:rgba(255,204,0,.15);color:var(--yellow)}
+.chat-tag.danger{background:rgba(255,69,58,.15);color:var(--red)}
+.chat-tag.info{background:rgba(10,132,255,.15);color:var(--accent)}
+/* Suggestion */
+.chat-suggestion{padding:8px 16px;border-top:1px solid var(--border);border-left:3px solid var(--accent);background:var(--bg2);font-size:12px;color:var(--text);line-height:1.4;cursor:pointer;transition:background .12s}
+.chat-suggestion:hover{background:var(--bg3)}
+/* Input */
+.chat-input-wrap{padding:10px 16px;border-top:1px solid var(--border);background:var(--bg)}
+.chat-input-row{display:flex;gap:8px;align-items:flex-end}
+.chat-textarea{flex:1;resize:none;padding:10px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;max-height:120px;overflow-y:auto;outline:none;transition:border-color .15s;font-family:inherit}
+.chat-textarea:focus{border-color:var(--accent)}
+.chat-btn-send{border-radius:50%;width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;background:var(--accent);color:#000;border:none;font-size:16px;cursor:pointer;transition:opacity .15s;flex-shrink:0}
+.chat-btn-send:hover{opacity:.85}
+.chat-input-actions{display:flex;gap:6px;margin-top:6px;align-items:center}
+.chat-btn-action{padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+.chat-btn-action:hover{border-color:var(--accent);color:var(--accent)}
+.chat-impact-badge{margin-left:auto;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(52,199,89,.15);color:var(--green)}
+.chat-typing{font-size:11px;color:var(--accent);margin-left:auto}
+/* Deal Context Sidebar */
+.chat-ctx-header{display:flex;align-items:center;justify-content:space-between;padding:14px 14px 10px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700}
+.chat-ctx-section{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.04)}
+.chat-ctx-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:3px}
+.chat-ctx-value{font-size:13px;font-weight:600}
+.chat-ctx-sub{font-size:11px;color:var(--text2);margin-top:1px}
+.chat-ctx-signals{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.chat-ctx-intel{font-size:11px;color:var(--text2);margin-top:4px}
+.chat-ctx-actions{padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+/* Responsive */
+@media(max-width:768px){.chat-panel-left{width:100%!important;min-width:0!important}.chat-panel-center{display:none!important}.chat-panel-right{display:none!important}.chat-app.chat-open .chat-panel-left{display:none!important}.chat-app.chat-open .chat-panel-center{display:flex!important}.chat-back-btn{display:block!important}}
 </style>
 <div id="settings-panel">
   <div id="settings-nav">
