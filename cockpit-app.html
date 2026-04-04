@@ -54,16 +54,55 @@ if(!window.IS_REMOTE){
 </script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#000000;--bg2:#0d0d0d;--bg3:#1c1c1e;--bg4:#2c2c2e;--border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.14);--accent:#0a84ff;--accent2:#5ac8fa;--adim:rgba(10,132,255,.10);--green:#30d158;--gdim:rgba(48,209,88,.10);--yellow:#ffd60a;--ydim:rgba(255,214,10,.10);--red:#ff453a;--rdim:rgba(255,69,58,.10);--blue:#64d2ff;--bdim:rgba(100,210,255,.10);--clay:#d4956a;--claydim:rgba(212,149,106,.10);--gold:#ffd60a;--golddim:rgba(255,214,10,.10);--text:#f5f5f7;--text2:#86868b;--r:12px;--r2:14px;--font-title:-apple-system,'SF Pro Display','Manrope',Inter,system-ui,sans-serif;--font-body:-apple-system,'SF Pro Text','Manrope',Inter,system-ui,sans-serif;--glass:rgba(255,255,255,.04);--glow:0 0 40px rgba(10,132,255,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.6);--shadow-sm:0 2px 8px rgba(0,0,0,.3);
-/* ── TYPOGRAPHY SYSTEM v1 (lockado) ────────────────────────────── */
---fs-display:28px;--fs-h1:26px;--fs-h2:22px;--fs-h3:16px;--fs-body:13px;--fs-body-sm:12px;--fs-caption:11px;--fs-micro:9px;
+:root{
+/* ── DESIGN SYSTEM v13: The High-Tech Editorial Authority ────── */
+--primary:#ffc174;--primary-tint:#ffb95f;--primary-container:#f59e0b;
+--secondary:#89ceff;--secondary-dim:rgba(137,206,255,.10);--secondary-glow:rgba(137,206,255,.15);
+--tertiary:#56e5a9;--tertiary-dim:rgba(86,229,169,.10);
+/* Surface Tonal Layering */
+--surface:#0e141b;--surface-low:#171c24;--surface-mid:#1b2028;--surface-high:#252a32;--surface-highest:#2e343c;
+/* Legacy aliases */
+--bg:#0e141b;--bg2:#171c24;--bg3:#1b2028;--bg4:#252a32;--bg5:#2e343c;
+/* Borders */
+--outline-variant:#534434;
+--border:rgba(83,68,52,.15);--border2:rgba(83,68,52,.25);--border3:rgba(83,68,52,.35);
+/* Accent aliases */
+--accent:#ffc174;--accent2:#ffb95f;--accent3:#ffd699;
+--adim:rgba(255,193,116,.08);--aglow:rgba(255,193,116,.15);--aborder:rgba(255,193,116,.18);--aborder2:rgba(255,193,116,.30);
+/* Semantic colors */
+--green:#56e5a9;--gdim:rgba(86,229,169,.10);
+--yellow:#ffc174;--ydim:rgba(255,193,116,.10);
+--red:#ef4444;--rdim:rgba(239,68,68,.10);
+--blue:#89ceff;--blue2:#a8dbff;--bdim:rgba(137,206,255,.10);
+--purple:#8b5cf6;--clay:#d8c3ad;--claydim:rgba(216,195,173,.10);
+--gold:#ffc174;--golddim:rgba(255,193,116,.10);
+/* Text */
+--text:#e8e0d6;--on-surface:#e8e0d6;--on-surface-variant:#d8c3ad;--text2:#8a7e72;--text3:#5a5148;
+/* Radius */
+--r:0.375rem;--r2:0.5rem;--r-xl:0.75rem;
+/* Typography */
+--font-display:'Plus Jakarta Sans',Inter,system-ui,sans-serif;
+--font-title:'Plus Jakarta Sans',Inter,system-ui,sans-serif;
+--font-body:'Inter',-apple-system,system-ui,sans-serif;
+/* Glass & Gradient */
+--glass:rgba(255,255,255,.03);--glass-blur:16px;
+--gradient-cta:linear-gradient(135deg,var(--primary),var(--primary-container));
+--glow:0 0 40px rgba(255,193,116,.08);--glow2:0 0 60px rgba(255,193,116,.12);
+--glow-primary:0 0 16px rgba(255,193,116,.25);
+--glow-secondary:0 0 12px rgba(137,206,255,.2);
+/* Shadows */
+--shadow-ambient:0px 24px 48px rgba(0,0,0,.4),0 0 60px rgba(255,193,116,.05);
+--shadow-lg:0 8px 32px rgba(0,0,0,.5);--shadow-sm:0 2px 8px rgba(0,0,0,.3);
+/* ── TYPOGRAPHY SYSTEM v2 ────────────────────────────────────── */
+--fs-display-lg:3.5rem;--fs-display:1.75rem;--fs-h1:1.625rem;--fs-h2:1.375rem;--fs-h3:1rem;
+--fs-body:0.8125rem;--fs-body-sm:0.75rem;--fs-caption:0.6875rem;--fs-micro:0.5625rem;
 --fw-regular:400;--fw-medium:500;--fw-semibold:600;--fw-bold:700;--fw-xbold:800;--fw-black:900;
-/* ── SPACING SYSTEM v1 ──────────────────────────────────────────── */
---gap-xs:4px;--gap-sm:8px;--gap-md:12px;--gap-lg:16px;--gap-xl:18px;--gap-xxl:24px;
---pad-card:12px;--pad-card-lg:16px;--pad-section:14px;--pad-section-lg:18px;
-/* ── LINE HEIGHT SYSTEM v1 ──────────────────────────────────────── */
+/* ── SPACING SYSTEM v2 ───────────────────────────────────────── */
+--gap-xs:4px;--gap-sm:8px;--gap-md:12px;--gap-lg:16px;--gap-xl:20px;--gap-xxl:28px;
+--pad-card:14px;--pad-card-lg:18px;--pad-section:16px;--pad-section-lg:22px;
+/* ── LINE HEIGHT SYSTEM ──────────────────────────────────────── */
 --lh-tight:1.2;--lh-normal:1.4;--lh-body:1.6;}
-body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:var(--fs-body);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{background:var(--surface);color:var(--on-surface);font-family:var(--font-body);height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:var(--fs-body);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;background-image:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(255,193,116,.04) 0%,transparent 70%),radial-gradient(ellipse 40% 30% at 90% 90%,rgba(137,206,255,.03) 0%,transparent 60%)}
 /* ── TYPOGRAPHY CLASSES v1 ──────────────────────────────────────── */
 .t-display{font-size:var(--fs-display);font-weight:var(--fw-xbold);line-height:var(--lh-tight)}
 .t-h1{font-size:var(--fs-h1);font-weight:var(--fw-xbold);line-height:var(--lh-tight)}
