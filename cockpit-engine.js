@@ -3270,29 +3270,6 @@ window.requestElucyCopy = function(deal_id, dealData, targetId, canal){
   if(_origCopy) _origCopy(deal_id, dealData, targetId, canal);
 };
 
-// Correction chat (max 3)
-async function requestCorrection(deal_id,targetId,correctionText,parentRequestId,correctionNumber){
-  if(correctionNumber>=3){
-    if(window.showSyncToast) window.showSyncToast('err','Limite de 3 correcoes atingido.');
-    return;
-  }
-  var sb=_sb(); if(!sb) return;
-  var opId=getOperatorId();
-  var result=await sb.from('cockpit_requests').insert({
-    operator_id:opId, deal_id:deal_id, request_type:'copy', deal_data:{}, status:'pending',
-    parent_request_id:parentRequestId||null,
-    correction_text:correctionText,
-    correction_number:(correctionNumber||0)+1
-  }).select('id').single();
-  if(result.error){
-    if(window.showSyncToast) window.showSyncToast('err','Erro ao enviar correcao.');
-    return;
-  }
-  if(window.showSyncToast) window.showSyncToast('ok','Correcao #'+((correctionNumber||0)+1)+' enviada.');
-  logActivity('correction_requested',deal_id,{n:(correctionNumber||0)+1});
-  saveInteraction(deal_id,'correction',correctionText);
-}
-window.requestCorrection = requestCorrection;
 
 // Patch selectLiveDeal
 var _origSelectLiveDeal = window.selectLiveDeal;
@@ -5406,24 +5383,8 @@ async function calcPerformanceReportV3(periodType, periodKey){
     tasks_per_deal: volume.deals_worked > 0 ? Math.round((tasksCompleted / volume.deals_worked) * 10) / 10 : 0
   };
 
-  // E3 — Economy: custo estimado de IA (cockpit_requests × ~$0.01/req)
-  var aiRequestsCount = 0;
-  var COST_PER_REQ = 0.01; // USD — Edge Function com prompt caching ~$0.01
-  try {
-    var sb2 = window._supabaseClient || (window.getSB && window.getSB());
-    if(sb2){
-      var costRes = await sb2.from('cockpit_requests')
-        .select('id', { count: 'exact', head: true })
-        .eq('operator_email', email)
-        .gte('created_at', monthStart + 'T00:00:00');
-      if(costRes.count != null) aiRequestsCount = costRes.count;
-    }
-  } catch(e){}
-  var e3_economy = {
-    ai_requests: aiRequestsCount,
-    estimated_cost_usd: Math.round(aiRequestsCount * COST_PER_REQ * 100) / 100,
-    cost_per_deal: volume.deals_worked > 0 ? Math.round((aiRequestsCount * COST_PER_REQ / volume.deals_worked) * 1000) / 1000 : 0
-  };
+  // E3 — Economy: removido (cockpit_requests worker descontinuado)
+  var e3_economy = { ai_requests: 0, estimated_cost_usd: 0, cost_per_deal: 0 };
 
   var three_es = {
     e1_effectiveness: e1_effectiveness,

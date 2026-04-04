@@ -19,7 +19,6 @@ window.IS_REMOTE = true;
 // Supabase Secret ANTHROPIC_API_KEY é usada server-side, nunca exposta ao browser
 window.ELUCY_API_KEY = null; // deprecated — kept for backward compat checks
 window.ELUCY_INFERENCE_URL = 'https://tnbbsjvzwleeoqnxtafp.supabase.co/functions/v1/elucy-inference';
-window.ELUCY_SYNC_DEALS_URL = 'https://tnbbsjvzwleeoqnxtafp.supabase.co/functions/v1/sync-deals';
 window.ELUCY_API_MODEL = localStorage.getItem('elucy_api_model') || 'claude-sonnet-4-20250514';
 window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false';
 </script>
@@ -2855,74 +2854,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 });
 
-// ── GROWTH LOOP — Auto-refresh via Edge Function sync-deals (Databricks → Supabase) ──
 
-let _lastSyncAt = null;
-let _syncInProgress = false;
-
-async function callSyncDeals(){
-  if(_syncInProgress) return;
-  const sb=getSB(); if(!sb) return;
-  const {data:{session}}=await sb.auth.getSession();
-  if(!session) return;
-  _syncInProgress=true;
-  if(typeof _syncStatus==='function') _syncStatus('syncing');
-  try{
-    // 1. Chama Edge Function sync-deals — Databricks query + upsert server-side
-    const syncUrl=window.ELUCY_SYNC_DEALS_URL||'https://tnbbsjvzwleeoqnxtafp.supabase.co/functions/v1/sync-deals';
-    const resp=await fetch(syncUrl,{
-      method:'POST',
-      headers:{
-        'content-type':'application/json',
-        'apikey':SUPABASE_ANON,
-        'Authorization':'Bearer '+session.access_token
-      }
-    });
-    if(!resp.ok){
-      const errBody=await resp.text().catch(()=>'');
-      throw new Error('sync-deals '+resp.status+': '+errBody.slice(0,200));
-    }
-    const result=await resp.json();
-    // 2. Recarrega deals do Supabase (agora atualizados pela Edge Function)
-    await loadDealsFromSupabase(session.user.email);
-    _lastSyncAt=Date.now();
-    if(typeof _syncStatus==='function') _syncStatus('ok');
-    const si=document.getElementById('sync-indicator');
-    if(si){ const d=new Date(); si.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2z"/></svg> ' + d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'); }
-    const el=document.getElementById('sbdate');
-    const now=new Date();
-    const ts=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    if(el) el.textContent='Sync concluído: '+ts+(result.synced?' · '+result.synced+' deals':'');
-    showSyncToast('ok','Pipeline sincronizado — '+(result.synced||0)+' deals atualizados.');
-  }catch(err){
-    if(typeof _syncStatus==='function') _syncStatus('error');
-    showSyncToast('err','Falha ao sincronizar: '+err.message);
-  }finally{
-    _syncInProgress=false;
-  }
-}
-
-(function initGrowthLoop(){
-  const STALE_MINUTES=15;
-  const POLL_MS=5*60*1000;
-
-  function isStale(){
-    if(!_lastSyncAt) return true;
-    return (Date.now()-_lastSyncAt)/60000 > STALE_MINUTES;
-  }
-
-  function requestRefresh(){
-    if(!window.IS_REMOTE) return; // modo local usa cockpit-data.js via G4OS
-    if(!isStale()) return;
-    callSyncDeals();
-  }
-
-  // G4OS postMessage listener DESABILITADO — cockpit usa apenas Edge Function
-  // window.addEventListener('message',function(e){ ... });
-
-  setTimeout(requestRefresh,3000);
-  setInterval(requestRefresh,POLL_MS);
-})();
 
 // Cmd+, (Mac) / Ctrl+, (Win) → abrir Settings
 document.addEventListener('keydown',function(e){
@@ -3476,10 +3408,11 @@ function showModalStatus(type,msg){
   el.innerHTML=`<div class="sync-status ${cls}">${msg}</div>`;
 }
 
-// ── REFRESH / DATABRICKS SYNC ────────────────────────────────────────
+// ── REFRESH — recarrega deals do Supabase ──────────────────────────
 
 function refreshPipeline(){
-  callSyncDeals();
+  const email = _currentUser && _currentUser.email;
+  if(email) loadDealsFromSupabase(email);
 }
 
 function promptDbToken(email){
@@ -4442,33 +4375,6 @@ async function requestElucyCopy(deal_id, dealData, targetId, canal){
   }
 }
 
-// Correction flow: max 3 corrections per original request
-async function requestCorrection(originalRequestId, deal_id, targetId, correctionText, correctionNumber){
-  if(correctionNumber>3){
-    showSyncToast('err','Limite de 3 correcoes atingido para este conteudo.');
-    return;
-  }
-  const sb=getSB();
-  const email=_currentUser&&_currentUser.email;
-  if(!sb||!email) return;
-
-  const {data,error}=await sb.from('cockpit_requests').insert({
-    operator_id: email,
-    deal_id: deal_id,
-    request_type: 'copy',
-    parent_request_id: originalRequestId,
-    correction_text: correctionText,
-    correction_number: correctionNumber,
-    status: 'pending'
-  }).select().single();
-  if(error){
-    showSyncToast('err','Erro ao solicitar correcao.');
-    return;
-  }
-  if(data) _pendingRequests[data.id]={targetId, deal_id, type:'copy'};
-  logActivity('correction_requested', deal_id, {correction_number: correctionNumber});
-  showSyncToast('ok','Correcao #'+correctionNumber+' enviada. Aguarde...');
-}
 
 // Activity logging
 async function logActivity(activityType, dealId, metadata){
@@ -4575,21 +4481,6 @@ REGRAS: Dados BR prioritários. Cite fonte+ano. Marque confiança [Alta]/[Média
       }
     }
 
-    // ── FALLBACK: Supabase worker queue ──
-    initRealtimeSubscription();
-    const {data,error}=await sb.from('cockpit_requests').insert({
-      operator_id: email,
-      deal_id: deal.deal_id||'_ba_'+id,
-      request_type: 'analyze',
-      deal_data: {...deal, _business_analysis: true, _ba_prompt: prompt},
-      status: 'pending'
-    }).select().single();
-    if(error){
-      baEl.innerHTML='<div class="ba-h"><span class="ba-badge">ERRO</span><span class="ba-htitle">Análise de Mercado</span></div><div class="ba-b">'+escHtml(error.message)+'</div>';
-      return;
-    }
-    if(data) _pendingRequests[data.id]={targetId:id, deal_id:deal.deal_id, type:'business_analysis'};
-    logActivity('business_analysis_requested', deal.deal_id);
   } else {
     const payload={type:'g4os:elucy:analyze',deal_id:deal.deal_id,deal_data:{...deal,_business_analysis:true,_ba_prompt:prompt},target_id:id};
     try{window.parent.postMessage(payload,'*');}catch(e){}
@@ -4766,22 +4657,6 @@ async function requestNotaCRM(id,btnEl){
       }
     }
 
-    // ── FALLBACK: Supabase worker queue ──
-    initRealtimeSubscription();
-    const {data,error}=await sb.from('cockpit_requests').insert({
-      operator_id: email,
-      deal_id: String(deal.deal_id),
-      request_type: 'note',
-      deal_data: deal,
-      status: 'pending'
-    }).select().single();
-    if(error){
-      notaEl.innerHTML='<div class="ba-h"><span class="ba-badge" style="background:var(--rdim);color:var(--red)">ERRO</span><span class="ba-htitle">Nota CRM</span></div><div class="ba-b">'+escHtml(error.message)+'</div>';
-      return;
-    }
-    if(data) _pendingRequests[data.id]={targetId:id, deal_id:deal.deal_id, type:'note'};
-    logActivity('note_requested', deal.deal_id, {});
-    showSyncToast('ok','Nota de qualificação solicitada...');
   }
 }
 
@@ -5328,40 +5203,6 @@ async function requestConvEnrichment(id){
         return;
       }
     }catch(e){console.warn('conv enrichment API error:',e);}
-  }
-  // Fallback: enfileirar no worker
-  try{
-    const waChat=document.getElementById('wa-chat-'+id);
-    const convText=waChat?waChat.innerText:'';
-    const reqId='conv_'+Date.now();
-    await sb.from('cockpit_requests').insert([{
-      operator_id: email,
-      deal_id: String(deal.deal_id),
-      request_type: 'conv_enrichment',
-      status: 'pending',
-      deal_data: {
-        ...deal,
-        conv_text: convText,
-        request_id: reqId
-      }
-    }]);
-    if(body) body.innerHTML='<div class="conv-enrich-loading">Enviado para processamento (~2min). Resultado aparecerá aqui via Realtime.</div>';
-    showSyncToast('ok','Extração de sinais enfileirada.');
-    logActivity('conv_enrichment_queued', deal.deal_id);
-    // Ouvir resposta via Realtime
-    const rtChan=sb.channel('conv-enrich-'+id+'-'+Date.now());
-    rtChan.on('postgres_changes',{event:'INSERT',schema:'public',table:'cockpit_responses',filter:'deal_id=eq.'+String(deal.deal_id)},
-      (payload)=>{
-        const d=payload.new;
-        if(d.request_type==='conv_enrichment'&&d.status==='done'){
-          renderConvSignals(id, d.output||'');
-          rtChan.unsubscribe();
-        }
-      }
-    ).subscribe();
-  }catch(e){
-    if(body) body.innerHTML='<div style="font-size:11px;color:var(--red)">Erro: '+escHtml(e.message)+'</div>';
-    showSyncToast('err','Erro ao enfileirar extração: '+e.message);
   }
 }
 
@@ -6824,17 +6665,7 @@ function dmSendToCRM(){
   if(window.showSyncToast) showSyncToast('ok','Nota enviada ao CRM');
 }
 function dmRequestElucy(){
-  const btn=document.getElementById('dm-btn-request');
-  if(btn) btn.disabled=true;
-  if(window.showSyncToast) showSyncToast('ok','Analise ELUCI solicitada...');
-  // Use cockpit_requests via engine
-  const sb=window.getSB?window.getSB():null;
-  if(sb&&window.getOperatorId){
-    sb.from('cockpit_requests').insert({
-      operator_id:window.getOperatorId(),deal_id:'dm-session-'+Date.now(),
-      request_type:'analyze',deal_data:{source:'dm_war_room'},status:'pending'
-    }).then(()=>{if(btn) btn.disabled=false;});
-  }
+  if(window.showSyncToast) showSyncToast('ok','Analise ELUCI: selecione um deal no pipeline e use o botão Analisar.');
 }
 // Populate DM insights when a deal is selected from pipeline
 function dmLoadDealInsights(d){
