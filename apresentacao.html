@@ -972,6 +972,8 @@
     <li><a href="#sistema" data-section="sistema">Sistema</a></li>
     <li><a href="#perfis" data-section="perfis">Perfis</a></li>
     <li><a href="#frameworks" data-section="frameworks">Frameworks</a></li>
+    <li><a href="#mcps" data-section="mcps">MCPs</a></li>
+    <li><a href="#skills" data-section="skills">Skills</a></li>
     <li><a href="#sinais" data-section="sinais">Sinais</a></li>
     <li><a href="#guardrails" data-section="guardrails">Governanca</a></li>
     <li><a href="#cockpit" data-section="cockpit">Cockpit</a></li>
@@ -979,7 +981,7 @@
   </ul>
   <div class="nav-arrows">
     <button class="nav-arrow" id="btnPrev" title="Anterior (←)">&#8592;</button>
-    <span class="nav-counter" id="navCounter">1 / 8</span>
+    <span class="nav-counter" id="navCounter">1 / 10</span>
     <button class="nav-arrow" id="btnNext" title="Proximo (→)">&#8594;</button>
   </div>
 </nav>
@@ -1285,10 +1287,229 @@
 </section>
 
 <!-- ────────────────────────────────────────────────────────── -->
-<!-- 05 SINAIS DE VENDA -->
+<!-- 05 MCPs -->
+<!-- ────────────────────────────────────────────────────────── -->
+<section id="mcps" style="background: var(--black);">
+  <div class="slide-num">05 / 10</div>
+  <div class="eyebrow">Camada de Inteligencia</div>
+  <h2>17 MCPs.<br><span class="gold">O cerebro semantico</span><br>do sistema.</h2>
+  <p class="section-desc">Os MCPs nao sao prompts. Sao arquivos de conhecimento estruturado que o sistema consulta antes de qualquer output — definindo regras, limites, personas e protocolos com precisao cirurgica.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:1000px;">
+
+    <!-- COLUNA ESQUERDA: hierarquia + nucleares -->
+    <div>
+      <div class="eyebrow" style="margin-bottom:12px;">Hierarquia de Autoridade</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:28px;">
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.3);border-radius:4px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:var(--gold);letter-spacing:0.12em;width:60px;flex-shrink:0;">MASTER</div>
+          <div><div style="font-size:13px;font-weight:600;color:var(--white);">eluci-core.md</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Regras absolutas do sistema. Nenhum outro MCP pode contradize-lo.</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:4px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:var(--builder);letter-spacing:0.12em;width:60px;flex-shrink:0;">L2</div>
+          <div><div style="font-size:13px;font-weight:600;color:var(--white);">g4-revops-blueprint.md</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">6 dimensoes de taxonomia. D1–D6. Vocabulario operacional do pipeline.</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:4px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:var(--executor);letter-spacing:0.12em;width:60px;flex-shrink:0;">L3</div>
+          <div><div style="font-size:13px;font-weight:600;color:var(--white);">elucy-system-brain.md</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Logica de decisao, roteamento de persona e protocolo de execucao.</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:4px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:var(--muted2);letter-spacing:0.12em;width:60px;flex-shrink:0;">L4</div>
+          <div><div style="font-size:13px;font-weight:600;color:var(--white);">output-schema.md</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Schema de output. Garante nota CRM zero-alucinacao em todos os canais.</div></div>
+        </div>
+      </div>
+
+      <div class="eyebrow" style="margin-bottom:12px;">MCPs de Governanca</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="arch-layer" style="padding:12px 16px;">
+          <div class="arch-layer-num" style="width:60px;">iron-dome</div>
+          <div class="arch-layer-desc">6 kill switches ativos. Bloqueia framework errado, tier incompativel, dados inventados e promessas sem base.</div>
+          <div class="arch-layer-tag tag-data">Guard</div>
+        </div>
+        <div class="arch-layer" style="padding:12px 16px;">
+          <div class="arch-layer-num" style="width:60px;">black-box</div>
+          <div class="arch-layer-desc">Define o que NUNCA e exposto ao lead: ICP, tier, DQI, score, frameworks, metodologias internas.</div>
+          <div class="arch-layer-tag tag-data">Guard</div>
+        </div>
+        <div class="arch-layer" style="padding:12px 16px;">
+          <div class="arch-layer-num" style="width:60px;">dqi-core</div>
+          <div class="arch-layer-desc">Pentagon Score: ICP Fit + Frame Integrity + State Timing + Ecosystem Protection + Data Density. 0–100 cada.</div>
+          <div class="arch-layer-tag tag-mcp">Metric</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUNA DIREITA: MCPs operacionais -->
+    <div>
+      <div class="eyebrow" style="margin-bottom:12px;">MCPs Operacionais</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="card" style="padding:14px 16px;border-left:2px solid var(--gold);">
+          <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:4px;">titan-challenger</div>
+          <p style="font-size:11px;margin:0;">Protocolo Challenger completo para CEOs enterprise. Teach, Tailor, Take Control.</p>
+        </div>
+        <div class="card" style="padding:14px 16px;border-left:2px solid var(--builder);">
+          <div style="font-size:12px;font-weight:700;color:var(--builder);margin-bottom:4px;">builder-spiced</div>
+          <p style="font-size:11px;margin:0;">SPICED para mid-market. Speed to Lead, Critical Event, Decision mapping.</p>
+        </div>
+        <div class="card" style="padding:14px 16px;border-left:2px solid var(--executor);">
+          <div style="font-size:12px;font-weight:700;color:var(--executor);margin-bottom:4px;">executor-spin</div>
+          <p style="font-size:11px;margin:0;">SPIN + Champion Selling. Armamento do Executor para venda interna ao CEO.</p>
+        </div>
+        <div class="card" style="padding:14px 16px;border-left:2px solid var(--green);">
+          <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:4px;">sinais-venda</div>
+          <p style="font-size:11px;margin:0;">10 sinais com pesos. BUY (1.0), URGENCY (0.95), RISK (-0.9), STALL (-0.7).</p>
+        </div>
+        <div class="card" style="padding:14px 16px;border-left:2px solid var(--gold);">
+          <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:4px;">playbooks</div>
+          <p style="font-size:11px;margin:0;">Perfect Storm, Late-Stage Recovery, Ghost, FUP Founder DM, Downsell.</p>
+        </div>
+        <div class="card" style="padding:14px 16px;border-left:2px solid var(--builder);">
+          <div style="font-size:12px;font-weight:700;color:var(--builder);margin-bottom:4px;">social-dm</div>
+          <p style="font-size:11px;margin:0;">3 founder modes: Tallis, Nardon, Alfredo. Tom, buzz, canal e limite de palavras.</p>
+        </div>
+        <div class="card" style="padding:14px 16px;border-left:2px solid var(--executor);">
+          <div style="font-size:12px;font-weight:700;color:var(--executor);margin-bottom:4px;">coaching-log</div>
+          <p style="font-size:11px;margin:0;">Erros recorrentes por operador. Padrao de drop por etapa. Melhoria continua.</p>
+        </div>
+        <div class="card" style="padding:14px 16px;border-left:2px solid var(--muted2);">
+          <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px;">patterns.md</div>
+          <p style="font-size:11px;margin:0;">Padroes de conversao e churn acumulados. O sistema aprende a cada ciclo.</p>
+        </div>
+        <div class="card" style="padding:14px 16px;border-left:2px solid var(--gold);">
+          <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:4px;">segmentos</div>
+          <p style="font-size:11px;margin:0;">10 grupos de receita (D3). Linha vigente (D4). Regras de bloqueio por produto.</p>
+        </div>
+        <div class="card" style="padding:14px 16px;border-left:2px solid var(--green);">
+          <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:4px;">beg-interceptor</div>
+          <p style="font-size:11px;margin:0;">Valida Budget, Engajamento e Goal antes de qualquer output. Gate obrigatorio.</p>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;padding:16px 20px;background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.15);border-radius:4px;">
+        <div style="font-size:12px;color:var(--muted);line-height:1.6;">
+          <span style="color:var(--gold);font-weight:600;">Regra de precedencia:</span> eluci-core &gt; blueprint &gt; system-brain &gt; MCP especifico &gt; output-schema. Conflito = MCP de maior hierarquia vence sempre.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<!-- 06 SKILLS -->
+<!-- ────────────────────────────────────────────────────────── -->
+<section id="skills" style="background: var(--dark);">
+  <div class="slide-num">06 / 10</div>
+  <div class="eyebrow">Camada de Execucao</div>
+  <h2>17 Skills.<br><span class="gold">Acao direta,</span><br>zero teoria.</h2>
+  <p class="section-desc">As skills nao explicam o que fazer — elas fazem. Cada skill e um protocolo de execucao completo: detecta contexto, aplica o framework correto e entrega o output exato para o canal certo.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;max-width:1100px;">
+
+    <!-- CLUSTER SDR PIPELINE -->
+    <div>
+      <div class="eyebrow" style="margin-bottom:12px;color:var(--gold);">SDR Pipeline</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="card" style="padding:16px 18px;border-left:3px solid var(--gold);">
+          <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:6px;">/qualificar-lead</div>
+          <p style="font-size:11px;margin:0;line-height:1.5;">Entry point do pipeline. Detecta persona, carrega Databricks, abre DVL Gate. Output: nota CRM + proximo passo exato.</p>
+        </div>
+        <div class="card" style="padding:16px 18px;border-left:3px solid var(--gold);">
+          <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:6px;">/gerar-nota-lead</div>
+          <p style="font-size:11px;margin:0;line-height:1.5;">Nota CRM zero-alucinacao. Campos [NAO DECLARADO] onde nao ha dado confirmado. Nunca inventa.</p>
+        </div>
+        <div class="card" style="padding:16px 18px;border-left:3px solid var(--gold);">
+          <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:6px;">/sinais-lead</div>
+          <p style="font-size:11px;margin:0;line-height:1.5;">Le os 10 sinais do deal. Calcula DVL Score. Identifica Perfect Storm ou Deal in Danger.</p>
+        </div>
+        <div class="card" style="padding:16px 18px;border-left:3px solid var(--gold);">
+          <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:6px;">/hot-handoff</div>
+          <p style="font-size:11px;margin:0;line-height:1.5;">Briefing completo para o Closer. SPICED preenchido, sinais, score, objecoes mapeadas e proximo passo.</p>
+        </div>
+        <div class="card" style="padding:16px 18px;border-left:3px solid var(--gold);">
+          <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:6px;">/estrategia</div>
+          <p style="font-size:11px;margin:0;line-height:1.5;">Estrategia de abordagem por deal. Combina sinais + persona + momento do ciclo para definir proximo passo.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLUSTER FRAMEWORKS -->
+    <div>
+      <div class="eyebrow" style="margin-bottom:12px;color:var(--builder);">Frameworks & Personas</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="card" style="padding:16px 18px;border-left:3px solid var(--titan);">
+          <div style="font-size:12px;font-weight:700;color:var(--titan);margin-bottom:6px;">/challenger-titan</div>
+          <p style="font-size:11px;margin:0;line-height:1.5;">Challenger Sale puro para CEOs &gt;R$10MM. Teach-Tailor-Take Control. Primeira mensagem: insight que provoca.</p>
+        </div>
+        <div class="card" style="padding:16px 18px;border-left:3px solid var(--builder);">
+          <div style="font-size:12px;font-weight:700;color:var(--builder);margin-bottom:6px;">/spin-executor</div>
+          <p style="font-size:11px;margin:0;line-height:1.5;">SPIN + Champion para Diretores/VPs. Arma o Executor com argumento interno. Multi-thread obrigatorio.</p>
+        </div>
+        <div class="card" style="padding:16px 18px;border-left:3px solid var(--builder);">
+          <div style="font-size:12px;font-weight:700;color:var(--builder);margin-bottom:6px;">/social-dm</div>
+          <p style="font-size:11px;margin:0;line-height:1.5;">Copy para DM via LinkedIn/Instagram. 3 modos de founder proxy (Tallis/Nardon/Alfredo). Nunca menciona G4.</p>
+        </div>
+        <div class="card" style="padding:16px 18px;border-left:3px solid var(--executor);">
+          <div style="font-size:12px;font-weight:700;color:var(--executor);margin-bottom:6px;">/analisar-call</div>
+          <p style="font-size:11px;margin:0;line-height:1.5;">Analisa transcript de call. Identifica sinais, gaps de SPICED, objecoes nao tratadas e momento de follow-up.</p>
+        </div>
+        <div class="card" style="padding:16px 18px;border-left:3px solid var(--executor);">
+          <div style="font-size:12px;font-weight:700;color:var(--executor);margin-bottom:6px;">/gav</div>
+          <p style="font-size:11px;margin:0;line-height:1.5;">Painel GAV ao vivo. Realizado vs meta por canal. Consulta Databricks em tempo real. Zero curadoria manual.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLUSTER GOVERNANCA & COACHING -->
+    <div>
+      <div class="eyebrow" style="margin-bottom:12px;color:var(--executor);">Governanca & Coaching</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="card" style="padding:16px 18px;border-left:3px solid var(--red);">
+          <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:6px;">/iron-dome</div>
+          <p style="font-size:11px;margin:0;line-height:1.5;">Auditoria completa do deal. Verifica todos os 6 kill switches. Bloqueia ou aprova antes de qualquer acao critica.</p>
+        </div>
+        <div class="card" style="padding:16px 18px;border-left:3px solid var(--red);">
+          <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:6px;">/downsell-honesto</div>
+          <p style="font-size:11px;margin:0;line-height:1.5;">Tier 3 redirecionado com dignidade. Produto digital correto recomendado. Preserva relacionamento e reputacao.</p>
+        </div>
+        <div class="card" style="padding:16px 18px;border-left:3px solid var(--green);">
+          <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:6px;">/coach-sdr</div>
+          <p style="font-size:11px;margin:0;line-height:1.5;">Coaching baseado em historico real. Identifica padrao de erro recorrente por operador. Feedback calibrado por nivel.</p>
+        </div>
+        <div class="card" style="padding:16px 18px;border-left:3px solid var(--green);">
+          <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:6px;">/analise-mercado</div>
+          <p style="font-size:11px;margin:0;line-height:1.5;">Contexto de mercado para abordagem Challenger. Tendencias do setor do lead. Dado que o Titan nao tem.</p>
+        </div>
+        <div class="card" style="padding:16px 18px;border-left:3px solid var(--muted2);">
+          <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;">/elucy (orchestrator)</div>
+          <p style="font-size:11px;margin:0;line-height:1.5;">Ponto de entrada unico. Detecta intencao, identifica role do operador e roteia para a skill correta automaticamente.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="margin-top:32px;max-width:1100px;display:flex;gap:16px;align-items:stretch;">
+    <div style="flex:1;padding:20px 24px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:4px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">Principio de Design</div>
+      <p style="font-size:13px;color:var(--muted);line-height:1.6;margin:0;">Nenhuma skill aceita input ambiguo. Todas exigem deal_id, email ou empresa antes de executar. O DVL Gate e sempre o primeiro passo — sem contexto confirmado, sem output.</p>
+    </div>
+    <div style="flex:1;padding:20px 24px;background:rgba(79,130,217,0.06);border:1px solid rgba(79,130,217,0.2);border-radius:4px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--builder);margin-bottom:8px;">Multi-Role</div>
+      <p style="font-size:13px;color:var(--muted);line-height:1.6;margin:0;">As mesmas skills operam para SDR, Closer, CS, CX e Account Manager. O sistema detecta o role automaticamente via contexto e adapta o output — tom, profundidade e proximo passo.</p>
+    </div>
+    <div style="flex:1;padding:20px 24px;background:rgba(123,94,167,0.06);border:1px solid rgba(123,94,167,0.2);border-radius:4px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--executor);margin-bottom:8px;">Sem Alucinacao</div>
+      <p style="font-size:13px;color:var(--muted);line-height:1.6;margin:0;">Todas as skills consultam o output-schema.md antes de gerar qualquer texto para lead ou CRM. Campos sem dado real = [NAO DECLARADO]. Proibido inventar contexto, urgencia ou escassez.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<!-- 07 SINAIS DE VENDA -->
 <!-- ────────────────────────────────────────────────────────── -->
 <section id="sinais" style="background: var(--black);">
-  <div class="slide-num">05 / 08</div>
+  <div class="slide-num">07 / 10</div>
   <div class="eyebrow">Sinais de Venda</div>
   <h2>O sistema le o que<br><span class="gold">o lead nao diz.</span></h2>
   <p class="section-desc">10 sinais monitorados continuamente. Cada silencio, cada resposta, cada atraso e dado. O Delta mede a variacao de informacao util entre interacoes.</p>
@@ -1374,7 +1595,7 @@
 <!-- 06 GUARDRAILS & GOVERNANÇA -->
 <!-- ────────────────────────────────────────────────────────── -->
 <section id="guardrails" style="background: var(--dark);">
-  <div class="slide-num">06 / 08</div>
+  <div class="slide-num">08 / 10</div>
   <div class="eyebrow">Governanca — Iron Dome</div>
   <h2>O sistema que<br><span class="gold">protege o ecossistema.</span></h2>
   <p class="section-desc">
@@ -1439,7 +1660,7 @@
 <!-- 07 COCKPIT -->
 <!-- ────────────────────────────────────────────────────────── -->
 <section id="cockpit" style="background: var(--black);">
-  <div class="slide-num">07 / 08</div>
+  <div class="slide-num">09 / 10</div>
   <div class="eyebrow">Elucy Cockpit</div>
   <h2>O painel de comando<br><span class="gold">do operador.</span></h2>
   <p class="section-desc">
@@ -1708,7 +1929,7 @@
 <section id="closing">
   <div class="hero-bg"></div>
   <div class="hero-grid" style="opacity: 0.15;"></div>
-  <div class="slide-num" style="top: 80px; right: 80px; position: absolute;">08 / 08</div>
+  <div class="slide-num" style="top: 80px; right: 80px; position: absolute;">10 / 10</div>
 
   <div style="position: relative; z-index: 1; text-align: center; max-width: 700px;">
     <div class="closing-logo">ELUCY</div>
@@ -1761,7 +1982,7 @@
 
 <script>
 (function() {
-  const SECTIONS = ['hero','sistema','perfis','frameworks','sinais','guardrails','cockpit','closing'];
+  const SECTIONS = ['hero','sistema','perfis','frameworks','mcps','skills','sinais','guardrails','cockpit','closing'];
   let current = 0;
 
   function goTo(idx) {
