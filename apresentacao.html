@@ -843,6 +843,11 @@
   .block-text { font-size: 13px; color: var(--muted); }
   .block-text strong { color: var(--red); }
 
+  /* ── COCKPIT PANELS ── */
+  .cockpit-panel { animation: fadeSlide 0.25s ease; }
+  .tab-item { cursor: pointer; transition: background 0.15s, color 0.15s; }
+  .tab-item:hover { color: var(--gold); }
+
   /* ── NAV ACTIVE ── */
   .nav-links a.active { color: var(--gold); }
 
@@ -1441,111 +1446,260 @@
     Frontend visual do Elucy — pipeline split, ELUCI REPORT por deal, gerador de copy calibrado, DVL Gate, menu contextual, gamificacao e Chat nativo com WhatsApp e Instagram.
   </p>
 
-  <div class="cockpit-tabs">
-    <div class="tab-item active">Home</div>
-    <div class="tab-item">Pipeline</div>
-    <div class="tab-item">Tasks</div>
-    <div class="tab-item">Reports</div>
-    <div class="tab-item">Pre-Vendas</div>
-    <div class="tab-item">Intel</div>
-    <div class="tab-item">Playbooks</div>
-    <div class="tab-item">Chat</div>
+  <div class="cockpit-tabs" id="cockpitTabs">
+    <div class="tab-item active" data-tab="home">Home</div>
+    <div class="tab-item" data-tab="pipeline">Pipeline</div>
+    <div class="tab-item" data-tab="tasks">Tasks</div>
+    <div class="tab-item" data-tab="reports">Reports</div>
+    <div class="tab-item" data-tab="prevendas">Pre-Vendas</div>
+    <div class="tab-item" data-tab="intel">Intel</div>
+    <div class="tab-item" data-tab="playbooks">Playbooks</div>
+    <div class="tab-item" data-tab="chat">Chat</div>
   </div>
 
-  <div class="grid-2" style="max-width: 920px; gap: 24px;">
-    <div>
-      <h3 style="margin-bottom: 20px;">DVL Gate — Dynamic Validation Layer</h3>
-      <div class="guardrail-list" style="gap: 10px;">
-        <div class="step-row">
-          <div class="step-n">01</div>
-          <div class="step-content">
-            <h4>Deal Detector</h4>
-            <p>Regex detecta deal_id / email / empresa. Carrega contexto Databricks automaticamente antes de qualquer acao.</p>
-          </div>
-        </div>
-        <div class="step-row">
-          <div class="step-n">02</div>
-          <div class="step-content">
-            <h4>DVL Gate</h4>
-            <p>Renderiza form com dados CRM pre-preenchidos. Operador confirma ou edita antes de qualquer output ser gerado.</p>
-          </div>
-        </div>
-        <div class="step-row">
-          <div class="step-n">03</div>
-          <div class="step-content">
-            <h4>DVL Score + Temperatura</h4>
-            <p>Score 0–100 calculado por sinais positivos e penalidades. Exibido em cada form. Incrementa SDR Progress Score.</p>
-          </div>
-        </div>
-        <div class="step-row">
-          <div class="step-n">04</div>
-          <div class="step-content">
-            <h4>Gamificacao</h4>
-            <p>5 niveis (Recruta to Arquiteto de Receita), 8 badges, streak de validacoes consecutivas. Qualidade vira jogo.</p>
-          </div>
+  <!-- TAB: HOME -->
+  <div class="cockpit-panel" id="tab-home" style="max-width:920px;">
+    <div class="grid-2" style="gap:24px;">
+      <div>
+        <h3 style="margin-bottom:20px;">DVL Gate — Dynamic Validation Layer</h3>
+        <div class="guardrail-list" style="gap:10px;">
+          <div class="step-row"><div class="step-n">01</div><div class="step-content"><h4>Deal Detector</h4><p>Regex detecta deal_id / email / empresa. Carrega contexto Databricks automaticamente antes de qualquer acao.</p></div></div>
+          <div class="step-row"><div class="step-n">02</div><div class="step-content"><h4>DVL Gate</h4><p>Renderiza form com dados CRM pre-preenchidos. Operador confirma ou edita antes de qualquer output ser gerado.</p></div></div>
+          <div class="step-row"><div class="step-n">03</div><div class="step-content"><h4>DVL Score + Temperatura</h4><p>Score 0–100 calculado por sinais positivos e penalidades. Exibido em cada form. Incrementa SDR Progress Score.</p></div></div>
+          <div class="step-row"><div class="step-n">04</div><div class="step-content"><h4>Gamificacao</h4><p>5 niveis (Recruta to Arquiteto de Receita), 8 badges, streak de validacoes consecutivas. Qualidade vira jogo.</p></div></div>
         </div>
       </div>
-    </div>
-
-    <div>
-      <h3 style="margin-bottom: 20px;">Intelligence Layer — 6 Tipos de Analise</h3>
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-        <div class="card" style="padding: 16px 20px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div style="font-size: 13px; font-weight: 600; color: var(--white);">Pipeline Analytics</div>
-            <div class="pill gold" style="font-size: 10px;">IA</div>
-          </div>
-          <p style="font-size: 12px; margin-top: 4px;">Visao completa do pipeline por etapa, tier e canal.</p>
-        </div>
-        <div class="card" style="padding: 16px 20px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div style="font-size: 13px; font-weight: 600; color: var(--white);">Forecast Deep</div>
-            <div class="pill gold" style="font-size: 10px;">IA</div>
-          </div>
-          <p style="font-size: 12px; margin-top: 4px;">Previsao de receita ponderada por deal_score e sinais.</p>
-        </div>
-        <div class="card" style="padding: 16px 20px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div style="font-size: 13px; font-weight: 600; color: var(--white);">Data Quality Report</div>
-            <div class="pill gold" style="font-size: 10px;">IA</div>
-          </div>
-          <p style="font-size: 12px; margin-top: 4px;">Auditoria de DQI por operador, etapa e periodo.</p>
-        </div>
-        <div class="card" style="padding: 16px 20px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div style="font-size: 13px; font-weight: 600; color: var(--white);">Operator Performance</div>
-            <div class="pill gold" style="font-size: 10px;">IA</div>
-          </div>
-          <p style="font-size: 12px; margin-top: 4px;">Ranking de operadores por qualidade de qualificacao.</p>
-        </div>
-        <div class="card" style="padding: 16px 20px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div style="font-size: 13px; font-weight: 600; color: var(--white);">Copy Optimization</div>
-            <div class="pill gold" style="font-size: 10px;">IA</div>
-          </div>
-          <p style="font-size: 12px; margin-top: 4px;">Analise de performance de copy por canal e founder mode.</p>
+      <div>
+        <h3 style="margin-bottom:20px;">Intelligence Layer — 6 Tipos de Analise</h3>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div class="card" style="padding:16px 20px;"><div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:13px;font-weight:600;color:var(--white);">Pipeline Analytics</div><div class="pill gold" style="font-size:10px;">IA</div></div><p style="font-size:12px;margin-top:4px;">Visao completa do pipeline por etapa, tier e canal.</p></div>
+          <div class="card" style="padding:16px 20px;"><div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:13px;font-weight:600;color:var(--white);">Forecast Deep</div><div class="pill gold" style="font-size:10px;">IA</div></div><p style="font-size:12px;margin-top:4px;">Previsao de receita ponderada por deal_score e sinais.</p></div>
+          <div class="card" style="padding:16px 20px;"><div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:13px;font-weight:600;color:var(--white);">Data Quality Report</div><div class="pill gold" style="font-size:10px;">IA</div></div><p style="font-size:12px;margin-top:4px;">Auditoria de DQI por operador, etapa e periodo.</p></div>
+          <div class="card" style="padding:16px 20px;"><div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:13px;font-weight:600;color:var(--white);">Operator Performance</div><div class="pill gold" style="font-size:10px;">IA</div></div><p style="font-size:12px;margin-top:4px;">Ranking de operadores por qualidade de qualificacao.</p></div>
+          <div class="card" style="padding:16px 20px;"><div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:13px;font-weight:600;color:var(--white);">Copy Optimization</div><div class="pill gold" style="font-size:10px;">IA</div></div><p style="font-size:12px;margin-top:4px;">Analise de performance de copy por canal e founder mode.</p></div>
         </div>
       </div>
     </div>
   </div>
 
-  <div style="margin-top: 40px; padding: 24px 32px; background: var(--card); border: 1px solid var(--border); border-radius: 4px; max-width: 920px;">
-    <div class="eyebrow" style="margin-bottom: 12px;">Social DM — Founder Proxy</div>
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+  <!-- TAB: PIPELINE -->
+  <div class="cockpit-panel" id="tab-pipeline" style="display:none;max-width:920px;">
+    <h3 style="margin-bottom:20px;">Pipeline Split — Visao por Etapa e Tier</h3>
+    <div class="pipeline-steps">
+      <div class="pipe-step"><div class="pipe-num">Etapa 01</div><div class="pipe-name">Primeiro Contato</div><div class="pipe-desc">Lead recebido. Speed to Lead ativado. DVL detecta perfil automaticamente.</div></div>
+      <div class="pipe-step"><div class="pipe-num">Etapa 02</div><div class="pipe-name">Qualificacao</div><div class="pipe-desc">BEG Interceptor ativo. Framework atribuido por persona. SPICED / Challenger / SPIN.</div></div>
+      <div class="pipe-step"><div class="pipe-num">Etapa 03</div><div class="pipe-name">Engajamento</div><div class="pipe-desc">Copy calibrado por founder mode. Sinais monitorados a cada interacao.</div></div>
+      <div class="pipe-step"><div class="pipe-num">Etapa 04</div><div class="pipe-name">Proposta</div><div class="pipe-desc">DVL Score validado. Deal bloqueado se DQI insuficiente. Anti-alucinacao ativo.</div></div>
+      <div class="pipe-step"><div class="pipe-num">Etapa 05</div><div class="pipe-name">Fechamento</div><div class="pipe-desc">Hot Handoff gerado. Nota CRM zero-alucinacao. Tier confirmado para sala correta.</div></div>
+    </div>
+    <div style="margin-top:28px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
+      <div class="score-box"><div class="score-num" style="color:var(--green);">Diamond</div><div class="score-label">&gt; R$ 10MM — Challenger</div></div>
+      <div class="score-box"><div class="score-num" style="color:var(--gold);">Gold</div><div class="score-label">R$ 3–10MM — Challenger / SPICED</div></div>
+      <div class="score-box"><div class="score-num" style="color:var(--builder);">Silver</div><div class="score-label">R$ 1–3MM — SPICED</div></div>
+      <div class="score-box"><div class="score-num" style="color:var(--muted);">Bronze</div><div class="score-label">&lt; R$ 1MM — Downsell automatico</div></div>
+    </div>
+  </div>
+
+  <!-- TAB: TASKS -->
+  <div class="cockpit-panel" id="tab-tasks" style="display:none;max-width:920px;">
+    <h3 style="margin-bottom:20px;">Tasks — Fila de Acoes por Operador</h3>
+    <div class="grid-2" style="gap:24px;">
       <div>
-        <div style="font-size: 14px; font-weight: 700; color: var(--gold); margin-bottom: 6px;">Tallis Mode</div>
-        <p style="font-size: 12px; color: var(--muted);">Minusculo, &lt;10 palavras, sem ponto. Crescimento / escala / time. Buzz nivel 3 — autoridade nativa.</p>
+        <div class="eyebrow" style="margin-bottom:12px;">Tipos de Task</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div class="card" style="padding:16px 20px;border-left:3px solid var(--gold);"><div style="font-size:13px;font-weight:600;color:var(--white);">Follow-up Ativo</div><p style="font-size:12px;margin-top:4px;">Mensagem de re-engajamento calibrada por sinal STALL. Tom por persona. Nunca "oi, viu minha mensagem?".</p></div>
+          <div class="card" style="padding:16px 20px;border-left:3px solid var(--builder);"><div style="font-size:13px;font-weight:600;color:var(--white);">Qualificar Lead</div><p style="font-size:12px;margin-top:4px;">DVL Gate aberto automaticamente. Dados Databricks pre-preenchidos. Operador confirma antes de executar.</p></div>
+          <div class="card" style="padding:16px 20px;border-left:3px solid var(--executor);"><div style="font-size:13px;font-weight:600;color:var(--white);">Multi-Thread</div><p style="font-size:12px;margin-top:4px;">Segundo contato mapeado. Rota CEO identificada. Materiais de enablement gerados para o Executor.</p></div>
+          <div class="card" style="padding:16px 20px;border-left:3px solid var(--green);"><div style="font-size:13px;font-weight:600;color:var(--white);">Hot Handoff</div><p style="font-size:12px;margin-top:4px;">Briefing completo para o Closer. Sinais, score, SPICED preenchido, proximo passo definido.</p></div>
+        </div>
       </div>
       <div>
-        <div style="font-size: 14px; font-weight: 700; color: var(--builder); margin-bottom: 6px;">Nardon Mode</div>
-        <p style="font-size: 12px; color: var(--muted);">Portugues correto, causa-efeito, analitico. Gestao / processos / cultura. Buzz nivel 1 — ancorado em dado ou historia real.</p>
-      </div>
-      <div>
-        <div style="font-size: 14px; font-weight: 700; color: var(--executor); margin-bottom: 6px;">Alfredo Mode</div>
-        <p style="font-size: 12px; color: var(--muted);">Alta energia, pragmatico, foco no numero. Vendas / receita / expansao. Buzz nivel 2 — vocabulario de execucao.</p>
+        <div class="eyebrow" style="margin-bottom:12px;">Gamificacao SDR</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="score-box" style="text-align:left;padding:16px 20px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;font-weight:700;color:var(--gold);">Arquiteto de Receita</span><span class="pill gold">Nivel 5</span></div><p style="font-size:12px;color:var(--muted);margin-top:6px;">DQI medio &gt; 85. 50+ validacoes. 8/8 badges desbloqueados.</p></div>
+          <div class="score-box" style="text-align:left;padding:16px 20px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;font-weight:700;color:var(--white);">Especialista</span><span class="pill">Nivel 4</span></div><p style="font-size:12px;color:var(--muted);margin-top:6px;">DQI medio &gt; 75. 25+ validacoes. 6/8 badges.</p></div>
+          <div class="score-box" style="text-align:left;padding:16px 20px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;font-weight:700;color:var(--white);">Qualificador</span><span class="pill">Nivel 3</span></div><p style="font-size:12px;color:var(--muted);margin-top:6px;">DQI medio &gt; 65. 10+ validacoes. Streak de 5 dias.</p></div>
+          <div class="score-box" style="text-align:left;padding:16px 20px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;font-weight:700;color:var(--muted);">Prospector / Recruta</span><span class="pill">Nivel 1–2</span></div><p style="font-size:12px;color:var(--muted);margin-top:6px;">Primeiras qualificacoes. DVL obrigatorio. Coach ativo.</p></div>
+        </div>
       </div>
     </div>
   </div>
+
+  <!-- TAB: REPORTS -->
+  <div class="cockpit-panel" id="tab-reports" style="display:none;max-width:920px;">
+    <h3 style="margin-bottom:20px;">Reports — Inteligencia de Pipeline</h3>
+    <div class="grid-3" style="gap:16px;">
+      <div class="card" style="border-top:2px solid var(--gold);">
+        <div class="card-num">Relatorio 01</div>
+        <h3 style="font-size:16px;">SDR Daily Brief</h3>
+        <p>Pipeline do dia, tasks pendentes, deals em risco, score de cada operador. Gerado automaticamente todo manha.</p>
+      </div>
+      <div class="card" style="border-top:2px solid var(--builder);">
+        <div class="card-num">Relatorio 02</div>
+        <h3 style="font-size:16px;">Forecast Semanal</h3>
+        <p>Receita ponderada por deal_score e sinais. Separado por tier, canal e operador. Comparativo semana anterior.</p>
+      </div>
+      <div class="card" style="border-top:2px solid var(--executor);">
+        <div class="card-num">Relatorio 03</div>
+        <h3 style="font-size:16px;">DQI Audit</h3>
+        <p>Qualidade de qualificacao por operador. Pentagon Score medio, campos faltantes, taxa de bloqueio por kill switch.</p>
+      </div>
+      <div class="card" style="border-top:2px solid var(--green);">
+        <div class="card-num">Relatorio 04</div>
+        <h3 style="font-size:16px;">Pipeline Velocity</h3>
+        <p>Tempo medio por etapa. Deals travados ha mais de X dias. Gargalos por tier e por operador.</p>
+      </div>
+      <div class="card" style="border-top:2px solid var(--red);">
+        <div class="card-num">Relatorio 05</div>
+        <h3 style="font-size:16px;">Deal in Danger</h3>
+        <p>Sinal STALL + RISK identificados. Late-stage recovery playbook recomendado. Alertas por grau de risco.</p>
+      </div>
+      <div class="card" style="border-top:2px solid var(--gold);">
+        <div class="card-num">Relatorio 06</div>
+        <h3 style="font-size:16px;">Operator Leaderboard</h3>
+        <p>Ranking de SDRs por DQI, conversao, velocidade e badges. Gamificacao visivel para toda a equipe.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: PRE-VENDAS -->
+  <div class="cockpit-panel" id="tab-prevendas" style="display:none;max-width:920px;">
+    <h3 style="margin-bottom:20px;">Pre-Vendas — SDR Pipeline Diario</h3>
+    <div class="grid-2" style="gap:24px;">
+      <div>
+        <div class="eyebrow" style="margin-bottom:12px;">Fluxo de Qualificacao</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div class="arch-layer" style="padding:16px 20px;"><div class="arch-layer-num">Step 1</div><div class="arch-layer-name" style="width:120px;">Lead In</div><div class="arch-layer-desc">Databricks carregado. Persona detectada. Framework atribuido automaticamente.</div></div>
+          <div class="arch-layer" style="padding:16px 20px;"><div class="arch-layer-num">Step 2</div><div class="arch-layer-name" style="width:120px;">BEG Check</div><div class="arch-layer-desc">Budget, Engajamento, Goal validados. Kill switch ativado se Tier &lt; 2 para Imersao.</div></div>
+          <div class="arch-layer" style="padding:16px 20px;"><div class="arch-layer-num">Step 3</div><div class="arch-layer-name" style="width:120px;">DVL Gate</div><div class="arch-layer-desc">Form pre-preenchido para confirmacao. Operador edita e valida. DQI calculado.</div></div>
+          <div class="arch-layer" style="padding:16px 20px;"><div class="arch-layer-num">Step 4</div><div class="arch-layer-name" style="width:120px;">Output</div><div class="arch-layer-desc">Nota CRM, copy para canal, briefing para closer. Zero alucinacao garantido.</div></div>
+        </div>
+      </div>
+      <div>
+        <div class="eyebrow" style="margin-bottom:12px;">Skills Disponiveis</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          <div class="pill gold">/qualificar-lead</div>
+          <div class="pill gold">/challenger-titan</div>
+          <div class="pill gold">/spin-executor</div>
+          <div class="pill gold">/social-dm</div>
+          <div class="pill gold">/hot-handoff</div>
+          <div class="pill gold">/gerar-nota-lead</div>
+          <div class="pill gold">/coach-sdr</div>
+          <div class="pill gold">/sinais-lead</div>
+          <div class="pill gold">/estrategia</div>
+          <div class="pill gold">/iron-dome</div>
+          <div class="pill gold">/downsell-honesto</div>
+          <div class="pill gold">/gav</div>
+        </div>
+        <div class="quote-block" style="margin-top:24px;">
+          <p class="quote-text" style="font-size:15px;">"O SDR nao decide o framework. O sistema decide. O SDR executa com precisao cirurgica."</p>
+          <div class="quote-src">Elucy — Principio de Execucao</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: INTEL -->
+  <div class="cockpit-panel" id="tab-intel" style="display:none;max-width:920px;">
+    <h3 style="margin-bottom:20px;">Intelligence Layer — Analise de Deal com IA</h3>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="guardrail-item" style="border-left-color:var(--gold);">
+        <div class="guardrail-icon">📊</div>
+        <div class="guardrail-content"><h4>Pipeline Analytics</h4><p>Visao completa do pipeline por etapa, tier, canal e operador. Identifica gargalos, compara periodos e aponta onde a velocidade cai.</p></div>
+      </div>
+      <div class="guardrail-item" style="border-left-color:var(--builder);">
+        <div class="guardrail-icon">🔮</div>
+        <div class="guardrail-content"><h4>Forecast Deep</h4><p>Previsao de receita ponderada por deal_score, sinais ativos e historico. Separado por tier e canal. Confiabilidade calculada por DQI medio.</p></div>
+      </div>
+      <div class="guardrail-item" style="border-left-color:var(--executor);">
+        <div class="guardrail-icon">🎯</div>
+        <div class="guardrail-content"><h4>Data Quality Report</h4><p>Auditoria de DQI por operador, etapa e periodo. Pentagon Score detalhado. Campos faltantes identificados. Prioridade de correcao ranqueada.</p></div>
+      </div>
+      <div class="guardrail-item" style="border-left-color:var(--green);">
+        <div class="guardrail-icon">🏆</div>
+        <div class="guardrail-content"><h4>Operator Performance</h4><p>Ranking de SDRs e Closers por qualidade de qualificacao, velocidade de pipeline e taxa de conversao real. DQI como metrica principal.</p></div>
+      </div>
+      <div class="guardrail-item" style="border-left-color:var(--gold);">
+        <div class="guardrail-icon">✍</div>
+        <div class="guardrail-content"><h4>Copy Optimization</h4><p>Analise de performance de copy por canal, persona e founder mode. Identifica padroes de resposta. Recomenda ajuste de tom e estrutura.</p></div>
+      </div>
+      <div class="guardrail-item" style="border-left-color:var(--red);">
+        <div class="guardrail-icon">⚖</div>
+        <div class="guardrail-content"><h4>Deal Comparison</h4><p>Compara dois deals similares para identificar o que diferenciou o resultado. Padrao de sinais, tempo de resposta, framework aplicado.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: PLAYBOOKS -->
+  <div class="cockpit-panel" id="tab-playbooks" style="display:none;max-width:920px;">
+    <h3 style="margin-bottom:20px;">Playbooks — Protocolo por Situacao</h3>
+    <div class="grid-2" style="gap:20px;">
+      <div class="card" style="border-left:3px solid var(--gold);">
+        <div class="card-num">Playbook 01</div>
+        <h3 style="font-size:15px;">Perfect Storm</h3>
+        <p>PAIN + URGENCY + TIMING simultaneos. Abordagem direta ao resultado. Discovery reduzido. Proposta em 48h.</p>
+      </div>
+      <div class="card" style="border-left:3px solid var(--red);">
+        <div class="card-num">Playbook 02</div>
+        <h3 style="font-size:15px;">Late-Stage Recovery</h3>
+        <p>Deal in Danger (STALL + RISK). Mudar abordagem completamente. Reativar com novo angulo de valor. Nunca pressao direta.</p>
+      </div>
+      <div class="card" style="border-left:3px solid var(--builder);">
+        <div class="card-num">Playbook 03</div>
+        <h3 style="font-size:15px;">Ghost Pos-Proposta</h3>
+        <p>Sem resposta apos proposta enviada. Re-engagement com valor novo. Nao "viu minha proposta?". Insight relevante primeiro.</p>
+      </div>
+      <div class="card" style="border-left:3px solid var(--executor);">
+        <div class="card-num">Playbook 04</div>
+        <h3 style="font-size:15px;">Executor to CEO</h3>
+        <p>Multi-thread ativado. Armar o Executor com argumentos internos. Material de enablement gerado. Rota ao CEO mapeada.</p>
+      </div>
+      <div class="card" style="border-left:3px solid var(--green);">
+        <div class="card-num">Playbook 05</div>
+        <h3 style="font-size:15px;">FUP via Founder DM</h3>
+        <p>Founder usa autoridade propria. Tom pessoal, nunca institucional. Cruzar linha_de_receita + proprietario + qualificador.</p>
+      </div>
+      <div class="card" style="border-left:3px solid var(--muted2);">
+        <div class="card-num">Playbook 06</div>
+        <h3 style="font-size:15px;">Downsell Honesto</h3>
+        <p>Tier 3 (&lt;R$250k) redirecionado com dignidade. Produto digital/online recomendado. Preserva relacionamento futuro.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: CHAT -->
+  <div class="cockpit-panel" id="tab-chat" style="display:none;max-width:920px;">
+    <h3 style="margin-bottom:20px;">Chat Nativo — WhatsApp e Instagram</h3>
+    <div class="grid-2" style="gap:24px;">
+      <div>
+        <div class="eyebrow" style="margin-bottom:12px;">Arquitetura do Canal</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div class="arch-layer" style="padding:16px 20px;"><div class="arch-layer-num">Layer 01</div><div class="arch-layer-name" style="width:100px;">Inbox</div><div class="arch-layer-desc">Conversas de WhatsApp e Instagram unificadas. Filtro por canal, status e operador.</div></div>
+          <div class="arch-layer" style="padding:16px 20px;"><div class="arch-layer-num">Layer 02</div><div class="arch-layer-name" style="width:100px;">Contexto</div><div class="arch-layer-desc">Cada conversa carrega deal_id automaticamente. Historico CRM visivel no painel lateral.</div></div>
+          <div class="arch-layer" style="padding:16px 20px;"><div class="arch-layer-num">Layer 03</div><div class="arch-layer-name" style="width:100px;">Elucy Copy</div><div class="arch-layer-desc">Botao "Inserir Copy Elucy" gera mensagem calibrada por persona e canal com um clique.</div></div>
+          <div class="arch-layer" style="padding:16px 20px;"><div class="arch-layer-num">Layer 04</div><div class="arch-layer-name" style="width:100px;">Realtime</div><div class="arch-layer-desc">Supabase Realtime. Novas mensagens chegam sem refresh. Notificacao por deal prioritario.</div></div>
+        </div>
+      </div>
+      <div>
+        <div class="eyebrow" style="margin-bottom:12px;">Social DM — Founder Proxy</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="card" style="padding:16px 20px;border-left:3px solid var(--gold);">
+            <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:6px;">Tallis Mode</div>
+            <p style="font-size:12px;">Minusculo, &lt;10 palavras, sem ponto. Crescimento / escala / time. Buzz nivel 3 — autoridade nativa.</p>
+          </div>
+          <div class="card" style="padding:16px 20px;border-left:3px solid var(--builder);">
+            <div style="font-size:13px;font-weight:700;color:var(--builder);margin-bottom:6px;">Nardon Mode</div>
+            <p style="font-size:12px;">Portugues correto, causa-efeito, analitico. Gestao / processos / cultura. Buzz nivel 1.</p>
+          </div>
+          <div class="card" style="padding:16px 20px;border-left:3px solid var(--executor);">
+            <div style="font-size:13px;font-weight:700;color:var(--executor);margin-bottom:6px;">Alfredo Mode</div>
+            <p style="font-size:12px;">Alta energia, pragmatico, foco no numero. Vendas / receita / expansao. Buzz nivel 2.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </section>
 
 <!-- ────────────────────────────────────────────────────────── -->
@@ -1663,6 +1817,23 @@
   const hash = location.hash.replace('#','');
   const initIdx = SECTIONS.indexOf(hash);
   goTo(initIdx >= 0 ? initIdx : 0);
+
+  // ── COCKPIT TABS ──
+  const cockpitTabs = document.getElementById('cockpitTabs');
+  if (cockpitTabs) {
+    cockpitTabs.addEventListener('click', function(e) {
+      const tab = e.target.closest('.tab-item[data-tab]');
+      if (!tab) return;
+      const tabId = tab.dataset.tab;
+      // update tab active state
+      cockpitTabs.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      // show correct panel
+      document.querySelectorAll('.cockpit-panel').forEach(p => p.style.display = 'none');
+      const panel = document.getElementById('tab-' + tabId);
+      if (panel) { panel.style.display = ''; panel.style.animation = 'none'; panel.offsetHeight; panel.style.animation = ''; }
+    });
+  }
 })();
 </script>
 
