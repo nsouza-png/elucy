@@ -1320,6 +1320,19 @@
       html += '<div style="font-size:11px;color:var(--text2)">Configure em Configurações → Conexões para ver MQL, SAL, CRs, Δt e receita.</div>';
       if (oppSB != null) html += '<div style="margin-top:8px;font-size:12px">OPP Geradas (Supabase): <strong style="color:var(--accent)">' + _fmt(oppSB) + '</strong></div>';
       html += '</div>';
+
+      // ── Volume Diário (Supabase fallback) ──
+      if (daily && daily.days && daily.days.length) {
+        html += '<div class="ch" style="margin-bottom:12px"><div class="ch-t">Volume Diário de Entrada</div>' + renderDailyChart(daily) + '</div>';
+      }
+
+      // ── Tabela de Eficiência (Supabase fallback) ──
+      if (deals && deals.length) {
+        var effData = calcEfficiencyByQualifier(deals);
+        if (effData && effData.rows && effData.rows.length) {
+          html += '<div class="ch" style="margin-bottom:12px"><div class="ch-t">Eficiência por Qualificador</div>' + renderEfficiencyTableWithBenchmark(effData, benchmark) + '</div>';
+        }
+      }
     }
 
     if (profile && profile.wonDeals > 0) {

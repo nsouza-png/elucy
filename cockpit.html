@@ -1508,11 +1508,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
         <div id="rp-daily-chart"><div style="font-size:11px;color:var(--text2);padding:8px">Carregando...</div></div>
       </div>
   </div>
-    <div class="screen" id="screen-prevendas">
-      <div id="screen-reports-v4">
-        <div style="font-size:12px;color:var(--text2);padding:20px;text-align:center">Carregando Pre-Vendas Intelligence...</div>
-      </div>
-    </div>
     <div class="screen" id="screen-intelligence">
       <div style="margin-bottom:16px">
         <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:3px">Inteligência Operacional</div>
@@ -1753,37 +1748,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 let cur=null;
 
-function setScreen(n,el,skipHash){
-  document.querySelectorAll('#ct > .screen').forEach(s=>s.classList.remove('on'));
-  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
-  var ct=document.getElementById('ct'); if(ct) ct.scrollTop=0;
-  const screenMap={home:'screen-home',pipeline:'screen-pipeline',tasks:'screen-tasks',reports:'screen-reports',prevendas:'screen-prevendas',intelligence:'screen-intelligence',playbooks:'screen-playbooks',dm:'screen-dm'};
-  const validScreens=Object.keys(screenMap);
-  const name=validScreens.includes(n)?n:'home';
-  const target=document.getElementById(screenMap[name]);
-  if(target) target.classList.add('on');
-  if(el){ el.classList.add('on'); }
-  else {
-    const tabs=document.querySelectorAll('.ntab');
-    const tabMap={home:0,pipeline:1,tasks:2,reports:3,prevendas:4,intelligence:5,playbooks:6};
-    const idx=tabMap[name]!=null?tabMap[name]:0;
-    if(tabs[idx]) tabs[idx].classList.add('on');
-  }
-  if(!skipHash) history.replaceState(null,'','#'+name);
-  if(name==='home' && window.renderHome) window.renderHome();
-  if(name==='tasks' && window.renderTaskRunner) window.renderTaskRunner();
-  if(name==='intelligence') renderIntelligence();
-  if(name==='reports') loadReportsScreen();
-  if(name==='prevendas' && window.ReportsV4) window.ReportsV4.renderReportsV4('screen-reports-v4');
-  if(name==='playbooks') renderPlaybooks();
-}
-// Hash routing — abre a seção correta ao carregar URL direta ou navegar pelo histórico
-function _routeFromHash(){
-  const hash=(location.hash||'').replace('#','').toLowerCase().trim();
-  const valid=['home','pipeline','tasks','reports','prevendas','intelligence','playbooks','dm'];
-  setScreen(valid.includes(hash)?hash:'home',null,true);
-}
-window.addEventListener('hashchange',_routeFromHash);
 
 function renderPlaybooks(){
   var el=document.getElementById('pb-root');
