@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elucy — Revenue Intelligence System</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+  :root {
+    --black:      #0A0A0A;
+    --dark:       #111111;
+    --card:       #161616;
+    --border:     #222222;
+    --border2:    #2A2A2A;
+    --gold:       #C9A84C;
+    --gold-light: #E8C96A;
+    --gold-dim:   #7A6030;
+    --white:      #F5F5F5;
+    --muted:      #888888;
+    --muted2:     #555555;
+    --accent:     #1A1A1A;
+    --red:        #D94F4F;
+    --green:      #4FA86D;
+    --blue:       #4F82D9;
+    --titan:      #C9A84C;
+    --builder:    #4F82D9;
+    --executor:   #7B5EA7;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    background: rgba(10,10,10,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 40px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .nav-logo {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--gold); }
+
+  /* ── SECTIONS ── */
+  section {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 100px 80px 80px;
+    position: relative;
+  }
+
+  /* ── SLIDE INDICATOR ── */
+  .slide-num {
+    position: absolute;
+    top: 80px;
+    right: 80px;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--muted2);
+    font-family: 'Space Grotesk', sans-serif;
+    text-transform: uppercase;
+  }
+
+  /* ── DIVIDER LINE ── */
+  .gold-line {
+    width: 48px;
+    height: 2px;
+    background: var(--gold);
+    margin-bottom: 24px;
+  }
+
+  /* ── EYEBROW ── */
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 16px;
+  }
+
+  /* ── HERO ── */
+  #hero {
+    background: var(--black);
+    justify-content: center;
+    align-items: flex-start;
+    overflow: hidden;
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 80% 40%, rgba(201,168,76,0.07) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 40% at 10% 80%, rgba(201,168,76,0.04) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 60px 60px;
+    opacity: 0.25;
+    pointer-events: none;
+  }
+
+  .hero-content { position: relative; z-index: 1; max-width: 900px; }
+
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(201,168,76,0.1);
+    border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 2px;
+    padding: 6px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 40px;
+  }
+
+  .hero-tag::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--gold);
+    border-radius: 50%;
+  }
+
+  h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(52px, 7vw, 88px);
+    font-weight: 700;
+    line-height: 1.0;
+    letter-spacing: -0.02em;
+    color: var(--white);
+    margin-bottom: 8px;
+  }
+
+  h1 .gold { color: var(--gold); }
+
+  .hero-sub {
+    font-size: clamp(16px, 2vw, 20px);
+    color: var(--muted);
+    font-weight: 400;
+    line-height: 1.6;
+    margin-top: 28px;
+    max-width: 600px;
+  }
+
+  .hero-stat-row {
+    display: flex;
+    gap: 48px;
+    margin-top: 64px;
+    padding-top: 40px;
+    border-top: 1px solid var(--border);
+  }
+
+  .hero-stat-item {}
+  .hero-stat-num {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--gold);
+    line-height: 1;
+  }
+  .hero-stat-label {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    margin-top: 6px;
+    text-transform: uppercase;
+  }
+
+  /* ── SECTION TITLES ── */
+  h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(36px, 4.5vw, 56px);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    color: var(--white);
+    margin-bottom: 16px;
+  }
+  h2 .gold { color: var(--gold); }
+
+  h3 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--white);
+    margin-bottom: 12px;
+  }
+
+  .section-desc {
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 580px;
+    line-height: 1.7;
+    margin-bottom: 56px;
+  }
+
+  /* ── CARDS GRID ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--gold);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .card:hover::before { opacity: 1; }
+
+  .card-num {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: var(--muted2);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .card p {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.65;
+    margin-top: 8px;
+  }
+
+  /* ── TIER CARDS ── */
+  .tier-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .tier-card.titan { border-left: 3px solid var(--titan); }
+  .tier-card.builder { border-left: 3px solid var(--builder); }
+  .tier-card.executor { border-left: 3px solid var(--executor); }
+
+  .tier-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 2px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .badge-titan { background: rgba(201,168,76,0.15); color: var(--titan); }
+  .badge-builder { background: rgba(79,130,217,0.15); color: var(--builder); }
+  .badge-executor { background: rgba(123,94,167,0.15); color: var(--executor); }
+
+  .tier-revenue {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted2);
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+  }
+
+  .tier-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 4px;
+  }
+
+  .tier-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 24px;
+    font-style: italic;
+  }
+
+  .tier-framework {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 2px;
+    display: inline-block;
+    margin-bottom: 20px;
+  }
+  .fw-challenger { background: rgba(201,168,76,0.12); color: var(--gold); border: 1px solid rgba(201,168,76,0.3); }
+  .fw-spiced { background: rgba(79,130,217,0.12); color: var(--builder); border: 1px solid rgba(79,130,217,0.3); }
+  .fw-spin { background: rgba(123,94,167,0.12); color: var(--executor); border: 1px solid rgba(123,94,167,0.3); }
+
+  .tier-list {
+    list-style: none;
+    margin-top: 16px;
+  }
+  .tier-list li {
+    font-size: 13px;
+    color: var(--muted);
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .tier-list li:last-child { border-bottom: none; }
+  .tier-list li::before {
+    content: '';
+    width: 4px; height: 4px;
+    background: currentColor;
+    border-radius: 50%;
+    flex-shrink: 0;
+    opacity: 0.5;
+  }
+  .tier-list .gold-text { color: var(--gold); }
+  .tier-list .blue-text { color: var(--builder); }
+  .tier-list .purple-text { color: var(--executor); }
+
+  .tier-metric {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 20px;
+  }
+  .tm-item {
+    background: var(--accent);
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    padding: 12px;
+  }
+  .tm-val {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--white);
+  }
+  .tm-label {
+    font-size: 10px;
+    color: var(--muted2);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* ── FRAMEWORK BLOCKS ── */
+  .fw-block {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 32px;
+    height: 100%;
+  }
+
+  .fw-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    gap: 16px;
+  }
+
+  .fw-icon {
+    width: 44px; height: 44px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .icon-gold { background: rgba(201,168,76,0.12); }
+  .icon-blue { background: rgba(79,130,217,0.12); }
+  .icon-purple { background: rgba(123,94,167,0.12); }
+
+  .fw-letter {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .fw-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 10px 14px;
+    background: var(--accent);
+    border-radius: 3px;
+    border: 1px solid var(--border2);
+  }
+  .fw-key {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    flex-shrink: 0;
+    width: 20px;
+  }
+  .fw-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .fw-desc strong { color: var(--white); font-weight: 600; }
+
+  /* ── SIGNALS ── */
+  .signal-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .signal-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 18px 16px;
+    text-align: center;
+  }
+
+  .signal-icon {
+    font-size: 22px;
+    margin-bottom: 8px;
+  }
+
+  .signal-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--white);
+    margin-bottom: 4px;
+  }
+
+  .signal-type {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+
+  .signal-card.positive { border-color: rgba(79,168,109,0.3); }
+  .signal-card.negative { border-color: rgba(217,79,79,0.3); }
+
+  .signal-weight {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    margin-top: 10px;
+    padding: 3px 8px;
+    border-radius: 2px;
+  }
+  .w-high { background: rgba(79,168,109,0.1); color: var(--green); }
+  .w-med { background: rgba(201,168,76,0.1); color: var(--gold); }
+  .w-neg { background: rgba(217,79,79,0.1); color: var(--red); }
+
+  /* ── PIPELINE ── */
+  .pipeline-steps {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin-top: 8px;
+  }
+
+  .pipe-step {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 20px 18px;
+    position: relative;
+  }
+
+  .pipe-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: -1px; top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 12px solid transparent;
+    border-bottom: 12px solid transparent;
+    border-left: 12px solid var(--gold);
+    z-index: 2;
+  }
+
+  .pipe-num {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .pipe-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--white);
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+
+  .pipe-desc {
+    font-size: 11px;
+    color: var(--muted2);
+    line-height: 1.4;
+  }
+
+  /* ── ARCHITECTURE ── */
+  .arch-layers {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 900px;
+  }
+
+  .arch-layer {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px 28px;
+    position: relative;
+  }
+
+  .arch-layer-num {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    width: 80px;
+    flex-shrink: 0;
+  }
+
+  .arch-layer-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--white);
+    width: 160px;
+    flex-shrink: 0;
+  }
+
+  .arch-layer-desc {
+    font-size: 13px;
+    color: var(--muted);
+    flex: 1;
+    line-height: 1.5;
+  }
+
+  .arch-layer-tag {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 2px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .tag-data { background: rgba(201,168,76,0.1); color: var(--gold); }
+  .tag-mcp { background: rgba(79,130,217,0.1); color: var(--builder); }
+  .tag-skill { background: rgba(79,168,109,0.1); color: var(--green); }
+  .tag-memory { background: rgba(123,94,167,0.1); color: var(--executor); }
+
+  /* ── GUARDRAILS ── */
+  .guardrail-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 900px;
+  }
+
+  .guardrail-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 20px 24px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    border-left: 3px solid var(--gold);
+  }
+
+  .guardrail-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+    width: 28px;
+    text-align: center;
+  }
+
+  .guardrail-content h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--white);
+    margin-bottom: 4px;
+  }
+
+  .guardrail-content p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* ── COCKPIT ── */
+  .cockpit-tabs {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .tab-item {
+    flex: 1;
+    padding: 12px 8px;
+    text-align: center;
+    background: var(--card);
+    border-right: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .tab-item:last-child { border-right: none; }
+  .tab-item.active { background: var(--accent); color: var(--gold); }
+
+  .feature-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .pill {
+    padding: 6px 16px;
+    border-radius: 2px;
+    font-size: 12px;
+    font-weight: 500;
+    background: var(--accent);
+    border: 1px solid var(--border2);
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+  .pill.gold { background: rgba(201,168,76,0.1); border-color: rgba(201,168,76,0.25); color: var(--gold); }
+
+  /* ── QUOTE ── */
+  .quote-block {
+    border-left: 3px solid var(--gold);
+    padding: 24px 32px;
+    background: var(--card);
+    border-radius: 0 4px 4px 0;
+    max-width: 700px;
+    margin: 32px 0;
+  }
+
+  .quote-text {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--white);
+    line-height: 1.5;
+    font-style: italic;
+  }
+
+  .quote-src {
+    font-size: 12px;
+    color: var(--gold);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 12px;
+  }
+
+  /* ── CLOSING ── */
+  #closing {
+    background: var(--black);
+    text-align: center;
+    align-items: center;
+  }
+
+  .closing-logo {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 80px;
+    font-weight: 800;
+    color: var(--gold);
+    letter-spacing: 0.06em;
+    line-height: 1;
+    margin-bottom: 24px;
+  }
+
+  .closing-tagline {
+    font-size: 18px;
+    color: var(--muted);
+    max-width: 480px;
+    line-height: 1.6;
+    margin-bottom: 48px;
+  }
+
+  .closing-rule {
+    display: flex;
+    gap: 48px;
+    justify-content: center;
+    margin-top: 40px;
+    padding-top: 40px;
+    border-top: 1px solid var(--border);
+  }
+
+  .cr-item {
+    text-align: center;
+  }
+  .cr-val {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--gold);
+  }
+  .cr-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* ── DQI HIGHLIGHT ── */
+  .dqi-block {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    padding: 32px 36px;
+    background: linear-gradient(135deg, rgba(201,168,76,0.08), rgba(201,168,76,0.02));
+    border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 4px;
+    max-width: 860px;
+    margin-top: 32px;
+  }
+
+  .dqi-big {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 56px;
+    font-weight: 800;
+    color: var(--gold);
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .dqi-text h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 8px;
+  }
+
+  .dqi-text p {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* ── BLOCK RULE ── */
+  .block-rule {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 20px;
+    background: rgba(217,79,79,0.05);
+    border: 1px solid rgba(217,79,79,0.2);
+    border-left: 3px solid var(--red);
+    border-radius: 0 4px 4px 0;
+    margin-top: 12px;
+  }
+
+  .block-icon { font-size: 18px; }
+  .block-text { font-size: 13px; color: var(--muted); }
+  .block-text strong { color: var(--red); }
+
+  /* ── SCROLL HINT ── */
+  .scroll-hint {
+    position: fixed;
+    bottom: 32px; right: 48px;
+    font-size: 11px;
+    color: var(--muted2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .scroll-hint::before {
+    content: '';
+    width: 1px; height: 40px;
+    background: var(--muted2);
+  }
+
+  /* ── STEP NUMBERS ── */
+  .step-row {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .step-row:last-child { border-bottom: none; }
+
+  .step-n {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gold);
+    width: 28px;
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+  .step-content h4 { font-size: 14px; font-weight: 600; color: var(--white); margin-bottom: 4px; }
+  .step-content p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+  /* ── SCORE VISUAL ── */
+  .score-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    max-width: 900px;
+    margin-top: 16px;
+  }
+  .score-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px 16px;
+    text-align: center;
+  }
+  .score-num {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--gold);
+  }
+  .score-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 6px;
+    line-height: 1.3;
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Elucy</div>
+  <ul class="nav-links">
+    <li><a href="#hero">Visao Geral</a></li>
+    <li><a href="#sistema">Sistema</a></li>
+    <li><a href="#perfis">Perfis</a></li>
+    <li><a href="#frameworks">Frameworks</a></li>
+    <li><a href="#sinais">Sinais</a></li>
+    <li><a href="#guardrails">Governanca</a></li>
+    <li><a href="#cockpit">Cockpit</a></li>
+  </ul>
+</nav>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<!-- 01 HERO -->
+<!-- ────────────────────────────────────────────────────────── -->
+<section id="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-tag">Revenue Intelligence System — G4 Educacao</div>
+    <h1>Inteligencia<br>de <span class="gold">Receita</span><br>Nivel Empresa</h1>
+    <p class="hero-sub">
+      Elucy nao e um assistente de vendas. E o sistema de decisao que senta entre o operador e o CRM — orquestra cada interacao com o framework certo, para a persona certa, no canal certo.
+    </p>
+    <div class="hero-stat-row">
+      <div class="hero-stat-item">
+        <div class="hero-stat-num">17</div>
+        <div class="hero-stat-label">Estagios de Pipeline</div>
+      </div>
+      <div class="hero-stat-item">
+        <div class="hero-stat-num">3</div>
+        <div class="hero-stat-label">Frameworks de Venda</div>
+      </div>
+      <div class="hero-stat-item">
+        <div class="hero-stat-num">10</div>
+        <div class="hero-stat-label">Sinais Monitorados</div>
+      </div>
+      <div class="hero-stat-item">
+        <div class="hero-stat-num">6</div>
+        <div class="hero-stat-label">Kill Switches Ativos</div>
+      </div>
+      <div class="hero-stat-item">
+        <div class="hero-stat-num">5+</div>
+        <div class="hero-stat-label">Roles Suportados</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">01 / 08</div>
+</section>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<!-- 02 O QUE E O ELUCY -->
+<!-- ────────────────────────────────────────────────────────── -->
+<section id="sistema" style="background: var(--dark);">
+  <div class="slide-num">02 / 08</div>
+  <div class="eyebrow">O Sistema</div>
+  <h2>Uma camada de <span class="gold">decisao</span><br>sobre o CRM</h2>
+  <p class="section-desc">
+    A maioria dos times de vendas usa o CRM como repositorio de dados. O Elucy usa como superficie de execucao — conectando dados reais com o proximo passo exato, no tom certo, pelo canal certo.
+  </p>
+
+  <div class="arch-layers">
+    <div class="arch-layer">
+      <div class="arch-layer-num">Layer 01</div>
+      <div class="arch-layer-name">Data</div>
+      <div class="arch-layer-desc">Databricks — 9 tabelas reais: persons_overview, funil_comercial, customer_360, order_items, skills_pql_user, aquisicao e mais. Fonte de verdade unica para todos os dados de lead, deal e receita.</div>
+      <div class="arch-layer-tag tag-data">Databricks</div>
+    </div>
+    <div class="arch-layer">
+      <div class="arch-layer-num">Layer 02</div>
+      <div class="arch-layer-name">MCP Semantico</div>
+      <div class="arch-layer-desc">17 arquivos que dao significado as variaveis — regras de framework por persona, sinais de venda, playbooks, segmentos, conversao, coaching e governanca. E o cerebro interpretativo do sistema.</div>
+      <div class="arch-layer-tag tag-mcp">Intelligence</div>
+    </div>
+    <div class="arch-layer">
+      <div class="arch-layer-num">Layer 03</div>
+      <div class="arch-layer-name">Skills</div>
+      <div class="arch-layer-desc">17 skills operacionais: qualificar-lead, challenger-titan, spin-executor, social-dm, hot-handoff, gerar-nota, iron-dome, downsell, gav, analisar-call, coach-sdr, estrategia, sinais-lead e mais. Acao direta, zero teoria.</div>
+      <div class="arch-layer-tag tag-skill">Execution</div>
+    </div>
+    <div class="arch-layer">
+      <div class="arch-layer-num">Layer 04</div>
+      <div class="arch-layer-name">Memory</div>
+      <div class="arch-layer-desc">Aprendizado acumulado: patterns.md, strategies.md, coaching-log.md. O sistema fica mais preciso a cada ciclo — padroes de conversao e drop sao registrados e consultados em novos deals.</div>
+      <div class="arch-layer-tag tag-memory">Learning</div>
+    </div>
+  </div>
+
+  <div class="quote-block" style="margin-top: 48px;">
+    <p class="quote-text">"O Elucy decide quando agir, como agir e com quem. O operador executa. O CRM registra."</p>
+    <div class="quote-src">Principio de Design — Elucy v2</div>
+  </div>
+</section>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<!-- 03 PERFIS DE LEAD -->
+<!-- ────────────────────────────────────────────────────────── -->
+<section id="perfis" style="background: var(--black);">
+  <div class="slide-num">03 / 08</div>
+  <div class="eyebrow">Perfis de Lead</div>
+  <h2>Tres perfis.<br><span class="gold">Tres abordagens.</span><br>Zero sobreposicao.</h2>
+  <p class="section-desc">O sistema identifica automaticamente o perfil do lead e bloqueia qualquer framework incorreto antes de gerar output.</p>
+
+  <div class="grid-3">
+
+    <!-- TITAN -->
+    <div class="tier-card titan">
+      <div class="tier-badge badge-titan">Perfil Titan</div>
+      <div class="tier-revenue">Faturamento &gt; R$ 10MM</div>
+      <div class="tier-name">Soberano</div>
+      <div class="tier-sub">CEO / Founder de empresa enterprise</div>
+      <div class="tier-framework fw-challenger">Challenger Sale</div>
+      <ul class="tier-list">
+        <li class="gold-text">Decide sozinho — agenda restrita</li>
+        <li>Responde a provocacao intelectual</li>
+        <li>Nao tolera script ou abordagem generica</li>
+        <li>Valoriza dados, cases e ROI comprovado</li>
+        <li>Primeira mensagem: insight de mercado</li>
+        <li>Silencio pos-Challenger = positivo</li>
+      </ul>
+      <div class="tier-metric">
+        <div class="tm-item">
+          <div class="tm-val">45–90d</div>
+          <div class="tm-label">Ciclo Medio</div>
+        </div>
+        <div class="tm-item">
+          <div class="tm-val">30–40%</div>
+          <div class="tm-label">Conv. Inbound</div>
+        </div>
+      </div>
+      <div class="block-rule" style="margin-top: 16px;">
+        <div class="block-icon">⛔</div>
+        <div class="block-text"><strong>BLOQUEADO:</strong> SPICED ou SPIN para Titan. Sistema rejeita automaticamente.</div>
+      </div>
+    </div>
+
+    <!-- BUILDER -->
+    <div class="tier-card builder">
+      <div class="tier-badge badge-builder">Perfil Builder</div>
+      <div class="tier-revenue">Faturamento R$ 1MM — R$ 10MM</div>
+      <div class="tier-name">Trator</div>
+      <div class="tier-sub">CEO / Founder de empresa mid-market</div>
+      <div class="tier-framework fw-spiced">SPICED Framework</div>
+      <ul class="tier-list">
+        <li class="blue-text">Acessivel — decide rapido quando ve valor</li>
+        <li>Busca crescimento acelerado e networking</li>
+        <li>Sensivel a prova social (quem participa)</li>
+        <li>Speed to Lead critico: &lt; 5 minutos</li>
+        <li>Urgencia natural: janela de crescimento</li>
+        <li>SPICED completo = ciclo 7–15 dias</li>
+      </ul>
+      <div class="tier-metric">
+        <div class="tm-item">
+          <div class="tm-val">15–30d</div>
+          <div class="tm-label">Ciclo Medio</div>
+        </div>
+        <div class="tm-item">
+          <div class="tm-val">40–55%</div>
+          <div class="tm-label">Conv. Inbound</div>
+        </div>
+      </div>
+      <div class="block-rule" style="margin-top: 16px; border-left-color: var(--builder); background: rgba(79,130,217,0.04); border-color: rgba(79,130,217,0.2);">
+        <div class="block-icon">⚡</div>
+        <div class="block-text" style="color: var(--builder);">Speed to Lead &lt; 5min. Cada minuto reduz conversao.</div>
+      </div>
+    </div>
+
+    <!-- EXECUTOR -->
+    <div class="tier-card executor">
+      <div class="tier-badge badge-executor">Perfil Executor</div>
+      <div class="tier-revenue">Diretor / VP / Head — empresa &gt; R$ 1MM</div>
+      <div class="tier-name">Braco Direito</div>
+      <div class="tier-sub">Influenciador — nao e o decisor final</div>
+      <div class="tier-framework fw-spin">SPIN + Champion Selling</div>
+      <ul class="tier-list">
+        <li class="purple-text">Influencia fortemente, mas nao assina</li>
+        <li>Precisa de argumentos para vender internamente</li>
+        <li>Pode ser convertido em Champion do deal</li>
+        <li>Multi-thread obrigatorio para chegar ao CEO</li>
+        <li>Fornecer materiais de enablement</li>
+        <li>Mapear organograma: quem mais precisa entrar?</li>
+      </ul>
+      <div class="tier-metric">
+        <div class="tm-item">
+          <div class="tm-val">30–60d</div>
+          <div class="tm-label">Ciclo Medio</div>
+        </div>
+        <div class="tm-item">
+          <div class="tm-val">30–40%</div>
+          <div class="tm-label">Multi-thread</div>
+        </div>
+      </div>
+      <div class="block-rule" style="margin-top: 16px; border-left-color: var(--executor); background: rgba(123,94,167,0.04); border-color: rgba(123,94,167,0.2);">
+        <div class="block-icon">🔗</div>
+        <div class="block-text" style="color: var(--executor);">Multi-thread ativado automaticamente. Objetivo: chegar ao CEO.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<!-- 04 FRAMEWORKS -->
+<!-- ────────────────────────────────────────────────────────── -->
+<section id="frameworks" style="background: var(--dark);">
+  <div class="slide-num">04 / 08</div>
+  <div class="eyebrow">Frameworks de Venda</div>
+  <h2>O sistema escolhe.<br><span class="gold">O operador executa.</span></h2>
+  <p class="section-desc">Tres frameworks distintos, cada um com logica propria. O Elucy detecta a persona e injeta o protocolo certo — automaticamente.</p>
+
+  <div class="grid-3">
+
+    <!-- CHALLENGER -->
+    <div class="fw-block">
+      <div class="fw-header">
+        <div>
+          <div class="tier-badge badge-titan" style="margin-bottom: 8px;">Para Titans</div>
+          <h3 style="font-size: 20px;">Challenger Sale</h3>
+          <p style="font-size: 13px; color: var(--muted); margin-top: 4px; margin-bottom: 0;">Ensina. Calibra. Toma Controle.</p>
+        </div>
+        <div class="fw-icon icon-gold" style="font-size: 22px;">⚔</div>
+      </div>
+      <div class="fw-letter">
+        <div class="fw-item">
+          <div class="fw-key" style="color: var(--gold);">T</div>
+          <div class="fw-desc"><strong>Teach</strong> — Oferecer insight de mercado que o lead nao tem. Provocar o status quo.</div>
+        </div>
+        <div class="fw-item">
+          <div class="fw-key" style="color: var(--gold);">T</div>
+          <div class="fw-desc"><strong>Tailor</strong> — Calibrar a mensagem para o contexto especifico da empresa e do CEO.</div>
+        </div>
+        <div class="fw-item">
+          <div class="fw-key" style="color: var(--gold);">T</div>
+          <div class="fw-desc"><strong>Take Control</strong> — Dominar a conversa. Nao perguntar; liderar a narrativa.</div>
+        </div>
+      </div>
+      <div style="margin-top: 20px; padding: 14px; background: rgba(201,168,76,0.05); border-radius: 3px; border: 1px solid rgba(201,168,76,0.1);">
+        <p style="font-size: 12px; color: var(--muted); line-height: 1.6; margin: 0;">Silencio pos-Challenger com Titan nao e stall. E tensao positiva. O sistema aguarda ate 48h sem follow-up.</p>
+      </div>
+    </div>
+
+    <!-- SPICED -->
+    <div class="fw-block">
+      <div class="fw-header">
+        <div>
+          <div class="tier-badge badge-builder" style="margin-bottom: 8px;">Para Builders</div>
+          <h3 style="font-size: 20px;">SPICED</h3>
+          <p style="font-size: 13px; color: var(--muted); margin-top: 4px; margin-bottom: 0;">Diagnostico rapido. Valor tangivel.</p>
+        </div>
+        <div class="fw-icon icon-blue" style="font-size: 22px;">◆</div>
+      </div>
+      <div class="fw-letter">
+        <div class="fw-item">
+          <div class="fw-key" style="color: var(--builder);">S</div>
+          <div class="fw-desc"><strong>Situation</strong> — Entender o contexto atual da empresa e do momento do CEO.</div>
+        </div>
+        <div class="fw-item">
+          <div class="fw-key" style="color: var(--builder);">P</div>
+          <div class="fw-desc"><strong>Problem</strong> — Mapear a dor real. O que trava o crescimento hoje?</div>
+        </div>
+        <div class="fw-item">
+          <div class="fw-key" style="color: var(--builder);">I</div>
+          <div class="fw-desc"><strong>Impact</strong> — Quantificar o impacto financeiro da dor. Qual o custo de inacao?</div>
+        </div>
+        <div class="fw-item">
+          <div class="fw-key" style="color: var(--builder);">C</div>
+          <div class="fw-desc"><strong>Critical Event</strong> — Identificar o evento com data que cria urgencia real.</div>
+        </div>
+        <div class="fw-item">
+          <div class="fw-key" style="color: var(--builder);">D</div>
+          <div class="fw-desc"><strong>Decision</strong> — Mapear quem decide, como decide e em qual prazo.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SPIN -->
+    <div class="fw-block">
+      <div class="fw-header">
+        <div>
+          <div class="tier-badge badge-executor" style="margin-bottom: 8px;">Para Executores</div>
+          <h3 style="font-size: 20px;">SPIN + Champion</h3>
+          <p style="font-size: 13px; color: var(--muted); margin-top: 4px; margin-bottom: 0;">Politica interna. Aliado estrategico.</p>
+        </div>
+        <div class="fw-icon icon-purple" style="font-size: 22px;">◉</div>
+      </div>
+      <div class="fw-letter">
+        <div class="fw-item">
+          <div class="fw-key" style="color: var(--executor);">S</div>
+          <div class="fw-desc"><strong>Situation</strong> — Entender o papel, responsabilidades e poder politico do Executor.</div>
+        </div>
+        <div class="fw-item">
+          <div class="fw-key" style="color: var(--executor);">P</div>
+          <div class="fw-desc"><strong>Problem</strong> — Identificar a dor que o Executor quer resolver (medo: parecer incompetente).</div>
+        </div>
+        <div class="fw-item">
+          <div class="fw-key" style="color: var(--executor);">I</div>
+          <div class="fw-desc"><strong>Implication</strong> — Mostrar o que acontece se o problema continuar. Pressao politica interna.</div>
+        </div>
+        <div class="fw-item">
+          <div class="fw-key" style="color: var(--executor);">N</div>
+          <div class="fw-desc"><strong>Need-Payoff</strong> — Armar o Executor com argumento para vender internamente ao CEO.</div>
+        </div>
+      </div>
+      <div style="margin-top: 16px; padding: 14px; background: rgba(123,94,167,0.05); border-radius: 3px; border: 1px solid rgba(123,94,167,0.15);">
+        <p style="font-size: 12px; color: var(--muted); line-height: 1.6; margin: 0;">Champion Selling: transformar o Executor em aliado que vende a solucao internamente. Fornecer materiais prontos para a reuniao com o CEO.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<!-- 05 SINAIS DE VENDA -->
+<!-- ────────────────────────────────────────────────────────── -->
+<section id="sinais" style="background: var(--black);">
+  <div class="slide-num">05 / 08</div>
+  <div class="eyebrow">Sinais de Venda</div>
+  <h2>O sistema le o que<br><span class="gold">o lead nao diz.</span></h2>
+  <p class="section-desc">10 sinais monitorados continuamente. Cada silencio, cada resposta, cada atraso e dado. O Delta mede a variacao de informacao util entre interacoes.</p>
+
+  <div class="signal-grid">
+    <div class="signal-card positive">
+      <div class="signal-name">BUY</div>
+      <div class="signal-type">Sinal de Compra</div>
+      <div class="signal-weight w-high">peso 1.0</div>
+      <p style="font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.5;">Perguntou datas, pediu proposta, mencionou orcamento aprovado.</p>
+    </div>
+    <div class="signal-card positive">
+      <div class="signal-name">URGENCY</div>
+      <div class="signal-type">Urgencia Real</div>
+      <div class="signal-weight w-high">peso 0.95</div>
+      <p style="font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.5;">Critical Event com data. "Preciso resolver isso nesse trimestre."</p>
+    </div>
+    <div class="signal-card positive">
+      <div class="signal-name">AUTHORITY</div>
+      <div class="signal-type">Poder de Decisao</div>
+      <div class="signal-weight w-high">peso 0.90</div>
+      <p style="font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.5;">Lead e CEO/Founder. Confirma "eu decido isso."</p>
+    </div>
+    <div class="signal-card positive">
+      <div class="signal-name">PAIN</div>
+      <div class="signal-type">Dor Articulada</div>
+      <div class="signal-weight w-med">peso 0.85</div>
+      <p style="font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.5;">"Minha empresa estagnou." "Nao consigo escalar a operacao."</p>
+    </div>
+    <div class="signal-card positive">
+      <div class="signal-name">MULTI-THREAD</div>
+      <div class="signal-type">Multiplos Contatos</div>
+      <div class="signal-weight w-med">peso 0.80</div>
+      <p style="font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.5;">Segundo contato da empresa no pipeline. CEO entrou na conversa.</p>
+    </div>
+    <div class="signal-card positive">
+      <div class="signal-name">BUDGET</div>
+      <div class="signal-type">Capacidade Financeira</div>
+      <div class="signal-weight w-med">peso 0.80</div>
+      <p style="font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.5;">Faixa de faturamento compativel. Historico de compra G4.</p>
+    </div>
+    <div class="signal-card positive">
+      <div class="signal-name">TIMING</div>
+      <div class="signal-type">Janela Temporal</div>
+      <div class="signal-weight w-med">peso 0.70</div>
+      <p style="font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.5;">Imersao em menos de 30 dias. Inicio de trimestre/ano.</p>
+    </div>
+    <div class="signal-card positive">
+      <div class="signal-name">ENGAGEMENT</div>
+      <div class="signal-type">Interacao Ativa</div>
+      <div class="signal-weight w-med">peso 0.60</div>
+      <p style="font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.5;">Abriu emails 3x. Assistiu webinar. Acessou pagina de produto.</p>
+    </div>
+    <div class="signal-card negative">
+      <div class="signal-name">RISK</div>
+      <div class="signal-type">Risco de Perda</div>
+      <div class="signal-weight w-neg">-0.90</div>
+      <p style="font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.5;">Menciona concorrente. "Nao e o momento." Cancelou sem reagendar.</p>
+    </div>
+    <div class="signal-card negative">
+      <div class="signal-name">STALL</div>
+      <div class="signal-type">Estagnacao</div>
+      <div class="signal-weight w-neg">-0.70</div>
+      <p style="font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.5;">Sem atividade 7+ dias (mid) ou 14+ dias (enterprise). Sem proximo passo.</p>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 32px; max-width: 900px;">
+    <div class="card" style="border-left: 3px solid var(--green);">
+      <div class="card-num">Combinacao de Alta Probabilidade</div>
+      <h3 style="font-size: 16px;">PAIN + URGENCY + TIMING</h3>
+      <p>= Perfect Storm. Janela maxima de oportunidade. Abordagem direta ao resultado, sem discovery longo.</p>
+    </div>
+    <div class="card" style="border-left: 3px solid var(--red);">
+      <div class="card-num">Combinacao de Risco Critico</div>
+      <h3 style="font-size: 16px;">STALL + RISK</h3>
+      <p>= Deal in Danger. Ativar late-stage recovery playbook. Mudar abordagem completamente.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<!-- 06 GUARDRAILS & GOVERNANÇA -->
+<!-- ────────────────────────────────────────────────────────── -->
+<section id="guardrails" style="background: var(--dark);">
+  <div class="slide-num">06 / 08</div>
+  <div class="eyebrow">Governanca — Iron Dome</div>
+  <h2>O sistema que<br><span class="gold">protege o ecossistema.</span></h2>
+  <p class="section-desc">
+    Seis kill switches ativos. O Elucy nao so recomenda — ele bloqueia ativamente o que prejudica a qualidade do pipeline, a governanca da marca e a experiencia do lead.
+  </p>
+
+  <div class="guardrail-list">
+    <div class="guardrail-item">
+      <div class="guardrail-icon">⚔</div>
+      <div class="guardrail-content">
+        <h4>Framework x Persona — Kill Switch 1</h4>
+        <p>SPICED para Titan = BLOQUEADO. Challenger para Builder = BLOQUEADO. O sistema detecta o framework errado antes de gerar qualquer output e exige correcao do operador.</p>
+      </div>
+    </div>
+    <div class="guardrail-item">
+      <div class="guardrail-icon">🏗</div>
+      <div class="guardrail-content">
+        <h4>Tier x Produto — Kill Switch 2</h4>
+        <p>Tier 2 (&lt;R$1MM) bloqueado para Imersoes Presenciais. Tier 3 (&lt;R$250k) redirecionado automaticamente para /downsell-honesto com produtos digital/online. A sala e protegida.</p>
+      </div>
+    </div>
+    <div class="guardrail-item">
+      <div class="guardrail-icon">🎭</div>
+      <div class="guardrail-content">
+        <h4>Black Box Protocol — Kill Switch 3</h4>
+        <p>PROIBIDO expor ao lead: ICP, tiers, SPICED, SPIN, Challenger, authority score, DQI, Pentagon Score, CSE states. Output para lead = linguagem humana. Output para CRM = tecnico estruturado.</p>
+      </div>
+    </div>
+    <div class="guardrail-item">
+      <div class="guardrail-icon">📊</div>
+      <div class="guardrail-content">
+        <h4>DQI como Metrica Soberana — Kill Switch 4</h4>
+        <p>O sucesso nao e medido por venda fechada. Uma nao-venda correta pontua mais que uma venda errada. DQI (Decision Quality Index) supera receita imediata. Sempre. Pentagon Score: 5 dimensoes, 0–100 cada.</p>
+      </div>
+    </div>
+    <div class="guardrail-item">
+      <div class="guardrail-icon">🔇</div>
+      <div class="guardrail-content">
+        <h4>Anti-Alucinacao Comercial — Kill Switch 5</h4>
+        <p>Nenhum dado inventado. Campos desconhecidos = [NAO DECLARADO]. Escassez real apenas (&lt;10% disponibilidade verificavel). Nenhuma promessa de receita sem dado real.</p>
+      </div>
+    </div>
+    <div class="guardrail-item">
+      <div class="guardrail-icon">⏱</div>
+      <div class="guardrail-content">
+        <h4>Gestao de Latencia — Kill Switch 6</h4>
+        <p>O sistema nao e reativo. Silencio pos-Challenger com Titan = aguardar 48h. Builder inbound = Speed to Lead &lt;5min. Ghost pos-proposta = re-engagement com valor, nunca "oi, viu minha mensagem?".</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="dqi-block">
+    <div class="dqi-big">DQI</div>
+    <div class="dqi-text">
+      <h3>Decision Quality Index</h3>
+      <p>A metrica soberana do Elucy. Pentagon Score: ICP Fit + Frame Integrity + State Timing + Ecosystem Protection + Data Density. Uma sala bem composta vale mais que 10 vendas erradas.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<!-- 07 COCKPIT -->
+<!-- ────────────────────────────────────────────────────────── -->
+<section id="cockpit" style="background: var(--black);">
+  <div class="slide-num">07 / 08</div>
+  <div class="eyebrow">Elucy Cockpit</div>
+  <h2>O painel de comando<br><span class="gold">do operador.</span></h2>
+  <p class="section-desc">
+    Frontend visual do Elucy — pipeline split, ELUCI REPORT por deal, gerador de copy calibrado, DVL Gate, menu contextual, gamificacao e Chat nativo com WhatsApp e Instagram.
+  </p>
+
+  <div class="cockpit-tabs">
+    <div class="tab-item active">Home</div>
+    <div class="tab-item">Pipeline</div>
+    <div class="tab-item">Tasks</div>
+    <div class="tab-item">Reports</div>
+    <div class="tab-item">Pre-Vendas</div>
+    <div class="tab-item">Intel</div>
+    <div class="tab-item">Playbooks</div>
+    <div class="tab-item">Chat</div>
+  </div>
+
+  <div class="grid-2" style="max-width: 920px; gap: 24px;">
+    <div>
+      <h3 style="margin-bottom: 20px;">DVL Gate — Dynamic Validation Layer</h3>
+      <div class="guardrail-list" style="gap: 10px;">
+        <div class="step-row">
+          <div class="step-n">01</div>
+          <div class="step-content">
+            <h4>Deal Detector</h4>
+            <p>Regex detecta deal_id / email / empresa. Carrega contexto Databricks automaticamente antes de qualquer acao.</p>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-n">02</div>
+          <div class="step-content">
+            <h4>DVL Gate</h4>
+            <p>Renderiza form com dados CRM pre-preenchidos. Operador confirma ou edita antes de qualquer output ser gerado.</p>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-n">03</div>
+          <div class="step-content">
+            <h4>DVL Score + Temperatura</h4>
+            <p>Score 0–100 calculado por sinais positivos e penalidades. Exibido em cada form. Incrementa SDR Progress Score.</p>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-n">04</div>
+          <div class="step-content">
+            <h4>Gamificacao</h4>
+            <p>5 niveis (Recruta to Arquiteto de Receita), 8 badges, streak de validacoes consecutivas. Qualidade vira jogo.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <h3 style="margin-bottom: 20px;">Intelligence Layer — 6 Tipos de Analise</h3>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="card" style="padding: 16px 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 13px; font-weight: 600; color: var(--white);">Pipeline Analytics</div>
+            <div class="pill gold" style="font-size: 10px;">IA</div>
+          </div>
+          <p style="font-size: 12px; margin-top: 4px;">Visao completa do pipeline por etapa, tier e canal.</p>
+        </div>
+        <div class="card" style="padding: 16px 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 13px; font-weight: 600; color: var(--white);">Forecast Deep</div>
+            <div class="pill gold" style="font-size: 10px;">IA</div>
+          </div>
+          <p style="font-size: 12px; margin-top: 4px;">Previsao de receita ponderada por deal_score e sinais.</p>
+        </div>
+        <div class="card" style="padding: 16px 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 13px; font-weight: 600; color: var(--white);">Data Quality Report</div>
+            <div class="pill gold" style="font-size: 10px;">IA</div>
+          </div>
+          <p style="font-size: 12px; margin-top: 4px;">Auditoria de DQI por operador, etapa e periodo.</p>
+        </div>
+        <div class="card" style="padding: 16px 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 13px; font-weight: 600; color: var(--white);">Operator Performance</div>
+            <div class="pill gold" style="font-size: 10px;">IA</div>
+          </div>
+          <p style="font-size: 12px; margin-top: 4px;">Ranking de operadores por qualidade de qualificacao.</p>
+        </div>
+        <div class="card" style="padding: 16px 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 13px; font-weight: 600; color: var(--white);">Copy Optimization</div>
+            <div class="pill gold" style="font-size: 10px;">IA</div>
+          </div>
+          <p style="font-size: 12px; margin-top: 4px;">Analise de performance de copy por canal e founder mode.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 40px; padding: 24px 32px; background: var(--card); border: 1px solid var(--border); border-radius: 4px; max-width: 920px;">
+    <div class="eyebrow" style="margin-bottom: 12px;">Social DM — Founder Proxy</div>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+      <div>
+        <div style="font-size: 14px; font-weight: 700; color: var(--gold); margin-bottom: 6px;">Tallis Mode</div>
+        <p style="font-size: 12px; color: var(--muted);">Minusculo, &lt;10 palavras, sem ponto. Crescimento / escala / time. Buzz nivel 3 — autoridade nativa.</p>
+      </div>
+      <div>
+        <div style="font-size: 14px; font-weight: 700; color: var(--builder); margin-bottom: 6px;">Nardon Mode</div>
+        <p style="font-size: 12px; color: var(--muted);">Portugues correto, causa-efeito, analitico. Gestao / processos / cultura. Buzz nivel 1 — ancorado em dado ou historia real.</p>
+      </div>
+      <div>
+        <div style="font-size: 14px; font-weight: 700; color: var(--executor); margin-bottom: 6px;">Alfredo Mode</div>
+        <p style="font-size: 12px; color: var(--muted);">Alta energia, pragmatico, foco no numero. Vendas / receita / expansao. Buzz nivel 2 — vocabulario de execucao.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<!-- 08 CLOSING -->
+<!-- ────────────────────────────────────────────────────────── -->
+<section id="closing">
+  <div class="hero-bg"></div>
+  <div class="hero-grid" style="opacity: 0.15;"></div>
+  <div class="slide-num" style="top: 80px; right: 80px; position: absolute;">08 / 08</div>
+
+  <div style="position: relative; z-index: 1; text-align: center; max-width: 700px;">
+    <div class="closing-logo">ELUCY</div>
+    <div style="width: 80px; height: 2px; background: var(--gold); margin: 0 auto 32px;"></div>
+    <p class="closing-tagline">
+      Revenue Intelligence para times comerciais B2B high-ticket.<br>
+      O sistema que pensa antes de voce falar.
+    </p>
+
+    <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 48px;">
+      <div class="pill gold">SDR Pipeline Diario</div>
+      <div class="pill gold">Social DM CQL</div>
+      <div class="pill gold">Deal Briefing</div>
+      <div class="pill gold">SPICED Diagnostico</div>
+      <div class="pill gold">Nota CRM Zero-Alucinacao</div>
+      <div class="pill gold">Iron Dome</div>
+      <div class="pill gold">Downsell Honesto</div>
+      <div class="pill gold">Coaching SDR</div>
+    </div>
+
+    <div class="closing-rule">
+      <div class="cr-item">
+        <div class="cr-val">17</div>
+        <div class="cr-label">Skills Nativas</div>
+      </div>
+      <div class="cr-item">
+        <div class="cr-val">17</div>
+        <div class="cr-label">MCPs Semanticos</div>
+      </div>
+      <div class="cr-item">
+        <div class="cr-val">10</div>
+        <div class="cr-label">Edge Functions</div>
+      </div>
+      <div class="cr-item">
+        <div class="cr-val">56</div>
+        <div class="cr-label">Tabelas Supabase</div>
+      </div>
+      <div class="cr-item">
+        <div class="cr-val">5+</div>
+        <div class="cr-label">Roles Operacionais</div>
+      </div>
+    </div>
+
+    <div style="margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--border);">
+      <div style="font-size: 11px; color: var(--muted2); letter-spacing: 0.12em; text-transform: uppercase;">G4 Educacao — Revenue Intelligence Division</div>
+      <div style="font-size: 11px; color: var(--muted2); margin-top: 6px; letter-spacing: 0.06em;">v2 Enterprise — April 2026</div>
+    </div>
+  </div>
+</section>
+
+<div class="scroll-hint">Scroll</div>
+
+</body>
+</html>
