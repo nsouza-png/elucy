@@ -3026,11 +3026,17 @@ function _handleResponse(response){
 async function _incrementEnrichmentCount(dealId){
   var sb=_sb(); if(!sb) return;
   var opId=getOperatorId();
+  // Tenta RPC atomico primeiro (se existir no Supabase); fallback para select+update
+  try{
+    var rpc=await sb.rpc('increment_enrichment_count', {p_deal_id:dealId, p_operator_email:opId});
+    if(!rpc.error) return;
+  }catch(e){}
+  // Fallback com select+update (mantém funcionalidade se RPC não existir)
   var result=await sb.from('deals').select('enrichment_count')
     .eq('deal_id',dealId).eq('operator_email',opId).maybeSingle();
   var current=(result.data&&result.data.enrichment_count)||0;
-  sb.from('deals').update({enrichment_count:current+1})
-    .eq('deal_id',dealId).eq('operator_email',opId).then(function(){});
+  await sb.from('deals').update({enrichment_count:current+1})
+    .eq('deal_id',dealId).eq('operator_email',opId);
 }
 
 function _updateBadge(){
@@ -3362,7 +3368,7 @@ async function updateTodayStats(){
   el=document.getElementById('meta-hand-bar'); if(el) el.style.width=Math.min(100,Math.round(stats.handoffs/meta.handoffs*100))+'%';
 }
 window.updateTodayStats = updateTodayStats;
-setInterval(function(){ if(getOperatorId()) updateTodayStats(); },60000);
+window._todayStatsInterval=setInterval(function(){ if(getOperatorId()) updateTodayStats(); },60000);
 setTimeout(function(){ if(getOperatorId()) updateTodayStats(); },2000);
 
 // ==================================================================
@@ -3720,8 +3726,8 @@ var DEFAULT_CADENCES = [
 window.DEFAULT_CADENCES = DEFAULT_CADENCES;
 window.CADENCE_CHANNELS = CADENCE_CHANNELS;
 
-// In-memory enrollment state: { dealId: { cadenceId, startDate, currentStep, status, completedSteps:[] } }
-var _cadenceEnrollments = {};
+// Usa o _cadenceEnrollments já declarado na linha ~1934 (unificado — fix P0 duplicata)
+// var _cadenceEnrollments removido — reutiliza window._cadenceEnrollments
 
 // Load enrollments from Supabase on init
 async function loadCadenceEnrollments(){
@@ -3999,7 +4005,6 @@ window.completeCadenceStep = completeCadenceStep;
 window.cancelCadenceEnrollment = cancelCadenceEnrollment;
 
 // Init cadences after operator loads
-var _origBoot = window._bootEngine;
 
 // ==================================================================
 // LAYER 9 — RUNTIME SYNC

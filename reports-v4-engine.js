@@ -19,9 +19,18 @@
   function _today() { return new Date().toISOString().slice(0, 10); }
   function _monthStart() { var d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10); }
 
-  // Sem cache — dados sempre frescos em tempo real
-  function _cacheGet(key) { return null; }
-  function _cacheSet(key, data) { }
+  // Cache com TTL de 5 minutos — evita re-fetch desnecessário em cada tab switch
+  var _cache = {};
+  var _CACHE_TTL = 5 * 60 * 1000;
+  function _cacheGet(key) {
+    var entry = _cache[key];
+    if (!entry) return null;
+    if (Date.now() - entry.ts > _CACHE_TTL) { delete _cache[key]; return null; }
+    return entry.data;
+  }
+  function _cacheSet(key, data) {
+    _cache[key] = { data: data, ts: Date.now() };
+  }
 
   // ============================================================================
   // PERIOD STATE — controla janela de tempo ativa em toda a tab Pre-Vendas
@@ -96,9 +105,15 @@
     } catch (e) { return null; }
   }
 
+  function _sanitizeQualName(name) {
+    if (!name) return null;
+    // Remove tudo que não é letra, número, espaço, ponto ou hífen — previne SQL injection
+    return name.replace(/[^a-zA-ZÀ-ÿ0-9 .\-]/g, '').trim().slice(0, 100);
+  }
+
   // Busca métricas agregadas do funil_comercial para o qualificador — usa período ativo
   async function fetchDatabricksMetrics(qualName) {
-    var qn = qualName || _qualName();
+    var qn = _sanitizeQualName(qualName || _qualName());
     if (!qn) return null;
     var pd = _periodDates();
     var monthStart = pd.from;
@@ -169,7 +184,7 @@
   }
 
   async function fetchDatabricksLineBreakdown(qualName) {
-    var qn = qualName || _qualName();
+    var qn = _sanitizeQualName(qualName || _qualName());
     if (!qn) return null;
     var pd = _periodDates();
     var monthStart = pd.from;
@@ -211,7 +226,7 @@
   }
 
   async function fetchDatabricksDtByLine(qualName) {
-    var qn = qualName || _qualName();
+    var qn = _sanitizeQualName(qualName || _qualName());
     if (!qn) return null;
     var pd = _periodDates();
     var monthStart = pd.from;
@@ -1130,7 +1145,7 @@
     var prefix = email.split('@')[0].toLowerCase();
     var segments = prefix.replace(/[._]/g, ' ').trim().split(' ').filter(function(s) { return s.length >= 4; });
     if (!segments.length) return null;
-    var likeParts = segments.map(function(s) { return "LOWER(qualificador_name) LIKE '%" + s + "%'"; }).join(' OR ');
+    var likeParts = segments.map(function(s) { return "LOWER(qualificador_name) LIKE '%" + s.replace(/[^a-z0-9]/g, '') + "%'"; }).join(' OR ');
     var sql = "SELECT DISTINCT qualificador_name FROM production.diamond.funil_comercial WHERE (" + likeParts + ") AND qualificador_name IS NOT NULL LIMIT 5";
     var rows = await _dbQuery(sql);
     if (!rows || !rows.length) return null;

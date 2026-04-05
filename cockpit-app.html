@@ -29,7 +29,8 @@ window.IS_REMOTE = location.hostname !== '' && !location.hostname.includes('loca
 // ── CLAUDE API CONFIG (Motor LLM do Elucy Webapp) ───────────────────
 // SEGURANCA: key NUNCA hardcoded no frontend. Obtida via Supabase Edge Function
 // ou configurada pelo operador nas Settings (armazenada apenas no localStorage).
-window.ELUCY_API_KEY = localStorage.getItem('elucy_api_key') || '';
+// API key REMOVIDA do frontend — chamadas via Edge Function (elucy-inference)
+window.ELUCY_API_KEY = null; // deprecated — usar Edge Function
 window.ELUCY_API_MODEL = localStorage.getItem('elucy_api_model') || 'claude-sonnet-4-20250514';
 window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false';
 

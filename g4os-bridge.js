@@ -21,8 +21,12 @@
   'use strict';
 
   // Responde ping do Cockpit
+  var ALLOWED_ORIGINS = ['https://nsouza-png.github.io', 'null']; // null = local file://
+
   window.addEventListener('message', function(e){
     if(!e.data || !e.data.type) return;
+    // Validate origin — only accept messages from known Elucy domains or local
+    if(e.origin && e.origin !== 'null' && ALLOWED_ORIGINS.indexOf(e.origin) === -1) return;
 
     // PING → PONG (heartbeat)
     if(e.data.type === 'elucy:ping'){

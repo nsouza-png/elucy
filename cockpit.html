@@ -1706,7 +1706,14 @@ function getSB(){
 }
 
 async function supabaseSignOut(){
-  const sb=getSB(); if(sb) await sb.auth.signOut();
+  // Cleanup intervals e realtime channels antes de deslogar
+  if(window._todayStatsInterval) clearInterval(window._todayStatsInterval);
+  if(window._texTimer) clearInterval(window._texTimer);
+  const sb=getSB();
+  if(sb){
+    try{ sb.removeAllChannels(); }catch(e){}
+    await sb.auth.signOut();
+  }
   _currentUser=null;
   localStorage.removeItem('elucy_operator_email');
   localStorage.removeItem('elucy_qualificador_name');
@@ -1760,7 +1767,7 @@ function showCockpit(user){
 
 async function checkApproval(user){
   const sb=getSB();
-  if(!sb) return showCockpit(user); // fallback sem SDK
+  if(!sb){ showAuthScreen(); console.error('[auth] Supabase SDK não carregou — bloqueando acesso'); return; }
   // Verifica se email é @g4educacao.com
   if(!user.email.endsWith('@g4educacao.com')){
     const err=document.getElementById('auth-error');
