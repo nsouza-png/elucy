@@ -24,6 +24,37 @@
   function _cacheSet(key, data) { }
 
   // ============================================================================
+  // PERIOD STATE — controla janela de tempo ativa em toda a tab Pre-Vendas
+  // ============================================================================
+
+  var _period = { preset: '30d', from: null, to: null };
+
+  function _periodDates() {
+    if (_period.preset === 'custom' && _period.from && _period.to) {
+      return { from: _period.from, to: _period.to };
+    }
+    var to = new Date();
+    var from = new Date();
+    if (_period.preset === '7d')  from.setDate(from.getDate() - 7);
+    else if (_period.preset === '90d') from.setDate(from.getDate() - 90);
+    else from.setDate(from.getDate() - 30); // default 30d
+    return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
+  }
+
+  function _periodNextDay(dateStr) {
+    var d = new Date(dateStr + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + 1);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function _periodLabel() {
+    var p = _periodDates();
+    var fmt = function(s) { return s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(0,4); };
+    if (_period.preset !== 'custom') return _period.preset + ' · ' + fmt(p.from) + ' → ' + fmt(p.to);
+    return fmt(p.from) + ' → ' + fmt(p.to);
+  }
+
+  // ============================================================================
   // DATABRICKS DATA LAYER — métricas analíticas oficiais do funil_comercial
   // Usa o mesmo padrão do cockpit: Bearer token em localStorage('elucy_db_token')
   // ============================================================================
@@ -65,15 +96,13 @@
     } catch (e) { return null; }
   }
 
-  // Busca métricas agregadas do mês do funil_comercial para o qualificador
+  // Busca métricas agregadas do funil_comercial para o qualificador — usa período ativo
   async function fetchDatabricksMetrics(qualName) {
     var qn = qualName || _qualName();
     if (!qn) return null;
-    var monthStart = _monthStart();
-    var nextMonth = (function() {
-      var d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + 1);
-      return d.toISOString().slice(0, 10);
-    })();
+    var pd = _periodDates();
+    var monthStart = pd.from;
+    var nextMonth = _periodNextDay(pd.to);
 
     var sql = `
       SELECT
@@ -142,11 +171,9 @@
   async function fetchDatabricksLineBreakdown(qualName) {
     var qn = qualName || _qualName();
     if (!qn) return null;
-    var monthStart = _monthStart();
-    var nextMonth = (function() {
-      var d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + 1);
-      return d.toISOString().slice(0, 10);
-    })();
+    var pd = _periodDates();
+    var monthStart = pd.from;
+    var nextMonth = _periodNextDay(pd.to);
     var sql = `
       SELECT
         COALESCE(linha_de_receita_vigente, 'Não Definido') AS linha,
@@ -186,11 +213,9 @@
   async function fetchDatabricksDtByLine(qualName) {
     var qn = qualName || _qualName();
     if (!qn) return null;
-    var monthStart = _monthStart();
-    var nextMonth = (function() {
-      var d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + 1);
-      return d.toISOString().slice(0, 10);
-    })();
+    var pd = _periodDates();
+    var monthStart = pd.from;
+    var nextMonth = _periodNextDay(pd.to);
     var sql = `
       SELECT
         COALESCE(linha_de_receita_vigente, 'Não Definido') AS linha,
@@ -247,12 +272,13 @@
     try {
       var sb = _sb();
       if (!sb) return null;
-      var monthStart = _monthStart();
+      var pd = _periodDates();
       var q = sb.from('deal_stage_history')
         .select('deal_id', { count: 'exact', head: true })
         .eq('to_stage', 'Oportunidade')
         .eq('source', 'databricks')
-        .gte('changed_at', monthStart);
+        .gte('changed_at', pd.from)
+        .lte('changed_at', pd.to);
       if (operatorEmail) q = q.eq('changed_by', operatorEmail);
       var res = await q;
       if (res.error) return null;
@@ -264,12 +290,13 @@
     try {
       var sb = _sb();
       if (!sb) return null;
-      var monthStart = _monthStart();
+      var pd = _periodDates();
       var q = sb.from('deal_stage_history')
         .select('deal_id', { count: 'exact', head: true })
         .eq('to_stage', 'Ganho')
         .eq('source', 'databricks')
-        .gte('changed_at', monthStart);
+        .gte('changed_at', pd.from)
+        .lte('changed_at', pd.to);
       if (operatorEmail) q = q.eq('changed_by', operatorEmail);
       var res = await q;
       if (res.error) return null;
@@ -484,6 +511,152 @@
   }
 
   // ============================================================================
+  // STEP 3 — DATABRICKS MACRO (toda a operação, sem filtro de qualificador)
+  // ============================================================================
+
+  async function fetchDatabricksMacro() {
+    var pd = _periodDates();
+    var monthStart = pd.from;
+    var nextMonth = _periodNextDay(pd.to);
+    var sql = `
+      SELECT
+        COUNT(DISTINCT CASE WHEN event = 'MQL'          THEN deal_id END) AS mql_count,
+        COUNT(DISTINCT CASE WHEN event = 'SAL'          THEN deal_id END) AS sal_count,
+        COUNT(DISTINCT CASE WHEN event = 'Agendado'     THEN deal_id END) AS agendamento_count,
+        COUNT(DISTINCT CASE WHEN event = 'Oportunidade' THEN deal_id END) AS opp_count,
+        COUNT(DISTINCT CASE WHEN event = 'Ganho'        THEN deal_id END) AS won_count,
+        COUNT(DISTINCT CASE WHEN event = 'Perdido'      THEN deal_id END) AS lost_count,
+        ROUND(AVG(CASE WHEN event = 'SAL'          AND delta_t > 0 AND delta_t < 180 THEN delta_t END), 1) AS avg_dt_sal,
+        ROUND(AVG(CASE WHEN event = 'Agendado'     AND delta_t > 0 AND delta_t < 180 THEN delta_t END), 1) AS avg_dt_agendado,
+        ROUND(AVG(CASE WHEN event = 'Oportunidade' AND delta_t > 0 AND delta_t < 180 THEN delta_t END), 1) AS avg_dt_opp,
+        ROUND(AVG(CASE WHEN event = 'Ganho'        AND delta_t > 0 AND delta_t < 365 THEN delta_t END), 1) AS avg_dt_ganho
+      FROM production.diamond.funil_comercial
+      WHERE event_timestamp >= CAST('${monthStart} 00:00:00' AS TIMESTAMP)
+        AND event_timestamp <  CAST('${nextMonth} 00:00:00' AS TIMESTAMP)
+    `;
+    var rows = await _dbQuery(sql.trim());
+    if (!rows || !rows.length) return null;
+    var r = rows[0];
+    function _i(v) { return v != null && v !== '' ? parseInt(v, 10) : 0; }
+    function _n(v) { return v != null && v !== '' ? parseFloat(v) : null; }
+    var mql = _i(r.mql_count), sal = _i(r.sal_count), agend = _i(r.agendamento_count);
+    var opp = _i(r.opp_count), won = _i(r.won_count), lost = _i(r.lost_count);
+    return {
+      mql: mql, sal: sal, agend: agend, opp: opp, won: won, lost: lost,
+      cr_mql_sal: mql ? _pct(sal, mql) : null,
+      cr_sal_agend: sal ? _pct(agend, sal) : null,
+      cr_agend_opp: agend ? _pct(opp, agend) : null,
+      cr_opp_won: opp ? _pct(won, opp) : null,
+      dt_mql_sal: _n(r.avg_dt_sal),
+      dt_agendado: _n(r.avg_dt_agendado),
+      dt_opp: _n(r.avg_dt_opp),
+      dt_ganho: _n(r.avg_dt_ganho),
+      _source: 'databricks_macro'
+    };
+  }
+
+  // ============================================================================
+  // STEP 1 — METAS DO OPERADOR (Supabase goals_current_period)
+  // ============================================================================
+
+  async function fetchGoals(operatorEmail) {
+    try {
+      var sb = _sb();
+      if (!sb || !operatorEmail) return null;
+      var res = await sb.from('goals_current_period')
+        .select('meta_opp_mensal,meta_sal,meta_mql,meta_cr_mql_sal,meta_cr_sal_opp,meta_cr_opp_won,linhas_atribuidas')
+        .eq('operator_email', operatorEmail)
+        .single();
+      if (res.error || !res.data) return null;
+      return res.data;
+    } catch(e) { return null; }
+  }
+
+  // ============================================================================
+  // STEP 4 — BENCHMARK (fórmula híbrida: macro da operação vs individual)
+  // ============================================================================
+
+  function calcBenchmark(opMetrics, macroMetrics, goals) {
+    if (!opMetrics || !macroMetrics) return null;
+    // Benchmark = média ponderada: 70% macro operação + 30% meta configurada (se existir)
+    function _bench(macroVal, goalVal) {
+      if (goalVal != null && goalVal > 0) return Math.round(macroVal * 0.7 + goalVal * 0.3);
+      return macroVal;
+    }
+    return {
+      cr_mql_sal:   _bench(macroMetrics.cr_mql_sal,   goals && goals.meta_cr_mql_sal),
+      cr_sal_opp:   _bench(macroMetrics.cr_agend_opp,  goals && goals.meta_cr_sal_opp),
+      cr_opp_won:   _bench(macroMetrics.cr_opp_won,    goals && goals.meta_cr_opp_won),
+      meta_opp:     goals && goals.meta_opp_mensal ? parseInt(goals.meta_opp_mensal, 10) : null,
+      linhas_atribuidas: goals && goals.linhas_atribuidas ? goals.linhas_atribuidas : null
+    };
+  }
+
+  // ============================================================================
+  // STEP 7 — QUALITY DATA LAYER
+  // ============================================================================
+
+  async function fetchQualityRuntime(operatorEmail) {
+    try {
+      var sb = _sb();
+      if (!sb) return null;
+      var q = sb.from('deal_data_quality_runtime').select(
+        'deal_id,operator_email,dqi_score,completeness_score,consistency_score,' +
+        'recency_score,evidence_score,linha_de_receita_vigente,grupo_de_receita,' +
+        'l19_completude,l19_consistencia,l19_recencia,l19_evidencia,dqi_band,updated_at'
+      ).limit(500);
+      if (operatorEmail) q = q.eq('operator_email', operatorEmail);
+      var res = await q;
+      return res.data || [];
+    } catch(e) { return []; }
+  }
+
+  async function fetchTransitionRuntime(operatorEmail) {
+    try {
+      var sb = _sb();
+      if (!sb) return null;
+      var q = sb.from('deal_transition_runtime').select(
+        'deal_id,operator_email,block_reason,block_category,is_blocked,' +
+        'next_action,next_action_due,stall_days,linha_de_receita_vigente'
+      ).eq('is_blocked', true).limit(200);
+      if (operatorEmail) q = q.eq('operator_email', operatorEmail);
+      var res = await q;
+      return res.data || [];
+    } catch(e) { return []; }
+  }
+
+  function calcQualityStats(qualityRows) {
+    if (!qualityRows || !qualityRows.length) return null;
+    function _avg(field) {
+      var vals = qualityRows.map(function(r) { return parseFloat(r[field]); }).filter(function(v) { return !isNaN(v); });
+      return vals.length ? Math.round(vals.reduce(function(a,b){return a+b;},0) / vals.length * 100) / 100 : null;
+    }
+    var bands = { A: 0, B: 0, C: 0, D: 0, E: 0 };
+    qualityRows.forEach(function(r) { var b = (r.dqi_band||'').toUpperCase(); if (bands[b]!=null) bands[b]++; });
+    return {
+      total: qualityRows.length,
+      avg_dqi: _avg('dqi_score'),
+      avg_completeness: _avg('completeness_score'),
+      avg_consistency: _avg('consistency_score'),
+      avg_recency: _avg('recency_score'),
+      avg_evidence: _avg('evidence_score'),
+      bands: bands
+    };
+  }
+
+  function calcBlockReasons(blockedRows) {
+    if (!blockedRows || !blockedRows.length) return [];
+    var byReason = {};
+    blockedRows.forEach(function(r) {
+      var key = r.block_reason || r.block_category || 'Sem motivo';
+      if (!byReason[key]) byReason[key] = { reason: key, count: 0, deals: [] };
+      byReason[key].count++;
+      if (r.deal_id) byReason[key].deals.push(r.deal_id);
+    });
+    return Object.values(byReason).sort(function(a,b){return b.count-a.count;});
+  }
+
+  // ============================================================================
   // RENDER LAYER
   // ============================================================================
 
@@ -564,6 +737,254 @@
     html += '<td style="text-align:right">' + _fmtBRL(t.revenue) + '</td>';
     html += '</tr></tbody></table></div>';
     return html;
+  }
+
+  // ── STEP 6 — Render Efficiency Table with benchmark highlight ──
+  function renderEfficiencyTableWithBenchmark(data, benchmark) {
+    if (!data || !data.rows || !data.rows.length) return '<div style="color:var(--text2);font-size:11px">Sem dados</div>';
+    var html = '<div style="overflow-x:auto"><table class="intel-table">';
+    html += '<thead><tr><th>Qualificador</th><th style="text-align:right">#MQL</th><th style="text-align:right">#SAL</th>';
+    html += '<th style="text-align:right">CR M→S</th><th style="text-align:right">#OPP</th><th style="text-align:right">CR S→O</th>';
+    html += '<th style="text-align:right">#Won</th><th style="text-align:right">CR O→W</th><th style="text-align:right">Receita</th></tr></thead><tbody>';
+    var myEmail = (_opEmail() || '').toLowerCase();
+    var bm = benchmark || {};
+    function _crColor(v, bv) {
+      if (v == null) return 'var(--text2)';
+      if (bv && v >= bv) return 'var(--green)';
+      if (bv && v >= bv * 0.7) return 'var(--accent)';
+      return 'var(--red)';
+    }
+    data.rows.forEach(function(r) {
+      if (r.mql < 3) return;
+      var isMe = r.name && myEmail && r.name.toLowerCase().indexOf(myEmail.split('@')[0]) !== -1;
+      var style = isMe ? ' style="background:var(--bg4);font-weight:700"' : '';
+      html += '<tr' + style + '>';
+      html += '<td>' + r.name + (isMe ? ' <span style="font-size:9px;color:var(--accent)">▶ você</span>' : '') + '</td>';
+      html += '<td style="text-align:right">' + _fmt(r.mql) + '</td>';
+      html += '<td style="text-align:right">' + _fmt(r.sal) + '</td>';
+      html += '<td style="text-align:right;color:' + _crColor(r.cr_mql_sal, bm.cr_mql_sal) + '">' + r.cr_mql_sal + '%</td>';
+      html += '<td style="text-align:right">' + _fmt(r.opp) + '</td>';
+      html += '<td style="text-align:right;color:' + _crColor(r.cr_sal_opp, bm.cr_sal_opp) + '">' + r.cr_sal_opp + '%</td>';
+      html += '<td style="text-align:right">' + _fmt(r.won) + '</td>';
+      html += '<td style="text-align:right;color:' + _crColor(r.cr_opp_won, bm.cr_opp_won) + '">' + r.cr_opp_won + '%</td>';
+      html += '<td style="text-align:right">' + _fmtBRL(r.revenue) + '</td>';
+      html += '</tr>';
+    });
+    var t = data.totals;
+    html += '<tr style="font-weight:800;border-top:2px solid var(--border);background:var(--bg3)">';
+    html += '<td>OPERAÇÃO</td><td style="text-align:right">' + _fmt(t.mql) + '</td>';
+    html += '<td style="text-align:right">' + _fmt(t.sal) + '</td>';
+    html += '<td style="text-align:right">' + t.cr_mql_sal + '%</td>';
+    html += '<td style="text-align:right">' + _fmt(t.opp) + '</td>';
+    html += '<td style="text-align:right">' + t.cr_sal_opp + '%</td>';
+    html += '<td style="text-align:right">' + _fmt(t.won) + '</td>';
+    html += '<td style="text-align:right">' + t.cr_opp_won + '%</td>';
+    html += '<td style="text-align:right">' + _fmtBRL(t.revenue) + '</td>';
+    html += '</tr>';
+    if (bm.cr_mql_sal != null) {
+      html += '<tr style="font-size:10px;color:var(--text2);border-top:1px dashed var(--border)">';
+      html += '<td style="color:var(--text3)">Benchmark</td>';
+      html += '<td colspan="2"></td>';
+      html += '<td style="text-align:right;color:var(--text2)">' + bm.cr_mql_sal + '%</td>';
+      html += '<td></td>';
+      html += '<td style="text-align:right;color:var(--text2)">' + (bm.cr_sal_opp||'—') + '%</td>';
+      html += '<td></td>';
+      html += '<td style="text-align:right;color:var(--text2)">' + (bm.cr_opp_won||'—') + '%</td>';
+      html += '<td></td></tr>';
+    }
+    html += '</tbody></table></div>';
+    return html;
+  }
+
+  // ── STEP 7 — renderQualityTab ──
+  function renderQualityTab(containerId, qualityRows, blockedRows, stats) {
+    var el = document.getElementById(containerId);
+    if (!el) return;
+    if (!qualityRows || !qualityRows.length) {
+      el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text2)">Sem dados de Quality Runtime. Tabela deal_data_quality_runtime vazia para este operador.</div>';
+      return;
+    }
+
+    var html = '';
+
+    // KPI cards Quality
+    if (stats) {
+      var dqiColor = stats.avg_dqi >= 0.7 ? 'var(--green)' : stats.avg_dqi >= 0.5 ? 'var(--accent)' : 'var(--red)';
+      html += '<div class="kpi-g" style="grid-template-columns:repeat(5,1fr);margin-bottom:14px">';
+      html += '<div class="kpi"><div class="kpi-l">DQI Médio</div><div class="kpi-v" style="color:' + dqiColor + '">' + (stats.avg_dqi != null ? Math.round(stats.avg_dqi*100) + '%' : '—') + '</div></div>';
+      html += '<div class="kpi"><div class="kpi-l">Completude</div><div class="kpi-v">' + (stats.avg_completeness != null ? Math.round(stats.avg_completeness*100) + '%' : '—') + '</div></div>';
+      html += '<div class="kpi"><div class="kpi-l">Consistência</div><div class="kpi-v">' + (stats.avg_consistency != null ? Math.round(stats.avg_consistency*100) + '%' : '—') + '</div></div>';
+      html += '<div class="kpi"><div class="kpi-l">Recência</div><div class="kpi-v">' + (stats.avg_recency != null ? Math.round(stats.avg_recency*100) + '%' : '—') + '</div></div>';
+      html += '<div class="kpi"><div class="kpi-l">Evidência</div><div class="kpi-v">' + (stats.avg_evidence != null ? Math.round(stats.avg_evidence*100) + '%' : '—') + '</div></div>';
+      html += '</div>';
+
+      // Bands
+      var bands = stats.bands;
+      var totalBands = Object.values(bands).reduce(function(a,b){return a+b;},0) || 1;
+      html += '<div class="ch" style="margin-bottom:12px"><div class="ch-t">Distribuição por Band DQI</div>';
+      html += '<div style="display:flex;gap:8px;align-items:stretch;margin-top:8px">';
+      var bandColors = {A:'var(--green)',B:'#48bb78',C:'var(--accent)',D:'var(--yellow)',E:'var(--red)'};
+      ['A','B','C','D','E'].forEach(function(b) {
+        var pct = Math.round((bands[b]||0)/totalBands*100);
+        var color = bandColors[b];
+        html += '<div style="flex:1;text-align:center;background:var(--bg3);border-radius:8px;padding:10px 6px">';
+        html += '<div style="font-size:18px;font-weight:800;color:'+color+'">' + (bands[b]||0) + '</div>';
+        html += '<div style="font-size:9px;color:var(--text2);margin-top:2px">Band ' + b + '</div>';
+        html += '<div style="font-size:10px;font-weight:700;color:'+color+'">' + pct + '%</div>';
+        html += '</div>';
+      });
+      html += '</div></div>';
+    }
+
+    // Tabela leads nomeados
+    html += '<div class="ch" style="margin-bottom:12px"><div class="ch-t">Leads por Dimensão L19 <span style="font-size:9px;color:var(--text2)">(Supabase Runtime)</span></div>';
+    html += '<div style="overflow-x:auto"><table class="intel-table"><thead><tr>';
+    html += '<th>Deal</th><th>Linha</th><th>Compl.</th><th>Cons.</th><th>Recência</th><th>Evidência</th><th>DQI</th><th>Band</th>';
+    html += '</tr></thead><tbody>';
+    qualityRows.slice(0, 50).forEach(function(r) {
+      function _sc(v) {
+        var pct = v != null ? Math.round(parseFloat(v)*100) : null;
+        var color = pct == null ? 'var(--text2)' : pct >= 70 ? 'var(--green)' : pct >= 50 ? 'var(--accent)' : 'var(--red)';
+        return '<td style="text-align:right;color:' + color + '">' + (pct != null ? pct + '%' : '—') + '</td>';
+      }
+      var dqi = r.dqi_score != null ? Math.round(parseFloat(r.dqi_score)*100) : null;
+      var dqiColor = dqi == null ? 'var(--text2)' : dqi >= 70 ? 'var(--green)' : dqi >= 50 ? 'var(--accent)' : 'var(--red)';
+      var band = (r.dqi_band || '—').toUpperCase();
+      var bandColors = {A:'var(--green)',B:'#48bb78',C:'var(--accent)',D:'var(--yellow)',E:'var(--red)'};
+      html += '<tr>';
+      html += '<td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (r.deal_id||'—') + '</td>';
+      html += '<td style="font-size:10px;color:var(--text2)">' + (r.linha_de_receita_vigente||r.grupo_de_receita||'—') + '</td>';
+      html += _sc(r.completeness_score) + _sc(r.consistency_score) + _sc(r.recency_score) + _sc(r.evidence_score);
+      html += '<td style="text-align:right;font-weight:700;color:' + dqiColor + '">' + (dqi != null ? dqi + '%' : '—') + '</td>';
+      html += '<td style="text-align:center"><span style="font-size:10px;font-weight:800;color:' + (bandColors[band]||'var(--text2)') + '">' + band + '</span></td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div></div>';
+
+    // Block reasons
+    if (blockedRows && blockedRows.length) {
+      var reasons = calcBlockReasons(blockedRows);
+      html += '<div class="ch" style="margin-bottom:12px"><div class="ch-t">Motivos de Bloqueio L20 <span style="font-size:9px;color:var(--red)">' + blockedRows.length + ' deals bloqueados</span></div>';
+      html += '<div style="overflow-x:auto"><table class="intel-table"><thead><tr><th>Motivo</th><th style="text-align:right">Qtd</th></tr></thead><tbody>';
+      reasons.slice(0, 10).forEach(function(r) {
+        html += '<tr><td>' + r.reason + '</td><td style="text-align:right;font-weight:700;color:var(--red)">' + r.count + '</td></tr>';
+      });
+      html += '</tbody></table>';
+      // Insight automático
+      if (reasons.length) {
+        html += '<div style="margin-top:8px;padding:10px;background:rgba(239,68,68,.08);border-radius:6px;border-left:3px solid var(--red);font-size:11px;color:var(--text)">';
+        html += '<strong>Principal bloqueio:</strong> ' + reasons[0].reason + ' (' + reasons[0].count + ' deals). ';
+        if (reasons.length > 1) html += 'Segundo: ' + reasons[1].reason + ' (' + reasons[1].count + ').';
+        html += '</div>';
+      }
+      html += '</div>';
+    } else {
+      html += '<div style="padding:12px;background:rgba(86,229,169,.08);border-radius:6px;border-left:3px solid var(--green);font-size:11px;color:var(--text)">';
+      html += 'Nenhum deal bloqueado no período. Qualidade operacional OK.';
+      html += '</div>';
+    }
+
+    el.innerHTML = html;
+  }
+
+  // ── renderPipelineTab — conteúdo da tab PIPELINE ──
+  function renderPipelineTab(containerId, dbMetrics, dbLines, deals, macroMetrics, benchmark) {
+    var el = document.getElementById(containerId);
+    if (!el) return;
+    var html = '';
+
+    // Owner bar — linhas ativas do operador (detectadas dos deals ativos)
+    var linesByDeal = {};
+    if (deals && deals.length) {
+      deals.forEach(function(d) {
+        var line = d.linha_de_receita_vigente || d.grupo_de_receita || 'Não Definido';
+        if (!linesByDeal[line]) linesByDeal[line] = 0;
+        linesByDeal[line]++;
+      });
+    }
+    var linhaEntries = Object.keys(linesByDeal).sort(function(a,b){return linesByDeal[b]-linesByDeal[a];});
+    if (linhaEntries.length) {
+      html += '<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Linhas Ativas</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+      linhaEntries.forEach(function(l) {
+        html += '<span style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text)">' + l + ' <span style="color:var(--accent)">' + linesByDeal[l] + '</span></span>';
+      });
+      html += '</div></div>';
+    }
+
+    // Funil do operador (Supabase deals)
+    if (deals && deals.length) {
+      var funnel = calcFunnel(deals);
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">';
+      html += '<div class="ch"><div class="ch-t">Funil do Operador <span style="font-size:9px;color:var(--text2)">(Supabase)</span></div>' + renderFunnelBars(funnel) + '</div>';
+
+      // OPPs por Grupo de Origem
+      var byGrupo = {};
+      deals.forEach(function(d) {
+        var fase = (d.fase_atual_no_processo||'').toLowerCase();
+        if (fase.indexOf('oportunidade') === -1 && fase.indexOf('negociac') === -1 && fase.indexOf('ganho') === -1) return;
+        var grp = d.grupo_de_receita || 'Grupo F';
+        if (!byGrupo[grp]) byGrupo[grp] = 0;
+        byGrupo[grp]++;
+      });
+      var grupoEntries = Object.keys(byGrupo).sort(function(a,b){return byGrupo[b]-byGrupo[a];});
+      var maxGrupo = Math.max.apply(null, Object.values(byGrupo)) || 1;
+      if (grupoEntries.length) {
+        html += '<div class="ch"><div class="ch-t">OPPs por Grupo de Origem</div>';
+        grupoEntries.forEach(function(g) {
+          var pct = Math.round((byGrupo[g]/maxGrupo)*100);
+          html += '<div class="fr"><div class="fl" style="width:100px;font-size:11px">' + g + '</div>';
+          html += '<div class="fb-bg"><div class="fb-f" style="width:'+Math.max(pct,3)+'%;background:var(--accent2)">';
+          html += '<span class="fb-v">' + byGrupo[g] + '</span></div></div></div>';
+        });
+        html += '</div>';
+      } else {
+        html += '<div class="ch"><div class="ch-t">OPPs por Grupo de Origem</div><div style="color:var(--text2);font-size:11px">Sem OPPs no pipeline</div></div>';
+      }
+      html += '</div>';
+    }
+
+    // Pipeline por Linha (Databricks)
+    if (dbLines && dbLines.length) {
+      var maxMql = Math.max.apply(null, dbLines.map(function(r){return r.total;})) || 1;
+      html += '<div class="ch" style="margin-bottom:12px"><div class="ch-t">Tabela Linhas Ativas × Origem <span style="font-size:9px;padding:2px 5px;border-radius:4px;background:var(--accent);color:#000;margin-left:4px;font-weight:700">DB</span></div>';
+      html += '<table class="intel-table"><thead><tr><th>Linha</th><th style="text-align:right">MQL</th><th style="text-align:right">SAL</th><th style="text-align:right">OPP</th><th style="text-align:right">Won</th><th style="text-align:right">CR M→O</th></tr></thead><tbody>';
+      dbLines.forEach(function(r) {
+        var crColor = r.cr_opp >= (benchmark && benchmark.cr_mql_sal ? benchmark.cr_mql_sal*0.5 : 20) ? 'var(--green)' : 'var(--accent)';
+        html += '<tr><td>' + r.name + '</td>';
+        html += '<td style="text-align:right">' + r.total + '</td>';
+        html += '<td style="text-align:right">' + r.sal + '</td>';
+        html += '<td style="text-align:right">' + r.opp + '</td>';
+        html += '<td style="text-align:right">' + r.won + '</td>';
+        html += '<td style="text-align:right;color:' + crColor + '">' + r.cr_opp + '%</td></tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+
+    // Comparativo vs operação completa (macro benchmark)
+    if (macroMetrics && dbMetrics) {
+      html += '<div class="ch" style="margin-bottom:12px"><div class="ch-t">Comparativo vs Operação</div>';
+      html += '<table class="intel-table"><thead><tr><th>Métrica</th><th style="text-align:right">Você</th><th style="text-align:right">Operação</th><th style="text-align:right">Δ</th></tr></thead><tbody>';
+      var comparisons = [
+        ['CR MQL→SAL', dbMetrics.cr_mql_sal, macroMetrics.cr_mql_sal],
+        ['CR SAL→Agend', dbMetrics.cr_sal_agend, macroMetrics.cr_sal_agend],
+        ['CR Agend→OPP', dbMetrics.cr_agend_opp, macroMetrics.cr_agend_opp],
+        ['CR OPP→Won', dbMetrics.cr_opp_won, macroMetrics.cr_opp_won]
+      ];
+      comparisons.forEach(function(c) {
+        var you = c[1], op = c[2];
+        if (you == null && op == null) return;
+        var delta = (you != null && op != null) ? Math.round((you - op) * 10) / 10 : null;
+        var deltaColor = delta == null ? 'var(--text2)' : delta >= 0 ? 'var(--green)' : 'var(--red)';
+        html += '<tr><td>' + c[0] + '</td>';
+        html += '<td style="text-align:right;font-weight:700">' + (you != null ? you + '%' : '—') + '</td>';
+        html += '<td style="text-align:right;color:var(--text2)">' + (op != null ? op + '%' : '—') + '</td>';
+        html += '<td style="text-align:right;font-weight:700;color:' + deltaColor + '">' + (delta != null ? (delta >= 0 ? '+' : '') + delta + 'pp' : '—') + '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+
+    el.innerHTML = html;
   }
 
   function renderClientProfile(data) {
@@ -728,8 +1149,11 @@
     el.innerHTML = '<div style="font-size:12px;color:var(--text2);padding:40px;text-align:center">Carregando dados'
       + (hasDbToken ? ' do Databricks...' : '...') + '</div>';
 
+    // Atualiza label do period bar
+    var labelEl = document.getElementById('bp-period-label');
+    if (labelEl) labelEl.textContent = _periodLabel();
+
     var email = _opEmail();
-    // Se token existe mas qualName não está em cache, faz lookup automático
     var qualName = hasDbToken ? (await _resolveQualName(email)) : null;
     var lastSync = new Date().toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
 
@@ -738,7 +1162,9 @@
       hasDbToken ? fetchDatabricksLineBreakdown(qualName) : Promise.resolve(null),
       hasDbToken ? fetchDatabricksDtByLine(qualName) : Promise.resolve(null),
       fetchOppEventsThisMonth(email),
-      fetchDeals(email)
+      fetchDeals(email),
+      hasDbToken ? fetchDatabricksMacro() : Promise.resolve(null),
+      fetchGoals(email)
     ]);
 
     var dbMetrics  = results[0];
@@ -746,6 +1172,9 @@
     var dbDtByLine = results[2];
     var oppSB      = results[3];
     var deals      = results[4];
+    var macroMetrics = results[5];
+    var goals      = results[6];
+    var benchmark  = calcBenchmark(dbMetrics, macroMetrics, goals);
 
     if (!dbMetrics && (!deals || !deals.length)) {
       el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text2)">'
@@ -762,19 +1191,18 @@
 
     // ── HEADER ──
     var dataSource = dbMetrics ? 'Databricks' : 'Supabase';
-    html += '<div style="margin-bottom:16px;display:flex;align-items:flex-end;justify-content:space-between">';
-    html += '<div><div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:3px">Pre-Vendas Intelligence</div>';
-    html += '<div style="font-size:12px;color:var(--text2)">' + dataSource + ' · Março 2026 · ' + lastSync + '</div></div>';
+    html += '<div style="margin-bottom:14px;display:flex;align-items:flex-end;justify-content:space-between">';
+    html += '<div><div style="font-size:17px;font-weight:800;color:var(--text);margin-bottom:2px">Performance</div>';
+    html += '<div style="font-size:11px;color:var(--text2)">' + dataSource + ' · ' + _periodLabel() + ' · ' + lastSync + '</div></div>';
     if (dbMetrics && dbMetrics.receita_won) {
       html += '<div style="font-size:11px;color:var(--text2);text-align:right">';
       html += 'Receita won: <span style="color:var(--green);font-weight:700">' + _fmtBRL(dbMetrics.receita_won) + '</span>';
-      html += ' · Ticket médio: <span style="font-weight:700">' + _fmtBRL(dbMetrics.ticket_medio) + '</span>';
+      html += ' · Ticket: <span style="font-weight:700">' + _fmtBRL(dbMetrics.ticket_medio) + '</span>';
       html += '</div>';
     }
     html += '</div>';
 
     if (dbMetrics) {
-      // ── KPI ROW — 100% Databricks event-based ──
       var mql  = dbMetrics.mql_validos;
       var sal  = dbMetrics.sal_count;
       var opp  = dbMetrics.opp_count;
@@ -782,35 +1210,73 @@
       var lost = dbMetrics.lost_count;
       var agend = dbMetrics.agendamento_count;
       var oppGeradasVal = (oppSB != null && oppSB > 0) ? oppSB : opp;
+
+      // ── HERO META OPP ──
+      if (benchmark && benchmark.meta_opp != null) {
+        var metaOpp = benchmark.meta_opp;
+        var heroPct = Math.min(Math.round((oppGeradasVal / metaOpp) * 100), 100);
+        var heroColor = heroPct >= 100 ? 'var(--green)' : heroPct >= 70 ? 'var(--accent)' : 'var(--red)';
+        var linhasAtiv = benchmark.linhas_atribuidas;
+        html += '<div style="background:var(--bg3);border-radius:var(--r2);padding:16px;margin-bottom:14px;border:1px solid var(--border)">';
+        html += '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">';
+        html += '<div>';
+        html += '<div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Meta OPPs do Mês</div>';
+        html += '<div style="font-size:38px;font-weight:800;color:' + heroColor + ';line-height:1">' + oppGeradasVal;
+        html += '<span style="font-size:18px;color:var(--text2);font-weight:600">/' + metaOpp + '</span></div>';
+        html += '</div>';
+        html += '<div style="text-align:right">';
+        html += '<div style="font-size:28px;font-weight:800;color:' + heroColor + '">' + heroPct + '%</div>';
+        html += '<div style="font-size:10px;color:var(--text2)">de realização</div>';
+        html += '</div></div>';
+        // Progress bar
+        html += '<div style="height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-bottom:10px">';
+        html += '<div style="height:100%;width:' + heroPct + '%;background:' + heroColor + ';border-radius:3px;transition:width .5s"></div>';
+        html += '</div>';
+        // Linhas ativas chips
+        if (linhasAtiv && Array.isArray(linhasAtiv) && linhasAtiv.length) {
+          html += '<div style="display:flex;flex-wrap:wrap;gap:5px">';
+          linhasAtiv.forEach(function(l) {
+            html += '<span style="padding:2px 9px;border-radius:5px;font-size:10px;font-weight:700;background:rgba(255,193,116,.12);color:var(--accent);border:1px solid rgba(255,193,116,.3)">' + l + '</span>';
+          });
+          html += '</div>';
+        }
+        html += '</div>';
+      }
+
+      // ── KPI ROW ──
       var crMqlOpp = mql ? _pct(oppGeradasVal, mql) : 0;
-
-      html += '<div class="kpi-g" style="grid-template-columns:repeat(7,1fr);margin-bottom:14px">';
-      html += '<div class="kpi" title="MQL gerados no mês — Databricks"><div class="kpi-l">MQL</div><div class="kpi-v">' + _fmt(mql) + '</div></div>';
-      html += '<div class="kpi" title="SAL gerados no mês — Databricks"><div class="kpi-l">SAL</div><div class="kpi-v">' + _fmt(sal) + '</div></div>';
-      html += '<div class="kpi" title="Agendamentos gerados — Databricks"><div class="kpi-l">Agendamentos</div><div class="kpi-v">' + _fmt(agend) + '</div></div>';
-      html += '<div class="kpi" title="OPP geradas no mês — event-based"><div class="kpi-l">OPP Geradas</div><div class="kpi-v" style="color:var(--accent)">' + _fmt(oppGeradasVal) + '</div></div>';
-      html += '<div class="kpi" title="Won no mês — Databricks"><div class="kpi-l">Won Mês</div><div class="kpi-v" style="color:var(--green)">' + _fmt(won) + '</div></div>';
-      html += '<div class="kpi" title="CR MQL→OPP no mês"><div class="kpi-l">CR MQL→OPP</div><div class="kpi-v">' + crMqlOpp + '%</div></div>';
-      html += '<div class="kpi" title="Perdidos no mês — Databricks"><div class="kpi-l">Perdidos</div><div class="kpi-v" style="color:var(--red)">' + _fmt(lost) + '</div></div>';
+      html += '<div class="kpi-g" style="grid-template-columns:repeat(6,1fr);margin-bottom:14px">';
+      html += '<div class="kpi"><div class="kpi-l">MQL</div><div class="kpi-v">' + _fmt(mql) + '</div></div>';
+      html += '<div class="kpi"><div class="kpi-l">SAL</div><div class="kpi-v">' + _fmt(sal) + '</div></div>';
+      html += '<div class="kpi"><div class="kpi-l">Agendamentos</div><div class="kpi-v">' + _fmt(agend) + '</div></div>';
+      html += '<div class="kpi"><div class="kpi-l">OPP Geradas</div><div class="kpi-v" style="color:var(--accent)">' + _fmt(oppGeradasVal) + '</div></div>';
+      html += '<div class="kpi"><div class="kpi-l">Won</div><div class="kpi-v" style="color:var(--green)">' + _fmt(won) + '</div></div>';
+      html += '<div class="kpi"><div class="kpi-l">CR MQL→OPP</div><div class="kpi-v">' + crMqlOpp + '%</div></div>';
       html += '</div>';
 
-      // ── CRs OFICIAIS ──
-      html += '<div class="kpi-g" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px;background:var(--bg3);border-radius:var(--r2);padding:10px">';
-      var crItems = [
-        ['CR01 MQL→SAL', dbMetrics.cr_mql_sal],
-        ['CR02 SAL→Agend', dbMetrics.cr_sal_agend],
-        ['CR03 Agend→OPP', dbMetrics.cr_agend_opp],
-        ['CR04 OPP→Won', dbMetrics.cr_opp_won]
+      // ── CRs vs Benchmark ──
+      var bmLabel = benchmark ? 'vs Benchmark' : 'CRs Oficiais';
+      html += '<div style="margin-bottom:14px"><div style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">' + bmLabel + '</div>';
+      html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">';
+      var crDefs = [
+        ['CR01 MQL→SAL', dbMetrics.cr_mql_sal, benchmark && benchmark.cr_mql_sal],
+        ['CR02 SAL→Agend', dbMetrics.cr_sal_agend, null],
+        ['CR03 Agend→OPP', dbMetrics.cr_agend_opp, benchmark && benchmark.cr_sal_opp],
+        ['CR04 OPP→Won', dbMetrics.cr_opp_won, benchmark && benchmark.cr_opp_won]
       ];
-      crItems.forEach(function (c) {
-        var v = c[1];
-        var color = v == null ? 'var(--text2)' : v >= 40 ? 'var(--green)' : v >= 20 ? 'var(--accent)' : 'var(--red)';
-        html += '<div style="text-align:center"><div style="font-size:10px;color:var(--text2);margin-bottom:4px">' + c[0] + '</div>';
-        html += '<div style="font-size:22px;font-weight:800;color:' + color + '">' + (v != null ? v + '%' : '—') + '</div></div>';
+      crDefs.forEach(function(c) {
+        var v = c[1], bv = c[2];
+        var color = v == null ? 'var(--text2)' : (bv && v >= bv) ? 'var(--green)' : (bv && v >= bv*0.7) ? 'var(--accent)' : 'var(--red)';
+        if (v == null) color = 'var(--text2)';
+        html += '<div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center">';
+        html += '<div style="font-size:9px;color:var(--text2);margin-bottom:4px">' + c[0] + '</div>';
+        html += '<div style="font-size:22px;font-weight:800;color:' + color + '">' + (v != null ? v + '%' : '—') + '</div>';
+        if (bv != null) html += '<div style="font-size:9px;color:var(--text2);margin-top:2px">meta: ' + bv + '%</div>';
+        html += '</div>';
       });
-      html += '</div>';
+      html += '</div></div>';
 
-      // ── Δt QUICKBAR ──
+      // ── Δt + SLA side-by-side ──
       var dbDts = [
         ['MQL→SAL', dbMetrics.dt_mql_sal],
         ['SAL→Agend', dbMetrics.dt_agendado],
@@ -819,60 +1285,140 @@
       ];
       var anyDt = dbDts.some(function(d) { return d[1] != null; });
       if (anyDt) {
-        html += '<div class="kpi-g" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px;background:var(--bg3);border-radius:var(--r2);padding:8px">';
-        dbDts.forEach(function (dt) {
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">';
+        html += '<div class="ch"><div class="ch-t">Velocidade (Δt)</div>';
+        html += '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:6px">';
+        dbDts.forEach(function(dt) {
           var v = dt[1];
           var color = v == null ? 'var(--text2)' : v <= 3 ? 'var(--green)' : v <= 7 ? 'var(--accent)' : 'var(--red)';
-          html += '<div class="kpi" style="background:transparent"><div class="kpi-l" style="color:var(--text2)">Δt ' + dt[0] + '</div>';
-          html += '<div class="kpi-v" style="font-size:14px;color:' + color + '">' + _fmtDays(v) + '</div></div>';
+          html += '<div style="background:var(--bg3);border-radius:6px;padding:8px;text-align:center">';
+          html += '<div style="font-size:9px;color:var(--text2);margin-bottom:3px">Δt ' + dt[0] + '</div>';
+          html += '<div style="font-size:16px;font-weight:800;color:' + color + '">' + _fmtDays(v) + '</div></div>';
         });
+        html += '</div></div>';
+        html += '<div class="ch">' + renderVelocitySection(dbMetrics, null, dbDtByLine) + '</div>';
         html += '</div>';
       }
 
-      // ── Pipeline por Linha + Velocity ──
-      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">';
-      if (dbLines && dbLines.length) {
-        var maxMql = Math.max.apply(null, dbLines.map(function(r) { return r.total; })) || 1;
-        var lineHtml = '';
-        dbLines.forEach(function (r) {
-          var pct = Math.round((r.total / maxMql) * 100);
-          var crColor = r.cr_opp >= 40 ? 'var(--green)' : r.cr_opp >= 20 ? 'var(--accent)' : 'var(--text2)';
-          lineHtml += '<div class="fr"><div class="fl" style="width:155px;font-size:11px">' + r.name + '</div>';
-          lineHtml += '<div class="fb-bg"><div class="fb-f" style="width:' + Math.max(pct, 3) + '%">';
-          lineHtml += '<span class="fb-v">' + r.total + ' MQL</span></div></div>';
-          lineHtml += '<span class="fp" style="width:70px;color:' + crColor + '">' + r.cr_opp + '% OPP</span></div>';
-        });
-        html += '<div class="ch"><div class="ch-t">Pipeline por Linha <span style="font-size:9px;padding:2px 5px;border-radius:4px;background:var(--accent);color:#000;margin-left:4px;font-weight:700">DB</span></div>' + lineHtml + '</div>';
-      } else {
-        html += '<div class="ch"><div class="ch-t">Pipeline por Linha</div><div style="color:var(--text2);font-size:11px">Sem dados</div></div>';
+      // ── Volume Diário ──
+      if (daily && daily.days && daily.days.length) {
+        html += '<div class="ch" style="margin-bottom:12px"><div class="ch-t">Volume Diário de Entrada</div>' + renderDailyChart(daily) + '</div>';
       }
-      html += '<div class="ch">' + renderVelocitySection(dbMetrics, null, dbDtByLine) + '</div>';
-      html += '</div>';
+
+      // ── Tabela comparativa operação (STEP 6 — renderEfficiencyTableWithBenchmark) ──
+      if (deals && deals.length) {
+        var effData = calcEfficiencyByQualifier(deals);
+        if (effData && effData.rows && effData.rows.length) {
+          html += '<div class="ch" style="margin-bottom:12px"><div class="ch-t">Eficiência por Qualificador</div>' + renderEfficiencyTableWithBenchmark(effData, benchmark) + '</div>';
+        }
+      }
 
     } else {
       // ── SEM DATABRICKS ──
       html += '<div style="padding:16px;background:var(--bg3);border-radius:var(--r2);margin-bottom:14px;border:1px solid var(--border)">';
       html += '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">Token Databricks não configurado</div>';
-      html += '<div style="font-size:11px;color:var(--text2)">Configure em Configurações → Conexões para ver MQL, SAL, CRs, Δt e receita do mês.</div>';
-      if (oppSB != null) {
-        html += '<div style="margin-top:8px;font-size:12px">OPP Geradas (Supabase): <strong style="color:var(--accent)">' + _fmt(oppSB) + '</strong></div>';
-      }
+      html += '<div style="font-size:11px;color:var(--text2)">Configure em Configurações → Conexões para ver MQL, SAL, CRs, Δt e receita.</div>';
+      if (oppSB != null) html += '<div style="margin-top:8px;font-size:12px">OPP Geradas (Supabase): <strong style="color:var(--accent)">' + _fmt(oppSB) + '</strong></div>';
       html += '</div>';
     }
 
-    // ── Volume Diário (Supabase — entrada de leads por data de sync) ──
-    if (daily && daily.days && daily.days.length) {
-      html += '<div style="margin-bottom:12px">';
-      html += '<div class="ch"><div class="ch-t">Volume de Entrada — Mês Atual <span style="font-size:9px;color:var(--text2)">(data sync)</span></div>' + renderDailyChart(daily) + '</div>';
-      html += '</div>';
-    }
-
-    // ── Perfil de Cliente (Supabase) ──
     if (profile && profile.wonDeals > 0) {
-      html += '<div class="ch" style="margin-bottom:12px"><div class="ch-t">Perfil de Cliente — Quem Converteu <span style="font-size:9px;color:var(--text2)">(Supabase)</span></div>' + renderClientProfile(profile) + '</div>';
+      html += '<div class="ch" style="margin-bottom:12px"><div class="ch-t">Perfil de Cliente — Quem Converteu</div>' + renderClientProfile(profile) + '</div>';
     }
 
     el.innerHTML = html;
+
+    // Pré-renderiza as outras tabs em background se dados disponíveis
+    if (deals && deals.length) {
+      setTimeout(function() {
+        renderPipelineTab('bp-pipeline-content', dbMetrics, dbLines, deals, macroMetrics, benchmark);
+      }, 100);
+    }
+  }
+
+  // ============================================================================
+  // STEP 1 — PERIOD CONTROLS + SUB-TAB SWITCHER (chamados pelo HTML)
+  // ============================================================================
+
+  function setPeriod(preset, btn) {
+    _period = { preset: preset, from: null, to: null };
+    // Atualiza UI dos botões de período
+    document.querySelectorAll('.bp-period-btn').forEach(function(b) { b.classList.remove('on'); });
+    if (btn) btn.classList.add('on');
+    // Fecha custom range se aberto
+    var cr = document.getElementById('bp-custom-range');
+    if (cr) cr.style.display = 'none';
+    // Re-renderiza tab ativa
+    _refreshActiveBpTab();
+  }
+
+  function applyCustomPeriod() {
+    var from = document.getElementById('bp-date-from');
+    var to   = document.getElementById('bp-date-to');
+    if (!from || !to || !from.value || !to.value) return;
+    _period = { preset: 'custom', from: from.value, to: to.value };
+    var btn = document.getElementById('bp-custom-btn');
+    document.querySelectorAll('.bp-period-btn').forEach(function(b) { b.classList.remove('on'); });
+    if (btn) btn.classList.add('on');
+    _refreshActiveBpTab();
+  }
+
+  var _activeBpTab = 'performance';
+
+  function setBpTab(tab, btn) {
+    _activeBpTab = tab;
+    // Atualiza UI dos sub-tabs
+    document.querySelectorAll('.bp-stab').forEach(function(b) {
+      b.classList.toggle('on', b === btn);
+      b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+    });
+    // Mostra/oculta panels
+    ['performance','pipeline','quality'].forEach(function(t) {
+      var panel = document.getElementById('bp-panel-' + t);
+      if (panel) panel.style.display = t === tab ? '' : 'none';
+    });
+    // Carrega conteúdo se ainda não carregado
+    _refreshActiveBpTab();
+  }
+
+  // Memoize dos dados carregados para evitar re-fetch ao trocar tab
+  var _cachedData = null;
+
+  function _refreshActiveBpTab() {
+    if (_activeBpTab === 'performance') {
+      renderReportsV4('screen-reports-v4');
+    } else if (_activeBpTab === 'pipeline') {
+      _loadPipelineTabData();
+    } else if (_activeBpTab === 'quality') {
+      _loadQualityTabData();
+    }
+  }
+
+  async function _loadPipelineTabData() {
+    var email = _opEmail();
+    var hasDb = !!_dbToken();
+    var qualName = hasDb ? (await _resolveQualName(email)) : null;
+    var results = await Promise.all([
+      hasDb ? fetchDatabricksMetrics(qualName) : Promise.resolve(null),
+      hasDb ? fetchDatabricksLineBreakdown(qualName) : Promise.resolve(null),
+      fetchDeals(email),
+      hasDb ? fetchDatabricksMacro() : Promise.resolve(null),
+      fetchGoals(email)
+    ]);
+    var bm = calcBenchmark(results[0], results[3], results[4]);
+    renderPipelineTab('bp-pipeline-content', results[0], results[1], results[2], results[3], bm);
+  }
+
+  async function _loadQualityTabData() {
+    var email = _opEmail();
+    var results = await Promise.all([
+      fetchQualityRuntime(email),
+      fetchTransitionRuntime(email)
+    ]);
+    var qualityRows = results[0];
+    var blockedRows = results[1];
+    var stats = calcQualityStats(qualityRows);
+    renderQualityTab('bp-quality-content', qualityRows, blockedRows, stats);
   }
 
   // ============================================================================
@@ -880,6 +1426,9 @@
   // ============================================================================
   window.ReportsV4 = {
     renderReportsV4: renderReportsV4,
+    setPeriod: setPeriod,
+    applyCustomPeriod: applyCustomPeriod,
+    setBpTab: setBpTab,
     fetchDeals: fetchDeals,
     fetchOppEventsThisMonth: fetchOppEventsThisMonth,
     fetchWonEventsThisMonth: fetchWonEventsThisMonth,
@@ -887,12 +1436,21 @@
     fetchDatabricksMetrics: fetchDatabricksMetrics,
     fetchDatabricksLineBreakdown: fetchDatabricksLineBreakdown,
     fetchDatabricksDtByLine: fetchDatabricksDtByLine,
+    fetchDatabricksMacro: fetchDatabricksMacro,
+    fetchGoals: fetchGoals,
+    fetchQualityRuntime: fetchQualityRuntime,
+    fetchTransitionRuntime: fetchTransitionRuntime,
     calcFunnel: calcFunnel,
     calcDailyVolume: calcDailyVolume,
     calcEfficiencyByQualifier: calcEfficiencyByQualifier,
     calcPipelineByLine: calcPipelineByLine,
     calcClientProfile: calcClientProfile,
-    calcChannelForecast: calcChannelForecast
+    calcChannelForecast: calcChannelForecast,
+    calcBenchmark: calcBenchmark,
+    calcQualityStats: calcQualityStats,
+    calcBlockReasons: calcBlockReasons,
+    renderQualityTab: renderQualityTab,
+    renderPipelineTab: renderPipelineTab
   };
 
 })();
