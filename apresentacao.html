@@ -843,25 +843,65 @@
   .block-text { font-size: 13px; color: var(--muted); }
   .block-text strong { color: var(--red); }
 
-  /* ── SCROLL HINT ── */
-  .scroll-hint {
-    position: fixed;
-    bottom: 32px; right: 48px;
-    font-size: 11px;
-    color: var(--muted2);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
+  /* ── NAV ACTIVE ── */
+  .nav-links a.active { color: var(--gold); }
+
+  /* ── SECTION TRANSITIONS ── */
+  section {
+    display: none;
+    animation: fadeSlide 0.35s ease;
+  }
+  section.active-section {
+    display: flex;
+  }
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── NAV ARROWS ── */
+  .nav-arrows {
     display: flex;
     align-items: center;
     gap: 8px;
+    margin-left: 32px;
+  }
+  .nav-arrow {
+    background: none;
+    border: 1px solid var(--border2);
+    color: var(--muted);
+    width: 30px; height: 30px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .nav-arrow:hover { border-color: var(--gold); color: var(--gold); }
+  .nav-arrow:disabled { opacity: 0.25; cursor: default; }
+
+  /* ── PROGRESS BAR ── */
+  .nav-progress {
+    position: fixed;
+    top: 60px; left: 0; right: 0;
+    height: 2px;
+    background: var(--border);
+    z-index: 99;
+  }
+  .nav-progress-fill {
+    height: 100%;
+    background: var(--gold);
+    transition: width 0.35s ease;
   }
 
-  .scroll-hint::before {
-    content: '';
-    width: 1px; height: 40px;
-    background: var(--muted2);
+  /* ── SLIDE COUNTER ── */
+  .nav-counter {
+    font-size: 11px;
+    color: var(--muted2);
+    letter-spacing: 0.12em;
+    font-family: 'Space Grotesk', sans-serif;
+    margin-left: 4px;
+    min-width: 40px;
   }
 
   /* ── STEP NUMBERS ── */
@@ -923,15 +963,22 @@
 <nav>
   <div class="nav-logo">Elucy</div>
   <ul class="nav-links">
-    <li><a href="#hero">Visao Geral</a></li>
-    <li><a href="#sistema">Sistema</a></li>
-    <li><a href="#perfis">Perfis</a></li>
-    <li><a href="#frameworks">Frameworks</a></li>
-    <li><a href="#sinais">Sinais</a></li>
-    <li><a href="#guardrails">Governanca</a></li>
-    <li><a href="#cockpit">Cockpit</a></li>
+    <li><a href="#hero" data-section="hero" class="active">Visao Geral</a></li>
+    <li><a href="#sistema" data-section="sistema">Sistema</a></li>
+    <li><a href="#perfis" data-section="perfis">Perfis</a></li>
+    <li><a href="#frameworks" data-section="frameworks">Frameworks</a></li>
+    <li><a href="#sinais" data-section="sinais">Sinais</a></li>
+    <li><a href="#guardrails" data-section="guardrails">Governanca</a></li>
+    <li><a href="#cockpit" data-section="cockpit">Cockpit</a></li>
+    <li><a href="#closing" data-section="closing">Encerramento</a></li>
   </ul>
+  <div class="nav-arrows">
+    <button class="nav-arrow" id="btnPrev" title="Anterior (←)">&#8592;</button>
+    <span class="nav-counter" id="navCounter">1 / 8</span>
+    <button class="nav-arrow" id="btnNext" title="Proximo (→)">&#8594;</button>
+  </div>
 </nav>
+<div class="nav-progress"><div class="nav-progress-fill" id="progressFill"></div></div>
 
 <!-- ────────────────────────────────────────────────────────── -->
 <!-- 01 HERO -->
@@ -1558,7 +1605,66 @@
   </div>
 </section>
 
-<div class="scroll-hint">Scroll</div>
+<script>
+(function() {
+  const SECTIONS = ['hero','sistema','perfis','frameworks','sinais','guardrails','cockpit','closing'];
+  let current = 0;
+
+  function goTo(idx) {
+    if (idx < 0 || idx >= SECTIONS.length) return;
+    // hide all
+    SECTIONS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('active-section');
+    });
+    // show target
+    const target = document.getElementById(SECTIONS[idx]);
+    if (target) {
+      target.classList.add('active-section');
+      // restart animation
+      target.style.animation = 'none';
+      target.offsetHeight; // reflow
+      target.style.animation = '';
+    }
+    // update nav links
+    document.querySelectorAll('.nav-links a').forEach(a => {
+      a.classList.toggle('active', a.dataset.section === SECTIONS[idx]);
+    });
+    // counter & progress
+    document.getElementById('navCounter').textContent = (idx + 1) + ' / ' + SECTIONS.length;
+    document.getElementById('progressFill').style.width = ((idx + 1) / SECTIONS.length * 100) + '%';
+    // arrows
+    document.getElementById('btnPrev').disabled = idx === 0;
+    document.getElementById('btnNext').disabled = idx === SECTIONS.length - 1;
+    current = idx;
+    // update URL hash silently
+    history.replaceState(null, '', '#' + SECTIONS[idx]);
+  }
+
+  // intercept nav link clicks
+  document.querySelectorAll('.nav-links a[data-section]').forEach(a => {
+    a.addEventListener('click', function(e) {
+      e.preventDefault();
+      goTo(SECTIONS.indexOf(this.dataset.section));
+    });
+  });
+
+  // prev/next buttons
+  document.getElementById('btnPrev').addEventListener('click', () => goTo(current - 1));
+  document.getElementById('btnNext').addEventListener('click', () => goTo(current + 1));
+
+  // keyboard arrows
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goTo(current + 1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   goTo(current - 1);
+  });
+
+  // init — read hash or default to first
+  const hash = location.hash.replace('#','');
+  const initIdx = SECTIONS.indexOf(hash);
+  goTo(initIdx >= 0 ? initIdx : 0);
+})();
+</script>
 
 </body>
 </html>
