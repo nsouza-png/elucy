@@ -1025,12 +1025,13 @@
     <li><a href="#cadencias" data-section="cadencias" data-label="Cadencias">Cadencias</a></li>
     <li><a href="#features" data-section="features" data-label="Features">Features</a></li>
     <li><a href="#visao-qualitativa" data-section="visao-qualitativa" data-label="Visao Qualitativa">Visao Qualitativa</a></li>
+    <li><a href="#cro-intelligence" data-section="cro-intelligence" data-label="CRO Intelligence">CRO Intelligence</a></li>
     <li><a href="#cockpit" data-section="cockpit" data-label="Cockpit">Cockpit</a></li>
     <li><a href="#closing" data-section="closing" data-label="Encerramento">Encerramento</a></li>
   </ul>
   <div class="nav-arrows">
     <button class="nav-arrow" id="btnPrev" title="Anterior (←)">&#8592;</button>
-    <span class="nav-counter" id="navCounter">1 / 14</span>
+    <span class="nav-counter" id="navCounter">1 / 15</span>
     <button class="nav-arrow" id="btnNext" title="Proximo (→)">&#8594;</button>
   </div>
 </nav>
@@ -2236,10 +2237,502 @@
 </section>
 
 <!-- ────────────────────────────────────────────────────────── -->
-<!-- 13 COCKPIT -->
+<!-- 13 CRO INTELLIGENCE — AS 7 PERGUNTAS QUE O ELUCY RESPONDE -->
+<!-- ────────────────────────────────────────────────────────── -->
+<section id="cro-intelligence" style="background: var(--dark);">
+  <div class="slide-num">13 / 16</div>
+  <div class="eyebrow">Elucy para o CRO</div>
+  <h2>As perguntas que<br><span class="gold">nenhum CRM</span><br>responde.</h2>
+  <p class="section-desc">O CRM mostra o que aconteceu. O Elucy mostra o que vai acontecer, por que, quem causou e quanto custa em dinheiro.</p>
+
+  <!-- TABS DAS USER STORIES -->
+  <div class="cockpit-tabs" id="croTabs" style="max-width:1100px;">
+    <div class="tab-item active" data-tab="cro1" style="font-size:10px;">Pipeline Real?</div>
+    <div class="tab-item" data-tab="cro2" style="font-size:10px;">Gargalo?</div>
+    <div class="tab-item" data-tab="cro3" style="font-size:10px;">Quem Causa?</div>
+    <div class="tab-item" data-tab="cro4" style="font-size:10px;">Qualidade?</div>
+    <div class="tab-item" data-tab="cro5" style="font-size:10px;">Forecast?</div>
+    <div class="tab-item" data-tab="cro6" style="font-size:10px;">Intervir Agora?</div>
+    <div class="tab-item" data-tab="cro7" style="font-size:10px;">Churn Futuro?</div>
+    <div class="tab-item" data-tab="cro8" style="font-size:10px;">A Virada</div>
+  </div>
+
+  <!-- US1 — Pipeline Real? -->
+  <div class="cockpit-panel" id="tab-cro1" style="max-width:1100px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;">
+      <div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+          <div style="width:40px;height:40px;border-radius:4px;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🧩</div>
+          <div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;">User Story 1</div>
+            <h3 style="font-size:20px;margin:0;">"Meu pipeline é real?"</h3>
+          </div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:20px 24px;margin-bottom:16px;">
+          <div style="font-size:11px;font-weight:700;color:var(--muted2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">Como CRO, eu quero...</div>
+          <p style="font-size:14px;color:var(--white);line-height:1.7;margin:0;">Ver o pipeline ponderado por <strong style="color:var(--gold);">qualidade e sinais reais</strong>, para saber quanto da receita é confiável — e quanto é volume de ilusão.</p>
+        </div>
+        <div style="padding:16px 20px;background:rgba(217,79,79,0.05);border:1px solid rgba(217,79,79,0.15);border-left:3px solid var(--red);border-radius:0 4px 4px 0;">
+          <div style="font-size:11px;font-weight:700;color:var(--red);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">O problema sem Elucy</div>
+          <p style="font-size:12px;color:var(--muted);line-height:1.6;margin:0;">CRM mostra R$2MM no pipeline. Mas 40% dos deals não têm dor declarada, 30% não têm decisor mapeado. O "pipeline" é ficção estruturada.</p>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:14px;">Output do Elucy</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:center;gap:16px;padding:16px 20px;background:var(--card);border:1px solid var(--border);border-radius:4px;">
+            <div style="text-align:center;min-width:64px;">
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:800;color:var(--gold);">R$2M</div>
+              <div style="font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">Pipeline Bruto</div>
+            </div>
+            <div style="width:1px;height:40px;background:var(--border2);"></div>
+            <div style="text-align:center;min-width:64px;">
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:800;color:var(--green);">R$1.1M</div>
+              <div style="font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">Pipeline Confiável</div>
+            </div>
+            <div style="width:1px;height:40px;background:var(--border2);"></div>
+            <div style="text-align:center;min-width:64px;">
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:800;color:var(--red);">45%</div>
+              <div style="font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">Deals Falsos</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:4px;">
+              <div style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">Confidence Score Médio</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;color:var(--gold);">58%</div>
+              <div style="margin-top:8px;height:4px;background:var(--border2);border-radius:2px;overflow:hidden;"><div style="width:58%;height:100%;background:var(--gold);border-radius:2px;"></div></div>
+            </div>
+            <div style="padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:4px;">
+              <div style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">DQI Médio do Pipeline</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;color:var(--builder);">62</div>
+              <div style="margin-top:8px;height:4px;background:var(--border2);border-radius:2px;overflow:hidden;"><div style="width:62%;height:100%;background:var(--builder);border-radius:2px;"></div></div>
+            </div>
+          </div>
+          <div style="padding:12px 16px;background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.15);border-radius:4px;">
+            <div style="font-size:12px;color:var(--muted);line-height:1.6;"><span style="color:var(--gold);font-weight:600;">Detalhamento automático:</span> % de deals sem dor declarada, sem decisor, sem Critical Event. CRO vê onde está o buraco, não só o número.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- US2 — Gargalo? -->
+  <div class="cockpit-panel" id="tab-cro2" style="display:none;max-width:1100px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;">
+      <div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+          <div style="width:40px;height:40px;border-radius:4px;background:rgba(217,79,79,0.1);border:1px solid rgba(217,79,79,0.3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🧩</div>
+          <div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--red);margin-bottom:4px;">User Story 2</div>
+            <h3 style="font-size:20px;margin:0;">"Onde está o gargalo?"</h3>
+          </div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:20px 24px;margin-bottom:16px;">
+          <div style="font-size:11px;font-weight:700;color:var(--muted2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">Como CRO, eu quero...</div>
+          <p style="font-size:14px;color:var(--white);line-height:1.7;margin:0;">Ver <strong style="color:var(--gold);">onde o funil quebra por etapa</strong>, para corrigir o sistema — não só cobrar o time quando já é tarde demais.</p>
+        </div>
+        <div style="padding:16px 20px;background:rgba(217,79,79,0.05);border:1px solid rgba(217,79,79,0.15);border-left:3px solid var(--red);border-radius:0 4px 4px 0;">
+          <div style="font-size:11px;font-weight:700;color:var(--red);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">O problema sem Elucy</div>
+          <p style="font-size:12px;color:var(--muted);line-height:1.6;margin:0;">Todo o time atinge a meta de "ligações feitas". O funil continua travado. O gargalo está na qualificação, mas o CRO só descobre no final do mês.</p>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:14px;">Output do Elucy — Drop-off por Etapa</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:4px;">
+            <div style="font-size:11px;font-weight:600;color:var(--muted);width:120px;flex-shrink:0;">Contato → Qualif.</div>
+            <div style="flex:1;height:6px;background:var(--border2);border-radius:3px;overflow:hidden;"><div style="width:72%;height:100%;background:var(--green);border-radius:3px;"></div></div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--green);width:36px;text-align:right;">72%</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--card);border:1px solid rgba(217,79,79,0.3);border-radius:4px;">
+            <div style="font-size:11px;font-weight:600;color:var(--muted);width:120px;flex-shrink:0;">Qualif. → Proposta</div>
+            <div style="flex:1;height:6px;background:var(--border2);border-radius:3px;overflow:hidden;"><div style="width:31%;height:100%;background:var(--red);border-radius:3px;"></div></div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--red);width:36px;text-align:right;">31%</div>
+            <div style="font-size:9px;font-weight:700;color:var(--red);background:rgba(217,79,79,0.1);padding:2px 6px;border-radius:2px;white-space:nowrap;">GARGALO</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:4px;">
+            <div style="font-size:11px;font-weight:600;color:var(--muted);width:120px;flex-shrink:0;">Proposta → Fecha</div>
+            <div style="flex:1;height:6px;background:var(--border2);border-radius:3px;overflow:hidden;"><div style="width:55%;height:100%;background:var(--gold);border-radius:3px;"></div></div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--gold);width:36px;text-align:right;">55%</div>
+          </div>
+        </div>
+        <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div style="padding:14px 18px;background:rgba(217,79,79,0.06);border:1px solid rgba(217,79,79,0.2);border-radius:4px;">
+            <div style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">SLA Violado</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;color:var(--red);">23 deals</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Parados há mais de 7 dias na qualificação sem próximo passo</div>
+          </div>
+          <div style="padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:4px;">
+            <div style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">Conv. Real vs Meta</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;color:var(--builder);">31% / 55%</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Etapa 2 operando a 56% da meta de conversão</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- US3 — Quem Causa? -->
+  <div class="cockpit-panel" id="tab-cro3" style="display:none;max-width:1100px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;">
+      <div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+          <div style="width:40px;height:40px;border-radius:4px;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🧩</div>
+          <div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--builder);margin-bottom:4px;">User Story 3</div>
+            <h3 style="font-size:20px;margin:0;">"Quem está causando isso?"</h3>
+          </div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:20px 24px;margin-bottom:16px;">
+          <div style="font-size:11px;font-weight:700;color:var(--muted2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">Como CRO, eu quero...</div>
+          <p style="font-size:14px;color:var(--white);line-height:1.7;margin:0;">Identificar quais operadores estão <strong style="color:var(--gold);">puxando o resultado para baixo</strong>, para agir com coaching cirúrgico ou substituição antes que o dano seja irreversível.</p>
+        </div>
+        <div style="padding:16px 20px;background:rgba(217,79,79,0.05);border:1px solid rgba(217,79,79,0.15);border-left:3px solid var(--red);border-radius:0 4px 4px 0;">
+          <div style="font-size:11px;font-weight:700;color:var(--red);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">O problema sem Elucy</div>
+          <p style="font-size:12px;color:var(--muted);line-height:1.6;margin:0;">O ranking mostra quem fez mais deals. Mas o SDR top em volume tem DQI 38 — ele está enchendo o funil de lixo que o Closer vai perder no final do mês.</p>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:14px;">Output do Elucy — Ranking Real</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <!-- Op 1 -->
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(79,168,109,0.06);border:1px solid rgba(79,168,109,0.25);border-radius:4px;">
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--muted2);width:20px;">1</div>
+            <div style="flex:1;font-size:13px;font-weight:600;color:var(--white);">Mariana S.</div>
+            <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--green);font-family:'Space Grotesk',sans-serif;">87</div><div style="font-size:9px;color:var(--muted2);">DQI</div></div>
+            <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--green);font-family:'Space Grotesk',sans-serif;">68%</div><div style="font-size:9px;color:var(--muted2);">Conv.</div></div>
+            <div style="font-size:9px;font-weight:700;color:var(--green);background:rgba(79,168,109,0.1);padding:3px 8px;border-radius:2px;">TOP</div>
+          </div>
+          <!-- Op 2 -->
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:4px;">
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--muted2);width:20px;">2</div>
+            <div style="flex:1;font-size:13px;font-weight:600;color:var(--white);">Lucas M.</div>
+            <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--gold);font-family:'Space Grotesk',sans-serif;">74</div><div style="font-size:9px;color:var(--muted2);">DQI</div></div>
+            <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--gold);font-family:'Space Grotesk',sans-serif;">51%</div><div style="font-size:9px;color:var(--muted2);">Conv.</div></div>
+            <div style="font-size:9px;color:var(--muted2);">OK</div>
+          </div>
+          <!-- Op 3 — risco -->
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(217,79,79,0.06);border:1px solid rgba(217,79,79,0.3);border-radius:4px;">
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--muted2);width:20px;">3</div>
+            <div style="flex:1;font-size:13px;font-weight:600;color:var(--white);">Rafael T. <span style="font-size:10px;color:var(--muted);font-weight:400;">(top volume)</span></div>
+            <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--red);font-family:'Space Grotesk',sans-serif;">38</div><div style="font-size:9px;color:var(--muted2);">DQI</div></div>
+            <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--red);font-family:'Space Grotesk',sans-serif;">22%</div><div style="font-size:9px;color:var(--muted2);">Conv.</div></div>
+            <div style="font-size:9px;font-weight:700;color:var(--red);background:rgba(217,79,79,0.1);padding:3px 8px;border-radius:2px;">RISCO</div>
+          </div>
+          <!-- Op 4 -->
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(217,79,79,0.04);border:1px solid rgba(217,79,79,0.2);border-radius:4px;">
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--muted2);width:20px;">4</div>
+            <div style="flex:1;font-size:13px;font-weight:600;color:var(--white);">Ana P.</div>
+            <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--red);font-family:'Space Grotesk',sans-serif;">41</div><div style="font-size:9px;color:var(--muted2);">DQI</div></div>
+            <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--red);font-family:'Space Grotesk',sans-serif;">28%</div><div style="font-size:9px;color:var(--muted2);">Conv.</div></div>
+            <div style="font-size:9px;font-weight:700;color:var(--red);background:rgba(217,79,79,0.1);padding:3px 8px;border-radius:2px;">RISCO</div>
+          </div>
+        </div>
+        <div style="margin-top:12px;padding:12px 16px;background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.15);border-radius:4px;">
+          <div style="font-size:12px;color:var(--muted);line-height:1.6;"><span style="color:var(--gold);font-weight:600;">Insight automático:</span> Rafael lidera em volume mas tem o pior DQI — cada deal dele consome tempo do Closer para fechar em 22%. Custo oculto de R$180k em ciclos perdidos.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- US4 — Qualidade vs Volume? -->
+  <div class="cockpit-panel" id="tab-cro4" style="display:none;max-width:1100px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;">
+      <div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+          <div style="width:40px;height:40px;border-radius:4px;background:rgba(217,119,6,0.1);border:1px solid rgba(217,119,6,0.3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🧩</div>
+          <div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--executor);margin-bottom:4px;">User Story 4</div>
+            <h3 style="font-size:20px;margin:0;">"Vendemos bem ou só rápido?"</h3>
+          </div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:20px 24px;margin-bottom:16px;">
+          <div style="font-size:11px;font-weight:700;color:var(--muted2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">Como CRO, eu quero...</div>
+          <p style="font-size:14px;color:var(--white);line-height:1.7;margin:0;">Ver a <strong style="color:var(--gold);">qualidade das vendas, não só o volume</strong>, para evitar churn e receita falsa que entra no mês e cancela no trimestre.</p>
+        </div>
+        <div style="padding:16px 20px;background:rgba(217,79,79,0.05);border:1px solid rgba(217,79,79,0.15);border-left:3px solid var(--red);border-radius:0 4px 4px 0;">
+          <div style="font-size:11px;font-weight:700;color:var(--red);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">O problema sem Elucy</div>
+          <p style="font-size:12px;color:var(--muted);line-height:1.6;margin:0;">"Batemos a meta!" — mas 35% dos contratos fechados no mês passado são cancelamentos em até 60 dias. A meta foi batida com receita de curto prazo que destrói LTV.</p>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:14px;">Output do Elucy — Auditoria de Qualidade</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
+          <div style="padding:14px;background:rgba(217,79,79,0.06);border:1px solid rgba(217,79,79,0.2);border-radius:4px;text-align:center;">
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:800;color:var(--red);">37%</div>
+            <div style="font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;">Sem dor real declarada</div>
+          </div>
+          <div style="padding:14px;background:rgba(217,79,79,0.06);border:1px solid rgba(217,79,79,0.2);border-radius:4px;text-align:center;">
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:800;color:var(--red);">28%</div>
+            <div style="font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;">Sem decisor mapeado</div>
+          </div>
+          <div style="padding:14px;background:rgba(217,79,79,0.06);border:1px solid rgba(217,79,79,0.2);border-radius:4px;text-align:center;">
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:800;color:var(--red);">44%</div>
+            <div style="font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;">Avançando sem qualif.</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:var(--card);border:1px solid var(--border);border-radius:4px;">
+            <span style="font-size:12px;color:var(--muted);">DQI médio por operador</span>
+            <div style="display:flex;gap:8px;align-items:center;"><div style="font-size:13px;font-weight:700;color:var(--green);">87</div><div style="width:1px;height:14px;background:var(--border2);"></div><div style="font-size:13px;font-weight:700;color:var(--gold);">74</div><div style="width:1px;height:14px;background:var(--border2);"></div><div style="font-size:13px;font-weight:700;color:var(--red);">38</div><div style="font-size:13px;font-weight:700;color:var(--red);">41</div></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:var(--card);border:1px solid var(--border);border-radius:4px;">
+            <span style="font-size:12px;color:var(--muted);">Deals sem Impact (R$) declarado</span>
+            <span style="font-size:13px;font-weight:700;color:var(--red);">61%</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:var(--card);border:1px solid var(--border);border-radius:4px;">
+            <span style="font-size:12px;color:var(--muted);">Deals com promessa desalinhada</span>
+            <span style="font-size:13px;font-weight:700;color:var(--red);">19%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- US5 — Forecast? -->
+  <div class="cockpit-panel" id="tab-cro5" style="display:none;max-width:1100px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;">
+      <div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+          <div style="width:40px;height:40px;border-radius:4px;background:rgba(79,168,109,0.1);border:1px solid rgba(79,168,109,0.3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🧩</div>
+          <div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--green);margin-bottom:4px;">User Story 5</div>
+            <h3 style="font-size:20px;margin:0;">"Meu forecast é confiável?"</h3>
+          </div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:20px 24px;margin-bottom:16px;">
+          <div style="font-size:11px;font-weight:700;color:var(--muted2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">Como CRO, eu quero...</div>
+          <p style="font-size:14px;color:var(--white);line-height:1.7;margin:0;">Um forecast baseado em <strong style="color:var(--gold);">evidência real</strong> — sinais, DQI, histórico — não em opinião de vendedor que acha que "está quente".</p>
+        </div>
+        <div style="padding:16px 20px;background:rgba(217,79,79,0.05);border:1px solid rgba(217,79,79,0.15);border-left:3px solid var(--red);border-radius:0 4px 4px 0;">
+          <div style="font-size:11px;font-weight:700;color:var(--red);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">O problema sem Elucy</div>
+          <p style="font-size:12px;color:var(--muted);line-height:1.6;margin:0;">O SDR coloca 100% de probabilidade em todo deal que o lead respondeu uma vez. O forecast do CRM é a soma dos otimismos individuais — sem relação com realidade.</p>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:14px;">Output do Elucy — Forecast com Evidência</div>
+        <div style="background:var(--card);border:1px solid rgba(201,168,76,0.3);border-radius:4px;padding:20px 24px;margin-bottom:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px;">
+            <div>
+              <div style="font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">Forecast do Vendedor</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:800;color:var(--muted2);text-decoration:line-through;">R$890k</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">Forecast Ponderado Elucy</div>
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:800;color:var(--green);">R$512k</div>
+            </div>
+          </div>
+          <div style="height:2px;background:var(--border2);border-radius:1px;margin-bottom:16px;position:relative;"><div style="position:absolute;left:0;top:0;height:100%;width:58%;background:var(--green);border-radius:1px;"></div></div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--muted);">Confidence score médio</span><span style="font-weight:700;color:var(--gold);">57%</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--muted);">Deals com BUY + URGENCY + PAIN</span><span style="font-weight:700;color:var(--green);">8 deals</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--muted);">Deals com STALL + RISK bloqueados</span><span style="font-weight:700;color:var(--red);">12 deals</span></div>
+          </div>
+        </div>
+        <div style="padding:12px 16px;background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.15);border-radius:4px;">
+          <div style="font-size:12px;color:var(--muted);line-height:1.6;"><span style="color:var(--gold);font-weight:600;">Fórmula:</span> Forecast = deal_value × DQI × sinais positivos ativos − penalidade por sinais negativos. Cada deal tem explicação do score em linguagem simples.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- US6 — Intervir Agora? -->
+  <div class="cockpit-panel" id="tab-cro6" style="display:none;max-width:1100px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;">
+      <div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+          <div style="width:40px;height:40px;border-radius:4px;background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🧩</div>
+          <div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--blue);margin-bottom:4px;">User Story 6</div>
+            <h3 style="font-size:20px;margin:0;">"Onde devo intervir agora?"</h3>
+          </div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:20px 24px;margin-bottom:16px;">
+          <div style="font-size:11px;font-weight:700;color:var(--muted2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">Como CRO, eu quero...</div>
+          <p style="font-size:14px;color:var(--white);line-height:1.7;margin:0;">Saber <strong style="color:var(--gold);">onde agir hoje</strong>, para maximizar impacto na receita — sem vasculhar 200 deals no CRM para encontrar o que importa.</p>
+        </div>
+        <div style="padding:16px 20px;background:rgba(217,79,79,0.05);border:1px solid rgba(217,79,79,0.15);border-left:3px solid var(--red);border-radius:0 4px 4px 0;">
+          <div style="font-size:11px;font-weight:700;color:var(--red);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">O problema sem Elucy</div>
+          <p style="font-size:12px;color:var(--muted);line-height:1.6;margin:0;">O CRO passa a reunião de segunda ouvindo status de cada deal. 40 minutos de reunião para descobrir que 3 deals precisam de atenção. Esses 3 deals já eram na terça.</p>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:14px;">Output do Elucy — Painel de Ação do CRO</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="padding:14px 18px;background:rgba(217,79,79,0.06);border:1px solid rgba(217,79,79,0.25);border-radius:4px;border-left:3px solid var(--red);">
+            <div style="font-size:10px;font-weight:700;color:var(--red);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Top Gargalos Hoje</div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <div style="font-size:12px;color:var(--muted);">▸ 23 deals parados em Qualif. há +7 dias sem próximo passo</div>
+              <div style="font-size:12px;color:var(--muted);">▸ Speed to Lead violado em 8 inbounds das últimas 4h</div>
+              <div style="font-size:12px;color:var(--muted);">▸ Etapa Proposta → Fecha abaixo de SLA em 60% dos casos</div>
+            </div>
+          </div>
+          <div style="padding:14px 18px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.25);border-radius:4px;border-left:3px solid var(--builder);">
+            <div style="font-size:10px;font-weight:700;color:var(--builder);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Top Deals em Risco</div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <div style="font-size:12px;color:var(--muted);">▸ Empresa XYZ — R$85k — STALL 12 dias + objeção aberta</div>
+              <div style="font-size:12px;color:var(--muted);">▸ Empresa ABC — R$62k — Ghost pós-proposta, 9 dias sem resposta</div>
+              <div style="font-size:12px;color:var(--muted);">▸ Empresa DEF — R$140k — decisor saiu, multi-thread não ativado</div>
+            </div>
+          </div>
+          <div style="padding:14px 18px;background:rgba(217,79,79,0.04);border:1px solid rgba(217,79,79,0.2);border-radius:4px;border-left:3px solid var(--red);">
+            <div style="font-size:10px;font-weight:700;color:var(--red);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Operadores Críticos</div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <div style="font-size:12px;color:var(--muted);">▸ Rafael T. — DQI 38, 3ª semana abaixo do mínimo, sem melhora</div>
+              <div style="font-size:12px;color:var(--muted);">▸ Ana P. — DQI 41, padrão de erro em detecção de persona</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- US7 — Churn Futuro? -->
+  <div class="cockpit-panel" id="tab-cro7" style="display:none;max-width:1100px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;">
+      <div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+          <div style="width:40px;height:40px;border-radius:4px;background:rgba(217,79,79,0.1);border:1px solid rgba(217,79,79,0.3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🧩</div>
+          <div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--red);margin-bottom:4px;">User Story 7</div>
+            <h3 style="font-size:20px;margin:0;">"Estamos criando churn futuro?"</h3>
+          </div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:20px 24px;margin-bottom:16px;">
+          <div style="font-size:11px;font-weight:700;color:var(--muted2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">Como CRO, eu quero...</div>
+          <p style="font-size:14px;color:var(--white);line-height:1.7;margin:0;">Detectar <strong style="color:var(--gold);">vendas ruins antes de fechar</strong>, para proteger retenção e LTV — porque o churn que vem em 60 dias começa aqui, no SDR.</p>
+        </div>
+        <div style="padding:16px 20px;background:rgba(217,79,79,0.05);border:1px solid rgba(217,79,79,0.15);border-left:3px solid var(--red);border-radius:0 4px 4px 0;">
+          <div style="font-size:11px;font-weight:700;color:var(--red);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">O problema sem Elucy</div>
+          <p style="font-size:12px;color:var(--muted);line-height:1.6;margin:0;">O churn aparece no mês 2 ou 3. Mas a causa foi a venda errada do mês 1. Quando o CS descobre, o dano ao LTV já aconteceu — e o SDR já está trabalhando o próximo deal errado.</p>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:14px;">Output do Elucy — Alertas de Churn Preditivo</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:4px;">
+            <div style="padding:14px;background:rgba(217,79,79,0.06);border:1px solid rgba(217,79,79,0.2);border-radius:4px;text-align:center;">
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:800;color:var(--red);">14</div>
+              <div style="font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;">Sem alinhamento de expectativa</div>
+            </div>
+            <div style="padding:14px;background:rgba(217,79,79,0.06);border:1px solid rgba(217,79,79,0.2);border-radius:4px;text-align:center;">
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:800;color:var(--red);">9</div>
+              <div style="font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;">Sem dor real declarada</div>
+            </div>
+            <div style="padding:14px;background:rgba(217,79,79,0.06);border:1px solid rgba(217,79,79,0.2);border-radius:4px;text-align:center;">
+              <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:800;color:var(--red);">7</div>
+              <div style="font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;">Promessa desalinhada</div>
+            </div>
+          </div>
+          <div style="padding:16px 20px;background:var(--card);border:1px solid var(--border);border-radius:4px;">
+            <div style="font-size:11px;font-weight:700;color:var(--muted2);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;">Deals de Alto Risco de Churn na Fila</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--white);">Empresa GHI — R$95k</span><span style="color:var(--red);font-weight:600;">Tier errado para produto</span></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--white);">Empresa JKL — R$72k</span><span style="color:var(--red);font-weight:600;">Sem Goal declarado</span></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:6px 0;"><span style="color:var(--white);">Empresa MNO — R$58k</span><span style="color:var(--red);font-weight:600;">Framework errado aplicado</span></div>
+            </div>
+          </div>
+          <div style="padding:12px 16px;background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.15);border-radius:4px;">
+            <div style="font-size:12px;color:var(--muted);line-height:1.6;"><span style="color:var(--gold);font-weight:600;">Regra do Iron Dome:</span> deals com DQI &lt; 60 + Tier incorreto são bloqueados de avançar automaticamente — o churn é prevenido na origem, não depois do contrato assinado.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 8 — A GRANDE VIRADA + MODELO MENTAL -->
+  <div class="cockpit-panel" id="tab-cro8" style="display:none;max-width:1100px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;">
+
+      <!-- A Grande Virada -->
+      <div>
+        <div class="eyebrow" style="margin-bottom:16px;color:var(--gold);">A Grande Virada do Elucy</div>
+        <div style="display:flex;gap:16px;margin-bottom:20px;align-items:stretch;">
+          <div style="flex:1;padding:20px 24px;background:var(--card);border:1px solid var(--border);border-radius:4px;border-top:2px solid var(--muted2);">
+            <div style="font-size:11px;font-weight:700;color:var(--muted2);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">CRM Tradicional</div>
+            <div style="font-size:13px;color:var(--muted);line-height:1.8;">
+              <div style="padding:6px 0;border-bottom:1px solid var(--border);">Mostra o que <strong style="color:var(--white);">aconteceu</strong></div>
+              <div style="padding:6px 0;border-bottom:1px solid var(--border);">Volume como métrica principal</div>
+              <div style="padding:6px 0;border-bottom:1px solid var(--border);">Forecast = opinião do vendedor</div>
+              <div style="padding:6px 0;border-bottom:1px solid var(--border);">Problema descoberto no fim do mês</div>
+              <div style="padding:6px 0;">Churn: surpresa do mês 3</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;font-size:22px;color:var(--gold);flex-shrink:0;">→</div>
+          <div style="flex:1;padding:20px 24px;background:linear-gradient(135deg,rgba(201,168,76,0.08),rgba(201,168,76,0.02));border:1px solid rgba(201,168,76,0.3);border-radius:4px;border-top:2px solid var(--gold);">
+            <div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">Elucy</div>
+            <div style="font-size:13px;color:var(--muted);line-height:1.8;">
+              <div style="padding:6px 0;border-bottom:1px solid rgba(201,168,76,0.1);">Mostra o que <strong style="color:var(--gold);">vai acontecer</strong></div>
+              <div style="padding:6px 0;border-bottom:1px solid rgba(201,168,76,0.1);">Qualidade × Volume como KPI</div>
+              <div style="padding:6px 0;border-bottom:1px solid rgba(201,168,76,0.1);">Forecast = evidência de sinais + DQI</div>
+              <div style="padding:6px 0;border-bottom:1px solid rgba(201,168,76,0.1);">Problema detectado em tempo real</div>
+              <div style="padding:6px 0;">Churn: prevenido no ato da venda</div>
+            </div>
+          </div>
+        </div>
+        <div class="quote-block" style="margin:0;">
+          <p class="quote-text" style="font-size:16px;">"O CRM registra o passado. O Elucy governa o futuro."</p>
+          <div class="quote-src">Principio de Design — Elucy v2 Enterprise</div>
+        </div>
+      </div>
+
+      <!-- Modelo Mental Final -->
+      <div>
+        <div class="eyebrow" style="margin-bottom:16px;color:var(--gold);">Modelo Mental Final do CRO</div>
+        <div style="background:var(--card);border:1px solid rgba(201,168,76,0.25);border-radius:4px;padding:24px;margin-bottom:16px;">
+          <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">O CRO passa a pensar em receita como uma equação:</div>
+          <div style="text-align:center;padding:20px;background:rgba(201,168,76,0.06);border-radius:4px;border:1px solid rgba(201,168,76,0.15);margin-bottom:16px;">
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--white);line-height:1.8;">
+              Receita =<br>
+              <span style="color:var(--gold);">Volume</span> × <span style="color:var(--green);">Conversão</span> × <span style="color:var(--blue);">Velocidade</span> × <span style="color:var(--builder);">Qualidade</span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;background:var(--accent);border-radius:3px;border:1px solid var(--border2);">
+              <div style="width:10px;height:10px;border-radius:50%;background:var(--gold);flex-shrink:0;margin-top:3px;"></div>
+              <div>
+                <div style="font-size:12px;font-weight:600;color:var(--gold);margin-bottom:2px;">Volume quebrando?</div>
+                <div style="font-size:11px;color:var(--muted);">Problema de geração de leads ou Speed to Lead. Canal ou ICP errado.</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;background:var(--accent);border-radius:3px;border:1px solid var(--border2);">
+              <div style="width:10px;height:10px;border-radius:50%;background:var(--green);flex-shrink:0;margin-top:3px;"></div>
+              <div>
+                <div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:2px;">Conversão quebrando?</div>
+                <div style="font-size:11px;color:var(--muted);">Framework errado ou operador sem qualificação. DQI abaixo de 65.</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;background:var(--accent);border-radius:3px;border:1px solid var(--border2);">
+              <div style="width:10px;height:10px;border-radius:50%;background:var(--blue);flex-shrink:0;margin-top:3px;"></div>
+              <div>
+                <div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:2px;">Velocidade quebrando?</div>
+                <div style="font-size:11px;color:var(--muted);">SLA violado, STALL em pipeline, latência no Hot Handoff.</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;background:var(--accent);border-radius:3px;border:1px solid var(--border2);">
+              <div style="width:10px;height:10px;border-radius:50%;background:var(--builder);flex-shrink:0;margin-top:3px;"></div>
+              <div>
+                <div style="font-size:12px;font-weight:600;color:var(--builder);margin-bottom:2px;">Qualidade quebrando?</div>
+                <div style="font-size:11px;color:var(--muted);">Churn futuro em construção. DQI baixo, deals sem dor ou decisor.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="padding:14px 20px;background:linear-gradient(135deg,rgba(201,168,76,0.08),rgba(201,168,76,0.02));border:1px solid rgba(201,168,76,0.25);border-radius:4px;text-align:center;">
+          <div style="font-size:12px;color:var(--muted);line-height:1.7;">O Elucy mostra <strong style="color:var(--gold);">onde cada variável está quebrando</strong>, <strong style="color:var(--white);">quem está causando</strong> e <strong style="color:var(--green);">quanto isso custa em dinheiro</strong> — em tempo real, sem reunião de segunda.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</section>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<!-- 14 COCKPIT -->
 <!-- ────────────────────────────────────────────────────────── -->
 <section id="cockpit" style="background: var(--black);">
-  <div class="slide-num">13 / 14</div>
+  <div class="slide-num">14 / 16</div>
   <div class="eyebrow">Elucy Cockpit</div>
   <h2>O painel de comando<br><span class="gold">do operador.</span></h2>
   <p class="section-desc">
@@ -2508,7 +3001,7 @@
 <section id="closing">
   <div class="hero-bg"></div>
   <div class="hero-grid" style="opacity: 0.15;"></div>
-  <div class="slide-num" style="top: 80px; right: 80px; position: absolute;">14 / 14</div>
+  <div class="slide-num" style="top: 80px; right: 80px; position: absolute;">15 / 15</div>
 
   <div style="position: relative; z-index: 1; text-align: center; max-width: 700px;">
     <div class="closing-logo">ELUCY</div>
@@ -2561,7 +3054,7 @@
 
 <script>
 (function() {
-  const SECTIONS = ['hero','sistema','perfis','frameworks','mcps','skills','sinais','guardrails','como-frameworks','cadencias','features','visao-qualitativa','cockpit','closing'];
+  const SECTIONS = ['hero','sistema','perfis','frameworks','mcps','skills','sinais','guardrails','como-frameworks','cadencias','features','visao-qualitativa','cro-intelligence','cockpit','closing'];
   let current = 0;
 
   function goTo(idx) {
@@ -2629,11 +3122,24 @@
       const tab = e.target.closest('.tab-item[data-tab]');
       if (!tab) return;
       const tabId = tab.dataset.tab;
-      // update tab active state
       cockpitTabs.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
-      // show correct panel
-      document.querySelectorAll('.cockpit-panel').forEach(p => p.style.display = 'none');
+      document.querySelectorAll('#cockpit .cockpit-panel').forEach(p => p.style.display = 'none');
+      const panel = document.getElementById('tab-' + tabId);
+      if (panel) { panel.style.display = ''; panel.style.animation = 'none'; panel.offsetHeight; panel.style.animation = ''; }
+    });
+  }
+
+  // ── CRO INTELLIGENCE TABS ──
+  const croTabs = document.getElementById('croTabs');
+  if (croTabs) {
+    croTabs.addEventListener('click', function(e) {
+      const tab = e.target.closest('.tab-item[data-tab]');
+      if (!tab) return;
+      const tabId = tab.dataset.tab;
+      croTabs.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      document.querySelectorAll('#cro-intelligence .cockpit-panel').forEach(p => p.style.display = 'none');
       const panel = document.getElementById('tab-' + tabId);
       if (panel) { panel.style.display = ''; panel.style.animation = 'none'; panel.offsetHeight; panel.style.animation = ''; }
     });
