@@ -129,13 +129,12 @@ Deno.serve(async (req) => {
     }
 
     const sbAdmin = createClient(supabaseUrl, serviceKey)
-    const sbUser = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
-      global: { headers: { Authorization: authHeader } },
-    })
 
-    // Validate user
-    const { data: { user }, error: userErr } = await sbUser.auth.getUser()
+    // Validate user — use sbAdmin.auth.getUser(jwt) to avoid anon key mismatch
+    const jwt = authHeader.replace(/^Bearer\s+/i, '')
+    const { data: { user }, error: userErr } = await sbAdmin.auth.getUser(jwt)
     if (userErr || !user || !user.email) {
+      console.warn('[elucy-inference] auth.getUser failed:', userErr?.message || 'no user/email')
       return new Response(JSON.stringify({ error: 'Invalid token' }), {
         status: 401, headers: { ...CORS, 'Content-Type': 'application/json' },
       })
