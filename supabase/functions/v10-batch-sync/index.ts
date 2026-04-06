@@ -56,19 +56,6 @@ serve(async (req) => {
       if (t.task_status === 'completed') taskMap[t.deal_id].completed++;
     });
 
-    // Fetch signals counts grouped by deal
-    const { data: allSignals } = await sb
-      .from('deal_signals')
-      .select('deal_id, impact_score')
-      .in('deal_id', dealIds);
-
-    const signalMap: Record<string, { total: number; positive: number }> = {};
-    (allSignals || []).forEach((s: any) => {
-      if (!signalMap[s.deal_id]) signalMap[s.deal_id] = { total: 0, positive: 0 };
-      signalMap[s.deal_id].total++;
-      if (s.impact_score > 0) signalMap[s.deal_id].positive++;
-    });
-
     // Fetch cache existence
     const { data: cacheHits } = await sb
       .from('elucy_cache')
@@ -83,7 +70,6 @@ serve(async (req) => {
 
     for (const d of deals) {
       const tasks = taskMap[d.deal_id] || { total: 0, completed: 0 };
-      const signals = signalMap[d.deal_id] || { total: 0, positive: 0 };
       const hasCache = cacheSet.has(d.deal_id);
 
       // ── DQR: Data Quality Runtime ──
@@ -103,10 +89,10 @@ serve(async (req) => {
       const daysSinceSync = (Date.now() - new Date(syncDate).getTime()) / 86400000;
       const recency = Math.max(0, 1.0 - daysSinceSync / 30);
 
+      // Evidence: tasks 20% each (max 3) + cache 40% (no deal_signals table)
       const evidence = Math.min(1.0,
-        tasks.total * 0.15 +
-        signals.total * 0.10 +
-        (hasCache ? 0.3 : 0)
+        tasks.total * 0.20 +
+        (hasCache ? 0.40 : 0)
       );
 
       const trustScore = (completeness * 0.30 + consistency * 0.20 + recency * 0.25 + evidence * 0.25) * 100;
@@ -126,7 +112,7 @@ serve(async (req) => {
         evidence_score: round4(evidence),
         data_trust_score: round4(trustScore),
         data_quality_band: band,
-        explain_json: { version: 'v10-batch-sync-1.0', synced_at: new Date().toISOString(), tasks: tasks.total, signals: signals.total, hasCache },
+        explain_json: { version: 'v10-batch-sync-1.1', synced_at: new Date().toISOString(), tasks: tasks.total, hasCache },
         updated_at: new Date().toISOString(),
       });
 
@@ -147,7 +133,7 @@ serve(async (req) => {
         (d.tier_da_oportunidade ? 0.10 : 0) +
         (d.linha_de_receita_vigente ? 0.10 : 0) +
         (tasks.completed > 0 ? 0.20 : 0) +
-        (signals.positive > 0 ? 0.15 : 0) +
+        (tasks.completed >= 2 ? 0.15 : tasks.completed >= 1 ? 0.08 : 0) +
         (!d.delta_t || d.delta_t < 14 ? 0.20 : d.delta_t < 30 ? 0.10 : 0)
       );
 
@@ -165,7 +151,7 @@ serve(async (req) => {
         transition_valid: valid,
         transition_block_reason: gaps.length ? gaps.join(', ') : null,
         transition_gap_count: gaps.length,
-        gaps_json: { version: 'v10-batch-sync-1.0', gaps, completed_tasks: tasks.completed, positive_signals: signals.positive, delta_t: d.delta_t },
+        gaps_json: { version: 'v10-batch-sync-1.1', gaps, completed_tasks: tasks.completed, delta_t: d.delta_t },
         updated_at: new Date().toISOString(),
       });
     }
