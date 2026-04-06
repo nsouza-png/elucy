@@ -1,16 +1,11 @@
 -- ============================================================
--- V10 SEED — Popula deal_data_quality_runtime e deal_transition_runtime
--- a partir dos dados existentes em deals, deal_tasks, deal_signals, elucy_cache, note_analysis
+-- V10 SEED v2 — Popula deal_data_quality_runtime e deal_transition_runtime
+-- Usa APENAS tabelas confirmadas: deals, deal_tasks, elucy_cache
+-- deal_signals NÃO existe — sinais são 0 até migration 019 ser executada
 -- Rodar no Supabase SQL Editor (tnbbsjvzwleeoqnxtafp)
 -- ============================================================
 
 -- 1. DEAL DATA QUALITY RUNTIME
--- Calcula 5 sub-scores (0-1) para cada deal:
---   completeness: % de campos preenchidos
---   consistency:  fase+etapa coerentes + tier preenchido
---   recency:      quão recente é o synced_at (decai com dias)
---   evidence:     presença de sinais, tasks, cache/notas
---   data_trust:   média ponderada dos 4 scores
 
 INSERT INTO deal_data_quality_runtime (
   deal_id, operator_email,
@@ -21,7 +16,7 @@ SELECT
   d.deal_id,
   d.operator_email,
 
-  -- COMPLETENESS (0-1): proporção de 10 campos-chave preenchidos
+  -- COMPLETENESS (0-1): 10 campos-chave
   (
     CASE WHEN d.fase_atual_no_processo IS NOT NULL AND d.fase_atual_no_processo != '' THEN 1 ELSE 0 END +
     CASE WHEN d.etapa_atual_no_pipeline IS NOT NULL AND d.etapa_atual_no_pipeline != '' THEN 1 ELSE 0 END +
@@ -35,7 +30,7 @@ SELECT
     CASE WHEN d.created_at_crm IS NOT NULL THEN 1 ELSE 0 END
   )::NUMERIC / 10.0 AS completeness_score,
 
-  -- CONSISTENCY (0-1): fase+etapa coerentes
+  -- CONSISTENCY (0-1)
   (
     CASE WHEN d.fase_atual_no_processo IS NOT NULL AND d.etapa_atual_no_pipeline IS NOT NULL THEN 0.4 ELSE 0 END +
     CASE WHEN d.tier_da_oportunidade IS NOT NULL THEN 0.2 ELSE 0 END +
@@ -43,86 +38,75 @@ SELECT
     CASE WHEN d.canal_de_marketing IS NOT NULL AND d.canal_de_marketing != d.linha_de_receita_vigente THEN 0.2 ELSE 0 END
   )::NUMERIC AS consistency_score,
 
-  -- RECENCY (0-1): decai exponencialmente com dias desde synced_at
+  -- RECENCY (0-1): decai linearmente em 30d
   GREATEST(0, 1.0 - (EXTRACT(EPOCH FROM (NOW() - COALESCE(d.synced_at, d.created_at_crm, NOW() - INTERVAL '90 days'))) / 86400.0 / 30.0))::NUMERIC AS recency_score,
 
-  -- EVIDENCE (0-1): baseado em tasks, signals, cache
+  -- EVIDENCE (0-1): tasks + cache (sem signals por enquanto)
   LEAST(1.0, (
-    COALESCE(task_counts.task_count, 0) * 0.15 +
-    COALESCE(signal_counts.signal_count, 0) * 0.10 +
-    CASE WHEN cache_exists.has_cache THEN 0.3 ELSE 0 END
+    COALESCE(task_counts.task_count, 0) * 0.20 +
+    CASE WHEN cache_exists.has_cache THEN 0.4 ELSE 0 END
   ))::NUMERIC AS evidence_score,
 
-  -- DATA TRUST (weighted average): comp 30% + cons 20% + rec 25% + evi 25%
+  -- DATA TRUST (weighted): comp 30% + cons 20% + rec 25% + evi 25%  → *100
   (
-    (
-      CASE WHEN d.fase_atual_no_processo IS NOT NULL AND d.fase_atual_no_processo != '' THEN 1 ELSE 0 END +
-      CASE WHEN d.etapa_atual_no_pipeline IS NOT NULL AND d.etapa_atual_no_pipeline != '' THEN 1 ELSE 0 END +
-      CASE WHEN d.tier_da_oportunidade IS NOT NULL AND d.tier_da_oportunidade != '' THEN 1 ELSE 0 END +
-      CASE WHEN d.linha_de_receita_vigente IS NOT NULL AND d.linha_de_receita_vigente != '' THEN 1 ELSE 0 END +
-      CASE WHEN d.grupo_de_receita IS NOT NULL AND d.grupo_de_receita != '' THEN 1 ELSE 0 END +
-      CASE WHEN d.email_lead IS NOT NULL AND d.email_lead != '' THEN 1 ELSE 0 END +
-      CASE WHEN d.cargo IS NOT NULL AND d.cargo != '' THEN 1 ELSE 0 END +
-      CASE WHEN d.canal_de_marketing IS NOT NULL AND d.canal_de_marketing != '' THEN 1 ELSE 0 END +
-      CASE WHEN d.status_do_deal IS NOT NULL AND d.status_do_deal != '' THEN 1 ELSE 0 END +
-      CASE WHEN d.created_at_crm IS NOT NULL THEN 1 ELSE 0 END
+    (CASE WHEN d.fase_atual_no_processo IS NOT NULL AND d.fase_atual_no_processo != '' THEN 1 ELSE 0 END +
+     CASE WHEN d.etapa_atual_no_pipeline IS NOT NULL AND d.etapa_atual_no_pipeline != '' THEN 1 ELSE 0 END +
+     CASE WHEN d.tier_da_oportunidade IS NOT NULL AND d.tier_da_oportunidade != '' THEN 1 ELSE 0 END +
+     CASE WHEN d.linha_de_receita_vigente IS NOT NULL AND d.linha_de_receita_vigente != '' THEN 1 ELSE 0 END +
+     CASE WHEN d.grupo_de_receita IS NOT NULL AND d.grupo_de_receita != '' THEN 1 ELSE 0 END +
+     CASE WHEN d.email_lead IS NOT NULL AND d.email_lead != '' THEN 1 ELSE 0 END +
+     CASE WHEN d.cargo IS NOT NULL AND d.cargo != '' THEN 1 ELSE 0 END +
+     CASE WHEN d.canal_de_marketing IS NOT NULL AND d.canal_de_marketing != '' THEN 1 ELSE 0 END +
+     CASE WHEN d.status_do_deal IS NOT NULL AND d.status_do_deal != '' THEN 1 ELSE 0 END +
+     CASE WHEN d.created_at_crm IS NOT NULL THEN 1 ELSE 0 END
     )::NUMERIC / 10.0 * 0.30
     +
-    (
-      CASE WHEN d.fase_atual_no_processo IS NOT NULL AND d.etapa_atual_no_pipeline IS NOT NULL THEN 0.4 ELSE 0 END +
-      CASE WHEN d.tier_da_oportunidade IS NOT NULL THEN 0.2 ELSE 0 END +
-      CASE WHEN d.linha_de_receita_vigente IS NOT NULL AND d.grupo_de_receita IS NOT NULL THEN 0.2 ELSE 0 END +
-      CASE WHEN d.canal_de_marketing IS NOT NULL AND d.canal_de_marketing != d.linha_de_receita_vigente THEN 0.2 ELSE 0 END
+    (CASE WHEN d.fase_atual_no_processo IS NOT NULL AND d.etapa_atual_no_pipeline IS NOT NULL THEN 0.4 ELSE 0 END +
+     CASE WHEN d.tier_da_oportunidade IS NOT NULL THEN 0.2 ELSE 0 END +
+     CASE WHEN d.linha_de_receita_vigente IS NOT NULL AND d.grupo_de_receita IS NOT NULL THEN 0.2 ELSE 0 END +
+     CASE WHEN d.canal_de_marketing IS NOT NULL AND d.canal_de_marketing != d.linha_de_receita_vigente THEN 0.2 ELSE 0 END
     )::NUMERIC * 0.20
     +
     GREATEST(0, 1.0 - (EXTRACT(EPOCH FROM (NOW() - COALESCE(d.synced_at, d.created_at_crm, NOW() - INTERVAL '90 days'))) / 86400.0 / 30.0))::NUMERIC * 0.25
     +
     LEAST(1.0, (
-      COALESCE(task_counts.task_count, 0) * 0.15 +
-      COALESCE(signal_counts.signal_count, 0) * 0.10 +
-      CASE WHEN cache_exists.has_cache THEN 0.3 ELSE 0 END
+      COALESCE(task_counts.task_count, 0) * 0.20 +
+      CASE WHEN cache_exists.has_cache THEN 0.4 ELSE 0 END
     ))::NUMERIC * 0.25
   ) * 100 AS data_trust_score,
 
-  -- BAND
+  -- BAND (based on completeness)
   CASE
-    WHEN (
-      (
-        CASE WHEN d.fase_atual_no_processo IS NOT NULL AND d.fase_atual_no_processo != '' THEN 1 ELSE 0 END +
-        CASE WHEN d.etapa_atual_no_pipeline IS NOT NULL AND d.etapa_atual_no_pipeline != '' THEN 1 ELSE 0 END +
-        CASE WHEN d.tier_da_oportunidade IS NOT NULL AND d.tier_da_oportunidade != '' THEN 1 ELSE 0 END +
-        CASE WHEN d.linha_de_receita_vigente IS NOT NULL AND d.linha_de_receita_vigente != '' THEN 1 ELSE 0 END +
-        CASE WHEN d.grupo_de_receita IS NOT NULL AND d.grupo_de_receita != '' THEN 1 ELSE 0 END +
-        CASE WHEN d.email_lead IS NOT NULL AND d.email_lead != '' THEN 1 ELSE 0 END +
-        CASE WHEN d.cargo IS NOT NULL AND d.cargo != '' THEN 1 ELSE 0 END +
-        CASE WHEN d.canal_de_marketing IS NOT NULL AND d.canal_de_marketing != '' THEN 1 ELSE 0 END +
-        CASE WHEN d.status_do_deal IS NOT NULL AND d.status_do_deal != '' THEN 1 ELSE 0 END +
-        CASE WHEN d.created_at_crm IS NOT NULL THEN 1 ELSE 0 END
-      )::NUMERIC / 10.0
-    ) < 0.4 THEN 'critical'
-    WHEN (
-      (
-        CASE WHEN d.fase_atual_no_processo IS NOT NULL AND d.fase_atual_no_processo != '' THEN 1 ELSE 0 END +
-        CASE WHEN d.etapa_atual_no_pipeline IS NOT NULL AND d.etapa_atual_no_pipeline != '' THEN 1 ELSE 0 END +
-        CASE WHEN d.tier_da_oportunidade IS NOT NULL AND d.tier_da_oportunidade != '' THEN 1 ELSE 0 END +
-        CASE WHEN d.linha_de_receita_vigente IS NOT NULL AND d.linha_de_receita_vigente != '' THEN 1 ELSE 0 END +
-        CASE WHEN d.grupo_de_receita IS NOT NULL AND d.grupo_de_receita != '' THEN 1 ELSE 0 END +
-        CASE WHEN d.email_lead IS NOT NULL AND d.email_lead != '' THEN 1 ELSE 0 END +
-        CASE WHEN d.cargo IS NOT NULL AND d.cargo != '' THEN 1 ELSE 0 END +
-        CASE WHEN d.canal_de_marketing IS NOT NULL AND d.canal_de_marketing != '' THEN 1 ELSE 0 END +
-        CASE WHEN d.status_do_deal IS NOT NULL AND d.status_do_deal != '' THEN 1 ELSE 0 END +
-        CASE WHEN d.created_at_crm IS NOT NULL THEN 1 ELSE 0 END
-      )::NUMERIC / 10.0
-    ) < 0.7 THEN 'risk'
+    WHEN (CASE WHEN d.fase_atual_no_processo IS NOT NULL AND d.fase_atual_no_processo != '' THEN 1 ELSE 0 END +
+          CASE WHEN d.etapa_atual_no_pipeline IS NOT NULL AND d.etapa_atual_no_pipeline != '' THEN 1 ELSE 0 END +
+          CASE WHEN d.tier_da_oportunidade IS NOT NULL AND d.tier_da_oportunidade != '' THEN 1 ELSE 0 END +
+          CASE WHEN d.linha_de_receita_vigente IS NOT NULL AND d.linha_de_receita_vigente != '' THEN 1 ELSE 0 END +
+          CASE WHEN d.grupo_de_receita IS NOT NULL AND d.grupo_de_receita != '' THEN 1 ELSE 0 END +
+          CASE WHEN d.email_lead IS NOT NULL AND d.email_lead != '' THEN 1 ELSE 0 END +
+          CASE WHEN d.cargo IS NOT NULL AND d.cargo != '' THEN 1 ELSE 0 END +
+          CASE WHEN d.canal_de_marketing IS NOT NULL AND d.canal_de_marketing != '' THEN 1 ELSE 0 END +
+          CASE WHEN d.status_do_deal IS NOT NULL AND d.status_do_deal != '' THEN 1 ELSE 0 END +
+          CASE WHEN d.created_at_crm IS NOT NULL THEN 1 ELSE 0 END
+    )::NUMERIC / 10.0 < 0.4 THEN 'critical'
+    WHEN (CASE WHEN d.fase_atual_no_processo IS NOT NULL AND d.fase_atual_no_processo != '' THEN 1 ELSE 0 END +
+          CASE WHEN d.etapa_atual_no_pipeline IS NOT NULL AND d.etapa_atual_no_pipeline != '' THEN 1 ELSE 0 END +
+          CASE WHEN d.tier_da_oportunidade IS NOT NULL AND d.tier_da_oportunidade != '' THEN 1 ELSE 0 END +
+          CASE WHEN d.linha_de_receita_vigente IS NOT NULL AND d.linha_de_receita_vigente != '' THEN 1 ELSE 0 END +
+          CASE WHEN d.grupo_de_receita IS NOT NULL AND d.grupo_de_receita != '' THEN 1 ELSE 0 END +
+          CASE WHEN d.email_lead IS NOT NULL AND d.email_lead != '' THEN 1 ELSE 0 END +
+          CASE WHEN d.cargo IS NOT NULL AND d.cargo != '' THEN 1 ELSE 0 END +
+          CASE WHEN d.canal_de_marketing IS NOT NULL AND d.canal_de_marketing != '' THEN 1 ELSE 0 END +
+          CASE WHEN d.status_do_deal IS NOT NULL AND d.status_do_deal != '' THEN 1 ELSE 0 END +
+          CASE WHEN d.created_at_crm IS NOT NULL THEN 1 ELSE 0 END
+    )::NUMERIC / 10.0 < 0.7 THEN 'risk'
     ELSE 'ok'
   END AS data_quality_band,
 
   jsonb_build_object(
     'seeded_at', NOW()::TEXT,
-    'version', 'v10-seed-1.0',
+    'version', 'v10-seed-2.0',
     'fields_checked', 10,
     'task_count', COALESCE(task_counts.task_count, 0),
-    'signal_count', COALESCE(signal_counts.signal_count, 0),
     'has_cache', COALESCE(cache_exists.has_cache, false)
   ) AS explain_json,
 
@@ -134,11 +118,6 @@ LEFT JOIN LATERAL (
   SELECT COUNT(*)::INT AS task_count
   FROM deal_tasks dt WHERE dt.deal_id = d.deal_id
 ) task_counts ON true
-
-LEFT JOIN LATERAL (
-  SELECT COUNT(*)::INT AS signal_count
-  FROM deal_signals ds WHERE ds.deal_id = d.deal_id
-) signal_counts ON true
 
 LEFT JOIN LATERAL (
   SELECT EXISTS(SELECT 1 FROM elucy_cache ec WHERE ec.deal_id = d.deal_id) AS has_cache
@@ -157,7 +136,6 @@ ON CONFLICT (deal_id) DO UPDATE SET
 
 
 -- 2. DEAL TRANSITION RUNTIME
--- Calcula se deal está pronto para avançar no pipeline baseado em regras de transição
 
 INSERT INTO deal_transition_runtime (
   deal_id, operator_email,
@@ -170,7 +148,6 @@ SELECT
   d.operator_email,
   d.etapa_atual_no_pipeline AS current_pipeline_stage,
 
-  -- Target: próxima etapa lógica
   CASE d.etapa_atual_no_pipeline
     WHEN 'novo lead' THEN 'dia 01'
     WHEN 'dia 01' THEN 'dia 02'
@@ -185,65 +162,55 @@ SELECT
     ELSE NULL
   END AS target_pipeline_stage,
 
-  -- Readiness score (0-1): combinação de completude + evidência + recência
+  -- Readiness (0-1): sem signals, redistribui peso
   LEAST(1.0, (
-    -- Tem dados básicos preenchidos?
     (CASE WHEN d.email_lead IS NOT NULL THEN 0.15 ELSE 0 END) +
     (CASE WHEN d.cargo IS NOT NULL THEN 0.10 ELSE 0 END) +
     (CASE WHEN d.tier_da_oportunidade IS NOT NULL THEN 0.10 ELSE 0 END) +
     (CASE WHEN d.linha_de_receita_vigente IS NOT NULL THEN 0.10 ELSE 0 END) +
-    -- Tem tasks completadas?
-    (CASE WHEN COALESCE(completed_tasks.count, 0) > 0 THEN 0.20 ELSE 0 END) +
-    -- Tem sinais positivos?
-    (CASE WHEN COALESCE(positive_signals.count, 0) > 0 THEN 0.15 ELSE 0 END) +
-    -- Não está aging demais?
-    (CASE WHEN d.delta_t IS NULL OR d.delta_t < 14 THEN 0.20 ELSE
-      CASE WHEN d.delta_t < 30 THEN 0.10 ELSE 0 END
+    (CASE WHEN COALESCE(completed_tasks.cnt, 0) > 0 THEN 0.25 ELSE 0 END) +
+    (CASE WHEN d.delta_t IS NULL OR d.delta_t < 14 THEN 0.30 ELSE
+      CASE WHEN d.delta_t < 30 THEN 0.15 ELSE 0 END
     END)
   ))::NUMERIC AS transition_readiness_score,
 
-  -- Valid: score >= 0.6 E tem target
   (
     LEAST(1.0, (
       (CASE WHEN d.email_lead IS NOT NULL THEN 0.15 ELSE 0 END) +
       (CASE WHEN d.cargo IS NOT NULL THEN 0.10 ELSE 0 END) +
       (CASE WHEN d.tier_da_oportunidade IS NOT NULL THEN 0.10 ELSE 0 END) +
       (CASE WHEN d.linha_de_receita_vigente IS NOT NULL THEN 0.10 ELSE 0 END) +
-      (CASE WHEN COALESCE(completed_tasks.count, 0) > 0 THEN 0.20 ELSE 0 END) +
-      (CASE WHEN COALESCE(positive_signals.count, 0) > 0 THEN 0.15 ELSE 0 END) +
-      (CASE WHEN d.delta_t IS NULL OR d.delta_t < 14 THEN 0.20 ELSE
-        CASE WHEN d.delta_t < 30 THEN 0.10 ELSE 0 END
+      (CASE WHEN COALESCE(completed_tasks.cnt, 0) > 0 THEN 0.25 ELSE 0 END) +
+      (CASE WHEN d.delta_t IS NULL OR d.delta_t < 14 THEN 0.30 ELSE
+        CASE WHEN d.delta_t < 30 THEN 0.15 ELSE 0 END
       END)
     )) >= 0.6
     AND d.etapa_atual_no_pipeline IS NOT NULL
   ) AS transition_valid,
 
-  -- Block reasons (comma-separated)
   NULLIF(TRIM(BOTH ', ' FROM (
     CASE WHEN d.email_lead IS NULL OR d.email_lead = '' THEN 'missing_email, ' ELSE '' END ||
     CASE WHEN d.cargo IS NULL OR d.cargo = '' THEN 'missing_cargo, ' ELSE '' END ||
     CASE WHEN d.tier_da_oportunidade IS NULL OR d.tier_da_oportunidade = '' THEN 'missing_tier, ' ELSE '' END ||
     CASE WHEN d.linha_de_receita_vigente IS NULL OR d.linha_de_receita_vigente = '' THEN 'missing_revenue_line, ' ELSE '' END ||
-    CASE WHEN COALESCE(completed_tasks.count, 0) = 0 THEN 'no_completed_tasks, ' ELSE '' END ||
+    CASE WHEN COALESCE(completed_tasks.cnt, 0) = 0 THEN 'no_completed_tasks, ' ELSE '' END ||
     CASE WHEN d.delta_t IS NOT NULL AND d.delta_t >= 30 THEN 'aging_critical, ' ELSE '' END ||
     CASE WHEN d.delta_t IS NOT NULL AND d.delta_t >= 14 AND d.delta_t < 30 THEN 'aging_warning, ' ELSE '' END
   )), '') AS transition_block_reason,
 
-  -- Gap count
   (
     CASE WHEN d.email_lead IS NULL OR d.email_lead = '' THEN 1 ELSE 0 END +
     CASE WHEN d.cargo IS NULL OR d.cargo = '' THEN 1 ELSE 0 END +
     CASE WHEN d.tier_da_oportunidade IS NULL OR d.tier_da_oportunidade = '' THEN 1 ELSE 0 END +
     CASE WHEN d.linha_de_receita_vigente IS NULL OR d.linha_de_receita_vigente = '' THEN 1 ELSE 0 END +
-    CASE WHEN COALESCE(completed_tasks.count, 0) = 0 THEN 1 ELSE 0 END +
+    CASE WHEN COALESCE(completed_tasks.cnt, 0) = 0 THEN 1 ELSE 0 END +
     CASE WHEN d.delta_t IS NOT NULL AND d.delta_t >= 14 THEN 1 ELSE 0 END
   )::INT AS transition_gap_count,
 
   jsonb_build_object(
     'seeded_at', NOW()::TEXT,
-    'version', 'v10-seed-1.0',
-    'completed_tasks', COALESCE(completed_tasks.count, 0),
-    'positive_signals', COALESCE(positive_signals.count, 0),
+    'version', 'v10-seed-2.0',
+    'completed_tasks', COALESCE(completed_tasks.cnt, 0),
     'delta_t', d.delta_t
   ) AS gaps_json,
 
@@ -252,16 +219,10 @@ SELECT
 FROM deals d
 
 LEFT JOIN LATERAL (
-  SELECT COUNT(*)::INT AS count
+  SELECT COUNT(*)::INT AS cnt
   FROM deal_tasks dt
   WHERE dt.deal_id = d.deal_id AND dt.task_status = 'completed'
 ) completed_tasks ON true
-
-LEFT JOIN LATERAL (
-  SELECT COUNT(*)::INT AS count
-  FROM deal_signals ds
-  WHERE ds.deal_id = d.deal_id AND ds.impact_score > 0
-) positive_signals ON true
 
 ON CONFLICT (deal_id) DO UPDATE SET
   operator_email = EXCLUDED.operator_email,
@@ -273,6 +234,7 @@ ON CONFLICT (deal_id) DO UPDATE SET
   transition_gap_count = EXCLUDED.transition_gap_count,
   gaps_json = EXCLUDED.gaps_json,
   updated_at = NOW();
+
 
 -- 3. Verification
 SELECT

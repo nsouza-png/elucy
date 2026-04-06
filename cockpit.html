@@ -1688,8 +1688,10 @@ function showCockpit(user){
     loadDealsFromSupabase(user.email);
   }
   initSlackAlerts();
-  // Cadência: carrega enrollments do Supabase antes de renderizar tasks
-  if(window.cadenceLoadAll) window.cadenceLoadAll();
+  // Cadência: carrega flow templates do DB e depois enrollments
+  if(window.loadFlowTemplates) window.loadFlowTemplates().then(function(){
+    if(window.loadCadenceEnrollments) window.loadCadenceEnrollments().then(function(){ if(window.loadCadenceSteps) window.loadCadenceSteps(); });
+  });
   // Hash routing — abre seção da URL (ex: /elucy/#tasks) ou home por padrão
   _routeFromHash();
   // Onboarding tour — verifica no Supabase se operador ja fez o tour
@@ -5003,12 +5005,13 @@ async function _renderPipeline(ct,period,qualName,opEmail){
 // ── TAB: QUALITY (KR3 — intelig\u00eancia qualitativa) ──
 async function _renderQuality(ct,period,qualName,opEmail){
   var sb=typeof getSB==='function'?getSB():null;
-  if(!sb){ct.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3)">Supabase não conectado.</div>';return;}
+  if(!sb){ct.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3)">Supabase n\u00e3o conectado.</div>';return;}
 
   var pStart=period&&period.start?period.start+'T00:00:00Z':null;
   var pEnd=period&&period.end?period.end+'T23:59:59Z':null;
-  var qQuery=sb.from('deal_data_quality_runtime').select('operator_email,data_trust_score,completeness_score,consistency_score,recency_score,evidence_score,data_quality_band');
-  var tQuery=sb.from('deal_transition_runtime').select('operator_email,transition_valid,transition_block_reason');
+  // Fetch com deal_id, etapa e explain_json para Deals em Risco
+  var qQuery=sb.from('deal_data_quality_runtime').select('deal_id,operator_email,data_trust_score,completeness_score,consistency_score,recency_score,evidence_score,data_quality_band,explain_json');
+  var tQuery=sb.from('deal_transition_runtime').select('deal_id,operator_email,transition_valid,transition_block_reason,current_pipeline_stage,transition_gap_count');
   if(pStart){qQuery=qQuery.gte('updated_at',pStart);tQuery=tQuery.gte('updated_at',pStart);}
   if(pEnd){qQuery=qQuery.lte('updated_at',pEnd);tQuery=tQuery.lte('updated_at',pEnd);}
   var [qRes,tRes]=await Promise.all([
@@ -5016,24 +5019,28 @@ async function _renderQuality(ct,period,qualName,opEmail){
     tQuery.then(function(r){return r.data||[];})
   ]);
 
+  // Aggregate por operador
   var opMap={};
   qRes.forEach(function(d){
     var e=d.operator_email||'unknown';
-    if(!opMap[e]) opMap[e]={email:e,trust:[],comp:[],cons:[],rec:[],evi:[],critical:0,total:0};
+    if(!opMap[e]) opMap[e]={email:e,trust:[],comp:[],cons:[],rec:[],evi:[],critical:0,risk:0,ok:0,total:0};
     opMap[e].trust.push(d.data_trust_score||0);
     opMap[e].comp.push(d.completeness_score||0);
     opMap[e].cons.push(d.consistency_score||0);
     opMap[e].rec.push(d.recency_score||0);
     opMap[e].evi.push(d.evidence_score||0);
     if(d.data_quality_band==='critical') opMap[e].critical++;
+    else if(d.data_quality_band==='risk') opMap[e].risk++;
+    else opMap[e].ok++;
     opMap[e].total++;
   });
 
   var ops=Object.values(opMap).map(function(o){
     function avg(arr){return arr.length?arr.reduce(function(a,b){return a+b;},0)/arr.length:0;}
-    return{email:o.email,avgTrust:avg(o.trust),avgComp:avg(o.comp),avgCons:avg(o.cons),avgRec:avg(o.rec),avgEvi:avg(o.evi),critical:o.critical,total:o.total};
+    return{email:o.email,avgTrust:avg(o.trust),avgComp:avg(o.comp),avgCons:avg(o.cons),avgRec:avg(o.rec),avgEvi:avg(o.evi),critical:o.critical,risk:o.risk,ok:o.ok,total:o.total};
   });
 
+  // Dynamic thresholds
   var allTrust=ops.map(function(o){return o.avgTrust;});
   var mean=allTrust.length?allTrust.reduce(function(a,b){return a+b;},0)/allTrust.length:50;
   var std=allTrust.length>1?Math.sqrt(allTrust.reduce(function(a,v){return a+Math.pow(v-mean,2);},0)/allTrust.length):10;
@@ -5043,10 +5050,13 @@ async function _renderQuality(ct,period,qualName,opEmail){
   function trustBand(v){return v<thCritical?'critical':v<thRisk?'risk':'ok';}
   function trustClass(v){var b=trustBand(v);return b==='critical'?'status-critical':b==='risk'?'status-warn':'status-ok';}
 
+  // Transition aggregation
   var blockReasons={};
   var transTotal=0,transReady=0;
+  var transMap={};
   tRes.forEach(function(d){
     transTotal++;
+    transMap[d.deal_id]=d;
     if(d.transition_valid) transReady++;
     if(!d.transition_valid&&d.transition_block_reason){
       (d.transition_block_reason||'').split(',').forEach(function(r){
@@ -5057,14 +5067,36 @@ async function _renderQuality(ct,period,qualName,opEmail){
   var brArr=Object.keys(blockReasons).map(function(k){return{reason:k,count:blockReasons[k]};}).sort(function(a,b){return b.count-a.count;});
   var blocked=transTotal-transReady;
 
+  // Band distribution global
+  var bands={ok:0,risk:0,critical:0};
+  qRes.forEach(function(d){
+    var b=d.data_quality_band||'risk';
+    if(bands[b]!=null) bands[b]++;else bands.risk++;
+  });
+
   var html='';
 
-  // Bloco 1: KPIs summary
+  // Bloco 1: KPIs summary + Band Distribution
   html+='<div class="perf-kpi-grid">';
   html+='<div class="perf-kpi"><span class="perf-kpi-label">Data Trust Score M\u00e9dio</span><span class="perf-kpi-value">'+Math.round(mean)+'<small>/100</small></span></div>';
-  html+='<div class="perf-kpi"><span class="perf-kpi-label">Deals Cr\u00edticos</span><span class="perf-kpi-value" style="background:linear-gradient(135deg,#ef4444,#f87171);-webkit-background-clip:text;-webkit-text-fill-color:transparent">'+ops.reduce(function(a,o){return a+o.critical;},0)+'</span></div>';
+  html+='<div class="perf-kpi"><span class="perf-kpi-label">Deals Cr\u00edticos</span><span class="perf-kpi-value" style="background:linear-gradient(135deg,#ef4444,#f87171);-webkit-background-clip:text;-webkit-text-fill-color:transparent">'+(bands.critical)+'</span></div>';
   html+='<div class="perf-kpi"><span class="perf-kpi-label">% Prontos p/ Avan\u00e7ar</span><span class="perf-kpi-value" style="background:linear-gradient(135deg,#56e5a9,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent">'+(transTotal>0?Math.round(transReady/transTotal*100):0)+'%</span></div>';
   html+='</div>';
+
+  // Band Distribution bars
+  if(qRes.length){
+    html+='<div class="perf-section"><div class="perf-section-title">Distribui\u00e7\u00e3o por Band</div>';
+    var bandItems=[
+      {label:'OK',count:bands.ok,cls:'status-ok'},
+      {label:'Risk',count:bands.risk,cls:'status-warn'},
+      {label:'Critical',count:bands.critical,cls:'status-critical'}
+    ];
+    bandItems.forEach(function(bi){
+      var pct=qRes.length>0?Math.round(bi.count/qRes.length*100):0;
+      html+='<div class="funnel-row"><span class="funnel-bar-label"><span class="'+bi.cls+'">'+bi.label+'</span></span><div class="funnel-bar-track"><div class="funnel-bar-fill" style="width:'+pct+'%;background:var(--'+(bi.cls==='status-ok'?'green':bi.cls==='status-warn'?'accent':'red')+')"></div></div><span class="funnel-bar-value">'+bi.count+' <small>('+pct+'%)</small></span></div>';
+    });
+    html+='</div>';
+  }
 
   // Bloco 2: Top block reasons
   if(brArr.length){
@@ -5076,18 +5108,66 @@ async function _renderQuality(ct,period,qualName,opEmail){
     html+='</tbody></table></div>';
   }
 
-  // Bloco 3: Qualidade por operador
+  // Bloco 3: Deals em Risco (critical + risk band)
+  var riskyDeals=qRes.filter(function(d){return d.data_quality_band==='critical'||d.data_quality_band==='risk';}).sort(function(a,b){return(a.data_trust_score||0)-(b.data_trust_score||0);});
+  if(riskyDeals.length){
+    html+='<div class="perf-section"><div class="perf-section-title">Deals em Risco ('+riskyDeals.length+')</div>';
+    html+='<table class="rpt-table"><thead><tr><th></th><th>Deal</th><th>Operador</th><th>Etapa</th><th>Trust</th><th>Band</th><th>Gaps</th></tr></thead><tbody>';
+    riskyDeals.slice(0,20).forEach(function(d){
+      var tr=transMap[d.deal_id];
+      var etapa=tr?_esc(tr.current_pipeline_stage||'\u2014'):'\u2014';
+      var gapCount=tr?tr.transition_gap_count:0;
+      var gaps=tr&&tr.transition_block_reason?_esc(tr.transition_block_reason.replace(/_/g,' ')):'';
+      var icon=d.data_quality_band==='critical'?'\u26d4':'\u26a0\ufe0f';
+      var cls=d.data_quality_band==='critical'?'status-critical':'status-warn';
+      html+='<tr><td>'+icon+'</td><td title="'+_esc(d.deal_id)+'">'+_esc((d.deal_id||'').slice(0,8))+'\u2026</td><td>'+_esc((d.operator_email||'').split('@')[0])+'</td><td>'+etapa+'</td><td>'+Math.round(d.data_trust_score||0)+'</td><td><span class="'+cls+'">'+d.data_quality_band+'</span></td><td title="'+gaps+'">'+gapCount+' gap'+(gapCount!==1?'s':'')+'</td></tr>';
+    });
+    if(riskyDeals.length>20) html+='<tr><td colspan="7" style="text-align:center;color:var(--text3);font-size:.75rem">+'+(riskyDeals.length-20)+' mais deals em risco</td></tr>';
+    html+='</tbody></table></div>';
+  }
+
+  // Bloco 4: Qualidade por operador
   if(ops.length){
     ops.sort(function(a,b){return b.avgTrust-a.avgTrust;});
     var myEmail=opEmail||'';
+    // Calcular % prontos por operador cruzando com transition data
+    var opTransMap={};
+    tRes.forEach(function(d){
+      var e=d.operator_email||'unknown';
+      if(!opTransMap[e]) opTransMap[e]={total:0,valid:0};
+      opTransMap[e].total++;
+      if(d.transition_valid) opTransMap[e].valid++;
+    });
     html+='<div class="perf-section"><div class="perf-section-title">Qualidade por Operador</div>';
-    html+='<table class="rpt-table"><thead><tr><th>Operador</th><th>Trust</th><th>Completeness</th><th>Consistency</th><th>Recency</th><th>Evidence</th><th>Band</th><th>Cr\u00edticos</th></tr></thead><tbody>';
+    html+='<table class="rpt-table"><thead><tr><th>Operador</th><th>Trust</th><th>Comp</th><th>Cons</th><th>Rec</th><th>Evi</th><th>Band</th><th>Cr\u00edt</th><th>% Pronto</th></tr></thead><tbody>';
     ops.forEach(function(o){
       var isSelf=o.email===myEmail;
       var band=trustBand(o.avgTrust);
-      html+='<tr class="'+(isSelf?'row-self':'')+'"><td>'+_esc(o.email.split('@')[0])+'</td><td>'+Math.round(o.avgTrust)+'</td><td>'+Math.round(o.avgComp)+'</td><td>'+Math.round(o.avgCons)+'</td><td>'+Math.round(o.avgRec)+'</td><td>'+Math.round(o.avgEvi)+'</td><td><span class="'+trustClass(o.avgTrust)+'">'+band+'</span></td><td>'+o.critical+'</td></tr>';
+      var ot=opTransMap[o.email]||{total:0,valid:0};
+      var pctReady=ot.total>0?Math.round(ot.valid/ot.total*100):0;
+      html+='<tr class="'+(isSelf?'row-self':'')+'"><td>'+_esc(o.email.split('@')[0])+'</td><td>'+Math.round(o.avgTrust)+'</td><td>'+Math.round(o.avgComp*100)+'</td><td>'+Math.round(o.avgCons*100)+'</td><td>'+Math.round(o.avgRec*100)+'</td><td>'+Math.round(o.avgEvi*100)+'</td><td><span class="'+trustClass(o.avgTrust)+'">'+band+'</span></td><td>'+o.critical+'</td><td>'+pctReady+'%</td></tr>';
     });
     html+='</tbody></table></div>';
+  }
+
+  // Bloco 5: Engagement Score do operador
+  var ae=window.AnalyticsEngine;
+  if(ae&&ae.calcByOperator){
+    try{
+      var engData=await ae.calcByOperator();
+      var scores=engData&&engData.scores?engData.scores:{};
+      var myScore=scores.dqi||scores.overall||0;
+      var analyses=scores.analyses||0;
+      var dvlConfirmed=scores.dvl||0;
+      var notes=scores.notes||0;
+      html+='<div class="perf-section"><div class="perf-section-title">Engagement Score</div>';
+      html+='<div class="perf-kpi-grid">';
+      html+='<div class="perf-kpi"><span class="perf-kpi-label">Seu Score</span><span class="perf-kpi-value">'+_fmtN(Math.round(myScore))+'<small>/100</small></span></div>';
+      html+='<div class="perf-kpi"><span class="perf-kpi-label">An\u00e1lises</span><span class="perf-kpi-value">'+_fmtN(analyses)+'</span></div>';
+      html+='<div class="perf-kpi"><span class="perf-kpi-label">DVL Confirmados</span><span class="perf-kpi-value">'+_fmtN(dvlConfirmed)+'</span></div>';
+      html+='<div class="perf-kpi"><span class="perf-kpi-label">Notas</span><span class="perf-kpi-value">'+_fmtN(notes)+'</span></div>';
+      html+='</div></div>';
+    }catch(e){}
   }
 
   if(!html) html='<div style="padding:40px;text-align:center;color:var(--text3)">Sem dados de qualidade dispon\u00edveis.</div>';
