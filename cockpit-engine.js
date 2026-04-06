@@ -2858,7 +2858,7 @@ function _renderTimeline(targetId,interactions){
   }
   var ic={analysis:'chart',copy:'edit',brief:'clipboard',dm:'chat',correction:'refresh',dvl_confirmed:'check',note_crm:'pin',whatsapp_sent:'phone',enrichment:'search',business_analysis:'building',dm_touchpoint:'phone'};
   var lb={analysis:'Analise',copy:'Copy',brief:'Briefing',dm:'DM',correction:'Correcao',dvl_confirmed:'DVL',note_crm:'Nota CRM',whatsapp_sent:'WhatsApp',enrichment:'Enrichment',business_analysis:'Mercado',dm_touchpoint:'Touchpoint DM'};
-  tl.innerHTML='<div class="sec-t" style="margin-bottom:10px">Historico de Interacoes</div>'+
+  tl.innerHTML=
     interactions.map(function(i){
       var dt=new Date(i.created_at);
       var tm=dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
