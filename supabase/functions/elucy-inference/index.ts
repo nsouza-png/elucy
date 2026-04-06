@@ -164,19 +164,22 @@ Deno.serve(async (req) => {
     }
 
     // ── 3. Parse body ──
+    // Accepts two formats:
+    //   Legacy (browser): { requestType, userMessage, model, dealId }
+    //   Structured:       { request_type, deal_context, history, prompt, extra_context, deal_id, deal_data, model_override }
     const body = await req.json()
-    const {
-      request_type = 'analyze',
-      deal_context = '',   // pre-built by buildDealContext() in browser
-      history = '',        // pre-built by loadDealFullHistory() in browser
-      prompt = '',         // pre-built by REQUEST_PROMPTS[type] in browser
-      extra_context = '',
-      deal_id = '',
-      deal_data = null,    // raw deal data for saving
-      model_override = '', // optional model override
-    } = body
+    const request_type = body.request_type || body.requestType || 'analyze'
+    const deal_context = body.deal_context || ''
+    const history = body.history || ''
+    const prompt = body.prompt || ''
+    const extra_context = body.extra_context || ''
+    const deal_id = body.deal_id || body.dealId || ''
+    const deal_data = body.deal_data || null
+    const model_override = body.model_override || body.model || ''
+    // Legacy format: browser sends pre-built userMessage with everything concatenated
+    const legacyUserMessage = body.userMessage || ''
 
-    if (!deal_context && !prompt) {
+    if (!deal_context && !prompt && !legacyUserMessage) {
       return new Response(JSON.stringify({ error: 'deal_context or prompt required' }), {
         status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
       })
@@ -210,8 +213,8 @@ Deno.serve(async (req) => {
       text: `OPERADOR: ${operator.name || user.email} | Role: ${operator.role || 'sdr'} | Qualificador: ${operator.qualificador_name || 'N/A'}`,
     })
 
-    // User message: deal context + history + prompt
-    const userMessage = [
+    // User message: use legacy pre-built message if available, otherwise assemble from parts
+    const userMessage = legacyUserMessage || [
       deal_context,
       history,
       prompt,
