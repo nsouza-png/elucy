@@ -4973,16 +4973,19 @@ async function _renderPipeline(ct,period,qualName,opEmail){
     html+='</div>';
   }
 
-  // Bloco 2: SDR Leaderboard
+  // Bloco 2: SDR Leaderboard (team view = leader/manager; SDR sees own + totals)
   if(macroRows&&macroRows.length){
     var myEmail=opEmail||'';
-    html+='<div class="perf-section"><div class="perf-section-title">SDR Leaderboard</div>';
+    var pCtx=window.getOperatorCtx?window.getOperatorCtx():{};
+    var canViewTeamP=pCtx.permissions&&pCtx.permissions.can_view_team;
+    html+='<div class="perf-section"><div class="perf-section-title">SDR Leaderboard'+(canViewTeamP?'':' <span style="font-weight:400;color:var(--text3);font-size:11px">(seus dados)</span>')+'</div>';
     html+='<table class="rpt-table"><thead><tr><th>Qualificador</th><th>MQL</th><th>SAL</th><th>%M\u2192S</th><th>OPP</th><th>%S\u2192O</th><th>Won</th><th>%O\u2192W</th><th>Receita</th></tr></thead><tbody>';
     var sorted=macroRows.slice().sort(function(a,b){return(b.cnt_opp||b.opp||0)-(a.cnt_opp||a.opp||0);});
     sorted.forEach(function(r){
       var name=_esc(r.qualificador_name||r.name||'\u2014');
       var mql=r.cnt_mql||r.mql||0,sal=r.cnt_sal||r.sal||0,opp=r.cnt_opp||r.opp||0,won=r.cnt_won||r.won||0,rec=r.receita||0;
       var isSelf=name.toLowerCase().indexOf((myEmail.split('@')[0]||'').toLowerCase())>=0||name.toLowerCase().indexOf((qualName||'').toLowerCase())>=0;
+      if(!canViewTeamP&&!isSelf) return;
       html+='<tr class="'+(isSelf?'row-self':'')+'"><td>'+name+'</td><td>'+_fmtN(mql)+'</td><td>'+_fmtN(sal)+'</td><td>'+_fmtPct(mql>0?sal/mql:0)+'</td><td>'+_fmtN(opp)+'</td><td>'+_fmtPct(sal>0?opp/sal:0)+'</td><td>'+_fmtN(won)+'</td><td>'+_fmtPct(opp>0?won/opp:0)+'</td><td>'+_fmtMoney(rec)+'</td></tr>';
     });
     var tot={mql:0,sal:0,opp:0,won:0,rec:0};
@@ -5155,10 +5158,13 @@ async function _renderQuality(ct,period,qualName,opEmail){
     html+='</tbody></table></div>';
   }
 
-  // Bloco 4: Qualidade por operador
+  // Bloco 4: Qualidade por operador (team view = leader/manager only; SDR sees own row)
   if(ops.length){
     ops.sort(function(a,b){return b.avgTrust-a.avgTrust;});
     var myEmail=opEmail||'';
+    var ctx=window.getOperatorCtx?window.getOperatorCtx():{};
+    var canViewTeam=ctx.permissions&&ctx.permissions.can_view_team;
+    var visibleOps=canViewTeam?ops:ops.filter(function(o){return o.email===myEmail;});
     // Calcular % prontos por operador cruzando com transition data
     var opTransMap={};
     tRes.forEach(function(d){
@@ -5167,16 +5173,18 @@ async function _renderQuality(ct,period,qualName,opEmail){
       opTransMap[e].total++;
       if(d.transition_valid) opTransMap[e].valid++;
     });
-    html+='<div class="perf-section"><div class="perf-section-title">Qualidade por Operador</div>';
-    html+='<table class="rpt-table"><thead><tr><th>Operador</th><th>Trust</th><th>Comp</th><th>Cons</th><th>Rec</th><th>Evi</th><th>Band</th><th>Cr\u00edt</th><th>% Pronto</th></tr></thead><tbody>';
-    ops.forEach(function(o){
-      var isSelf=o.email===myEmail;
-      var band=trustBand(o.avgTrust);
-      var ot=opTransMap[o.email]||{total:0,valid:0};
-      var pctReady=ot.total>0?Math.round(ot.valid/ot.total*100):0;
-      html+='<tr class="'+(isSelf?'row-self':'')+'"><td>'+_esc(o.email.split('@')[0])+'</td><td>'+Math.round(o.avgTrust)+'</td><td>'+Math.round(o.avgComp*100)+'</td><td>'+Math.round(o.avgCons*100)+'</td><td>'+Math.round(o.avgRec*100)+'</td><td>'+Math.round(o.avgEvi*100)+'</td><td><span class="'+trustClass(o.avgTrust)+'">'+band+'</span></td><td>'+o.critical+'</td><td>'+pctReady+'%</td></tr>';
-    });
-    html+='</tbody></table></div>';
+    if(visibleOps.length){
+      html+='<div class="perf-section"><div class="perf-section-title">Qualidade por Operador'+(canViewTeam?'':' <span style="font-weight:400;color:var(--text3);font-size:11px">(seus dados)</span>')+'</div>';
+      html+='<table class="rpt-table"><thead><tr><th>Operador</th><th>Trust</th><th>Comp</th><th>Cons</th><th>Rec</th><th>Evi</th><th>Band</th><th>Cr\u00edt</th><th>% Pronto</th></tr></thead><tbody>';
+      visibleOps.forEach(function(o){
+        var isSelf=o.email===myEmail;
+        var band=trustBand(o.avgTrust);
+        var ot=opTransMap[o.email]||{total:0,valid:0};
+        var pctReady=ot.total>0?Math.round(ot.valid/ot.total*100):0;
+        html+='<tr class="'+(isSelf?'row-self':'')+'"><td>'+_esc(o.email.split('@')[0])+'</td><td>'+Math.round(o.avgTrust)+'</td><td>'+Math.round(o.avgComp*100)+'</td><td>'+Math.round(o.avgCons*100)+'</td><td>'+Math.round(o.avgRec*100)+'</td><td>'+Math.round(o.avgEvi*100)+'</td><td><span class="'+trustClass(o.avgTrust)+'">'+band+'</span></td><td>'+o.critical+'</td><td>'+pctReady+'%</td></tr>';
+      });
+      html+='</tbody></table></div>';
+    }
   }
 
   // Bloco 5: Engagement Score do operador
