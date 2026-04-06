@@ -5,14 +5,17 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Confirmando acesso — Elucy Cockpit</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#000000;--bg2:#0d0d0d;--border:rgba(255,255,255,.08);--accent:#f59e0b;--accent2:#fbbf24;--accent3:#fcd34d;--adim:rgba(245,158,11,.10);--green:#30d158;--gdim:rgba(48,209,88,.10);--red:#ff453a;--rdim:rgba(255,69,58,.10);--text:#f5f5f7;--text2:#86868b}
-body{background:var(--bg);color:var(--text);font-family:-apple-system,'SF Pro Display','Manrope',Inter,system-ui,sans-serif;height:100vh;display:flex;align-items:center;justify-content:center;-webkit-font-smoothing:antialiased}
+:root{--bg:#0e141b;--bg2:#171c24;--border:rgba(255,255,255,.06);--accent:#f59e0b;--accent2:#fbbf24;--accent3:#fcd34d;--adim:rgba(245,158,11,.10);--green:#30d158;--gdim:rgba(48,209,88,.10);--red:#ff453a;--rdim:rgba(255,69,58,.10);--text:#e8e0d6;--text2:#b0a898;--font-display:'Plus Jakarta Sans',Inter,system-ui,sans-serif}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,'SF Pro Text','Plus Jakarta Sans',Inter,system-ui,sans-serif;height:100vh;display:flex;align-items:center;justify-content:center;-webkit-font-smoothing:antialiased}
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:48px 40px;max-width:420px;width:90%;text-align:center;-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
-.logo{font-size:15px;font-weight:800;color:var(--text);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:28px}.logo em{color:var(--accent2);font-style:normal;font-weight:600;font-size:8px;background:var(--accent);color:#fff;padding:2px 7px;border-radius:5px;letter-spacing:1px;margin-left:6px;vertical-align:middle}
+.logo{font-family:var(--font-display);font-size:15px;font-weight:800;color:var(--text);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:28px}.logo em{color:var(--accent2);font-style:normal;font-weight:600;font-size:8px;background:var(--accent);color:#fff;padding:2px 7px;border-radius:5px;letter-spacing:1px;margin-left:6px;vertical-align:middle}
 .icon{font-size:44px;margin-bottom:16px}
-.title{font-size:18px;font-weight:700;margin-bottom:8px}
+.title{font-family:var(--font-display);font-size:18px;font-weight:700;margin-bottom:8px}
 .msg{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:24px}
 .badge{display:inline-block;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:700;margin-bottom:24px}
 .badge-ok{background:var(--gdim);border:1px solid var(--green);color:var(--green)}
