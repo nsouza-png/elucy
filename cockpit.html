@@ -4779,12 +4779,13 @@ window._loadIntelTab=async function(){
   panel.innerHTML='<div class="sk sk-card" style="height:400px"><div class="sk-kpi"></div></div>';
 
   var period=_getPeriod();
-  var qualName=window._resolveQualName?window._resolveQualName():(window._OPERATOR_EMAIL||'');
+  var qualName=localStorage.getItem('elucy_qualificador_name')||'';
+  var opEmail=window.getOperatorId?window.getOperatorId():(window._currentUser?window._currentUser.email:localStorage.getItem('elucy_operator_email')||'');
 
   try{
-    if(tab==='performance') await _renderPerformance(panel,period,qualName);
-    else if(tab==='pipeline') await _renderPipeline(panel,period,qualName);
-    else if(tab==='quality') await _renderQuality(panel,period,qualName);
+    if(tab==='performance') await _renderPerformance(panel,period,qualName,opEmail);
+    else if(tab==='pipeline') await _renderPipeline(panel,period,qualName,opEmail);
+    else if(tab==='quality') await _renderQuality(panel,period,qualName,opEmail);
   }catch(err){
     panel.innerHTML='<div style="padding:40px;text-align:center;color:var(--red);font-size:.8125rem">Erro ao carregar '+tab+': '+err.message+'</div>';
     console.error('[Intel v5] '+tab+' error:',err);
@@ -4815,13 +4816,13 @@ function fmtRevLine(k){
 
 
 // ── TAB: PERFORMANCE (KR1 — individual) ──
-async function _renderPerformance(ct,period,qualName){
+async function _renderPerformance(ct,period,qualName,opEmail){
   var RV4=window.ReportsV4||{};
   var [dbIndiv,dbLine,dbDt,dtRuntime,macroRows]=await Promise.all([
     RV4.fetchDatabricksMetrics?RV4.fetchDatabricksMetrics(qualName,period):null,
     RV4.fetchDatabricksLineBreakdown?RV4.fetchDatabricksLineBreakdown(qualName,period):null,
     RV4.fetchDatabricksDtByLine?RV4.fetchDatabricksDtByLine(qualName,period):null,
-    RV4.fetchDeltaTRuntime?RV4.fetchDeltaTRuntime(window._OPERATOR_EMAIL):null,
+    RV4.fetchDeltaTRuntime?RV4.fetchDeltaTRuntime(opEmail):null,
     RV4.fetchDatabricksMacro?RV4.fetchDatabricksMacro(period):[]
   ]);
 
@@ -4923,7 +4924,7 @@ function _calcBenchmarks(macroRows){
 }
 
 // ── TAB: PIPELINE (KR2 — opera\u00e7\u00e3o completa) ──
-async function _renderPipeline(ct,period,qualName){
+async function _renderPipeline(ct,period,qualName,opEmail){
   var RV4=window.ReportsV4||{};
   var [macroRows,dbLineMacro]=await Promise.all([
     RV4.fetchDatabricksMacro?RV4.fetchDatabricksMacro(period):[],
@@ -4953,7 +4954,7 @@ async function _renderPipeline(ct,period,qualName){
 
   // Bloco 2: SDR Leaderboard
   if(macroRows&&macroRows.length){
-    var myEmail=window._OPERATOR_EMAIL||'';
+    var myEmail=opEmail||'';
     html+='<div class="perf-section"><div class="perf-section-title">SDR Leaderboard</div>';
     html+='<table class="rpt-table"><thead><tr><th>Qualificador</th><th>MQL</th><th>SAL</th><th>%M\u2192S</th><th>OPP</th><th>%S\u2192O</th><th>Won</th><th>%O\u2192W</th><th>Receita</th></tr></thead><tbody>';
     var sorted=macroRows.slice().sort(function(a,b){return(b.cnt_opp||b.opp||0)-(a.cnt_opp||a.opp||0);});
@@ -4988,9 +4989,9 @@ async function _renderPipeline(ct,period,qualName){
 }
 
 // ── TAB: QUALITY (KR3 — intelig\u00eancia qualitativa) ──
-async function _renderQuality(ct,period,qualName){
-  var sb=window._SB;
-  if(!sb){ct.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3)">Supabase n\u00e3o conectado.</div>';return;}
+async function _renderQuality(ct,period,qualName,opEmail){
+  var sb=typeof getSB==='function'?getSB():null;
+  if(!sb){ct.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3)">Supabase não conectado.</div>';return;}
 
   var [qRes,tRes]=await Promise.all([
     sb.from('deal_data_quality_runtime').select('operator_email,data_trust_score,completeness_score,consistency_score,recency_score,evidence_score,data_quality_band').then(function(r){return r.data||[];}),
@@ -5060,7 +5061,7 @@ async function _renderQuality(ct,period,qualName){
   // Bloco 3: Qualidade por operador
   if(ops.length){
     ops.sort(function(a,b){return b.avgTrust-a.avgTrust;});
-    var myEmail=window._OPERATOR_EMAIL||'';
+    var myEmail=opEmail||'';
     html+='<div class="perf-section"><div class="perf-section-title">Qualidade por Operador</div>';
     html+='<table class="rpt-table"><thead><tr><th>Operador</th><th>Trust</th><th>Completeness</th><th>Consistency</th><th>Recency</th><th>Evidence</th><th>Band</th><th>Cr\u00edticos</th></tr></thead><tbody>';
     ops.forEach(function(o){
