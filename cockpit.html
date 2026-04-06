@@ -4787,13 +4787,14 @@ window._loadIntelTab=async function(){
     else if(tab==='pipeline') await _renderPipeline(panel,period,qualName,opEmail);
     else if(tab==='quality') await _renderQuality(panel,period,qualName,opEmail);
   }catch(err){
-    panel.innerHTML='<div style="padding:40px;text-align:center;color:var(--red);font-size:.8125rem">Erro ao carregar '+tab+': '+err.message+'</div>';
+    panel.innerHTML='<div style="padding:40px;text-align:center;color:var(--red);font-size:.8125rem">Erro ao carregar '+_esc(tab)+': '+_esc(err.message)+'</div>';
     console.error('[Intel v5] '+tab+' error:',err);
   }
 };
 
 // ── Helpers ──
-function _fmtN(n){return n==null?'—':typeof n==='number'?n.toLocaleString('pt-BR'):''+n;}
+function _esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function _fmtN(n){return n==null?'—':typeof n==='number'?n.toLocaleString('pt-BR'):_esc(''+n);}
 function _fmtPct(v){return v==null?'—':Math.round(v*100)+'%';}
 function _fmtMoney(v){return v==null?'—':'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});}
 function _fmtDays(v){return v==null?'—':Math.round(v*10)/10+'d';}
@@ -4831,8 +4832,8 @@ async function _renderPerformance(ct,period,qualName,opEmail){
 
   // Bloco 1: Funil pessoal
   var funnelStages=[
-    {label:'MQL',val:m.mql||0},{label:'SAL',val:m.sal||0},{label:'Agendamento',val:m.agend||0},
-    {label:'OPP',val:m.opp||0},{label:'Won',val:m.won||0}
+    {label:'MQL',val:m.mql_validos||0},{label:'SAL',val:m.sal_count||0},{label:'Agendamento',val:m.agendamento_count||0},
+    {label:'OPP',val:m.opp_count||0},{label:'Won',val:m.won_count||0}
   ];
   var maxF=Math.max(1,...funnelStages.map(function(s){return s.val;}));
 
@@ -4849,7 +4850,7 @@ async function _renderPerformance(ct,period,qualName,opEmail){
 
   // Bloco 2: KPIs financeiros + Engagement Score
   var ae=window.AnalyticsEngine;
-  var opScore=ae&&ae.calcByOperator?ae.calcByOperator():{};
+  var opScore=ae&&ae.calcByOperator?(await ae.calcByOperator()):{};
   var scores=opScore.scores||{};
   html+='<div class="perf-kpi-grid">';
   html+='<div class="perf-kpi"><span class="perf-kpi-label">Receita Won</span><span class="perf-kpi-value">'+_fmtMoney(m.receita_won)+'</span></div>';
@@ -4862,14 +4863,15 @@ async function _renderPerformance(ct,period,qualName,opEmail){
   if(macroRows&&macroRows.length>1){
     var metrics=[
       {key:'cr_mql_sal',label:'MQL\u2192SAL%',target:0.50},
-      {key:'cr_sal_opp',label:'SAL\u2192OPP%',target:0.40},
+      {key:'cr_sal_opp',bmKey:'cr_sal_opp',srcKey:'cr_agend_opp',label:'Agend\u2192OPP%',target:0.40},
       {key:'cr_opp_won',label:'OPP\u2192Won%',target:0.30}
     ];
     html+='<div class="perf-section"><div class="perf-section-title">Ranking vs Opera\u00e7\u00e3o</div>';
     html+='<table class="rpt-table"><thead><tr><th>M\u00e9trica</th><th>Voc\u00ea</th><th>Benchmark</th><th>Score</th><th>Status</th></tr></thead><tbody>';
     metrics.forEach(function(mt){
-      var myVal=m[mt.key]||0;
-      var bm=bench[mt.key]||mt.target;
+      var rawVal=m[mt.srcKey||mt.key]||0;
+      var myVal=rawVal>1?rawVal/100:rawVal;
+      var bm=bench[mt.bmKey||mt.key]||mt.target;
       var rel=bm>0?myVal/bm:0;
       var cls=rel>=1?'status-ok':rel>=0.7?'status-warn':'status-critical';
       html+='<tr><td>'+mt.label+'</td><td>'+_fmtPct(myVal)+'</td><td>'+_fmtPct(bm)+'</td><td>'+Math.round(rel*100)+'%</td><td><span class="'+cls+'">'+(rel>=1?'Acima':rel>=0.7?'Na m\u00e9dia':'Abaixo')+'</span></td></tr>';
@@ -4881,10 +4883,10 @@ async function _renderPerformance(ct,period,qualName,opEmail){
   var dtData=m._source==='databricks'?m:dtRuntime;
   if(dtData){
     var transitions=[
-      {label:'MQL\u2192SAL',key:'avg_delta_t_sal',slaBase:2},
-      {label:'SAL\u2192Agend',key:'avg_delta_t_agendado',slaBase:5},
-      {label:'Agend\u2192OPP',key:'avg_delta_t_opp',slaBase:7},
-      {label:'Neg\u2192Won',key:'avg_delta_t_ganho',slaBase:14}
+      {label:'MQL\u2192SAL',key:'dt_mql_sal',slaBase:2},
+      {label:'SAL\u2192Agend',key:'dt_agendado',slaBase:5},
+      {label:'Agend\u2192OPP',key:'dt_agendado_oportunidade',slaBase:7},
+      {label:'Neg\u2192Won',key:'dt_negociacao_ganho',slaBase:14}
     ];
     html+='<div class="perf-section"><div class="perf-section-title">Velocidade</div>';
     html+='<table class="rpt-table"><thead><tr><th>Transi\u00e7\u00e3o</th><th>Seu \u0394t</th><th>SLA Base</th><th>Status</th></tr></thead><tbody>';
@@ -4901,13 +4903,14 @@ async function _renderPerformance(ct,period,qualName,opEmail){
     html+='<div class="perf-section"><div class="perf-section-title">Por Linha de Receita</div>';
     html+='<table class="rpt-table"><thead><tr><th>Linha</th><th>MQL</th><th>Won</th><th>CR%</th><th>Receita</th></tr></thead><tbody>';
     dbLine.forEach(function(r){
-      html+='<tr><td>'+fmtRevLine(r.name)+'</td><td>'+_fmtN(r.total)+'</td><td>'+_fmtN(r.won)+'</td><td>'+_fmtPct(r.cr_opp||r.winRate)+'</td><td>'+_fmtMoney(r.value)+'</td></tr>';
+      var crRaw=r.cr_opp||r.winRate||0;var cr=crRaw>1?crRaw/100:crRaw;
+      html+='<tr><td>'+fmtRevLine(r.name)+'</td><td>'+_fmtN(r.total)+'</td><td>'+_fmtN(r.won)+'</td><td>'+_fmtPct(cr)+'</td><td>'+_fmtMoney(r.value)+'</td></tr>';
     });
     html+='</tbody></table></div>';
   }
 
   var sub=document.getElementById('intel-subtitle');
-  if(sub) sub.textContent=(m.mql||0)+' deals ativos \u2014 '+period.start+' a '+period.end+' \u2014 dim: PERFORMANCE';
+  if(sub) sub.textContent=(m.mql_validos||0)+' deals ativos \u2014 '+period.start+' a '+period.end+' \u2014 dim: PERFORMANCE';
 
   ct.innerHTML=html;
 }
@@ -4959,7 +4962,7 @@ async function _renderPipeline(ct,period,qualName,opEmail){
     html+='<table class="rpt-table"><thead><tr><th>Qualificador</th><th>MQL</th><th>SAL</th><th>%M\u2192S</th><th>OPP</th><th>%S\u2192O</th><th>Won</th><th>%O\u2192W</th><th>Receita</th></tr></thead><tbody>';
     var sorted=macroRows.slice().sort(function(a,b){return(b.cnt_opp||b.opp||0)-(a.cnt_opp||a.opp||0);});
     sorted.forEach(function(r){
-      var name=r.qualificador_name||r.name||'\u2014';
+      var name=_esc(r.qualificador_name||r.name||'\u2014');
       var mql=r.cnt_mql||r.mql||0,sal=r.cnt_sal||r.sal||0,opp=r.cnt_opp||r.opp||0,won=r.cnt_won||r.won||0,rec=r.receita||0;
       var isSelf=name.toLowerCase().indexOf((myEmail.split('@')[0]||'').toLowerCase())>=0||name.toLowerCase().indexOf((qualName||'').toLowerCase())>=0;
       html+='<tr class="'+(isSelf?'row-self':'')+'"><td>'+name+'</td><td>'+_fmtN(mql)+'</td><td>'+_fmtN(sal)+'</td><td>'+_fmtPct(mql>0?sal/mql:0)+'</td><td>'+_fmtN(opp)+'</td><td>'+_fmtPct(sal>0?opp/sal:0)+'</td><td>'+_fmtN(won)+'</td><td>'+_fmtPct(opp>0?won/opp:0)+'</td><td>'+_fmtMoney(rec)+'</td></tr>';
@@ -4975,7 +4978,8 @@ async function _renderPipeline(ct,period,qualName,opEmail){
     html+='<div class="perf-section"><div class="perf-section-title">Por Linha de Receita (Opera\u00e7\u00e3o)</div>';
     html+='<table class="rpt-table"><thead><tr><th>Linha</th><th>MQL</th><th>Won</th><th>CR%</th><th>Receita</th></tr></thead><tbody>';
     dbLineMacro.forEach(function(r){
-      html+='<tr><td>'+fmtRevLine(r.name)+'</td><td>'+_fmtN(r.total)+'</td><td>'+_fmtN(r.won)+'</td><td>'+_fmtPct(r.cr_opp||r.winRate)+'</td><td>'+_fmtMoney(r.value)+'</td></tr>';
+      var crRaw=r.cr_opp||r.winRate||0;var cr=crRaw>1?crRaw/100:crRaw;
+      html+='<tr><td>'+fmtRevLine(r.name)+'</td><td>'+_fmtN(r.total)+'</td><td>'+_fmtN(r.won)+'</td><td>'+_fmtPct(cr)+'</td><td>'+_fmtMoney(r.value)+'</td></tr>';
     });
     html+='</tbody></table></div>';
   }
@@ -5053,7 +5057,7 @@ async function _renderQuality(ct,period,qualName,opEmail){
     html+='<div class="perf-section"><div class="perf-section-title">Top Causas de Bloqueio</div>';
     html+='<table class="rpt-table"><thead><tr><th>Motivo</th><th>Count</th><th>% dos Bloqueados</th></tr></thead><tbody>';
     brArr.slice(0,8).forEach(function(b){
-      html+='<tr><td>'+b.reason.replace(/_/g,' ')+'</td><td>'+b.count+'</td><td>'+_fmtPct(blocked>0?b.count/blocked:0)+'</td></tr>';
+      html+='<tr><td>'+_esc(b.reason.replace(/_/g,' '))+'</td><td>'+b.count+'</td><td>'+_fmtPct(blocked>0?b.count/blocked:0)+'</td></tr>';
     });
     html+='</tbody></table></div>';
   }
@@ -5067,7 +5071,7 @@ async function _renderQuality(ct,period,qualName,opEmail){
     ops.forEach(function(o){
       var isSelf=o.email===myEmail;
       var band=trustBand(o.avgTrust);
-      html+='<tr class="'+(isSelf?'row-self':'')+'"><td>'+(o.email.split('@')[0])+'</td><td>'+Math.round(o.avgTrust)+'</td><td>'+Math.round(o.avgComp)+'</td><td>'+Math.round(o.avgCons)+'</td><td>'+Math.round(o.avgRec)+'</td><td>'+Math.round(o.avgEvi)+'</td><td><span class="'+trustClass(o.avgTrust)+'">'+band+'</span></td><td>'+o.critical+'</td></tr>';
+      html+='<tr class="'+(isSelf?'row-self':'')+'"><td>'+_esc(o.email.split('@')[0])+'</td><td>'+Math.round(o.avgTrust)+'</td><td>'+Math.round(o.avgComp)+'</td><td>'+Math.round(o.avgCons)+'</td><td>'+Math.round(o.avgRec)+'</td><td>'+Math.round(o.avgEvi)+'</td><td><span class="'+trustClass(o.avgTrust)+'">'+band+'</span></td><td>'+o.critical+'</td></tr>';
     });
     html+='</tbody></table></div>';
   }

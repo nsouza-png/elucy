@@ -3121,6 +3121,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .sub-tab-btn:hover { color:var(--accent) }
 .sub-tab-btn:focus-visible { outline:2px solid var(--accent);outline-offset:2px }
 .sub-tab-btn.active { background:var(--adim,rgba(255,193,116,.10));border:1px solid var(--aborder,rgba(255,193,116,.20));color:var(--accent);font-weight:600 }
+.sub-tab-panel { padding:20px 0;animation:fadeIn .25s ease }
+@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
 .perf-section { margin-bottom:24px }
 .perf-section-title { font-size:.8125rem;font-weight:700;color:var(--text);margin-bottom:12px;letter-spacing:.02em }
 .perf-kpi-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px }
