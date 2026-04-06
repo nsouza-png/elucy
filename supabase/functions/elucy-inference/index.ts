@@ -16,10 +16,10 @@ const CORS = {
 // eluci-core = 15k tokens (mandatory), demais priorizados por impacto no output
 const MCP_MAP: Record<string, string[]> = {
   analyze: ['eluci-core','mece-intelligence','signals','behavior','output-schema'],
-  copy: ['eluci-core','blde','fip','sdr-social-dm','playbook-sdr','signals','behavior','output-schema'],
+  copy: ['eluci-core','blde','sdr-social-dm','output-schema'],
   note: ['eluci-core','output-schema'],
   business_analysis: ['eluci-core','mece-intelligence','strategy'],
-  dm_copy: ['eluci-core','sdr-social-dm','fip','blde','behavior','playbook-sdr','signals'],
+  dm_copy: ['eluci-core','sdr-social-dm','blde','output-schema'],
   coaching: ['eluci-core','sdr-coaching','playbook-sdr'],
   briefing: ['eluci-core','mece-intelligence','output-schema'],
   batch_classify: ['eluci-core','signals','output-schema'],
