@@ -167,7 +167,14 @@ Deno.serve(async (req) => {
     // Accepts two formats:
     //   Legacy (browser): { requestType, userMessage, model, dealId }
     //   Structured:       { request_type, deal_context, history, prompt, extra_context, deal_id, deal_data, model_override }
-    const body = await req.json()
+    let body: any
+    try {
+      body = await req.json()
+    } catch (_) {
+      return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+        status: 400, headers: { ...CORS, 'Content-Type': 'application/json' },
+      })
+    }
     const request_type = body.request_type || body.requestType || 'analyze'
     const deal_context = body.deal_context || ''
     const history = body.history || ''
@@ -222,7 +229,8 @@ Deno.serve(async (req) => {
     ].filter(Boolean).join('\n\n')
 
     // ── 5. Call Claude API with prompt caching ──
-    const model = model_override || 'claude-sonnet-4-20250514'
+    const ALLOWED_MODELS = ['claude-sonnet-4-20250514', 'claude-opus-4-20250514', 'claude-haiku-4-5-20251001']
+    const model = (model_override && ALLOWED_MODELS.includes(model_override)) ? model_override : 'claude-sonnet-4-20250514'
     const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {

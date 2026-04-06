@@ -3083,24 +3083,7 @@ function showNotificationBadge(n){
 
 // ── CLAUDE API — MOTOR LLM DO ELUCY WEBAPP ──────────────────────────
 
-let _mcpBundle = null;
-async function loadMCPBundle(){
-  if(_mcpBundle) return _mcpBundle;
-  try {
-    const resp = await fetch('mcps.json');
-    if(resp.ok) _mcpBundle = await resp.json();
-  } catch(e){ console.warn('Erro ao carregar MCPs:', e); }
-  return _mcpBundle || {};
-}
-
-const MCP_MAP = {
-  analyze: ['eluci-core','lead-profile','output-schema','signals','strategy','cse-engine','behavior','segments','conversion','iron-dome'],
-  copy: ['eluci-core','playbooks','playbook-sdr','cse-engine','blde','fip','sdr-social-dm','behavior','signals','output-schema'],
-  note: ['eluci-core','output-schema','data-contract','validation-forms','funnel','lead-profile','guardrails'],
-  business_analysis: ['eluci-core','strategy','revops-gtm','produtos-g4','bench-canais','segments','revenue-line-matrix'],
-  dm_copy: ['eluci-core','sdr-social-dm','fip','blde','behavior','playbook-sdr','signals'],
-  coaching: ['eluci-core','sdr-coaching','training-scenarios','playbook-sdr','guardrails']
-};
+// MCP_MAP e loadMCPBundle removidos — MCPs sao carregados exclusivamente pelo edge function elucy-inference
 
 function buildDealContext(dealData){
   const t = dealData._timeline || {};
@@ -3305,7 +3288,6 @@ async function requestElucyAnalysis(deal_id, dealData, targetId){
       ELUCY_CACHE[deal_id] = output;
       injectElucyReport(targetId, output);
       logActivity('analysis_generated', deal_id);
-      saveAPIResponse(deal_id, 'analyze', output);
       logDealInteraction(deal_id, 'analysis', output);
       return;
     }
@@ -3342,8 +3324,20 @@ function parseCopyOutput(raw){
     const dmMatch = raw.match(/DM\s+PRONTO\s+PARA\s+COLAR\s*:?\s*\n([\s\S]*?)(?=\n(?:NOTA|CRM|━|---|\*\*\*|$))/i);
     if(dmMatch && dmMatch[1]) wa = dmMatch[1].trim();
   }
-  if(!wa) wa = raw;
-  if(!crm) crm = raw;
+  // Fallback inteligente: se regex nao matchou, tenta separar por divisores comuns
+  if(!wa || !crm){
+    // Tenta split por separadores comuns (━━, ---, ***)
+    var dividers = raw.split(/(?:\n━{3,}\n|\n-{3,}\n|\n\*{3,}\n)/);
+    if(dividers.length >= 2){
+      // Primeiro bloco = copy WA, ultimo bloco = nota CRM
+      if(!wa) wa = dividers[0].replace(/^.*?(WHATSAPP|COPY|MENSAGEM).*?\n/i,'').trim();
+      if(!crm) crm = dividers[dividers.length-1].trim();
+    } else {
+      // Ultimo recurso: primeiros 500 chars como WA, ultimos 300 como CRM
+      if(!wa) wa = raw.length > 500 ? raw.slice(0,500).trim() : raw;
+      if(!crm) crm = raw.length > 300 ? raw.slice(-300).trim() : raw;
+    }
+  }
   return {wa, crm, full: raw};
 }
 
@@ -3373,7 +3367,7 @@ async function requestElucyCopy(deal_id, dealData, targetId, canal){
       const coEl = document.getElementById('co-'+targetId);
       if(coEl) coEl.style.display='block';
       logActivity('copy_generated', deal_id, {canal: canal||'WhatsApp'});
-      saveAPIResponse(deal_id, 'copy', output);
+      // saveAPIResponse removido — edge function elucy-inference ja salva em cockpit_responses
       logDealInteraction(deal_id, 'copy', output, {canal: canal||'WhatsApp'});
       return;
     }
@@ -3481,7 +3475,6 @@ REGRAS: Dados BR prioritários. Cite fonte+ano. Marque confiança [Alta]/[Média
           const output = typeof apiResult.intelligence === 'string' ? apiResult.intelligence : JSON.stringify(apiResult.intelligence, null, 2);
           baEl.innerHTML='<div class="ba-h"><span class="ba-badge">ANÁLISE</span><span class="ba-htitle">Análise de Mercado</span><button class="hist-copy-btn" onclick="event.stopPropagation();clipText(document.getElementById(\'ba-content-'+id+'\').innerText)" style="position:static;margin-left:auto">Copiar</button></div><div class="ba-b" id="ba-content-'+id+'">'+renderMd(output)+'</div>';
           logActivity('business_analysis_generated', deal.deal_id);
-          saveAPIResponse(deal.deal_id, 'business_analysis', output);
           logDealInteraction(deal.deal_id, 'business_analysis', output);
           return;
         }
@@ -3657,7 +3650,6 @@ async function requestNotaCRM(id,btnEl){
           const output = typeof apiResult.intelligence === 'string' ? apiResult.intelligence : JSON.stringify(apiResult.intelligence, null, 2);
           injectNotaCRM(id, output);
           logActivity('note_generated', deal.deal_id);
-          saveAPIResponse(deal.deal_id, 'note', output);
           logDealInteraction(deal.deal_id, 'note_crm', output);
           return;
         }

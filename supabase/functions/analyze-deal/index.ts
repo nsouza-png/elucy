@@ -231,8 +231,8 @@ OPERADOR: ${operator.name || user.email} | Role: ${operator.role || 'sdr'}`
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 2000,
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4096,
         system: ELUCY_SYSTEM,
         messages: [
           {
