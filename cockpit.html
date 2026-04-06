@@ -69,13 +69,15 @@ window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false'
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
   </button>
   <span class="logo"><span class="logo-name">ELUCY</span><span class="logo-badge-ent">ENTERPRISE</span></span>
-  <button class="ntab on" onclick="setScreen('home',this)">Home</button>
-  <button class="ntab" onclick="setScreen('pipeline',this)">Pipeline</button>
-  <button class="ntab" onclick="setScreen('tasks',this)">Tasks <span class="tab-count" id="task-count"></span></button>
-  <button class="ntab" onclick="setScreen('reports',this)">Reports</button>
-  <button class="ntab" onclick="setScreen('prevendas',this)">Pre-Vendas</button>
-  <button class="ntab" onclick="setScreen('intelligence',this)">Intel</button>
-  <button class="ntab" onclick="setScreen('playbooks',this)">Playbooks</button>
+  <nav role="tablist" aria-label="Navegação principal" style="display:contents">
+    <button class="ntab on" role="tab" aria-selected="true" aria-controls="screen-home" onclick="setScreen('home',this)">Home</button>
+    <button class="ntab" role="tab" aria-selected="false" aria-controls="screen-pipeline" onclick="setScreen('pipeline',this)">Pipeline</button>
+    <button class="ntab" role="tab" aria-selected="false" aria-controls="screen-tasks" onclick="setScreen('tasks',this)">Tasks <span class="tab-count" id="task-count"></span></button>
+    <button class="ntab" role="tab" aria-selected="false" aria-controls="screen-reports" onclick="setScreen('reports',this)">Reports</button>
+    <button class="ntab" role="tab" aria-selected="false" aria-controls="screen-prevendas" onclick="setScreen('prevendas',this)">Pre-Vendas</button>
+    <button class="ntab" role="tab" aria-selected="false" aria-controls="screen-intelligence" onclick="setScreen('intelligence',this)">Intel</button>
+    <button class="ntab" role="tab" aria-selected="false" aria-controls="screen-playbooks" onclick="setScreen('playbooks',this)">Playbooks</button>
+  </nav>
   <div class="tbr">
     <span id="sync-dot" class="sync-dot sync-dot-ok" title="Sincronizado"></span>
     <span class="op-pill" id="op-pill">CRM Sincronizado</span>
@@ -819,24 +821,24 @@ let cur=null;
 
 function setScreen(n,el,skipHash){
   document.querySelectorAll('#ct > .screen').forEach(s=>s.classList.remove('on'));
-  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.ntab').forEach(t=>{t.classList.remove('on');t.setAttribute('aria-selected','false');});
   var ct=document.getElementById('ct'); if(ct) ct.scrollTop=0;
   const screenMap={home:'screen-home',pipeline:'screen-pipeline',tasks:'screen-tasks',reports:'screen-reports',prevendas:'screen-prevendas',intelligence:'screen-intelligence',playbooks:'screen-playbooks',dm:'screen-dm'};
   const validScreens=Object.keys(screenMap);
   const name=validScreens.includes(n)?n:'home';
   const target=document.getElementById(screenMap[name]);
   if(target) target.classList.add('on');
-  if(el){ el.classList.add('on'); }
+  if(el){ el.classList.add('on'); el.setAttribute('aria-selected','true'); }
   else {
     const tabs=document.querySelectorAll('.ntab');
     const tabMap={home:0,pipeline:1,tasks:2,reports:3,prevendas:4,intelligence:5,playbooks:6};
     const idx=tabMap[name]!=null?tabMap[name]:0;
-    if(tabs[idx]) tabs[idx].classList.add('on');
+    if(tabs[idx]){ tabs[idx].classList.add('on'); tabs[idx].setAttribute('aria-selected','true'); }
   }
   if(!skipHash) history.replaceState(null,'','#'+name);
   if(name==='home' && window.renderHome) window.renderHome();
   if(name==='tasks' && window.renderTaskRunner) window.renderTaskRunner();
-  if(name==='intelligence') renderIntelligence();
+  if(name==='intelligence' && window._loadIntelTab) window._loadIntelTab();
   if(name==='reports') loadReportsScreen();
   if(name==='prevendas' && window.ReportsV4) window.ReportsV4.renderReportsV4('screen-reports-v4');
   if(name==='playbooks') renderPlaybooks();
@@ -1969,7 +1971,7 @@ function openSettings(section){
   ov.style.cssText='align-items:center;justify-content:center';
 
   ov.innerHTML=`
-<div id="settings-panel">
+<div id="settings-panel" role="dialog" aria-modal="true" aria-label="Configurações do operador">
   <div id="settings-nav">
     <div id="settings-nav-header">
       <div id="settings-nav-title">Configurações</div>
@@ -5580,7 +5582,7 @@ window._obStart = function(){
 };
 </script>
 <!-- ── TASK EXECUTION OVERLAY ────────────────────────────────────── -->
-<div class="tex-overlay" id="tex-overlay">
+<div class="tex-overlay" id="tex-overlay" role="dialog" aria-modal="true" aria-label="Deal workspace">
   <div class="tex-nav">
     <div class="tex-nav-left">
       <div class="tex-nav-arrows">

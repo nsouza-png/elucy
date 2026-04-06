@@ -3109,12 +3109,72 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .hidden { display: none }
 .hidden-force { display: none !important }
 
-/* Intel dimension color variants */
-.intel-dim-forecast { border-color: var(--accent2); color: var(--accent2) }
-.intel-dim-framework { border-color: var(--clay); color: var(--clay) }
-.intel-dim-performance { border-color: var(--gold); color: var(--gold) }
-.intel-dim-enterprise { border-color: var(--green); color: var(--green) }
-.intel-dim-rfv { border-color: #fbbf24; color: #fbbf24 }
-.intel-dim-spin { border-color: var(--yellow); color: var(--yellow) }
-.intel-dim-advisor { border-color: var(--accent2); color: var(--accent2) }
-.intel-dim-bowtie { border-color: #f97316; color: #f97316 }
+/* ── Intel v5: PERFORMANCE | PIPELINE | QUALITY ── */
+.intel-header { display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-wrap:wrap;gap:12px }
+.rpt-period-bar { display:flex;align-items:center;gap:8px;flex-wrap:wrap }
+.rpt-period-btn { padding:6px 14px;border-radius:var(--r,6px);font-size:.75rem;font-weight:500;color:var(--text3);background:transparent;border:1px solid var(--border2,#333);cursor:pointer;transition:all .25s ease }
+.rpt-period-btn:hover { color:var(--accent);border-color:var(--accent) }
+.rpt-period-btn.active { background:var(--adim,rgba(255,193,116,.10));border-color:var(--aborder,rgba(255,193,116,.20));color:var(--accent);font-weight:600 }
+.rpt-date-input { background:var(--bg3,#1b2028);border:1px solid var(--border2,#333);border-radius:var(--r,6px);color:var(--text);padding:4px 8px;font-size:.75rem }
+.sub-tab-nav { display:flex;gap:4px;padding:4px;background:var(--bg,#0a0e14);border-radius:var(--r2,8px);margin-bottom:16px }
+.sub-tab-btn { padding:8px 16px;border-radius:var(--r,6px);font-family:var(--font-body,'Inter',sans-serif);font-size:.75rem;font-weight:500;color:var(--text3,#7a6f65);cursor:pointer;border:none;background:transparent;transition:all .25s ease }
+.sub-tab-btn:hover { color:var(--accent) }
+.sub-tab-btn:focus-visible { outline:2px solid var(--accent);outline-offset:2px }
+.sub-tab-btn.active { background:var(--adim,rgba(255,193,116,.10));border:1px solid var(--aborder,rgba(255,193,116,.20));color:var(--accent);font-weight:600 }
+.perf-section { margin-bottom:24px }
+.perf-section-title { font-size:.8125rem;font-weight:700;color:var(--text);margin-bottom:12px;letter-spacing:.02em }
+.perf-kpi-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px }
+.perf-kpi { background:var(--glass,rgba(255,255,255,.03));border:1px solid var(--border2,#333);border-radius:var(--r-xl,12px);padding:20px;display:flex;flex-direction:column;gap:8px }
+.perf-kpi-label { font-size:.6875rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.1em }
+.perf-kpi-value { font-family:var(--font-display,'Plus Jakarta Sans',sans-serif);font-weight:900;font-size:1.75rem;background:linear-gradient(135deg,#f59e0b,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent }
+.funnel-row { display:flex;align-items:center;gap:10px;margin-bottom:8px }
+.funnel-bar-label { width:90px;font-size:.6875rem;font-weight:600;color:var(--text2);text-align:right;flex-shrink:0 }
+.funnel-bar-track { flex:1;background:var(--bg4,#252a32);border-radius:99px;height:20px;overflow:hidden }
+.funnel-bar-fill { height:100%;border-radius:99px;background:linear-gradient(90deg,var(--amber-500,#f59e0b),var(--amber-400,#fbbf24));transition:width .4s ease }
+.funnel-bar-value { font-family:var(--font-display,'Plus Jakarta Sans',sans-serif);font-weight:800;font-size:.8125rem;color:var(--text);width:50px }
+.funnel-cr { font-size:.6875rem;font-weight:600;color:var(--accent2,#f59e0b);min-width:36px }
+.rpt-table { width:100%;font-size:.6875rem;border-collapse:collapse }
+.rpt-table th { text-align:left;padding:6px 8px;color:var(--text3);font-weight:600;border-bottom:1px solid var(--border2,#333);font-size:.625rem;text-transform:uppercase;letter-spacing:.08em }
+.rpt-table td { padding:6px 8px;color:var(--text);border-bottom:1px solid var(--border,#1e2530) }
+.rpt-table .row-self { background:var(--adim,rgba(255,193,116,.10));font-weight:600 }
+.rpt-table .row-self td { color:var(--accent) }
+.status-ok { display:inline-block;background:var(--gdim,rgba(86,229,169,.08));border:1px solid rgba(86,229,169,.20);color:var(--green,#56e5a9);padding:3px 10px;border-radius:99px;font-size:.6875rem;font-weight:600 }
+.status-warn { display:inline-block;background:var(--adim,rgba(255,193,116,.10));border:1px solid var(--aborder,rgba(255,193,116,.20));color:var(--accent3,#f59e0b);padding:3px 10px;border-radius:99px;font-size:.6875rem;font-weight:600 }
+.status-critical { display:inline-block;background:var(--rdim,rgba(239,68,68,.08));border:1px solid rgba(239,68,68,.20);color:var(--red,#ef4444);padding:3px 10px;border-radius:99px;font-size:.6875rem;font-weight:600 }
+@media(max-width:768px){.intel-header{flex-direction:column}.perf-kpi-grid{grid-template-columns:1fr 1fr}.rpt-table{font-size:.5625rem}.rpt-table th,.rpt-table td{padding:4px}.funnel-bar-label{width:60px;font-size:.5625rem}}
+
+/* ══════════════════════════════════════════════════════════════
+   AFFORDANCES — Brand Book §05
+   ══════════════════════════════════════════════════════════════ */
+
+/* Universal keyboard focus ring — amber adim */
+:focus-visible{outline:2px solid var(--accent-brand);outline-offset:2px;border-radius:var(--r)}
+
+/* All interactive elements — focus ring for accessibility */
+button:focus-visible,
+.ntab:focus-visible,
+.fchip:focus-visible,
+.qa-btn:focus-visible,
+.bp:focus-visible,
+.bs:focus-visible,
+.btn:focus-visible{outline:none;box-shadow:0 0 0 3px var(--adim),0 0 0 1px var(--accent-brand)}
+
+/* Input focus ring upgrade — amber adim */
+input:focus,
+select:focus,
+textarea:focus,
+[contenteditable]:focus{box-shadow:0 0 0 3px var(--adim)!important;outline:none!important}
+
+/* Disabled states */
+button:disabled,
+.btn:disabled,
+.bp:disabled,
+.bs:disabled{opacity:.4!important;cursor:not-allowed!important;pointer-events:none}
+
+/* Touch target minimum — 44px for all tappable elements */
+button,.ntab,.fchip,.qa-btn,.task-btn,.home-fm-btn{min-height:44px;min-width:44px}
+.tab-count,.logo-badge-ent{min-height:unset;min-width:unset}
+
+/* Shimmer loading — amber brand (brand book §05) */
+@keyframes shimmer{0%{background-position:-200px 0}100%{background-position:200px 0}}
+.sk{background:linear-gradient(90deg,var(--bg3) 25%,var(--bg4) 50%,var(--bg3) 75%);background-size:400px 100%;animation:shimmer 1.4s infinite linear}
