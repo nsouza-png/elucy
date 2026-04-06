@@ -4764,7 +4764,14 @@ function _getPeriod(){
   var sel=(document.getElementById('rpt-period-select')||{}).value||'30d';
   var now=new Date();
   if(sel==='custom'){
-    return{start:document.getElementById('rpt-date-start').value,end:document.getElementById('rpt-date-end').value};
+    var s=document.getElementById('rpt-date-start').value,e=document.getElementById('rpt-date-end').value;
+    var rx=/^\d{4}-\d{2}-\d{2}$/;
+    if(!rx.test(s)||!rx.test(e)){
+      var msg=document.getElementById('rpt-custom-range');
+      if(msg){msg.style.borderColor='var(--red)';setTimeout(function(){msg.style.borderColor='';},2000);}
+      return null;
+    }
+    return{start:s,end:e};
   }
   var days=sel==='7d'?7:sel==='90d'?90:30;
   var start=new Date(now);start.setDate(now.getDate()-days);
@@ -4779,6 +4786,7 @@ window._loadIntelTab=async function(){
   panel.innerHTML='<div class="sk sk-card" style="height:400px"><div class="sk-kpi"></div></div>';
 
   var period=_getPeriod();
+  if(!period){panel.innerHTML='<div style="padding:40px;text-align:center;color:var(--accent);font-size:.8125rem">Preencha as datas de in\u00edcio e fim para o per\u00edodo custom.</div>';return;}
   var qualName=localStorage.getItem('elucy_qualificador_name')||'';
   var opEmail=window.getOperatorId?window.getOperatorId():(window._currentUser?window._currentUser.email:localStorage.getItem('elucy_operator_email')||'');
 
@@ -4997,9 +5005,15 @@ async function _renderQuality(ct,period,qualName,opEmail){
   var sb=typeof getSB==='function'?getSB():null;
   if(!sb){ct.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3)">Supabase não conectado.</div>';return;}
 
+  var pStart=period&&period.start?period.start+'T00:00:00Z':null;
+  var pEnd=period&&period.end?period.end+'T23:59:59Z':null;
+  var qQuery=sb.from('deal_data_quality_runtime').select('operator_email,data_trust_score,completeness_score,consistency_score,recency_score,evidence_score,data_quality_band');
+  var tQuery=sb.from('deal_transition_runtime').select('operator_email,transition_valid,transition_block_reason');
+  if(pStart){qQuery=qQuery.gte('updated_at',pStart);tQuery=tQuery.gte('updated_at',pStart);}
+  if(pEnd){qQuery=qQuery.lte('updated_at',pEnd);tQuery=tQuery.lte('updated_at',pEnd);}
   var [qRes,tRes]=await Promise.all([
-    sb.from('deal_data_quality_runtime').select('operator_email,data_trust_score,completeness_score,consistency_score,recency_score,evidence_score,data_quality_band').then(function(r){return r.data||[];}),
-    sb.from('deal_transition_runtime').select('operator_email,transition_valid,transition_block_reason').then(function(r){return r.data||[];})
+    qQuery.then(function(r){return r.data||[];}),
+    tQuery.then(function(r){return r.data||[];})
   ]);
 
   var opMap={};

@@ -23,25 +23,37 @@
   function _cacheGet(key) { return null; }
   function _cacheSet(key, data) { }
 
+  // SQL sanitization helpers
+  function _sqlStr(s) { if (s == null) return ''; return String(s).replace(/'/g, "''"); }
+  function _sqlDate(s) { var m = String(s || '').match(/^\d{4}-\d{2}-\d{2}$/); return m ? m[0] : null; }
+
   // ============================================================================
-  // DATABRICKS DATA LAYER — métricas analíticas oficiais do funil_comercial
-  // Usa o mesmo padrão do cockpit: Bearer token em localStorage('elucy_db_token')
+  // DATABRICKS DATA LAYER — via db-proxy Edge Function (Supabase)
+  // Token Databricks fica em Supabase Secret (DATABRICKS_TOKEN), nunca no frontend.
+  // Fallback legado: localStorage('elucy_db_token') passado via X-DB-Token header.
   // ============================================================================
 
-  var _DB_ENDPOINT = 'https://dbc-8acefaf9-a170.cloud.databricks.com/api/2.0/sql/statements';
+  var _DB_PROXY = 'https://tnbbsjvzwleeoqnxtafp.supabase.co/functions/v1/db-proxy';
   var _DB_WAREHOUSE = 'bbae754ea44f67e0';
 
   function _dbToken() { return localStorage.getItem('elucy_db_token') || null; }
   function _qualName() { return localStorage.getItem('elucy_qualificador_name') || null; }
+  function _sbAnonKey() { return window.SUPABASE_ANON || 'sb_publishable_bh1m8U-gNbrBtA9WSCDWrA_V-RXZU15'; }
+  function _sbAuthToken() { var sb = _sb(); if (!sb) return null; try { var s = sb.auth.session && sb.auth.session(); return s && s.access_token ? s.access_token : null; } catch(e) { return null; } }
 
-  // Executa SQL no Databricks com poll automático. Retorna array de objetos {col: val}.
+  // Executa SQL no Databricks via db-proxy com poll automático
   async function _dbQuery(sql) {
-    var token = _dbToken();
-    if (!token) return null; // sem token → sem dados Databricks
+    var authToken = _sbAuthToken();
+    var legacyToken = _dbToken();
+    if (!authToken && !legacyToken) return null;
     try {
-      var resp = await fetch(_DB_ENDPOINT, {
+      var headers = { 'Content-Type': 'application/json', 'apikey': _sbAnonKey() };
+      if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
+      if (legacyToken) headers['X-DB-Token'] = legacyToken;
+
+      var resp = await fetch(_DB_PROXY, {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        headers: headers,
         body: JSON.stringify({ statement: sql, warehouse_id: _DB_WAREHOUSE, wait_timeout: '30s', on_wait_timeout: 'CONTINUE' })
       });
       if (!resp.ok) return null;
@@ -50,7 +62,10 @@
       var attempts = 0;
       while (data.status && (data.status.state === 'PENDING' || data.status.state === 'RUNNING') && attempts < 15) {
         await new Promise(function (r) { setTimeout(r, 2000); });
-        var pr = await fetch(_DB_ENDPOINT + '/' + data.statement_id, { headers: { 'Authorization': 'Bearer ' + token } });
+        var pollHeaders = { 'apikey': _sbAnonKey() };
+        if (authToken) pollHeaders['Authorization'] = 'Bearer ' + authToken;
+        if (legacyToken) pollHeaders['X-DB-Token'] = legacyToken;
+        var pr = await fetch(_DB_PROXY + '?stmt_id=' + data.statement_id, { headers: pollHeaders });
         data = await pr.json();
         attempts++;
       }
@@ -67,7 +82,10 @@
 
   // Helper: resolve date range from period object or fallback to current month
   function _resolveDates(period) {
-    if (period && period.start && period.end) return { start: period.start, end: period.end };
+    if (period && period.start && period.end) {
+      var s = _sqlDate(period.start), e = _sqlDate(period.end);
+      if (s && e) return { start: s, end: e };
+    }
     var ms = _monthStart();
     var d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + 1);
     return { start: ms, end: d.toISOString().slice(0, 10) };
@@ -75,7 +93,7 @@
 
   // Busca métricas agregadas do funil_comercial para o qualificador (com período dinâmico)
   async function fetchDatabricksMetrics(qualName, period) {
-    var qn = qualName || _qualName();
+    var qn = _sqlStr(qualName || _qualName());
     if (!qn) return null;
     var dt = _resolveDates(period);
 
@@ -144,7 +162,7 @@
   }
 
   async function fetchDatabricksLineBreakdown(qualName, period) {
-    var qn = qualName || _qualName();
+    var qn = _sqlStr(qualName || _qualName());
     var dt = _resolveDates(period);
     var whereClause = qn ? "WHERE qualificador_name = '" + qn + "'" : "WHERE qualificador_name IS NOT NULL";
     var sql = `
@@ -184,7 +202,7 @@
   }
 
   async function fetchDatabricksDtByLine(qualName, period) {
-    var qn = qualName || _qualName();
+    var qn = _sqlStr(qualName || _qualName());
     if (!qn) return null;
     var dt = _resolveDates(period);
     var sql = `
@@ -742,7 +760,7 @@
     var prefix = email.split('@')[0].toLowerCase();
     var segments = prefix.replace(/[._]/g, ' ').trim().split(' ').filter(function(s) { return s.length >= 4; });
     if (!segments.length) return null;
-    var likeParts = segments.map(function(s) { return "LOWER(qualificador_name) LIKE '%" + s + "%'"; }).join(' OR ');
+    var likeParts = segments.map(function(s) { return "LOWER(qualificador_name) LIKE '%" + _sqlStr(s) + "%'"; }).join(' OR ');
     var sql = "SELECT DISTINCT qualificador_name FROM production.diamond.funil_comercial WHERE (" + likeParts + ") AND qualificador_name IS NOT NULL LIMIT 5";
     var rows = await _dbQuery(sql);
     if (!rows || !rows.length) return null;

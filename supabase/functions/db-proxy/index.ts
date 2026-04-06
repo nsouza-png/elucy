@@ -19,9 +19,18 @@ serve(async (req) => {
   }
 
   try {
-    const dbToken = req.headers.get('x-db-token');
+    // Auth: JWT do Supabase obrigatório
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
+        status: 401, headers: { ...CORS, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Token Databricks: prioriza Supabase Secret, fallback para X-DB-Token (legado)
+    const dbToken = Deno.env.get('DATABRICKS_TOKEN') || req.headers.get('x-db-token');
     if (!dbToken || dbToken.length < 10) {
-      return new Response(JSON.stringify({ error: 'Missing or invalid X-DB-Token header' }), {
+      return new Response(JSON.stringify({ error: 'Databricks token not configured. Set DATABRICKS_TOKEN in Supabase Secrets.' }), {
         status: 400, headers: { ...CORS, 'Content-Type': 'application/json' }
       });
     }
