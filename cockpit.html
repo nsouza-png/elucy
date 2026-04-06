@@ -2143,7 +2143,47 @@ function openSettings(section){
             <option value="claude-haiku-4-5-20251001" ${window.ELUCY_API_MODEL==='claude-haiku-4-5-20251001'?'selected':''}>Claude Haiku 4.5 — econômico</option>
           </select>
         </div>
-        <div style="font-size:10px;color:var(--green);margin-top:6px;display:flex;align-items:center;gap:4px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Key centralizada — motor ativo para todos os operadores</div>
+        <div id="llm-health-status" style="font-size:10px;color:var(--text2);margin-top:6px;display:flex;align-items:center;gap:4px">
+          <span class="elucy-pulse" style="font-size:10px">Verificando conexão LLM...</span>
+        </div>
+        <script>
+        (function checkLLMHealth(){
+          const el=document.getElementById('llm-health-status');
+          if(!el) return;
+          const sb=typeof getSB==='function'&&getSB();
+          if(!sb){el.innerHTML='<span style="color:var(--red)">Sem conexão Supabase</span>';return;}
+          (async()=>{
+            try{
+              await sb.auth.refreshSession();
+              const session=(await sb.auth.getSession()).data.session;
+              if(!session){el.innerHTML='<span style="color:var(--amber)">Sessão expirada — faça login novamente</span>';return;}
+              const url=window.ELUCY_INFERENCE_URL||'https://tnbbsjvzwleeoqnxtafp.supabase.co/functions/v1/elucy-inference';
+              const resp=await fetch(url,{
+                method:'POST',
+                headers:{'content-type':'application/json','apikey':typeof SUPABASE_ANON!=='undefined'?SUPABASE_ANON:'','Authorization':'Bearer '+session.access_token},
+                body:JSON.stringify({requestType:'health_check'})
+              });
+              const body=await resp.json().catch(()=>({}));
+              if(resp.status===400&&(body.error||'').includes('deal_context')){
+                // 400 = chegou no parse, key + auth OK
+                el.innerHTML='<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> <span style="color:var(--green)">Motor LLM ativo — key centralizada, operador aprovado</span>';
+              } else if(resp.status===401){
+                el.innerHTML='<span style="color:var(--red)">Token expirado — recarregue a página</span>';
+              } else if(resp.status===403){
+                el.innerHTML='<span style="color:var(--red)">Operador não aprovado — contate o admin</span>';
+              } else if(resp.status===429){
+                el.innerHTML='<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> <span style="color:var(--green)">Motor LLM ativo (rate limit atingido, aguarde)</span>';
+              } else if(resp.status===500&&(body.error||'').includes('ANTHROPIC_API_KEY')){
+                el.innerHTML='<span style="color:var(--red)">ANTHROPIC_API_KEY não configurada no Supabase</span>';
+              } else {
+                el.innerHTML='<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> <span style="color:var(--green)">Motor LLM ativo — key centralizada</span>';
+              }
+            }catch(e){
+              el.innerHTML='<span style="color:var(--red)">Erro de conexão: '+((e&&e.message)||'timeout')+'</span>';
+            }
+          })();
+        })();
+        </script>
       </div>
 
       <!-- CONEXOES -->
