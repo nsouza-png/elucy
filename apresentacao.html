@@ -52,7 +52,7 @@
     background: rgba(14,20,27,0.92);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
-    padding: 0 24px;
+    padding: 0 32px;
     height: 56px;
     display: flex;
     align-items: center;
@@ -70,28 +70,58 @@
     flex-shrink: 0;
   }
 
+  /* nav-links agora e tooltip-driven dots, nao texto */
   .nav-links {
     display: flex;
-    gap: 4px;
+    gap: 6px;
     list-style: none;
-    flex-wrap: nowrap;
-    overflow: hidden;
+    align-items: center;
   }
 
-  .nav-links a {
-    color: var(--muted);
-    text-decoration: none;
+  .nav-links li a {
+    display: block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--muted2);
+    transition: background 0.2s, transform 0.2s, width 0.25s;
+    text-indent: -9999px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .nav-links li a:hover,
+  .nav-links li a.active {
+    background: var(--gold);
+    transform: scale(1.4);
+  }
+
+  /* Tooltip com nome da secao */
+  .nav-links li {
+    position: relative;
+  }
+  .nav-links li a::after {
+    content: attr(data-label);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(14,20,27,0.95);
+    border: 1px solid var(--border2);
+    color: var(--white);
     font-size: 10px;
     font-weight: 600;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    transition: color 0.2s;
-    padding: 4px 8px;
-    border-radius: 3px;
+    text-indent: 0;
     white-space: nowrap;
+    padding: 4px 10px;
+    border-radius: 3px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
   }
-  .nav-links a:hover { color: var(--gold); background: rgba(201,168,76,0.06); }
-  .nav-links a.active { color: var(--gold); }
+  .nav-links li a:hover::after { opacity: 1; }
 
   /* ── SECTIONS ── */
   section {
@@ -977,22 +1007,26 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo">Elucy</div>
+  <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
+    <div class="nav-logo">Elucy</div>
+    <div style="width:1px;height:20px;background:var(--border2);"></div>
+    <div id="navSectionName" style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);white-space:nowrap;"></div>
+  </div>
   <ul class="nav-links">
-    <li><a href="#hero" data-section="hero" class="active">Visao Geral</a></li>
-    <li><a href="#sistema" data-section="sistema">Sistema</a></li>
-    <li><a href="#perfis" data-section="perfis">Perfis</a></li>
-    <li><a href="#frameworks" data-section="frameworks">Frameworks</a></li>
-    <li><a href="#mcps" data-section="mcps">MCPs</a></li>
-    <li><a href="#skills" data-section="skills">Skills</a></li>
-    <li><a href="#sinais" data-section="sinais">Sinais</a></li>
-    <li><a href="#guardrails" data-section="guardrails">Governanca</a></li>
-    <li><a href="#como-frameworks" data-section="como-frameworks">Frameworks</a></li>
-    <li><a href="#cadencias" data-section="cadencias">Cadencias</a></li>
-    <li><a href="#features" data-section="features">Features</a></li>
-    <li><a href="#visao-qualitativa" data-section="visao-qualitativa">Qualitativo</a></li>
-    <li><a href="#cockpit" data-section="cockpit">Cockpit</a></li>
-    <li><a href="#closing" data-section="closing">Encerramento</a></li>
+    <li><a href="#hero" data-section="hero" data-label="Visao Geral" class="active">Visao Geral</a></li>
+    <li><a href="#sistema" data-section="sistema" data-label="Sistema">Sistema</a></li>
+    <li><a href="#perfis" data-section="perfis" data-label="Perfis">Perfis</a></li>
+    <li><a href="#frameworks" data-section="frameworks" data-label="Frameworks">Frameworks</a></li>
+    <li><a href="#mcps" data-section="mcps" data-label="MCPs">MCPs</a></li>
+    <li><a href="#skills" data-section="skills" data-label="Skills">Skills</a></li>
+    <li><a href="#sinais" data-section="sinais" data-label="Sinais">Sinais</a></li>
+    <li><a href="#guardrails" data-section="guardrails" data-label="Governanca">Governanca</a></li>
+    <li><a href="#como-frameworks" data-section="como-frameworks" data-label="Como Funciona">Como Funciona</a></li>
+    <li><a href="#cadencias" data-section="cadencias" data-label="Cadencias">Cadencias</a></li>
+    <li><a href="#features" data-section="features" data-label="Features">Features</a></li>
+    <li><a href="#visao-qualitativa" data-section="visao-qualitativa" data-label="Visao Qualitativa">Visao Qualitativa</a></li>
+    <li><a href="#cockpit" data-section="cockpit" data-label="Cockpit">Cockpit</a></li>
+    <li><a href="#closing" data-section="closing" data-label="Encerramento">Encerramento</a></li>
   </ul>
   <div class="nav-arrows">
     <button class="nav-arrow" id="btnPrev" title="Anterior (←)">&#8592;</button>
@@ -2546,10 +2580,14 @@
       target.offsetHeight; // reflow
       target.style.animation = '';
     }
-    // update nav links
+    // update nav dots
     document.querySelectorAll('.nav-links a').forEach(a => {
       a.classList.toggle('active', a.dataset.section === SECTIONS[idx]);
     });
+    // update section name label
+    const activeLink = document.querySelector('.nav-links a[data-section="' + SECTIONS[idx] + '"]');
+    const nameEl = document.getElementById('navSectionName');
+    if (nameEl && activeLink) nameEl.textContent = activeLink.dataset.label || '';
     // counter & progress
     document.getElementById('navCounter').textContent = (idx + 1) + ' / ' + SECTIONS.length;
     document.getElementById('progressFill').style.width = ((idx + 1) / SECTIONS.length * 100) + '%';
