@@ -194,8 +194,6 @@ async function initOperatorContext(){
   }
   _deriveMetaDiaria(_operatorCtx.meta_mensal);
   _operatorCtx.initialized=true;
-  // Load cadence enrollments after operator context is ready
-  cadenceLoadAll();
 }
 window.initOperatorContext = initOperatorContext;
 
@@ -719,26 +717,12 @@ function buildTaskQueue(filterType, filterRevLine, filterFase, filterCiclo, filt
       }
     }
 
-    // Check if deal has active cadence — cadence overrides default _nextAction
-    var cadStep = cadenceGetCurrentStep(id);
-    var action, isCadence = false;
-    if(cadStep){
-      var channelIcon = (CHANNEL_ICONS[cadStep.step.channel]||'') + ' ';
-      action = {
-        type: cadStep.step.taskType,
-        label: channelIcon + cadStep.step.action,
-        priority: cadStep.overdue ? 'critical' : 'high'
-      };
-      isCadence = true;
-    } else {
-      action = d._nextAction;
-    }
+    // Cadence tasks are now injected by getCadenceTasks() via buildTaskQueue override
+    var action = d._nextAction;
     if(!action) return;
     if(filterType && action.type !== filterType) return;
     var priorityIdx = priorityOrder.indexOf(action.type);
     var sortPriority = priorityIdx >= 0 ? priorityIdx : 99;
-    // Cadence tasks get priority boost (always above non-cadence of same type)
-    if(isCadence) sortPriority = Math.max(0, sortPriority - 1);
     tasks.push({
       id: id,
       deal: d,
@@ -747,8 +731,7 @@ function buildTaskQueue(filterType, filterRevLine, filterFase, filterCiclo, filt
       priority: action.priority,
       sortPriority: sortPriority,
       urgency: d._urgency||0,
-      aging: d._aging,
-      cadence: isCadence ? cadStep : null
+      aging: d._aging
     });
   });
 
@@ -1813,8 +1796,8 @@ window.texComplete = function(){
       .then(function(res){ if(res.error){ _syncErr('task-persist', res.error); } });
   }
 
-  // Advance cadence step if this task is from a cadence
-  if(t.cadence) window.cadenceAdvance(t.id);
+  // Complete cadence step if this task is from a cadence
+  if(t.cadenceStep!=null && window.completeCadenceStep) window.completeCadenceStep(t.id, t.cadenceStep);
 
   if(window.showSyncToast) window.showSyncToast('ok','Task concluída: '+(t.deal.nome||''));
 
@@ -1860,254 +1843,10 @@ window.taskNext = function(currentIdx){
 };
 
 // ==================================================================
-// CADENCE ENGINE — Sequências multi-canal com steps programados
-// Templates pré-definidos por tier/canal. Enrollment persistido no elucy_cache.
+// CADENCE ENGINE V1 (LEGACY) — REMOVED 2026-04-06
+// Migrated to Layer 8 (DEFAULT_CADENCES + deal_interactions persistence)
+// Templates now loaded from Supabase flow_templates table.
 // ==================================================================
-
-var CADENCE_TEMPLATES = {
-  'prospecao-padrao': {
-    name: 'Prospecção Padrão',
-    description: 'Cadência 14 dias — WhatsApp + Ligação + Email',
-    steps: [
-      { day:0,  channel:'whatsapp', action:'Primeiro contato WhatsApp', taskType:'follow_up' },
-      { day:1,  channel:'phone',    action:'Ligação de apresentação', taskType:'follow_up' },
-      { day:2,  channel:'whatsapp', action:'FUP WhatsApp — reforço', taskType:'follow_up' },
-      { day:4,  channel:'email',    action:'Email com material', taskType:'follow_up' },
-      { day:6,  channel:'phone',    action:'Ligação de follow-up', taskType:'follow_up' },
-      { day:8,  channel:'whatsapp', action:'WhatsApp — última tentativa', taskType:'follow_up' },
-      { day:10, channel:'instagram',action:'Social DM — abordagem founder', taskType:'social_dm' },
-      { day:14, channel:'phone',    action:'Ligação final — break up', taskType:'follow_up' }
-    ]
-  },
-  'prospecao-rapida': {
-    name: 'Prospecção Rápida',
-    description: 'Cadência 7 dias — alta frequência para leads quentes',
-    steps: [
-      { day:0,  channel:'whatsapp', action:'Primeiro contato imediato', taskType:'follow_up' },
-      { day:0,  channel:'phone',    action:'Ligação mesmo dia', taskType:'follow_up' },
-      { day:1,  channel:'whatsapp', action:'FUP WhatsApp', taskType:'follow_up' },
-      { day:2,  channel:'phone',    action:'Segunda ligação', taskType:'follow_up' },
-      { day:3,  channel:'whatsapp', action:'WhatsApp com gatilho', taskType:'follow_up' },
-      { day:5,  channel:'email',    action:'Email break up', taskType:'follow_up' },
-      { day:7,  channel:'phone',    action:'Última tentativa', taskType:'follow_up' }
-    ]
-  },
-  'reativacao': {
-    name: 'Reativação',
-    description: 'Cadência 21 dias — leads frios/stall',
-    steps: [
-      { day:0,  channel:'whatsapp', action:'Reativação WhatsApp — novo contexto', taskType:'reativacao' },
-      { day:3,  channel:'email',    action:'Email com case/resultado', taskType:'reativacao' },
-      { day:6,  channel:'instagram',action:'Social DM — tom founder', taskType:'social_dm' },
-      { day:10, channel:'phone',    action:'Ligação de reengajamento', taskType:'reativacao' },
-      { day:14, channel:'whatsapp', action:'WhatsApp — oferta especial', taskType:'reativacao' },
-      { day:21, channel:'email',    action:'Email break up final', taskType:'reativacao' }
-    ]
-  },
-  'social-dm': {
-    name: 'Social Selling',
-    description: 'Cadência 10 dias — Instagram + WhatsApp intercalado',
-    steps: [
-      { day:0,  channel:'instagram',action:'DM de abertura — perfil', taskType:'social_dm' },
-      { day:2,  channel:'instagram',action:'DM de valor — conteúdo', taskType:'social_dm' },
-      { day:4,  channel:'whatsapp', action:'WhatsApp — ponte do IG', taskType:'follow_up' },
-      { day:6,  channel:'instagram',action:'DM — prova social', taskType:'social_dm' },
-      { day:8,  channel:'phone',    action:'Ligação — fechamento', taskType:'follow_up' },
-      { day:10, channel:'whatsapp', action:'WhatsApp — última chance', taskType:'follow_up' }
-    ]
-  },
-  'handoff-prep': {
-    name: 'Pré-Handoff',
-    description: 'Cadência 5 dias — preparar lead para closer',
-    steps: [
-      { day:0,  channel:'whatsapp', action:'Confirmar interesse e dados', taskType:'handoff_prep' },
-      { day:1,  channel:'email',    action:'Enviar material preparatório', taskType:'handoff_prep' },
-      { day:2,  channel:'phone',    action:'Ligação de alinhamento', taskType:'handoff_prep' },
-      { day:3,  channel:'whatsapp', action:'Confirmar agendamento', taskType:'agendamento' },
-      { day:5,  channel:'whatsapp', action:'Lembrete dia da reunião', taskType:'agendamento' }
-    ]
-  }
-};
-window.CADENCE_TEMPLATES = CADENCE_TEMPLATES;
-
-// In-memory enrollment state: { dealId: { template, startDate, currentStep, paused, completedSteps:[] } }
-var _cadenceEnrollments = {};
-var _cadenceLoaded = false;
-window._cadenceEnrollments = _cadenceEnrollments; // expõe para matchQueue e UI
-
-// Load enrollments from Supabase elucy_cache
-async function cadenceLoadAll(){
-  var sb = _sb(); if(!sb) return;
-  var opId = getOperatorId(); if(!opId) return;
-  try{
-    var {data} = await sb.from('elucy_cache')
-      .select('deal_id,report')
-      .eq('operator_email', opId)
-      .like('deal_id', '_cad_%');
-    if(data && data.length){
-      data.forEach(function(row){
-        var realId = row.deal_id.replace('_cad_','');
-        try{ _cadenceEnrollments[realId] = JSON.parse(row.report); }catch(e){}
-      });
-    }
-    _cadenceLoaded = true;
-  }catch(e){ console.warn('cadenceLoadAll error:', e); }
-}
-window.cadenceLoadAll = cadenceLoadAll;
-
-// Save single enrollment to Supabase
-async function cadenceSave(dealId){
-  var sb = _sb(); if(!sb) return;
-  var opId = getOperatorId(); if(!opId) return;
-  var enrollment = _cadenceEnrollments[dealId];
-  if(!enrollment) return;
-  try{
-    await sb.from('elucy_cache').upsert({
-      deal_id: '_cad_'+dealId,
-      operator_email: opId,
-      report: JSON.stringify(enrollment),
-      updated_at: _now()
-    }, { onConflict:'deal_id,operator_email' });
-  }catch(e){ console.warn('cadenceSave error:', e); }
-}
-
-// Enroll a deal into a cadence
-window.cadenceEnroll = function(dealId, templateKey){
-  var tmpl = CADENCE_TEMPLATES[templateKey];
-  if(!tmpl){ console.warn('Cadence template not found:', templateKey); return; }
-  _cadenceEnrollments[dealId] = {
-    template: templateKey,
-    templateName: tmpl.name,
-    startDate: _today(),
-    currentStep: 0,
-    paused: false,
-    completedSteps: []
-  };
-  cadenceSave(dealId);
-  // Re-render tasks if visible
-  if(window.renderTaskRunner) window.renderTaskRunner();
-  if(window.showSyncToast) window.showSyncToast('ok','Cadência "'+tmpl.name+'" iniciada');
-};
-
-// Pause/resume cadence
-window.cadenceTogglePause = function(dealId){
-  var enr = _cadenceEnrollments[dealId];
-  if(!enr) return;
-  enr.paused = !enr.paused;
-  cadenceSave(dealId);
-  if(window.showSyncToast) window.showSyncToast('ok', enr.paused?'Cadência pausada':'Cadência retomada');
-};
-
-// Complete current step and advance
-window.cadenceAdvance = function(dealId){
-  var enr = _cadenceEnrollments[dealId];
-  if(!enr) return;
-  var tmpl = CADENCE_TEMPLATES[enr.template];
-  if(!tmpl) return;
-  enr.completedSteps.push({ step:enr.currentStep, completedAt:_now() });
-  if(enr.currentStep < tmpl.steps.length - 1){
-    enr.currentStep++;
-  } else {
-    enr.completed = true;
-    enr.completedAt = _now();
-  }
-  cadenceSave(dealId);
-};
-
-// Remove enrollment
-window.cadenceRemove = function(dealId){
-  delete _cadenceEnrollments[dealId];
-  var sb = _sb(); if(!sb) return;
-  var opId = getOperatorId(); if(!opId) return;
-  sb.from('elucy_cache').delete()
-    .eq('deal_id','_cad_'+dealId)
-    .eq('operator_email',opId)
-    .then(function(){});
-  if(window.showSyncToast) window.showSyncToast('ok','Cadência removida');
-};
-
-// Get current step info for a deal (used by task queue)
-function cadenceGetCurrentStep(dealId){
-  var enr = _cadenceEnrollments[dealId];
-  if(!enr || enr.paused || enr.completed) return null;
-  var tmpl = CADENCE_TEMPLATES[enr.template];
-  if(!tmpl) return null;
-  var step = tmpl.steps[enr.currentStep];
-  if(!step) return null;
-  // Check if today is the right day for this step
-  var start = new Date(enr.startDate+'T00:00:00');
-  var today = new Date(_today()+'T00:00:00');
-  var daysSinceStart = Math.floor((today - start)/(1000*60*60*24));
-  if(daysSinceStart < step.day) return null; // Not yet time for this step
-  return {
-    step: step,
-    stepIndex: enr.currentStep,
-    totalSteps: tmpl.steps.length,
-    templateName: tmpl.name,
-    daysSinceStart: daysSinceStart,
-    overdue: daysSinceStart > step.day
-  };
-}
-
-// Get enrollment info for UI display
-window.cadenceGetInfo = function(dealId){
-  var enr = _cadenceEnrollments[dealId];
-  if(!enr) return null;
-  var tmpl = CADENCE_TEMPLATES[enr.template];
-  return {
-    enrollment: enr,
-    template: tmpl,
-    currentStep: cadenceGetCurrentStep(dealId),
-    progress: tmpl ? Math.round(enr.completedSteps.length / tmpl.steps.length * 100) : 0
-  };
-};
-
-// Channel icons for UI
-var CHANNEL_ICONS = {whatsapp:'chat',phone:'phone',email:'email',instagram:'instagram'};
-var CHANNEL_SVG = {chat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',phone:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.28a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.8 2.5h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.09a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',email:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',instagram:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>',pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'};
-window.CHANNEL_ICONS = CHANNEL_ICONS;
-
-// Build cadence enrollment UI (for deal cards)
-window.cadenceBuildUI = function(dealId){
-  var info = window.cadenceGetInfo(dealId);
-  if(!info){
-    // Not enrolled — show enroll button with template picker
-    var opts = Object.keys(CADENCE_TEMPLATES).map(function(k){
-      var t = CADENCE_TEMPLATES[k];
-      return '<option value="'+k+'">'+_escHtml(t.name)+' — '+t.steps.length+' steps</option>';
-    }).join('');
-    return '<div class="cad-enroll">'
-      + '<select class="cad-select" id="cad-sel-'+dealId+'">'+opts+'</select>'
-      + '<button class="btn bs btn-sm" onclick="window.cadenceEnroll(\''+dealId+'\',document.getElementById(\'cad-sel-'+dealId+'\').value)">▶ Iniciar Cadência</button>'
-      + '</div>';
-  }
-  // Enrolled — show progress
-  var enr = info.enrollment;
-  var tmpl = info.template;
-  var steps = tmpl ? tmpl.steps : [];
-  var stepHtml = steps.map(function(s, i){
-    var done = enr.completedSteps.some(function(c){ return c.step===i; });
-    var current = i === enr.currentStep && !enr.completed;
-    var icon = CHANNEL_SVG[CHANNEL_ICONS[s.channel]]||CHANNEL_SVG.pin;
-    var cls = done ? 'cad-step done' : current ? 'cad-step current' : 'cad-step';
-    return '<div class="'+cls+'" title="D'+s.day+': '+_escHtml(s.action)+'">'
-      + '<span class="cad-step-icon">'+icon+'</span>'
-      + '<span class="cad-step-day">D'+s.day+'</span>'
-      + '</div>';
-  }).join('');
-  var statusLabel = enr.completed ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="10" height="10"><polyline points="20 6 9 17 4 12"/></svg> Completa' : enr.paused ? '⏸ Pausada' : '▶ Ativa';
-  return '<div class="cad-progress">'
-    + '<div class="cad-header">'
-    + '<span class="cad-name">'+_escHtml(tmpl?tmpl.name:enr.template)+'</span>'
-    + '<span class="cad-status">'+statusLabel+'</span>'
-    + '</div>'
-    + '<div class="cad-steps">'+stepHtml+'</div>'
-    + '<div class="cad-actions">'
-    + (enr.completed?'':('<button class="btn bs btn-sm" onclick="window.cadenceTogglePause(\''+dealId+'\')">'+(enr.paused?'▶ Retomar':'⏸ Pausar')+'</button>'))
-    + '<button class="btn bs btn-sm" style="border-color:var(--red);color:var(--red)" onclick="if(confirm(\'Remover cadência?\'))window.cadenceRemove(\''+dealId+'\')">✕ Remover</button>'
-    + '</div>'
-    + '</div>';
-};
 
 // ==================================================================
 // LAYER 5 — ANALYTICS (Reports V3)
@@ -3610,9 +3349,11 @@ if(window._currentUser){
     setTimeout(initRealtimeListeners,500);
     setTimeout(updateGamificationUI,2000);
     setTimeout(function(){ var sh=document.getElementById('screen-home'); if(sh&&sh.classList.contains('on')) renderHome(); },2500);
-    // Load cadence enrollments after operator context is ready
+    // Load flow templates from DB, then cadence enrollments
     setTimeout(function(){
-      if(window.loadCadenceEnrollments) loadCadenceEnrollments().then(function(){ loadCadenceSteps(); });
+      if(window.loadFlowTemplates) loadFlowTemplates().then(function(){
+        if(window.loadCadenceEnrollments) loadCadenceEnrollments().then(function(){ loadCadenceSteps(); });
+      });
     },1500);
   });
 }
@@ -3626,99 +3367,64 @@ if(window._currentUser){
 var CADENCE_CHANNELS = {
   whatsapp:  { label:'WhatsApp',  icon:'chat', color:'green' },
   ligacao:   { label:'Ligação',   icon:'phone', color:'accent' },
-  email:     { label:'E-mail',    icon:'email', color:'accent2' },
   instagram: { label:'Instagram', icon:'instagram', color:'clay' },
   linkedin:  { label:'LinkedIn',  icon:'linkedin', color:'accent2' },
   tarefa:    { label:'Tarefa',    icon:'clipboard', color:'text2' }
 };
 
-// Default cadence templates by tier/persona
-var DEFAULT_CADENCES = [
-  {
-    id: 'cad_titan_hot',
-    name: 'Titan Hot — Imersão Presencial',
-    tier: 'diamond,gold',
-    persona: 'Titan',
-    totalDays: 14,
-    steps: [
-      { day:1, channel:'whatsapp', action:'Apresentação + link calendly', auto:false },
-      { day:1, channel:'ligacao',  action:'Call de conexão (60s max)', auto:false },
-      { day:2, channel:'whatsapp', action:'FUP: enviou link? Viu material?', auto:false },
-      { day:3, channel:'instagram',action:'DM Founder — tensão de inação', auto:false },
-      { day:4, channel:'ligacao',  action:'Call decisivo — agenda ou descarta', auto:false },
-      { day:5, channel:'whatsapp', action:'Último toque — deadline 24h', auto:false },
-      { day:7, channel:'email',    action:'Breakup email — encerramento elegante', auto:false },
-      { day:10,channel:'instagram',action:'Reengajamento leve — conteúdo de valor', auto:false },
-      { day:14,channel:'whatsapp', action:'Último contato — arquivo ou reativa', auto:false }
-    ]
-  },
-  {
-    id: 'cad_builder_warm',
-    name: 'Builder Warm — Digital/Harvard',
-    tier: 'silver,gold',
-    persona: 'Builder',
-    totalDays: 12,
-    steps: [
-      { day:1, channel:'whatsapp', action:'Apresentação SPICED — situação + impacto', auto:false },
-      { day:2, channel:'email',    action:'Caso de sucesso do segmento', auto:false },
-      { day:3, channel:'ligacao',  action:'Call SPICED — Critical Event', auto:false },
-      { day:4, channel:'whatsapp', action:'FUP com dados personalizado', auto:false },
-      { day:6, channel:'linkedin', action:'Conexão + mensagem de valor', auto:false },
-      { day:8, channel:'ligacao',  action:'Call decisivo', auto:false },
-      { day:10,channel:'whatsapp', action:'Último toque', auto:false },
-      { day:12,channel:'email',    action:'Breakup email', auto:false }
-    ]
-  },
-  {
-    id: 'cad_executor_cold',
-    name: 'Executor Cold — Reativação',
-    tier: 'bronze,silver',
-    persona: 'Executor',
-    totalDays: 21,
-    steps: [
-      { day:1, channel:'whatsapp', action:'Reativação — nova abordagem', auto:false },
-      { day:3, channel:'ligacao',  action:'Call SPIN — identificar dor atual', auto:false },
-      { day:5, channel:'email',    action:'Conteúdo educativo', auto:false },
-      { day:7, channel:'whatsapp', action:'FUP + pergunta aberta', auto:false },
-      { day:10,channel:'instagram',action:'Engajamento social leve', auto:false },
-      { day:14,channel:'ligacao',  action:'Última tentativa de call', auto:false },
-      { day:17,channel:'whatsapp', action:'Mensagem de encerramento', auto:false },
-      { day:21,channel:'email',    action:'Breakup definitivo', auto:false }
-    ]
-  },
-  {
-    id: 'cad_fast_agendamento',
-    name: 'Fast Track — Agendamento Rápido',
-    tier: 'diamond,gold,silver',
-    persona: 'any',
-    totalDays: 5,
-    steps: [
-      { day:1, channel:'whatsapp', action:'Envio de link para agendar', auto:false },
-      { day:1, channel:'ligacao',  action:'Call imediato', auto:false },
-      { day:2, channel:'whatsapp', action:'FUP: conseguiu agendar?', auto:false },
-      { day:3, channel:'ligacao',  action:'Segunda tentativa de call', auto:false },
-      { day:4, channel:'instagram',action:'DM Founder como último recurso', auto:false },
-      { day:5, channel:'whatsapp', action:'Deadline final — agora ou arquivo', auto:false }
-    ]
-  },
-  {
-    id: 'cad_no_show',
-    name: 'No-Show Recovery',
-    tier: 'any',
-    persona: 'any',
-    totalDays: 7,
-    steps: [
-      { day:1, channel:'whatsapp', action:'Reagendamento imediato — tom empático', auto:false },
-      { day:1, channel:'ligacao',  action:'Call para reagendar (até 2h após no-show)', auto:false },
-      { day:2, channel:'whatsapp', action:'FUP com nova data sugerida', auto:false },
-      { day:3, channel:'email',    action:'Email formal com opções de horário', auto:false },
-      { day:5, channel:'ligacao',  action:'Última tentativa de call', auto:false },
-      { day:7, channel:'whatsapp', action:'Encerramento ou downsell', auto:false }
-    ]
-  }
-];
+// Flow templates loaded from Supabase (replaces hardcoded DEFAULT_CADENCES)
+var DEFAULT_CADENCES = [];
 window.DEFAULT_CADENCES = DEFAULT_CADENCES;
 window.CADENCE_CHANNELS = CADENCE_CHANNELS;
+
+// Load flow templates from Supabase flow_templates + flow_template_steps
+async function loadFlowTemplates(){
+  var sb=_sb(); if(!sb){ console.warn('[cadence] No Supabase client'); return; }
+  try{
+    var {data:templates,error:tErr}=await sb.from('flow_templates')
+      .select('*')
+      .eq('is_active',true)
+      .order('name');
+    if(tErr){ console.warn('[cadence] flow_templates error:',tErr); return; }
+    if(!templates||!templates.length){ console.warn('[cadence] No flow templates in DB'); return; }
+
+    var {data:steps,error:sErr}=await sb.from('flow_template_steps')
+      .select('*')
+      .order('sort_order');
+    if(sErr){ console.warn('[cadence] flow_template_steps error:',sErr); return; }
+
+    // Build template objects matching DEFAULT_CADENCES format
+    var stepsByTemplate={};
+    (steps||[]).forEach(function(s){
+      if(!stepsByTemplate[s.template_id]) stepsByTemplate[s.template_id]=[];
+      stepsByTemplate[s.template_id].push({
+        day: s.day,
+        channel: s.channel,
+        action: s.action,
+        auto: s.auto||false,
+        fallbackChannel: s.fallback_channel||null,
+        fallbackDelayHours: s.fallback_delay_hours||null,
+        waTemplateId: s.wa_template_id||null
+      });
+    });
+
+    DEFAULT_CADENCES.length=0; // clear array preserving reference
+    templates.forEach(function(t){
+      DEFAULT_CADENCES.push({
+        id: t.id,
+        name: t.name,
+        description: t.description||'',
+        tier: t.tier||'any',
+        persona: t.persona||'any',
+        totalDays: t.total_days||0,
+        isDefault: t.is_default||false,
+        steps: stepsByTemplate[t.id]||[]
+      });
+    });
+    console.log('[cadence] Loaded '+DEFAULT_CADENCES.length+' flow templates from DB');
+  }catch(e){ console.warn('[cadence] loadFlowTemplates error:',e); }
+}
+window.loadFlowTemplates = loadFlowTemplates;
 
 // In-memory enrollment state: { dealId: { cadenceId, startDate, currentStep, status, completedSteps:[] } }
 var _cadenceEnrollments = {};
