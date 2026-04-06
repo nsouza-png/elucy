@@ -15,9 +15,9 @@
 --primary:var(--accent);--accent2:var(--accent);--accent3:var(--accent);
 --yellow:var(--accent);--ydim:var(--adim);--gold:var(--accent);--golddim:var(--adim);
 --aglow:var(--adim);--aborder2:var(--aborder);
---secondary:var(--blue);--secondary-dim:var(--bdim);--secondary-glow:var(--bdim);--blue2:var(--blue);
+--secondary:var(--accent2);--secondary-dim:var(--adim);--secondary-glow:var(--adim);--blue2:var(--accent2);
 --tertiary:var(--green);--tertiary-dim:var(--gdim);
---purple:var(--blue);--clay:var(--accent);--claydim:var(--adim);
+--purple:var(--accent);--clay:var(--accent);--claydim:var(--adim);
 /* Text */
 --text:#e8e0d6;--on-surface:#e8e0d6;--on-surface-variant:#b0a898;--text2:#7a6f65;--text3:#4a4138;
 /* Radius */
