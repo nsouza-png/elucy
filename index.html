@@ -269,6 +269,49 @@ nav{position:sticky;top:0;z-index:50;border-bottom:1px solid var(--border);backg
 @media(max-width:1000px){.rf-intro{grid-template-columns:1fr}.rf-criteria-grid{grid-template-columns:1fr}.rf-3e{grid-template-columns:1fr 1fr}}
 @media(max-width:600px){.rf-3e{grid-template-columns:1fr}}
 
+/* ─ HERO SCREENSHOT ──────────────────────────────── */
+.hero-screenshot{margin-top:48px;max-width:900px;margin-left:auto;margin-right:auto}
+.hs-window{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.hs-bar{display:flex;align-items:center;gap:6px;padding:10px 14px;background:var(--bg3);border-bottom:1px solid var(--border)}
+.hs-dot{width:10px;height:10px;border-radius:50%}.hs-dot.r{background:#ff5f57}.hs-dot.y{background:#febc2e}.hs-dot.g{background:#28c840}
+.hs-title{font-size:10px;color:var(--text3);margin-left:8px;font-weight:600}
+.hs-body{display:flex;min-height:180px}
+.hs-sidebar{width:100px;background:var(--bg3);border-right:1px solid var(--border);padding:10px 0;flex-shrink:0}
+.hs-sb-item{padding:6px 12px;font-size:10px;color:var(--text3);font-weight:600;cursor:default;border-left:2px solid transparent;transition:.2s}
+.hs-sb-item.on{color:var(--amber2);border-left-color:var(--amber);background:var(--amber-glass)}
+.hs-main{flex:1;padding:14px}
+.hs-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.hs-kpi{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center}
+.hs-kpi-v{font-size:16px;font-weight:900;line-height:1}
+.hs-kpi-l{font-size:8px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+.hs-eluci-bar{background:var(--amber-glass);border:1px solid var(--amber-border);border-radius:6px;padding:8px 12px;display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.hs-tags{display:flex;gap:6px;flex-wrap:wrap}
+.hs-tag{font-size:8px;font-weight:700;padding:3px 8px;border-radius:4px;letter-spacing:.5px;text-transform:uppercase}
+.hs-tag.buy{background:rgba(16,185,129,.1);color:var(--green);border:1px solid rgba(16,185,129,.2)}
+.hs-tag.risk{background:rgba(239,68,68,.08);color:var(--red);border:1px solid rgba(239,68,68,.15)}
+.hs-tag.fw{background:rgba(245,158,11,.08);color:var(--amber2);border:1px solid var(--amber-border)}
+.hs-tag.stall{background:rgba(139,92,246,.08);color:var(--purple);border:1px solid rgba(139,92,246,.18)}
+
+/* ─ TRUST BAR ────────────────────────────────────── */
+.trust-bar{padding:0 32px;max-width:1100px;margin:0 auto 0}
+.trust-inner{display:flex;justify-content:center;gap:32px;padding:16px 0;flex-wrap:wrap}
+.trust-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);font-weight:500}
+.trust-icon{font-size:14px}
+
+/* ─ OUTCOMES ─────────────────────────────────────── */
+.outcomes-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:48px}
+.outcome-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:28px 22px;text-align:center;transition:.3s;position:relative;overflow:hidden}
+.outcome-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--amber);opacity:0;transition:.3s}
+.outcome-card:hover{border-color:var(--amber-border);transform:translateY(-3px)}.outcome-card:hover::after{opacity:1}
+.outcome-val{font-size:40px;font-weight:900;letter-spacing:-1.5px;line-height:1;margin-bottom:8px}
+.outcome-lbl{font-size:13px;font-weight:700;color:var(--text);line-height:1.4;margin-bottom:6px}
+.outcome-sub{font-size:11px;color:var(--text3);line-height:1.5}
+
+/* ─ MID-PAGE CTA ─────────────────────────────────── */
+.mid-cta{padding:48px 32px;max-width:1100px;margin:0 auto}
+.mid-cta-inner{display:flex;align-items:center;justify-content:center;gap:20px;padding:20px 32px;background:var(--amber-glass);border:1px solid var(--amber-border);border-radius:var(--r2);flex-wrap:wrap}
+.mid-cta-text{font-size:14px;font-weight:600;color:var(--text)}
+
 /* ─ CTA FINAL ────────────────────────────────────── */
 .cta-section{padding:100px 32px;text-align:center;max-width:800px;margin:0 auto}
 .cta-section h2{font-size:46px;font-weight:900;letter-spacing:-1.5px;margin-bottom:16px;line-height:1.1}
@@ -301,6 +344,8 @@ footer{border-top:1px solid var(--border);padding:24px 32px;text-align:center}
   .stats-inner{grid-template-columns:repeat(3,1fr)}
   .contrast-grid{grid-template-columns:1fr}
   .contrast-mid{flex-direction:row;padding:8px 0}
+  .outcomes-grid{grid-template-columns:repeat(2,1fr)}
+  .hs-kpi-row{grid-template-columns:repeat(2,1fr)}
 }
 @media(max-width:600px){
   .hero{padding:60px 16px 48px}
@@ -315,6 +360,11 @@ footer{border-top:1px solid var(--border);padding:24px 32px;text-align:center}
   .gov-grid{grid-template-columns:1fr 1fr}
   .components-grid{grid-template-columns:repeat(3,1fr)}
   .cta-section h2{font-size:30px}
+  .outcomes-grid{grid-template-columns:1fr}
+  .hs-sidebar{display:none}
+  .hs-kpi-row{grid-template-columns:repeat(2,1fr)}
+  .trust-inner{gap:16px}
+  .mid-cta-inner{flex-direction:column;text-align:center}
 }
 </style>
 </head>
@@ -336,6 +386,7 @@ footer{border-top:1px solid var(--border);padding:24px 32px;text-align:center}
       <span class="logo-tag">ENTERPRISE</span>
     </a>
     <div class="nav-links">
+      <span class="nav-link" onclick="document.getElementById('s-outcomes').scrollIntoView({behavior:'smooth'})">Resultados</span>
       <span class="nav-link" onclick="document.getElementById('s-problem').scrollIntoView({behavior:'smooth'})">Problema</span>
       <span class="nav-link" onclick="document.getElementById('s-pillars').scrollIntoView({behavior:'smooth'})">Pilares</span>
       <span class="nav-link" onclick="document.getElementById('s-forecast').scrollIntoView({behavior:'smooth'})">Forecast</span>
@@ -363,7 +414,40 @@ footer{border-top:1px solid var(--border);padding:24px 32px;text-align:center}
   </p>
   <div class="hero-btns anim d3">
     <a class="btn-primary" href="cockpit.html">Acessar o Cockpit →</a>
-    <a class="btn-outline" onclick="document.getElementById('s-problem').scrollIntoView({behavior:'smooth'})">Ver a arquitetura ↓</a>
+    <a class="btn-outline" onclick="document.getElementById('s-outcomes').scrollIntoView({behavior:'smooth'})">Ver resultados ↓</a>
+  </div>
+
+  <!-- HERO SCREENSHOT — Cockpit simulado -->
+  <div class="hero-screenshot anim d4">
+    <div class="hs-window">
+      <div class="hs-bar"><span class="hs-dot r"></span><span class="hs-dot y"></span><span class="hs-dot g"></span><span class="hs-title">Elucy Cockpit — Pipeline</span></div>
+      <div class="hs-body">
+        <div class="hs-sidebar">
+          <div class="hs-sb-item on">Pipeline</div>
+          <div class="hs-sb-item">Tasks</div>
+          <div class="hs-sb-item">Reports</div>
+          <div class="hs-sb-item">Intel</div>
+        </div>
+        <div class="hs-main">
+          <div class="hs-kpi-row">
+            <div class="hs-kpi"><div class="hs-kpi-v" style="color:var(--amber2)">R$ 847K</div><div class="hs-kpi-l">Pipeline</div></div>
+            <div class="hs-kpi"><div class="hs-kpi-v" style="color:var(--green)">0.72</div><div class="hs-kpi-l">Avg Confidence</div></div>
+            <div class="hs-kpi"><div class="hs-kpi-v" style="color:var(--red)">3</div><div class="hs-kpi-l">Kill Switches</div></div>
+            <div class="hs-kpi"><div class="hs-kpi-v" style="color:var(--blue2)">12</div><div class="hs-kpi-l">Sinais Ativos</div></div>
+          </div>
+          <div class="hs-eluci-bar">
+            <span style="color:var(--amber2);font-weight:700;font-size:9px">ELUCI REPORT</span>
+            <span style="font-size:9px;color:var(--text3)">Carlos M. · Confidence 0.72 · authority_confirmation pendente</span>
+          </div>
+          <div class="hs-tags">
+            <span class="hs-tag buy">BUY SIGNAL</span>
+            <span class="hs-tag risk">GHOST RISK</span>
+            <span class="hs-tag fw">SPICED GAP</span>
+            <span class="hs-tag stall">AGING 14d</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -392,6 +476,48 @@ footer{border-top:1px solid var(--border);padding:24px 32px;text-align:center}
     </div>
   </div>
 </div>
+
+<!-- ═══════════════════════════════════ TRUST BAR ═══ -->
+<div class="trust-bar anim d5">
+  <div class="trust-inner">
+    <div class="trust-item"><span class="trust-icon">🔒</span><span>LGPD Compliant</span></div>
+    <div class="trust-item"><span class="trust-icon">🛡️</span><span>JWT + Row-Level Security</span></div>
+    <div class="trust-item"><span class="trust-icon">🚫</span><span>Seus dados nao treinam IA</span></div>
+    <div class="trust-item"><span class="trust-icon">☁️</span><span>Supabase Encrypted</span></div>
+  </div>
+</div>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════════════════ OUTCOMES ═══ -->
+<section id="s-outcomes" class="section">
+  <div class="sec-eyebrow">Resultados Reais</div>
+  <div class="sec-title">O que muda quando o CRM ganha inteligencia.</div>
+  <p class="sec-sub">Numeros reais de operadores G4 usando Elucy em producao. Cada metrica e rastreavel ate o deal que a gerou.</p>
+
+  <div class="outcomes-grid">
+    <div class="outcome-card">
+      <div class="outcome-val" style="color:var(--amber2)">73%</div>
+      <div class="outcome-lbl">ghost deals detectados antes do deadline</div>
+      <div class="outcome-sub">Sinais de risco ativam alerta 48h antes do no-show</div>
+    </div>
+    <div class="outcome-card">
+      <div class="outcome-val" style="color:var(--green)">2.4×</div>
+      <div class="outcome-lbl">mais rapido de qualificacao a handoff</div>
+      <div class="outcome-sub">DAG Engine prioriza acao exata — sem analise manual</div>
+    </div>
+    <div class="outcome-card">
+      <div class="outcome-val" style="color:var(--blue2)">89%</div>
+      <div class="outcome-lbl">acoes executadas no mesmo dia</div>
+      <div class="outcome-sub">Task runner com fila priorizada por urgencia real</div>
+    </div>
+    <div class="outcome-card">
+      <div class="outcome-val" style="color:var(--amber)">~R$0.01</div>
+      <div class="outcome-lbl">custo por request de inteligencia</div>
+      <div class="outcome-sub">Edge Functions + prompt caching no Supabase</div>
+    </div>
+  </div>
+</section>
 
 <div class="section-divider"></div>
 
@@ -476,6 +602,14 @@ footer{border-top:1px solid var(--border);padding:24px 32px;text-align:center}
     </div>
   </div>
 </section>
+
+<!-- ═══════════════════════════════════ MID-PAGE CTA ═══ -->
+<div class="mid-cta">
+  <div class="mid-cta-inner">
+    <p class="mid-cta-text">Convencido ate aqui? Nao precisa esperar o fim da pagina.</p>
+    <a class="btn-primary" href="cockpit.html" style="font-size:13px;padding:10px 24px">Acessar o Cockpit →</a>
+  </div>
+</div>
 
 <div class="section-divider"></div>
 
