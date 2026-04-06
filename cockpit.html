@@ -3227,6 +3227,8 @@ async function loadDealFullHistory(dealId){
 async function callIntelligenceAPI(dealData, requestType, extraContext){
   // Route via Edge Function (API key segura server-side)
   const sb = getSB();
+  // Force session refresh to avoid stale JWT (expires after 1h)
+  if(sb){ try{ await sb.auth.refreshSession(); }catch(e){} }
   const session = sb ? (await sb.auth.getSession()).data.session : null;
   const jwt = session ? session.access_token : null;
 
