@@ -2323,7 +2323,7 @@ function _checkLLMHealth(){
       if(resp.status===400&&(body.error||'').includes('deal_context')){
         el.innerHTML=okIcon+'<span style="color:var(--green)">Motor LLM ativo — key centralizada, operador aprovado</span>';
       } else if(resp.status===401){
-        el.innerHTML='<span style="color:var(--red)">Token expirado — recarregue a página</span>';
+        el.innerHTML='<span style="color:var(--red)">Sessão expirada</span> <button onclick="getSB().auth.signOut().then(function(){location.reload();})" style="background:var(--amber);color:#000;border:none;border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;margin-left:6px">Reconectar</button>';
       } else if(resp.status===403){
         el.innerHTML='<span style="color:var(--red)">Operador não aprovado — contate o admin</span>';
       } else if(resp.status===429){
