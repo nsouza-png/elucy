@@ -12,21 +12,21 @@ const CORS = {
 }
 
 // MCP_MAP — quais documentos injetar por request type
-// Budget: ~25k system tokens max (30k org limit - 5k for deal_context+prompt)
-// eluci-core = 15k (mandatory), mece-intelligence = 4k, so ~6k for extras
+// Budget: ~30k system tokens (prompt caching amortiza custo)
+// eluci-core = 15k tokens (mandatory), demais priorizados por impacto no output
 const MCP_MAP: Record<string, string[]> = {
-  analyze: ['eluci-core','mece-intelligence','signals','output-schema'],
-  copy: ['eluci-core','mece-intelligence','blde','output-schema'],
+  analyze: ['eluci-core','mece-intelligence','signals','behavior','output-schema'],
+  copy: ['eluci-core','blde','fip','sdr-social-dm','playbook-sdr','signals','output-schema'],
   note: ['eluci-core','output-schema'],
   business_analysis: ['eluci-core','mece-intelligence','strategy'],
-  dm_copy: ['eluci-core','mece-intelligence','blde','fip'],
-  coaching: ['eluci-core','sdr-coaching'],
+  dm_copy: ['eluci-core','sdr-social-dm','fip','blde','behavior','playbook-sdr','signals'],
+  coaching: ['eluci-core','sdr-coaching','playbook-sdr'],
   briefing: ['eluci-core','mece-intelligence','output-schema'],
   batch_classify: ['eluci-core','signals','output-schema'],
   competitive: ['eluci-core','mece-intelligence','strategy'],
-  rt_assist: ['eluci-core','mece-intelligence','blde','output-schema'],
+  rt_assist: ['eluci-core','blde','fip','sdr-social-dm','output-schema'],
   downsell: ['eluci-core','mece-intelligence','output-schema'],
-  conv_enrichment: ['eluci-core','signals','output-schema'],
+  conv_enrichment: ['eluci-core','signals','behavior','output-schema'],
 }
 
 // In-memory MCP cache (warm across invocations within same Deno isolate)
@@ -233,7 +233,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         model,
-        max_tokens: 4096,
+        max_tokens: 6144,
         system: systemBlocks,
         messages: [{ role: 'user', content: userMessage }],
       }),
