@@ -227,7 +227,7 @@ function openTransitionModal(dealId, fromStage, toStage) {
   modal.innerHTML = `
     <div class="transition-modal-header">
       <div class="transition-modal-direction">
-        <svg width="20" height="20" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" stroke-width="1.8" aria-hidden="true">
           <path d="M5 12h14M12 5l7 7-7 7"/>
         </svg>
       </div>
@@ -235,7 +235,7 @@ function openTransitionModal(dealId, fromStage, toStage) {
         Avancar: ${_escHtml(fromStage)} &rarr; ${_escHtml(toStage)}
       </h2>
       <button class="transition-modal-close" type="button" aria-label="Fechar modal">
-        <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8" aria-hidden="true">
           <path d="M18 6L6 18M6 6l12 12"/>
         </svg>
       </button>
@@ -385,13 +385,13 @@ function openLostModal(dealId) {
   modal.innerHTML = `
     <div class="transition-modal-header lost-header">
       <div class="transition-modal-direction lost-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" stroke-width="1.8" aria-hidden="true">
           <path d="M18 6L6 18M6 6l12 12"/>
         </svg>
       </div>
       <h2 id="lost-modal-title" class="transition-modal-title">Marcar como Perdido</h2>
       <button class="transition-modal-close" type="button" aria-label="Fechar modal">
-        <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8" aria-hidden="true">
           <path d="M18 6L6 18M6 6l12 12"/>
         </svg>
       </button>
@@ -868,8 +868,8 @@ function _showToast(type, message) {
   toast.setAttribute('aria-live', 'assertive');
 
   const icon = type === 'success'
-    ? '<svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>'
-    : '<svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path d="M12 9v4m0 4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>';
+    ? '<svg width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>'
+    : '<svg width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8" aria-hidden="true"><path d="M12 9v4m0 4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>';
 
   toast.innerHTML = icon + '<span>' + _escHtml(message) + '</span>';
   document.body.appendChild(toast);
