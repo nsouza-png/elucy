@@ -1673,6 +1673,12 @@ function showCockpit(user){
   document.getElementById('topbar').style.display='';
   document.getElementById('main').style.display='';
   _currentUser=user;
+  // Transition UI: configura JWT e Supabase URL para edge functions
+  window.ELUCY_SUPABASE_URL=SUPABASE_URL;
+  const _sb_session=getSB();
+  if(_sb_session) _sb_session.auth.getSession().then(function(r){
+    if(r.data&&r.data.session) window.ELUCY_JWT=r.data.session.access_token;
+  });
   // Governança: seta operador no localStorage a partir do auth (modo remoto)
   if(window.IS_REMOTE && user.email){
     localStorage.setItem('elucy_operator_email', user.email);
@@ -1900,6 +1906,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     // Ouve mudanças de auth
     sb.auth.onAuthStateChange((_event,session)=>{
       if(session&&session.user) checkApproval(session.user);
+      // Atualiza JWT para Transition UI em token refresh
+      if(session&&session.access_token) window.ELUCY_JWT=session.access_token;
     });
   } else {
     // Modo local (G4 OS): carrega cockpit-data.js diretamente
@@ -4536,6 +4544,7 @@ function selectLiveDeal(id,d){
       </div>
       ${(d._urgency||0)>=60?`<div class="alrt al-d">SLA em risco — deal sem avanço por ${d._delta||d.delta||0} dias.</div>`:''}
       ${d._signal==='DOME'?`<div class="alrt al-w">Iron Dome ativo — +10 dias sem resposta. Copy bloqueada até revisão manual.</div>`:''}
+      <div id="transition-mount-${id}" style="margin:8px 0"></div>
       <div class="row">
         <button class="btn bp" onclick="showCopy('${id}',this)">Gerar Copy via ELUCY</button>
         <button class="btn bs" id="btn-er-${id}" onclick="toggleER('${id}',this)">ELUCI Report</button>
@@ -4637,6 +4646,15 @@ function selectLiveDeal(id,d){
   // Renderiza painel de sinais (Layer 18)
   if(window.renderSignalPanel){
     window.renderSignalPanel(id, 'signal-panel-'+id);
+  }
+  // Renderiza botao de transicao de pipeline (D2)
+  if(window.TransitionUI && window.TransitionUI.renderTransitionButton){
+    const mountEl = document.getElementById('transition-mount-'+id);
+    if(mountEl){
+      mountEl.innerHTML='';
+      const btnGroup = window.TransitionUI.renderTransitionButton(d);
+      if(btnGroup) mountEl.appendChild(btnGroup);
+    }
   }
 }
 
@@ -5762,6 +5780,7 @@ window._obStart = function(){
 <script src="cockpit-engine.js"></script>
 <script src="analytics-engine.js"></script>
 <script src="reports-v4-engine.js"></script>
+<script src="transition-ui.js"></script>
 <script>
 // ── MOBILE SIDEBAR TOGGLE ───────────────────────────────────────
 window.toggleSidebar = function(force){
