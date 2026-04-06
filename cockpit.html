@@ -3251,10 +3251,28 @@ async function loadDealFullHistory(dealId){
 async function callIntelligenceAPI(dealData, requestType, extraContext){
   // Route via Edge Function (API key segura server-side)
   const sb = getSB();
+  if(!sb) throw new Error('Supabase não inicializado. Recarregue a página.');
+
   // Force session refresh to avoid stale JWT (expires after 1h)
-  if(sb){ try{ await sb.auth.refreshSession(); }catch(e){} }
-  const session = sb ? (await sb.auth.getSession()).data.session : null;
+  let session = null;
+  try {
+    const refreshResult = await sb.auth.refreshSession();
+    session = refreshResult.data && refreshResult.data.session;
+  } catch(e) { console.warn('refreshSession failed:', e); }
+
+  // Fallback: try getSession if refresh didn't return a session
+  if(!session){
+    try {
+      const getResult = await sb.auth.getSession();
+      session = getResult.data && getResult.data.session;
+    } catch(e) {}
+  }
+
   const jwt = session ? session.access_token : null;
+  if(!jwt){
+    // Session completely dead — force re-login
+    throw new Error('Sessão expirada. Clique em Configurações → Reconectar ou faça logout/login.');
+  }
 
   // Carrega histórico completo para enriquecer contexto
   const history = await loadDealFullHistory(dealData.deal_id);
@@ -3295,6 +3313,12 @@ async function callIntelligenceAPI(dealData, requestType, extraContext){
   clearTimeout(timeoutId);
   if(!resp.ok){
     const errBody = await resp.text().catch(()=>'');
+    if(resp.status===401){
+      throw new Error('Sessão expirada. Faça logout e login novamente.');
+    }
+    if(resp.status===403){
+      throw new Error('Operador não aprovado. Contate o admin para ativar seu acesso.');
+    }
     throw new Error('Elucy Inference ' + resp.status + ': ' + errBody.slice(0,200));
   }
   const result = await resp.json();
