@@ -6,15 +6,72 @@
 
 /* ── 1. TOKENS (Custom Properties) ──────────────────────── */
 
-:root{--bg:#04080f;--bg2:#080e18;--bg3:#0d1520;--bg4:#131d2b;--bg5:#1a2535;--border:rgba(255,255,255,.05);--border2:rgba(255,255,255,.10);--border3:rgba(255,255,255,.16);--accent:#f59e0b;--accent2:#fbbf24;--accent3:#fcd34d;--adim:rgba(245,158,11,.08);--aglow:rgba(245,158,11,.15);--aborder:rgba(245,158,11,.18);--aborder2:rgba(245,158,11,.30);--green:#10b981;--gdim:rgba(16,185,129,.10);--yellow:#fcd34d;--ydim:rgba(252,211,77,.10);--red:#ef4444;--rdim:rgba(239,68,68,.10);--blue:#0ea5e9;--bdim:rgba(14,165,233,.10);--clay:#d4956a;--claydim:rgba(212,149,106,.10);--gold:#f59e0b;--golddim:rgba(245,158,11,.10);--text:#f0f4ff;--text2:#8899aa;--text3:#445566;--r:12px;--r2:14px;--font-title:-apple-system,'SF Pro Display','Manrope',Inter,system-ui,sans-serif;--font-body:-apple-system,'SF Pro Text','Manrope',Inter,system-ui,sans-serif;--glass:rgba(255,255,255,.04);--glow:0 0 40px rgba(245,158,11,.08);--glow2:0 0 60px rgba(245,158,11,.12);--shadow-lg:0 8px 32px rgba(0,0,0,.6);--shadow-sm:0 2px 8px rgba(0,0,0,.3);
-/* ── TYPOGRAPHY SYSTEM v1 (lockado) ────────────────────────────── */
+:root{
+/* ── Brand Scale (Amber Mono-Tone) — Brand Book v1.0 ── */
+--amber-50:#fffbeb;--amber-100:#fef3c7;--amber-200:#fde68a;
+--amber-300:#fcd34d;--amber-400:#fbbf24;--amber-500:#f59e0b;
+--amber-600:#d97706;--amber-700:#b45309;--amber-800:#92400e;--amber-900:#78350f;
+
+/* ── Primary Accent ── */
+--accent:#ffc174;--accent-brand:#f59e0b;--accent2:#fbbf24;--accent3:#fcd34d;
+--adim:rgba(255,193,116,.10);--aglow:rgba(245,158,11,.15);
+--aborder:rgba(255,193,116,.20);--aborder2:rgba(245,158,11,.30);
+
+/* ── Surfaces (Dark Navy — Brand Book §02) ── */
+--bg:#0e141b;--bg2:#171c24;--bg3:#1b2028;--bg4:#252a32;--bg5:#2e343c;
+--glass:rgba(255,255,255,.03);
+
+/* ── Text (Warm Tone — Brand Book §02) ── */
+--text:#e8e0d6;--text2:#b0a898;--text3:#7a6f65;--text4:#4a4138;
+
+/* ── Semantic (apenas status — nunca identidade) ── */
+--green:#56e5a9;--gdim:rgba(86,229,169,.10);
+--yellow:#fcd34d;--ydim:rgba(252,211,77,.10);
+--red:#ef4444;--rdim:rgba(239,68,68,.10);
+--blue:#89ceff;--bdim:rgba(137,206,255,.10);
+
+/* ── Legacy aliases (compatibilidade) ── */
+--clay:#d4956a;--claydim:rgba(212,149,106,.10);
+--gold:#f59e0b;--golddim:rgba(245,158,11,.10);
+
+/* ── Borders ── */
+--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);--border3:rgba(255,255,255,.18);
+
+/* ── Radii — Brand Book §04 ── */
+--r:0.375rem;--r2:0.5rem;--r-xl:0.75rem;--r-2xl:1rem;--r-full:9999px;
+/* Cockpit-specific (containers maiores) */
+--r-card:12px;--r-card-lg:14px;
+
+/* ── Gradients — Brand Book v1.0 ── */
+--gradient-brand:linear-gradient(135deg,#f59e0b,#fbbf24);
+--gradient-cta:linear-gradient(135deg,#ffc174,#f59e0b);
+--gradient-text:linear-gradient(90deg,#f59e0b,#fcd34d,#fbbf24);
+--gradient-glow:linear-gradient(135deg,rgba(245,158,11,.12),rgba(251,191,36,.06));
+
+/* ── Typography — Brand Book §03 ── */
+--font-display:'Plus Jakarta Sans',Inter,system-ui,sans-serif;
+--font-body:'Inter',-apple-system,system-ui,sans-serif;
+/* Legacy alias */
+--font-title:var(--font-display);
+
+/* ── Shadows ── */
+--glow:0 0 40px rgba(245,158,11,.08);--glow2:0 0 60px rgba(245,158,11,.12);
+--shadow-lg:0 8px 32px rgba(0,0,0,.6);--shadow-sm:0 2px 8px rgba(0,0,0,.3);
+
+/* ── TYPOGRAPHY SYSTEM v2 ── */
 --fs-display:28px;--fs-h1:26px;--fs-h2:22px;--fs-h3:16px;--fs-body:13px;--fs-body-sm:12px;--fs-caption:11px;--fs-micro:9px;
 --fw-regular:400;--fw-medium:500;--fw-semibold:600;--fw-bold:700;--fw-xbold:800;--fw-black:900;
-/* ── SPACING SYSTEM v1 ──────────────────────────────────────────── */
---gap-xs:4px;--gap-sm:8px;--gap-md:12px;--gap-lg:16px;--gap-xl:18px;--gap-xxl:24px;
+
+/* ── SPACING SYSTEM v2 ── */
+--gap-xs:4px;--gap-sm:8px;--gap-md:12px;--gap-lg:16px;--gap-xl:20px;--gap-xxl:28px;
 --pad-card:12px;--pad-card-lg:16px;--pad-section:14px;--pad-section-lg:18px;
-/* ── LINE HEIGHT SYSTEM v1 ──────────────────────────────────────── */
---lh-tight:1.2;--lh-normal:1.4;--lh-body:1.6;}
+
+/* ── LINE HEIGHT SYSTEM v1 ── */
+--lh-tight:1.2;--lh-normal:1.4;--lh-body:1.6;
+
+/* ── Surface aliases (compat) ── */
+--surface:var(--bg2);--surface-mid:var(--bg3);--surface-high:var(--bg4);
+}
 
 
 
@@ -22,7 +79,7 @@
 
 *{margin:0;padding:0;box-sizing:border-box} a,button,.btn,.di,.card,.kpi,.task-card,.mo,.ntab,.rp-card,.pb-item,.home-task-item,.intel-dim,.fchip,.ft{transition:all .2s ease}
 
-body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:var(--fs-body);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;background-image:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(245,158,11,.06) 0%,transparent 70%),radial-gradient(ellipse 40% 30% at 90% 90%,rgba(14,165,233,.04) 0%,transparent 60%)}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:var(--fs-body);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;background-image:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(245,158,11,.06) 0%,transparent 70%),radial-gradient(ellipse 40% 30% at 85% 85%,rgba(245,158,11,.03) 0%,transparent 60%)}
 
 ::-webkit-scrollbar{width:6px}
 
@@ -108,21 +165,24 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 #sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
 
 /* ── TOPBAR ───────────────────────────────────────────────────── */
-#topbar{height:52px;background:rgba(4,8,15,.85);-webkit-backdrop-filter:saturate(180%) blur(24px);backdrop-filter:saturate(180%) blur(24px);border-bottom:1px solid var(--aborder);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0;z-index:10}
+#topbar{height:52px;background:rgba(14,20,27,.85);-webkit-backdrop-filter:saturate(180%) blur(24px);backdrop-filter:saturate(180%) blur(24px);border-bottom:1px solid var(--aborder);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0;z-index:10}
 
 .logo{display:flex;align-items:center;gap:8px;margin-right:12px}
 
-.logo-name{font-family:var(--font-title);font-size:var(--fs-h3);font-weight:var(--fw-xbold);color:#fff;text-transform:uppercase;letter-spacing:1.5px}
+/* Logo — display font + gradient text (Brand Book §01) */
+.logo-name{font-family:var(--font-display);font-size:var(--fs-h3);font-weight:var(--fw-black);background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-transform:uppercase;letter-spacing:1.5px}
 
-.logo-badge{background:var(--accent);color:#000;font-size:8px;font-weight:var(--fw-bold);padding:2px 6px;border-radius:4px;letter-spacing:1px;text-transform:uppercase;line-height:var(--lh-tight)}
+.logo-badge{background:var(--accent-brand);color:#0a0a0a;font-size:8px;font-weight:var(--fw-bold);padding:2px 6px;border-radius:4px;letter-spacing:1px;text-transform:uppercase;line-height:var(--lh-tight)}
 
-.logo-badge-ent{border:1.5px solid var(--accent);color:var(--accent);background:transparent;font-size:9px;font-weight:800;padding:2px 8px;border-radius:5px;letter-spacing:1.2px;text-transform:uppercase;line-height:1.4;font-family:var(--font-title)}
+.logo-badge-ent{border:1.5px solid var(--accent-brand);color:var(--accent-brand);background:transparent;font-size:9px;font-weight:800;padding:2px 8px;border-radius:5px;letter-spacing:1.2px;text-transform:uppercase;line-height:1.4;font-family:var(--font-display)}
 
-.ntab{padding:6px 14px;border-radius:20px;font-size:var(--fs-body-sm);color:var(--text2);cursor:pointer;transition:.2s;border:1px solid transparent;background:none;font-family:inherit;font-weight:var(--fw-medium)}
+/* Tabs topbar — Brand Book §08 */
+.ntab{padding:6px 14px;border-radius:var(--r-full);font-size:var(--fs-body-sm);color:var(--text3);cursor:pointer;transition:.2s;border:1px solid transparent;background:none;font-family:inherit;font-weight:var(--fw-medium)}
 
 .ntab:hover{color:var(--text);background:rgba(255,255,255,.06)}
 
-.ntab.on{color:#fff;background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.18);font-weight:var(--fw-semibold);box-shadow:0 0 12px rgba(255,255,255,.06)}
+/* Tab ativa: amber dim + borda amber (Brand Book §08) */
+.ntab.on{color:var(--accent);background:var(--adim);border-color:var(--aborder);font-weight:var(--fw-semibold);box-shadow:0 0 12px rgba(245,158,11,.08)}
 
 .tbr{margin-left:auto;display:flex;align-items:center;gap:10px}
 
@@ -245,16 +305,32 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 .streak-badge{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--text2);font-weight:600;display:inline-flex;align-items:center;gap:4px}
 
-.card{background:rgba(28,28,30,.8);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--r2);padding:18px;margin-bottom:14px;transition:.2s ease}
-.card:hover{border-color:var(--border2);box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.card{background:var(--glass);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid var(--border2);border-radius:var(--r-card);padding:18px;margin-bottom:14px;transition:.2s ease}
+.card:hover{border-color:var(--aborder);box-shadow:0 0 30px rgba(245,158,11,.06)}
 
-.sec-t{font-family:var(--font-body);font-size:var(--fs-body);font-weight:var(--fw-bold);color:#fff;letter-spacing:.2px}
+/* ── Deal Card — top accent bar (Brand Book §04) ── */
+.deal-card{background:var(--glass);border:1px solid var(--border2);border-radius:var(--r-card);padding:14px;margin-bottom:6px;transition:all .25s ease;border-top:2px solid var(--accent-brand);cursor:pointer}
+.deal-card:hover{border-color:var(--aborder);box-shadow:0 0 20px rgba(245,158,11,.08);transform:translateY(-1px)}
 
-.btn{padding:8px 15px;border-radius:var(--r);font-size:var(--fs-body-sm);font-weight:var(--fw-semibold);cursor:pointer;border:none;transition:.2s;display:inline-flex;align-items:center;gap:5px;font-family:inherit;text-decoration:none}
+/* ── Stat Value — gradient text (Brand Book §04) ── */
+.stat-value{font-family:var(--font-display);font-weight:var(--fw-black);background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.stat-label{font-size:var(--fs-caption);font-weight:var(--fw-bold);color:var(--text3);text-transform:uppercase;letter-spacing:.8px}
+.stat-delta-up{font-size:var(--fs-body-sm);font-weight:var(--fw-semibold);color:var(--green)}
+.stat-delta-down{font-size:var(--fs-body-sm);font-weight:var(--fw-semibold);color:var(--red)}
 
-.bp{background:var(--accent);color:#fff;box-shadow:none}
+.sec-t{font-family:var(--font-display);font-size:var(--fs-body);font-weight:var(--fw-bold);color:var(--text);letter-spacing:.2px}
 
-.bp:hover{background:#d97706;box-shadow:0 4px 20px rgba(245,158,11,.35);transform:translateY(-1px)}
+/* ── Buttons — Brand Book §04 ── */
+.btn{padding:8px 15px;border-radius:var(--r2);font-size:var(--fs-body-sm);font-weight:var(--fw-semibold);cursor:pointer;border:none;transition:all .25s ease;display:inline-flex;align-items:center;gap:5px;font-family:inherit;text-decoration:none}
+.btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+
+/* Primary — gradiente amber (Brand Book §04) */
+.bp{background:var(--gradient-brand);color:#0a0a0a;font-weight:var(--fw-bold);box-shadow:0 0 24px rgba(245,158,11,.25)}
+.bp:hover{box-shadow:0 0 40px rgba(245,158,11,.4);transform:translateY(-1px)}
+
+/* Ghost — borda sutil */
+.bs{background:transparent;color:var(--text);border:1px solid var(--border2)}
+.bs:hover{border-color:var(--aborder);background:rgba(245,158,11,.04)}
 
 .bs{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
 
@@ -276,7 +352,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 .btn-sm{padding:5px 9px;font-size:11px}
 
-.tag{padding:3px 7px;border-radius:4px;font-size:11px;font-weight:600;display:inline-block;background:var(--surface-mid);border:1px solid var(--border2)}
+/* ── Tags / Badges — Brand Book §04 ── */
+/* Categoria amber (padrão) */
+.tag{display:inline-flex;align-items:center;gap:4px;background:var(--adim);border:1px solid var(--aborder);border-radius:var(--r-full);padding:4px 12px;font-size:var(--fs-caption);font-weight:var(--fw-bold);color:var(--accent3)}
+/* Status semânticos */
+.tag-success{background:var(--gdim);border-color:rgba(86,229,169,.20);color:var(--green)}
+.tag-danger{background:var(--rdim);border-color:rgba(239,68,68,.20);color:var(--red)}
+.tag-info{background:var(--bdim);border-color:rgba(137,206,255,.20);color:var(--blue)}
+.tag-warning{background:var(--ydim);border-color:rgba(252,211,77,.20);color:var(--yellow)}
 
 .bar{background:var(--bg4);border-radius:4px;height:6px;overflow:hidden}
 
@@ -304,7 +387,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 .row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:10px;margin-bottom:4px}
 
-.sk-n{font-family:var(--font-body);font-size:var(--fs-h2);font-weight:var(--fw-xbold);color:var(--gold);text-align:center;line-height:var(--lh-tight);margin:3px 0}
+/* Stat number — gradient text (Brand Book §04) */
+.sk-n{font-family:var(--font-display);font-size:var(--fs-h2);font-weight:var(--fw-black);background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-align:center;line-height:var(--lh-tight);margin:3px 0}
 
 .sk-l{font-size:10px;color:var(--text2);text-align:center}
 
@@ -339,12 +423,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 .tab-count:empty{display:none}
 
-/* V3: Filter chips */
-.fchip{padding:4px 10px;border-radius:6px;font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.12s}
+/* V3: Filter chips — pill shape (Brand Book §08) */
+.fchip{padding:4px 10px;border-radius:var(--r-full);font-size:10px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.12s}
 
-.fchip:hover{border-color:var(--accent);color:var(--accent2)}
+.fchip:hover{border-color:var(--aborder);color:var(--accent2)}
 
-.fchip.on{background:var(--adim);border-color:var(--accent);color:var(--accent2);box-shadow:0 0 8px rgba(245,158,11,.12)}
+.fchip.on{background:var(--adim);border-color:var(--aborder);color:var(--accent3);box-shadow:0 0 8px rgba(245,158,11,.12)}
 
 .btn-on{background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important;box-shadow:0 2px 8px rgba(245,158,11,.25)}
 
@@ -662,7 +746,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 .home-strat-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;font-weight:700}
 
-.home-strat-value{font-size:16px;font-weight:800;line-height:1.2}
+/* Home stat values — gradient text (Brand Book §04) */
+.home-strat-value{font-family:var(--font-display);font-size:16px;font-weight:800;line-height:1.2;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 
 .home-strat-sub{font-size:10px;color:var(--text2);margin-top:2px}
 
@@ -1244,7 +1329,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 .intel-kpi{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:9px 10px;text-align:center}
 
-.intel-kpi-v{font-family:var(--font-body);font-size:20px;font-weight:800;line-height:1.2}
+/* Intel KPI values — gradient text (Brand Book §04) */
+.intel-kpi-v{font-family:var(--font-display);font-size:20px;font-weight:800;line-height:1.2;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 
 .intel-kpi-l{font-family:var(--font-body);font-size:10px;font-weight:500;color:var(--text2);margin-top:2px}
 
@@ -1557,13 +1643,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 .kpi-g{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
 
-.kpi{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:16px;transition:.15s}
+/* KPI cards — Brand Book §04 */
+.kpi{background:var(--glass);border:1px solid var(--border2);border-radius:var(--r-card);padding:16px;transition:.2s ease;border-top:2px solid var(--accent-brand)}
 
-.kpi:hover{background:var(--bg4);border-color:var(--border2);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.kpi:hover{border-color:var(--aborder);transform:translateY(-1px);box-shadow:0 0 24px rgba(245,158,11,.08)}
 
-.kpi-l{font-size:var(--fs-caption);color:var(--text2);margin-bottom:8px;letter-spacing:.3px}
+.kpi-l{font-size:var(--fs-caption);font-weight:var(--fw-bold);color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
 
-.kpi-v{font-size:var(--fs-h2);font-weight:var(--fw-xbold);margin-bottom:3px}
+/* KPI value — gradient text (Brand Book §04) */
+.kpi-v{font-family:var(--font-display);font-size:var(--fs-h2);font-weight:var(--fw-black);margin-bottom:3px;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 
 .kpi-loading{animation:shimmer 1.4s infinite;background:linear-gradient(90deg,var(--bg3) 25%,var(--bg4) 50%,var(--bg3) 75%);background-size:800px 100%}
 
@@ -1823,7 +1911,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 .auth-logo{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px}
 
-.auth-logo-name{font-family:var(--font-title);font-size:26px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:2.5px}
+/* Auth logo — display font + gradient (Brand Book §01) */
+.auth-logo-name{font-family:var(--font-display);font-size:26px;font-weight:900;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-transform:uppercase;letter-spacing:2.5px}
 
 .auth-logo-badge{border:1.5px solid var(--accent);color:var(--accent);background:transparent;font-size:10px;font-weight:800;padding:3px 10px;border-radius:5px;letter-spacing:1.2px;text-transform:uppercase;font-family:var(--font-title)}
 
@@ -1839,9 +1928,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 .auth-input::placeholder{color:var(--text2)}
 
-.auth-btn-main{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;transition:.15s;font-family:inherit}
+/* Auth CTA — gradiente (Brand Book §04) */
+.auth-btn-main{width:100%;padding:12px;background:var(--gradient-brand);color:#0a0a0a;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;transition:.25s;font-family:inherit;box-shadow:0 0 24px rgba(245,158,11,.25)}
 
-.auth-btn-main:hover{background:var(--accent2);transform:translateY(-1px)}
+.auth-btn-main:hover{box-shadow:0 0 40px rgba(245,158,11,.4);transform:translateY(-1px)}
 
 .auth-btn-main:disabled{opacity:.5;cursor:not-allowed;transform:none}
 
@@ -1978,7 +2068,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 .sbs{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 7px;text-align:center}
 
-.sbs-n{font-family:var(--font-body);font-size:var(--fs-h3);font-weight:var(--fw-xbold)}
+/* Sidebar stats — gradient text (Brand Book §04) */
+.sbs-n{font-family:var(--font-display);font-size:var(--fs-h3);font-weight:var(--fw-black);background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 
 .sbs-l{font-size:10px;color:var(--text2)}
 
@@ -2068,7 +2159,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 .lvl-xp{font-size:10px;color:var(--text2);text-align:center}
 
-.score-big{font-family:var(--font-body);font-size:var(--fs-display);font-weight:var(--fw-xbold);color:var(--accent2);text-align:center;line-height:var(--lh-tight);margin:3px 0}
+/* Score big — gradient text (Brand Book §04) */
+.score-big{font-family:var(--font-display);font-size:var(--fs-display);font-weight:var(--fw-black);background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-align:center;line-height:var(--lh-tight);margin:3px 0}
 
 .score-l{font-size:10px;color:var(--text2);text-align:center;font-family:var(--font-body)}
 
@@ -2159,7 +2251,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 .home-block{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px;margin-bottom:14px}
 
-.home-block-title{font-family:var(--font-title);font-size:var(--fs-body);font-weight:var(--fw-bold);color:var(--text);text-transform:uppercase;letter-spacing:1px;margin-bottom:var(--gap-md);display:flex;align-items:center;gap:var(--gap-sm)}
+/* Home block title — display font (Brand Book §03) */
+.home-block-title{font-family:var(--font-display);font-size:var(--fs-body);font-weight:var(--fw-bold);color:var(--text);text-transform:uppercase;letter-spacing:1px;margin-bottom:var(--gap-md);display:flex;align-items:center;gap:var(--gap-sm)}
 
 .home-count{background:var(--adim);color:var(--accent2);font-size:10px;font-weight:800;padding:2px 7px;border-radius:8px}
 
@@ -2203,7 +2296,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 .home-perf-kpi{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center}
 
-.home-perf-v{font-size:var(--fs-h2);font-weight:var(--fw-xbold);line-height:var(--lh-tight)}
+/* Home perf values — gradient text (Brand Book §04) */
+.home-perf-v{font-family:var(--font-display);font-size:var(--fs-h2);font-weight:var(--fw-black);line-height:var(--lh-tight);background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 
 .home-perf-l{font-size:10px;color:var(--text2);margin-top:3px}
 
@@ -2983,8 +3077,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 /* ── V1.0 Utility Classes (inline style replacements) ─── */
 
-/* Section titles */
-.section-title { font-size: 18px; font-weight: 800; color: var(--text); line-height: 1.2; margin-bottom: 3px }
+/* Section titles — display font (Brand Book §03) */
+.section-title { font-family: var(--font-display); font-size: 18px; font-weight: 800; color: var(--text); line-height: 1.2; margin-bottom: 3px }
 .section-sub { font-size: 12px; color: var(--text2) }
 
 /* Filter/form labels */
