@@ -979,12 +979,16 @@
     <li><a href="#skills" data-section="skills">Skills</a></li>
     <li><a href="#sinais" data-section="sinais">Sinais</a></li>
     <li><a href="#guardrails" data-section="guardrails">Governanca</a></li>
+    <li><a href="#como-frameworks" data-section="como-frameworks">Frameworks</a></li>
+    <li><a href="#cadencias" data-section="cadencias">Cadencias</a></li>
+    <li><a href="#features" data-section="features">Features</a></li>
+    <li><a href="#visao-qualitativa" data-section="visao-qualitativa">Qualitativo</a></li>
     <li><a href="#cockpit" data-section="cockpit">Cockpit</a></li>
     <li><a href="#closing" data-section="closing">Encerramento</a></li>
   </ul>
   <div class="nav-arrows">
     <button class="nav-arrow" id="btnPrev" title="Anterior (←)">&#8592;</button>
-    <span class="nav-counter" id="navCounter">1 / 10</span>
+    <span class="nav-counter" id="navCounter">1 / 14</span>
     <button class="nav-arrow" id="btnNext" title="Proximo (→)">&#8594;</button>
   </div>
 </nav>
@@ -1660,10 +1664,540 @@
 </section>
 
 <!-- ────────────────────────────────────────────────────────── -->
-<!-- 07 COCKPIT -->
+<!-- 09 COMO FUNCIONAM OS FRAMEWORKS -->
+<!-- ────────────────────────────────────────────────────────── -->
+<section id="como-frameworks" style="background: var(--dark);">
+  <div class="slide-num">09 / 14</div>
+  <div class="eyebrow">Frameworks de Venda — Como Funcionam</div>
+  <h2>O sistema le o deal.<br><span class="gold">Escolhe o framework.</span><br>Bloqueia o errado.</h2>
+  <p class="section-desc">Cada framework tem logica propria de deteccao, restricao e execucao. O Elucy nao deixa o operador escolher — ele determina automaticamente com base na persona detectada e bloqueia qualquer desvio.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;max-width:1100px;">
+
+    <!-- COLUNA ESQUERDA: como o sistema decide -->
+    <div>
+      <div class="eyebrow" style="margin-bottom:14px;">Como o Sistema Decide</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:28px;">
+        <div class="arch-layer" style="padding:16px 20px;border-left:3px solid var(--gold);">
+          <div class="arch-layer-num" style="width:70px;font-size:12px;">Passo 1</div>
+          <div class="arch-layer-desc"><strong style="color:var(--white);">Deteccao de Persona</strong> — O sistema cruza faturamento da empresa, cargo do contato e sinais de comportamento para classificar: Titan (CEO &gt;R$10MM), Builder (CEO R$1–10MM) ou Executor (Diretor/VP).</div>
+        </div>
+        <div class="arch-layer" style="padding:16px 20px;border-left:3px solid var(--builder);">
+          <div class="arch-layer-num" style="width:70px;font-size:12px;">Passo 2</div>
+          <div class="arch-layer-desc"><strong style="color:var(--white);">Atribuicao de Framework</strong> — Titan recebe Challenger automaticamente. Builder recebe SPICED. Executor recebe SPIN + Champion. Nenhuma excecao sem override explicito do gestor.</div>
+        </div>
+        <div class="arch-layer" style="padding:16px 20px;border-left:3px solid var(--executor);">
+          <div class="arch-layer-num" style="width:70px;font-size:12px;">Passo 3</div>
+          <div class="arch-layer-desc"><strong style="color:var(--white);">Kill Switch de Framework</strong> — Antes de qualquer output, o Iron Dome valida: framework correto para a persona detectada. Desvio = bloqueio imediato com instrucao de correcao ao operador.</div>
+        </div>
+        <div class="arch-layer" style="padding:16px 20px;border-left:3px solid var(--red);">
+          <div class="arch-layer-num" style="width:70px;font-size:12px;">Passo 4</div>
+          <div class="arch-layer-desc"><strong style="color:var(--white);">Output Calibrado</strong> — O conteudo gerado (copy, nota CRM, briefing) ja sai formatado com a linguagem do framework correto. O operador executa — nao adapta.</div>
+        </div>
+      </div>
+
+      <!-- Score de exemplo -->
+      <div class="eyebrow" style="margin-bottom:14px;">Exemplo Real de Score de Deal</div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:24px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--white);">Deal Score Consolidado</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">2 positivos · 4 negativos · Risco CRITICO</div>
+          </div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:40px;font-weight:800;color:var(--red);line-height:1;">−0.41</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(79,168,109,0.06);border:1px solid rgba(79,168,109,0.2);border-radius:3px;">
+            <span style="font-size:11px;font-weight:700;color:var(--green);width:16px;">+</span>
+            <span style="font-size:12px;color:var(--muted);flex:1;">Trusted Advisor alto</span>
+            <span style="font-size:11px;font-weight:600;color:var(--green);">+0.15</span>
+            <span style="font-size:10px;color:var(--muted2);border:1px solid var(--border2);border-radius:2px;padding:2px 6px;">Qualidade</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(79,168,109,0.06);border:1px solid rgba(79,168,109,0.2);border-radius:3px;">
+            <span style="font-size:11px;font-weight:700;color:var(--green);width:16px;">+</span>
+            <span style="font-size:12px;color:var(--muted);flex:1;">Score qualitativo alto (100%)</span>
+            <span style="font-size:11px;font-weight:600;color:var(--green);">+0.15</span>
+            <span style="font-size:10px;color:var(--muted2);border:1px solid var(--border2);border-radius:2px;padding:2px 6px;">Forecast</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(217,79,79,0.06);border:1px solid rgba(217,79,79,0.2);border-radius:3px;">
+            <span style="font-size:11px;font-weight:700;color:var(--red);width:16px;">−</span>
+            <span style="font-size:12px;color:var(--muted);flex:1;">Objecao de autoridade (nao resolvida)</span>
+            <span style="font-size:11px;font-weight:600;color:var(--red);">−0.38</span>
+            <span style="font-size:10px;color:var(--muted2);border:1px solid var(--border2);border-radius:2px;padding:2px 6px;">Comportamental</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(217,79,79,0.06);border:1px solid rgba(217,79,79,0.2);border-radius:3px;">
+            <span style="font-size:11px;font-weight:700;color:var(--red);width:16px;">−</span>
+            <span style="font-size:12px;color:var(--muted);flex:1;">Apenas continuacao sem compromisso</span>
+            <span style="font-size:11px;font-weight:600;color:var(--red);">−0.15</span>
+            <span style="font-size:10px;color:var(--muted2);border:1px solid var(--border2);border-radius:2px;padding:2px 6px;">Pipeline</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(217,79,79,0.06);border:1px solid rgba(217,79,79,0.2);border-radius:3px;">
+            <span style="font-size:11px;font-weight:700;color:var(--red);width:16px;">−</span>
+            <span style="font-size:12px;color:var(--muted);flex:1;">Baixa confianca de forecast (0%)</span>
+            <span style="font-size:11px;font-weight:600;color:var(--red);">−0.15</span>
+            <span style="font-size:10px;color:var(--muted2);border:1px solid var(--border2);border-radius:2px;padding:2px 6px;">Forecast</span>
+          </div>
+        </div>
+        <div class="block-rule" style="margin-top:14px;">
+          <div class="block-icon">⛔</div>
+          <div class="block-text"><strong>Acao bloqueada:</strong> Deal in Danger. Sistema recomenda Late-Stage Recovery Playbook antes de qualquer contato.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUNA DIREITA: o que cada framework faz na pratica -->
+    <div>
+      <div class="eyebrow" style="margin-bottom:14px;">O Que Cada Framework Faz na Pratica</div>
+
+      <!-- CHALLENGER -->
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:20px 24px;margin-bottom:12px;border-left:3px solid var(--titan);">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:var(--titan);letter-spacing:0.12em;background:rgba(201,168,76,0.12);padding:3px 10px;border-radius:2px;">CHALLENGER SALE</div>
+          <div style="font-size:11px;color:var(--muted);">Para Titans — CEO &gt; R$10MM</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+          <div style="background:var(--accent);border:1px solid var(--border2);border-radius:3px;padding:10px 12px;text-align:center;">
+            <div style="font-size:18px;font-weight:800;color:var(--gold);font-family:'Space Grotesk',sans-serif;">T</div>
+            <div style="font-size:11px;font-weight:600;color:var(--white);margin-top:4px;">Teach</div>
+            <div style="font-size:10px;color:var(--muted2);margin-top:2px;">Insight que provoca status quo</div>
+          </div>
+          <div style="background:var(--accent);border:1px solid var(--border2);border-radius:3px;padding:10px 12px;text-align:center;">
+            <div style="font-size:18px;font-weight:800;color:var(--gold);font-family:'Space Grotesk',sans-serif;">T</div>
+            <div style="font-size:11px;font-weight:600;color:var(--white);margin-top:4px;">Tailor</div>
+            <div style="font-size:10px;color:var(--muted2);margin-top:2px;">Calibrar para o contexto do CEO</div>
+          </div>
+          <div style="background:var(--accent);border:1px solid var(--border2);border-radius:3px;padding:10px 12px;text-align:center;">
+            <div style="font-size:18px;font-weight:800;color:var(--gold);font-family:'Space Grotesk',sans-serif;">T</div>
+            <div style="font-size:11px;font-weight:600;color:var(--white);margin-top:4px;">Take Control</div>
+            <div style="font-size:10px;color:var(--muted2);margin-top:2px;">Liderar a narrativa, nao perguntar</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6;padding:10px 14px;background:rgba(201,168,76,0.04);border-radius:3px;border:1px solid rgba(201,168,76,0.1);">Silencio pos-Challenger nao e stall — e tensao positiva. O sistema aguarda 48h sem follow-up automaticamente.</div>
+      </div>
+
+      <!-- SPICED -->
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:20px 24px;margin-bottom:12px;border-left:3px solid var(--builder);">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:var(--builder);letter-spacing:0.12em;background:rgba(251,191,36,0.12);padding:3px 10px;border-radius:2px;">SPICED</div>
+          <div style="font-size:11px;color:var(--muted);">Para Builders — CEO R$1–10MM</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px;">
+          <div style="background:var(--accent);border:1px solid var(--border2);border-radius:3px;padding:8px;text-align:center;"><div style="font-size:16px;font-weight:800;color:var(--builder);font-family:'Space Grotesk',sans-serif;">S</div><div style="font-size:9px;color:var(--muted2);margin-top:3px;">Situation</div></div>
+          <div style="background:var(--accent);border:1px solid var(--border2);border-radius:3px;padding:8px;text-align:center;"><div style="font-size:16px;font-weight:800;color:var(--builder);font-family:'Space Grotesk',sans-serif;">P</div><div style="font-size:9px;color:var(--muted2);margin-top:3px;">Problem</div></div>
+          <div style="background:var(--accent);border:1px solid var(--border2);border-radius:3px;padding:8px;text-align:center;"><div style="font-size:16px;font-weight:800;color:var(--builder);font-family:'Space Grotesk',sans-serif;">I</div><div style="font-size:9px;color:var(--muted2);margin-top:3px;">Impact</div></div>
+          <div style="background:var(--accent);border:1px solid var(--border2);border-radius:3px;padding:8px;text-align:center;"><div style="font-size:16px;font-weight:800;color:var(--builder);font-family:'Space Grotesk',sans-serif;">C</div><div style="font-size:9px;color:var(--muted2);margin-top:3px;">Critical Event</div></div>
+          <div style="background:var(--accent);border:1px solid var(--border2);border-radius:3px;padding:8px;text-align:center;"><div style="font-size:16px;font-weight:800;color:var(--builder);font-family:'Space Grotesk',sans-serif;">D</div><div style="font-size:9px;color:var(--muted2);margin-top:3px;">Decision</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6;padding:10px 14px;background:rgba(251,191,36,0.04);border-radius:3px;border:1px solid rgba(251,191,36,0.1);">Speed to Lead &lt;5min critico. Critical Event com data real = urgencia autentica. SPICED completo = ciclo 7–15 dias.</div>
+      </div>
+
+      <!-- SPIN + CHAMPION -->
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:20px 24px;border-left:3px solid var(--executor);">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;color:var(--executor);letter-spacing:0.12em;background:rgba(217,119,6,0.12);padding:3px 10px;border-radius:2px;">SPIN + CHAMPION</div>
+          <div style="font-size:11px;color:var(--muted);">Para Executores — Diretor/VP</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;">
+          <div style="background:var(--accent);border:1px solid var(--border2);border-radius:3px;padding:8px;text-align:center;"><div style="font-size:16px;font-weight:800;color:var(--executor);font-family:'Space Grotesk',sans-serif;">S</div><div style="font-size:9px;color:var(--muted2);margin-top:3px;">Situation</div></div>
+          <div style="background:var(--accent);border:1px solid var(--border2);border-radius:3px;padding:8px;text-align:center;"><div style="font-size:16px;font-weight:800;color:var(--executor);font-family:'Space Grotesk',sans-serif;">P</div><div style="font-size:9px;color:var(--muted2);margin-top:3px;">Problem</div></div>
+          <div style="background:var(--accent);border:1px solid var(--border2);border-radius:3px;padding:8px;text-align:center;"><div style="font-size:16px;font-weight:800;color:var(--executor);font-family:'Space Grotesk',sans-serif;">I</div><div style="font-size:9px;color:var(--muted2);margin-top:3px;">Implication</div></div>
+          <div style="background:var(--accent);border:1px solid var(--border2);border-radius:3px;padding:8px;text-align:center;"><div style="font-size:16px;font-weight:800;color:var(--executor);font-family:'Space Grotesk',sans-serif;">N</div><div style="font-size:9px;color:var(--muted2);margin-top:3px;">Need-Payoff</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6;padding:10px 14px;background:rgba(217,119,6,0.04);border-radius:3px;border:1px solid rgba(217,119,6,0.1);">Champion Selling: armar o Executor com argumento para vender internamente. Multi-thread obrigatorio. Objetivo final: chegar ao CEO.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<!-- 10 CADENCIAS -->
+<!-- ────────────────────────────────────────────────────────── -->
+<section id="cadencias" style="background: var(--black);">
+  <div class="slide-num">10 / 14</div>
+  <div class="eyebrow">Cadencias — Sistema de Tocadas</div>
+  <h2>Cada canal.<br><span class="gold">Cada passo.</span><br>Orquestrado.</h2>
+  <p class="section-desc">As cadencias do Elucy nao sao scripts. Sao flows estruturados com canais, timings e logica de saida. O operador executa o passo — o sistema define qual passo, quando e em qual canal.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;max-width:1100px;">
+
+    <!-- COLUNA ESQUERDA: Canais e estrutura -->
+    <div>
+      <div class="eyebrow" style="margin-bottom:14px;">Canais Ativos nas Cadencias</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px;">
+        <div style="background:var(--card);border:1px solid rgba(79,168,109,0.3);border-radius:4px;padding:16px 18px;">
+          <div style="font-size:20px;margin-bottom:8px;">📱</div>
+          <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px;">WhatsApp</div>
+          <div style="font-size:11px;color:var(--muted);">Canal principal. Copy gerado por Elucy calibrado por persona e founder mode.</div>
+        </div>
+        <div style="background:var(--card);border:1px solid rgba(201,168,76,0.3);border-radius:4px;padding:16px 18px;">
+          <div style="font-size:20px;margin-bottom:8px;">📞</div>
+          <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px;">Ligacao</div>
+          <div style="font-size:11px;color:var(--muted);">Script dinamico por framework. Briefing pre-call com sinais e contexto do deal.</div>
+        </div>
+        <div style="background:var(--card);border:1px solid rgba(14,165,233,0.3);border-radius:4px;padding:16px 18px;">
+          <div style="font-size:20px;margin-bottom:8px;">📸</div>
+          <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px;">Instagram DM</div>
+          <div style="font-size:11px;color:var(--muted);">Abordagem via perfil pessoal do founder proxy. Tom casual, sem mencao ao G4.</div>
+        </div>
+        <div style="background:var(--card);border:1px solid rgba(251,191,36,0.3);border-radius:4px;padding:16px 18px;">
+          <div style="font-size:20px;margin-bottom:8px;">💼</div>
+          <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px;">LinkedIn</div>
+          <div style="font-size:11px;color:var(--muted);">Conexao + mensagem profissional. Challenger para Titan. SPICED para Builder.</div>
+        </div>
+        <div style="background:var(--card);border:1px solid rgba(217,119,6,0.3);border-radius:4px;padding:16px 18px;grid-column:1/-1;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="font-size:20px;">✅</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:2px;">Tarefa Interna</div>
+              <div style="font-size:11px;color:var(--muted);">Acoes que o operador executa sem canal externo: pesquisa, atualizacao de CRM, revisao de proposta, preparo de reuniao.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:16px 20px;background:rgba(217,79,79,0.05);border:1px solid rgba(217,79,79,0.2);border-left:3px solid var(--red);border-radius:0 4px 4px 0;">
+        <div style="font-size:11px;font-weight:700;color:var(--red);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Canal Removido</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5;">Email nao faz parte das cadencias ativas. Alta taxa de ignore, baixo engajamento em B2B high-ticket. Foco em canais de resposta rapida.</div>
+      </div>
+    </div>
+
+    <!-- COLUNA DIREITA: Anatomia de um flow de cadencia -->
+    <div>
+      <div class="eyebrow" style="margin-bottom:14px;">Anatomia de um Flow — Exemplo: Builder Inbound</div>
+      <div style="display:flex;flex-direction:column;gap:0;">
+
+        <div style="display:flex;gap:0;align-items:stretch;">
+          <div style="display:flex;flex-direction:column;align-items:center;margin-right:16px;padding-top:4px;">
+            <div style="width:28px;height:28px;border-radius:50%;background:rgba(251,191,36,0.15);border:2px solid var(--builder);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--builder);flex-shrink:0;">1</div>
+            <div style="width:2px;flex:1;background:var(--border);margin-top:4px;"></div>
+          </div>
+          <div style="padding-bottom:20px;flex:1;">
+            <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px;">Lead In — Speed to Lead ativo</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.5;">WhatsApp. Janela de 5 min. Copy SPICED — primeira mensagem: pergunta situacional direta. Sem apresentacao institucional.</div>
+            <div style="display:inline-block;margin-top:6px;font-size:10px;font-weight:600;color:var(--builder);background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);padding:2px 8px;border-radius:2px;">D+0 · WhatsApp</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:0;align-items:stretch;">
+          <div style="display:flex;flex-direction:column;align-items:center;margin-right:16px;padding-top:4px;">
+            <div style="width:28px;height:28px;border-radius:50%;background:rgba(201,168,76,0.12);border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--gold);flex-shrink:0;">2</div>
+            <div style="width:2px;flex:1;background:var(--border);margin-top:4px;"></div>
+          </div>
+          <div style="padding-bottom:20px;flex:1;">
+            <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px;">Qualificacao SPICED</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.5;">DVL Gate aberto. SPICED preenchido com dados Databricks. Operador confirma Problem e Critical Event. DQI calculado.</div>
+            <div style="display:inline-block;margin-top:6px;font-size:10px;font-weight:600;color:var(--gold);background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);padding:2px 8px;border-radius:2px;">D+1 · Tarefa</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:0;align-items:stretch;">
+          <div style="display:flex;flex-direction:column;align-items:center;margin-right:16px;padding-top:4px;">
+            <div style="width:28px;height:28px;border-radius:50%;background:rgba(14,165,233,0.12);border:2px solid var(--blue);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--blue);flex-shrink:0;">3</div>
+            <div style="width:2px;flex:1;background:var(--border);margin-top:4px;"></div>
+          </div>
+          <div style="padding-bottom:20px;flex:1;">
+            <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px;">Engajamento por Impact</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.5;">Ligacao. Script gerado com Impact quantificado: custo de inacao em R$. Conversa em torno do Critical Event identificado.</div>
+            <div style="display:inline-block;margin-top:6px;font-size:10px;font-weight:600;color:var(--blue);background:rgba(14,165,233,0.08);border:1px solid rgba(14,165,233,0.2);padding:2px 8px;border-radius:2px;">D+3 · Ligacao</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:0;align-items:stretch;">
+          <div style="display:flex;flex-direction:column;align-items:center;margin-right:16px;padding-top:4px;">
+            <div style="width:28px;height:28px;border-radius:50%;background:rgba(79,168,109,0.12);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--green);flex-shrink:0;">4</div>
+            <div style="width:2px;flex:1;background:var(--border);margin-top:4px;"></div>
+          </div>
+          <div style="padding-bottom:20px;flex:1;">
+            <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px;">Follow-up Decisor</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.5;">WhatsApp. Mensagem curta com ancoragem no Critical Event. Proposta de data especifica. Decision mapping ativo.</div>
+            <div style="display:inline-block;margin-top:6px;font-size:10px;font-weight:600;color:var(--green);background:rgba(79,168,109,0.08);border:1px solid rgba(79,168,109,0.2);padding:2px 8px;border-radius:2px;">D+5 · WhatsApp</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:0;align-items:stretch;">
+          <div style="display:flex;flex-direction:column;align-items:center;margin-right:16px;padding-top:4px;">
+            <div style="width:28px;height:28px;border-radius:50%;background:rgba(217,79,79,0.12);border:2px solid var(--red);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--red);flex-shrink:0;">5</div>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px;">Hot Handoff ou Stall Recovery</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.5;">Se DQI &gt; 70: Hot Handoff gerado para o Closer. Se STALL detectado: Late-Stage Recovery Playbook ativado automaticamente.</div>
+            <div style="display:inline-block;margin-top:6px;font-size:10px;font-weight:600;color:var(--red);background:rgba(217,79,79,0.08);border:1px solid rgba(217,79,79,0.2);padding:2px 8px;border-radius:2px;">D+7 · Gate de saida</div>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="margin-top:20px;padding:16px 20px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:4px;">
+        <div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">DB-Driven — Sem Hardcode</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6;">Todos os flows vivem na tabela <code style="font-size:10px;background:var(--accent);padding:1px 4px;border-radius:2px;color:var(--gold);">flow_templates</code> com steps em <code style="font-size:10px;background:var(--accent);padding:1px 4px;border-radius:2px;color:var(--gold);">flow_template_steps</code>. Novos flows podem ser criados pelo gestor sem tocar no codigo.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<!-- 11 FEATURES — NOTA CRM E FUNCIONALIDADES -->
+<!-- ────────────────────────────────────────────────────────── -->
+<section id="features" style="background: var(--dark);">
+  <div class="slide-num">11 / 14</div>
+  <div class="eyebrow">Features — O Que o Cockpit Faz</div>
+  <h2>Cada feature existe<br><span class="gold">para remover fricao</span><br>do operador.</h2>
+  <p class="section-desc">As features do Elucy nao sao cosmeticas. Cada uma reduz um passo manual, elimina um dado incorreto ou acelera uma decisao que antes dependia do operador.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;max-width:1100px;">
+
+    <!-- COLUNA ESQUERDA: Nota CRM em destaque -->
+    <div>
+      <div class="eyebrow" style="margin-bottom:14px;">Nota CRM — Zero Alucinacao</div>
+      <div style="background:var(--card);border:1px solid rgba(201,168,76,0.3);border-radius:4px;padding:24px;margin-bottom:20px;">
+        <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:16px;">Como a Nota e Gerada</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div class="step-row" style="padding:10px 0;"><div class="step-n">01</div><div class="step-content"><h4>Coleta de Dados Real</h4><p>Databricks consultado: faturamento, cargo, historico de interacoes, produtos anteriores. Nada inventado.</p></div></div>
+          <div class="step-row" style="padding:10px 0;"><div class="step-n">02</div><div class="step-content"><h4>DVL Gate Confirmado</h4><p>Operador valida o que foi preenchido. Cada campo nao confirmado = [NAO DECLARADO] na nota final.</p></div></div>
+          <div class="step-row" style="padding:10px 0;"><div class="step-n">03</div><div class="step-content"><h4>output-schema.md Aplicado</h4><p>Schema de saida obrigatorio. Campos: empresa, persona, framework, DQI, sinais, proximo passo. Estrutura imutavel.</p></div></div>
+          <div class="step-row" style="padding:10px 0;border-bottom:none;"><div class="step-n">04</div><div class="step-content"><h4>Nota Inserida no CRM</h4><p>Formato padronizado. Linguagem tecnica para o Closer. Legivel por qualquer operador sem contexto adicional.</p></div></div>
+        </div>
+        <div style="margin-top:16px;padding:12px 16px;background:rgba(201,168,76,0.06);border-radius:3px;border:1px solid rgba(201,168,76,0.15);">
+          <div style="font-size:11px;color:var(--muted);line-height:1.6;"><span style="color:var(--gold);font-weight:600;">Regra absoluta:</span> nenhum campo de urgencia, escassez ou promessa de resultado pode ser gerado sem dado real verificavel no Databricks.</div>
+        </div>
+      </div>
+
+      <div class="eyebrow" style="margin-bottom:14px;">Hot Handoff — Briefing para o Closer</div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:20px 24px;">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span style="font-size:12px;color:var(--muted);">SPICED preenchido</span><span style="font-size:11px;color:var(--green);font-weight:600;">Completo</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span style="font-size:12px;color:var(--muted);">Sinais ativos e pesos</span><span style="font-size:11px;color:var(--green);font-weight:600;">Listados</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span style="font-size:12px;color:var(--muted);">DVL Score do deal</span><span style="font-size:11px;color:var(--gold);font-weight:600;">Exibido</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span style="font-size:12px;color:var(--muted);">Objecoes mapeadas</span><span style="font-size:11px;color:var(--gold);font-weight:600;">Com sugestao de resposta</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;">
+            <span style="font-size:12px;color:var(--muted);">Proximo passo</span><span style="font-size:11px;color:var(--green);font-weight:600;">Definido e datado</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUNA DIREITA: outras features -->
+    <div>
+      <div class="eyebrow" style="margin-bottom:14px;">Outras Features do Cockpit</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:18px 20px;border-left:3px solid var(--gold);">
+          <div style="display:flex;align-items:flex-start;gap:14px;">
+            <div style="font-size:22px;flex-shrink:0;">📊</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px;">DVL Gate — Dynamic Validation Layer</div>
+              <div style="font-size:12px;color:var(--muted);line-height:1.5;">Form interativo pre-preenchido com dados do Databricks. O operador confirma ou edita antes de qualquer output ser gerado. Bloqueia alucinacao na origem.</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:18px 20px;border-left:3px solid var(--builder);">
+          <div style="display:flex;align-items:flex-start;gap:14px;">
+            <div style="font-size:22px;flex-shrink:0;">🧠</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px;">Intelligence Layer — 6 Analises por IA</div>
+              <div style="font-size:12px;color:var(--muted);line-height:1.5;">Pipeline Analytics, Forecast Deep, Data Quality Report, Operator Performance, Copy Optimization, Deal Comparison. Gerados sob demanda com um clique.</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:18px 20px;border-left:3px solid var(--green);">
+          <div style="display:flex;align-items:flex-start;gap:14px;">
+            <div style="font-size:22px;flex-shrink:0;">🎮</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px;">Gamificacao SDR</div>
+              <div style="font-size:12px;color:var(--muted);line-height:1.5;">5 niveis, 8 badges, streak de validacoes. Recruta → Arquiteto de Receita. DQI medio como metrica de progresso. Qualidade vira jogo competitivo.</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:18px 20px;border-left:3px solid var(--blue);">
+          <div style="display:flex;align-items:flex-start;gap:14px;">
+            <div style="font-size:22px;flex-shrink:0;">💬</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px;">Chat Nativo WhatsApp / Instagram</div>
+              <div style="font-size:12px;color:var(--muted);line-height:1.5;">Inbox unificado. Botao "Inserir Copy Elucy" gera mensagem calibrada em 1 clique. Historico CRM visivel. Realtime via Supabase.</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:18px 20px;border-left:3px solid var(--executor);">
+          <div style="display:flex;align-items:flex-start;gap:14px;">
+            <div style="font-size:22px;flex-shrink:0;">📋</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px;">Playbooks Contextuais</div>
+              <div style="font-size:12px;color:var(--muted);line-height:1.5;">6 playbooks: Perfect Storm, Late-Stage Recovery, Ghost, Executor to CEO, FUP Founder DM, Downsell Honesto. Ativados automaticamente por condicao de deal.</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:18px 20px;border-left:3px solid var(--red);">
+          <div style="display:flex;align-items:flex-start;gap:14px;">
+            <div style="font-size:22px;flex-shrink:0;">⚔</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px;">Iron Dome — Auditoria Completa</div>
+              <div style="font-size:12px;color:var(--muted);line-height:1.5;">Verifica os 6 kill switches antes de qualquer acao critica. Framework x Persona, Tier x Produto, Black Box, DQI, Anti-Alucinacao, Latencia. Nao ha override silencioso.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<!-- 12 VISAO QUALITATIVA — METODOLOGIA DE SCORE PARA O CRO -->
+<!-- ────────────────────────────────────────────────────────── -->
+<section id="visao-qualitativa" style="background: var(--black);">
+  <div class="slide-num">12 / 14</div>
+  <div class="eyebrow">Visao Qualitativa — Metodologia de Score</div>
+  <h2>O funil visto<br><span class="gold">pelo CRO.</span><br>Qualidade, nao volume.</h2>
+  <p class="section-desc">A visao qualitativa e como o CRO enxerga o pipeline alem dos numeros brutos. Cada deal carrega um score qualitativo multidimensional que revela saude real, riscos ocultos e probabilidade de conversao.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;max-width:1100px;">
+
+    <!-- COLUNA ESQUERDA: Pentagon Score -->
+    <div>
+      <div class="eyebrow" style="margin-bottom:14px;">Pentagon Score — 5 Dimensoes</div>
+      <div style="background:var(--card);border:1px solid rgba(201,168,76,0.25);border-radius:4px;padding:24px;margin-bottom:20px;">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+
+          <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--accent);border-radius:3px;border:1px solid var(--border2);">
+            <div style="width:36px;height:36px;border-radius:50%;background:rgba(201,168,76,0.12);border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--gold);flex-shrink:0;">D1</div>
+            <div style="flex:1;">
+              <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:2px;">ICP Fit</div>
+              <div style="font-size:11px;color:var(--muted);">O lead esta dentro do Ideal Customer Profile? Faturamento, setor, cargo e momento corretos.</div>
+            </div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--gold);">0–100</div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--accent);border-radius:3px;border:1px solid var(--border2);">
+            <div style="width:36px;height:36px;border-radius:50%;background:rgba(251,191,36,0.12);border:2px solid var(--builder);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--builder);flex-shrink:0;">D2</div>
+            <div style="flex:1;">
+              <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:2px;">Frame Integrity</div>
+              <div style="font-size:11px;color:var(--muted);">O framework correto foi aplicado? Challenger com Titan, SPICED com Builder, SPIN com Executor?</div>
+            </div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--builder);">0–100</div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--accent);border-radius:3px;border:1px solid var(--border2);">
+            <div style="width:36px;height:36px;border-radius:50%;background:rgba(79,168,109,0.12);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--green);flex-shrink:0;">D3</div>
+            <div style="flex:1;">
+              <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:2px;">State Timing</div>
+              <div style="font-size:11px;color:var(--muted);">O deal esta no momento certo do ciclo? Ha urgencia real e Critical Event mapeado?</div>
+            </div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--green);">0–100</div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--accent);border-radius:3px;border:1px solid var(--border2);">
+            <div style="width:36px;height:36px;border-radius:50%;background:rgba(14,165,233,0.12);border:2px solid var(--blue);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--blue);flex-shrink:0;">D4</div>
+            <div style="flex:1;">
+              <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:2px;">Ecosystem Protection</div>
+              <div style="font-size:11px;color:var(--muted);">O deal nao prejudica a sala? Tier correto para o produto. Sem venda errada que danifica a experiencia coletiva.</div>
+            </div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--blue);">0–100</div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--accent);border-radius:3px;border:1px solid var(--border2);">
+            <div style="width:36px;height:36px;border-radius:50%;background:rgba(217,119,6,0.12);border:2px solid var(--executor);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--executor);flex-shrink:0;">D5</div>
+            <div style="flex:1;">
+              <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:2px;">Data Density</div>
+              <div style="font-size:11px;color:var(--muted);">Os campos criticos foram preenchidos com dado real? Quanto do deal e [NAO DECLARADO] vs dado confirmado?</div>
+            </div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--executor);">0–100</div>
+          </div>
+
+        </div>
+
+        <div style="margin-top:16px;padding:14px 18px;background:linear-gradient(135deg,rgba(201,168,76,0.08),rgba(201,168,76,0.03));border:1px solid rgba(201,168,76,0.2);border-radius:3px;display:flex;align-items:center;gap:16px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:36px;font-weight:800;color:var(--gold);flex-shrink:0;">DQI</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px;">Decision Quality Index</div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.5;">Media ponderada das 5 dimensoes. Uma nao-venda correta (DQI alto) vale mais que uma venda errada (DQI baixo). Esta e a metrica soberana do Elucy.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUNA DIREITA: Como o CRO usa isso -->
+    <div>
+      <div class="eyebrow" style="margin-bottom:14px;">Como o CRO Usa a Visao Qualitativa</div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px;">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:18px 20px;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+            <div style="font-size:20px;">🔎</div>
+            <div style="font-size:13px;font-weight:700;color:var(--white);">Auditoria de Pipeline Real</div>
+          </div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6;">Filtrar deals por DQI medio por operador. Identificar quem esta qualificando bem vs. quem esta empurrando volume baixo. A taxa de conversao da equipe reflete o DQI medio dos deals.</div>
+        </div>
+
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:18px 20px;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+            <div style="font-size:20px;">📈</div>
+            <div style="font-size:13px;font-weight:700;color:var(--white);">Forecast Confiavel</div>
+          </div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6;">Receita ponderada nao e apenas deal_value x probabilidade. E deal_value x DQI x sinais positivos. Deal com DQI 40 e sinal STALL vale menos que deal com DQI 85 e sinal BUY — mesmo valor nominal igual.</div>
+        </div>
+
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:18px 20px;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+            <div style="font-size:20px;">⚡</div>
+            <div style="font-size:13px;font-weight:700;color:var(--white);">Intervencao Cirurgica</div>
+          </div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6;">O CRO ve em qual dimensao do Pentagon Score os deals estao perdendo pontos. Se Data Density e baixo em toda a equipe, o problema e treinamento de DVL. Se Frame Integrity cai, o problema e deteccao de persona.</div>
+        </div>
+
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:18px 20px;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+            <div style="font-size:20px;">🏆</div>
+            <div style="font-size:13px;font-weight:700;color:var(--white);">Gestao por Qualidade, Nao Volume</div>
+          </div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6;">Meta de DQI medio &gt; 75 por operador substitui meta de "X qualificacoes por dia". Operador que faz 5 qualificacoes com DQI 85 e melhor que operador que faz 20 com DQI 40. Sala preservada.</div>
+        </div>
+      </div>
+
+      <!-- Score Qualitativo vs Confiança -->
+      <div class="eyebrow" style="margin-bottom:14px;">Score Qualitativo vs Confianca de Forecast</div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:20px 24px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+          <div style="text-align:center;padding:16px;background:rgba(79,168,109,0.06);border:1px solid rgba(79,168,109,0.2);border-radius:3px;">
+            <div style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--green);margin-bottom:8px;">Score Qualitativo Alto</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:800;color:var(--green);">100%</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Sinais de compra claros, persona certa, framework correto. Deal saudavel mesmo sem urgencia imediata.</div>
+          </div>
+          <div style="text-align:center;padding:16px;background:rgba(217,79,79,0.06);border:1px solid rgba(217,79,79,0.2);border-radius:3px;">
+            <div style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--red);margin-bottom:8px;">Confianca de Forecast</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:800;color:var(--red);">0%</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Objecao de autoridade aberta + sem compromisso. Nao entra no forecast ate resolucao confirmada.</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6;padding:12px 16px;background:rgba(201,168,76,0.04);border-radius:3px;border:1px solid rgba(201,168,76,0.12);">
+          <span style="color:var(--gold);font-weight:600;">Insight para o CRO:</span> Score qualitativo alto + confianca 0% = deal promissor travado por objecao especifica. Nao e perda — e oportunidade de intervencao cirurgica com argumento de autoridade.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<!-- 13 COCKPIT -->
 <!-- ────────────────────────────────────────────────────────── -->
 <section id="cockpit" style="background: var(--black);">
-  <div class="slide-num">09 / 10</div>
+  <div class="slide-num">13 / 14</div>
   <div class="eyebrow">Elucy Cockpit</div>
   <h2>O painel de comando<br><span class="gold">do operador.</span></h2>
   <p class="section-desc">
@@ -1932,7 +2466,7 @@
 <section id="closing">
   <div class="hero-bg"></div>
   <div class="hero-grid" style="opacity: 0.15;"></div>
-  <div class="slide-num" style="top: 80px; right: 80px; position: absolute;">10 / 10</div>
+  <div class="slide-num" style="top: 80px; right: 80px; position: absolute;">14 / 14</div>
 
   <div style="position: relative; z-index: 1; text-align: center; max-width: 700px;">
     <div class="closing-logo">ELUCY</div>
@@ -1985,7 +2519,7 @@
 
 <script>
 (function() {
-  const SECTIONS = ['hero','sistema','perfis','frameworks','mcps','skills','sinais','guardrails','cockpit','closing'];
+  const SECTIONS = ['hero','sistema','perfis','frameworks','mcps','skills','sinais','guardrails','como-frameworks','cadencias','features','visao-qualitativa','cockpit','closing'];
   let current = 0;
 
   function goTo(idx) {
