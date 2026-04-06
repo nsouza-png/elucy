@@ -8,19 +8,21 @@
 <link rel="shortcut icon" href="favicon-e.svg?v=4">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  /* Apple Design System — Dark */
-  --bg:#000;--bg2:#0a0a0a;--bg3:#1c1c1e;--bg4:#2c2c2e;
-  --surface:rgba(28,28,30,.65);--surface-elevated:rgba(44,44,46,.55);
+  /* Design System v14 — Brand Book Aligned */
+  --bg:#0e141b;--bg2:#171c24;--bg3:#1b2028;--bg4:#252a32;
+  --surface:rgba(27,32,40,.65);--surface-elevated:rgba(37,42,50,.55);
   --border:rgba(255,255,255,.06);--border2:rgba(255,255,255,.12);--border-focus:rgba(245,158,11,.5);
-  --accent:#f59e0b;--accent2:#fbbf24;--accent-glow:rgba(245,158,11,.12);
+  --accent:#f59e0b;--accent2:#fbbf24;--warm-accent:#ffc174;--accent-glow:rgba(245,158,11,.12);
+  --gradient-text:linear-gradient(90deg,#f59e0b,#fcd34d,#fbbf24);
   --green:#30d158;--yellow:#ffd60a;--red:#ff453a;
-  --text:#f5f5f7;--text2:#86868b;--text3:#48484a;
+  --text:#e8e0d6;--text2:#b0a898;--text3:#7a6f65;
   --r:14px;--r2:18px;--r3:24px;--r-pill:100px;
-  --font:-apple-system,'SF Pro Display','Manrope',Inter,system-ui,sans-serif;
+  --font-display:'Plus Jakarta Sans',Inter,system-ui,sans-serif;
+  --font:-apple-system,'SF Pro Text','Plus Jakarta Sans',Inter,system-ui,sans-serif;
   /* Elevation */
   --shadow-sm:0 2px 8px rgba(0,0,0,.3);--shadow-md:0 4px 16px rgba(0,0,0,.4);--shadow-lg:0 8px 32px rgba(0,0,0,.55);--shadow-xl:0 16px 48px rgba(0,0,0,.65);
   --blur-sm:saturate(180%) blur(12px);--blur-md:saturate(180%) blur(20px);--blur-lg:saturate(180%) blur(40px);
@@ -62,7 +64,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
 .topbar{height:52px;display:flex;align-items:center;padding:0 var(--sp-6);border-bottom:1px solid var(--border);background:rgba(0,0,0,.5);-webkit-backdrop-filter:var(--blur-md);backdrop-filter:var(--blur-md);flex-shrink:0;position:sticky;top:0;z-index:10;transition:background var(--dur-normal) var(--ease-smooth)}
 .logo{display:flex;align-items:center;gap:var(--sp-3)}
 .logo-mark{width:28px;height:28px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;color:#fff;letter-spacing:1px;box-shadow:0 2px 8px rgba(245,158,11,.25)}
-.logo-text{font-size:15px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase}
+.logo-text{font-family:var(--font-display);font-size:15px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase}
 .logo-badge{background:var(--accent);color:#fff;font-size:8px;font-weight:700;padding:2px 7px;border-radius:5px;letter-spacing:1px;margin-left:2px;box-shadow:0 1px 4px rgba(245,158,11,.3)}
 .topbar-right{margin-left:auto;display:flex;align-items:center;gap:var(--sp-4)}
 .top-link{font-size:12px;color:var(--text2);text-decoration:none;font-weight:500;transition:color var(--dur-fast) var(--ease-smooth);cursor:pointer;letter-spacing:.02em}
@@ -76,7 +78,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
 .hero-eyebrow{display:inline-flex;align-items:center;gap:var(--sp-2);padding:6px 18px;border-radius:var(--r-pill);border:1px solid var(--border2);background:rgba(245,158,11,.05);margin-bottom:var(--sp-6);font-size:11px;font-weight:600;color:var(--accent2);letter-spacing:.5px;-webkit-backdrop-filter:var(--blur-sm);backdrop-filter:var(--blur-sm)}
 .hero-eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-.hero h1{font-size:52px;font-weight:900;line-height:1.06;letter-spacing:-1.5px;margin-bottom:var(--sp-5);background:linear-gradient(135deg,#fff 20%,rgba(255,255,255,.85) 40%,var(--accent2) 75%,var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:heroIn var(--dur-slow) var(--ease-out)}
+.hero h1{font-family:var(--font-display);font-size:52px;font-weight:900;line-height:1.06;letter-spacing:-1.5px;margin-bottom:var(--sp-5);background:linear-gradient(135deg,#fff 20%,rgba(255,255,255,.85) 40%,var(--accent2) 75%,var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:heroIn var(--dur-slow) var(--ease-out)}
 @keyframes heroIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 .hero-sub{font-size:18px;color:var(--text2);line-height:1.65;max-width:620px;margin:0 auto var(--sp-7);font-weight:400;animation:heroIn .5s var(--ease-out) .1s both}
 .hero-sub strong{color:var(--text);font-weight:600}
@@ -95,7 +97,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
 .metric:hover{border-color:var(--border2);background:var(--surface-elevated);transform:translateY(-3px);box-shadow:var(--shadow-md)}
 .metric::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:32px;height:2px;background:var(--accent);border-radius:0 0 2px 2px;opacity:.4;transition:width var(--dur-normal) var(--ease-spring)}
 .metric:hover::before{width:64px;opacity:.7}
-.metric-val{font-size:34px;font-weight:900;line-height:1;margin-bottom:var(--sp-2);letter-spacing:-1.5px}
+.metric-val{font-family:var(--font-display);font-size:34px;font-weight:900;line-height:1;margin-bottom:var(--sp-2);letter-spacing:-1.5px}
 .metric-val.blue{color:var(--accent2)}.metric-val.green{color:var(--green)}.metric-val.yellow{color:var(--yellow)}.metric-val.red{color:var(--red)}.metric-val.white{color:#fff}
 .metric-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:var(--sp-1)}
 .metric-sub{font-size:11px;color:var(--text3);font-weight:500}
@@ -123,7 +125,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
 .engine-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);padding:var(--sp-7);display:flex;gap:var(--sp-7);align-items:center;-webkit-backdrop-filter:var(--blur-sm);backdrop-filter:var(--blur-sm);box-shadow:var(--shadow-sm)}
 .engine-left{flex:1}
 .engine-label{font-size:10px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:2.5px;margin-bottom:var(--sp-3)}
-.engine h2{font-size:28px;font-weight:800;line-height:1.15;margin-bottom:var(--sp-3);letter-spacing:-.5px}
+.engine h2{font-family:var(--font-display);font-size:28px;font-weight:800;line-height:1.15;margin-bottom:var(--sp-3);letter-spacing:-.5px}
 .engine p{font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:var(--sp-5)}
 .engine-layers{display:flex;flex-direction:column;gap:var(--sp-2)}
 .engine-layer{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-2) var(--sp-3);background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:var(--r);transition:all var(--dur-fast) var(--ease-smooth)}
@@ -137,12 +139,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
 .viz-ring{width:160px;height:160px;margin:0 auto var(--sp-4);position:relative}
 .viz-ring svg{width:100%;height:100%}
 .viz-ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.viz-ring-val{font-size:38px;font-weight:900;color:var(--accent2);line-height:1}
+.viz-ring-val{font-family:var(--font-display);font-size:38px;font-weight:900;color:var(--accent2);line-height:1}
 .viz-ring-lbl{font-size:10px;color:var(--text2);margin-top:2px;font-weight:600}
 .viz-stats{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-2)}
 .viz-stat{text-align:center;padding:var(--sp-2);background:rgba(255,255,255,.02);border-radius:var(--r);transition:background var(--dur-fast) var(--ease-smooth)}
 .viz-stat:hover{background:rgba(255,255,255,.05)}
-.viz-stat-val{font-size:17px;font-weight:800;line-height:1}
+.viz-stat-val{font-family:var(--font-display);font-size:17px;font-weight:800;line-height:1}
 .viz-stat-lbl{font-size:9px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.5px}
 
 /* ── FOOTER ──────────────────────────────────────────────── */
