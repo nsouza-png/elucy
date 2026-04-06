@@ -78,50 +78,51 @@
     align-items: center;
   }
 
+  .nav-links li {
+    position: relative;
+  }
+
   .nav-links li a {
     display: block;
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
     background: var(--muted2);
-    transition: background 0.2s, transform 0.2s, width 0.25s;
-    text-indent: -9999px;
-    overflow: hidden;
-    position: relative;
+    transition: background 0.2s, transform 0.2s;
+    font-size: 0; /* hide text without text-indent trick */
+    color: transparent;
+    /* NO overflow:hidden — tooltip precisa vazar */
   }
 
   .nav-links li a:hover,
   .nav-links li a.active {
     background: var(--gold);
-    transform: scale(1.4);
+    transform: scale(1.5);
   }
 
-  /* Tooltip com nome da secao */
-  .nav-links li {
-    position: relative;
-  }
-  .nav-links li a::after {
+  /* Tooltip com nome da secao — no li, nao no a */
+  .nav-links li::after {
     content: attr(data-label);
     position: absolute;
-    bottom: calc(100% + 8px);
+    bottom: calc(100% + 10px);
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(14,20,27,0.95);
+    background: rgba(14,20,27,0.97);
     border: 1px solid var(--border2);
     color: var(--white);
     font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    text-indent: 0;
     white-space: nowrap;
-    padding: 4px 10px;
+    padding: 5px 10px;
     border-radius: 3px;
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.15s;
+    z-index: 200;
   }
-  .nav-links li a:hover::after { opacity: 1; }
+  .nav-links li:hover::after { opacity: 1; }
 
   /* ── SECTIONS ── */
   section {
@@ -1013,25 +1014,26 @@
     <div id="navSectionName" style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);white-space:nowrap;"></div>
   </div>
   <ul class="nav-links">
-    <li><a href="#hero" data-section="hero" data-label="Visao Geral" class="active">Visao Geral</a></li>
-    <li><a href="#sistema" data-section="sistema" data-label="Sistema">Sistema</a></li>
-    <li><a href="#perfis" data-section="perfis" data-label="Perfis">Perfis</a></li>
-    <li><a href="#frameworks" data-section="frameworks" data-label="Frameworks">Frameworks</a></li>
-    <li><a href="#mcps" data-section="mcps" data-label="MCPs">MCPs</a></li>
-    <li><a href="#skills" data-section="skills" data-label="Skills">Skills</a></li>
-    <li><a href="#sinais" data-section="sinais" data-label="Sinais">Sinais</a></li>
-    <li><a href="#guardrails" data-section="guardrails" data-label="Governanca">Governanca</a></li>
-    <li><a href="#como-frameworks" data-section="como-frameworks" data-label="Como Funciona">Como Funciona</a></li>
-    <li><a href="#cadencias" data-section="cadencias" data-label="Cadencias">Cadencias</a></li>
-    <li><a href="#features" data-section="features" data-label="Features">Features</a></li>
-    <li><a href="#visao-qualitativa" data-section="visao-qualitativa" data-label="Visao Qualitativa">Visao Qualitativa</a></li>
-    <li><a href="#cro-intelligence" data-section="cro-intelligence" data-label="CRO Intelligence">CRO Intelligence</a></li>
-    <li><a href="#cockpit" data-section="cockpit" data-label="Cockpit">Cockpit</a></li>
-    <li><a href="#closing" data-section="closing" data-label="Encerramento">Encerramento</a></li>
+    <li data-label="01 Visao Geral"><a href="#hero" data-section="hero" class="active"></a></li>
+    <li data-label="02 Sistema"><a href="#sistema" data-section="sistema"></a></li>
+    <li data-label="03 Perfis"><a href="#perfis" data-section="perfis"></a></li>
+    <li data-label="04 Frameworks"><a href="#frameworks" data-section="frameworks"></a></li>
+    <li data-label="05 MCPs"><a href="#mcps" data-section="mcps"></a></li>
+    <li data-label="06 Skills"><a href="#skills" data-section="skills"></a></li>
+    <li data-label="07 Sinais"><a href="#sinais" data-section="sinais"></a></li>
+    <li data-label="08 Governanca"><a href="#guardrails" data-section="guardrails"></a></li>
+    <li data-label="09 Como Funciona"><a href="#como-frameworks" data-section="como-frameworks"></a></li>
+    <li data-label="10 Cadencias"><a href="#cadencias" data-section="cadencias"></a></li>
+    <li data-label="11 Features"><a href="#features" data-section="features"></a></li>
+    <li data-label="12 Visao Qualitativa"><a href="#visao-qualitativa" data-section="visao-qualitativa"></a></li>
+    <li data-label="13 CRO Intelligence"><a href="#cro-intelligence" data-section="cro-intelligence"></a></li>
+    <li data-label="14 Dashboard CRO"><a href="#cro-dashboard" data-section="cro-dashboard"></a></li>
+    <li data-label="15 Cockpit"><a href="#cockpit" data-section="cockpit"></a></li>
+    <li data-label="16 Encerramento"><a href="#closing" data-section="closing"></a></li>
   </ul>
   <div class="nav-arrows">
     <button class="nav-arrow" id="btnPrev" title="Anterior (←)">&#8592;</button>
-    <span class="nav-counter" id="navCounter">1 / 15</span>
+    <span class="nav-counter" id="navCounter">1 / 16</span>
     <button class="nav-arrow" id="btnNext" title="Proximo (→)">&#8594;</button>
   </div>
 </nav>
@@ -2729,10 +2731,263 @@
 </section>
 
 <!-- ────────────────────────────────────────────────────────── -->
-<!-- 14 COCKPIT -->
+<!-- 14 DASHBOARD CRO — REALIDADE DA RECEITA -->
+<!-- ────────────────────────────────────────────────────────── -->
+<section id="cro-dashboard" style="background: var(--black); padding: 76px 48px 48px;">
+  <div class="slide-num">14 / 16</div>
+  <div class="eyebrow" style="margin-bottom:8px;">Dashboard CRO — Realidade da Receita</div>
+  <h2 style="font-size:clamp(22px,2.8vw,34px);margin-bottom:24px;">Quanto dinheiro é <span class="gold">real?</span></h2>
+
+  <!-- ROW 1: Header KPIs -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:1200px;margin-bottom:16px;">
+    <div style="background:linear-gradient(135deg,rgba(201,168,76,0.1),rgba(201,168,76,0.03));border:1px solid rgba(201,168,76,0.3);border-radius:4px;padding:16px 20px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;">Pipeline Bruto</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:800;color:var(--muted);line-height:1;text-decoration:line-through;">R$2.0M</div>
+      <div style="font-size:11px;color:var(--muted2);margin-top:6px;">100% declarado pelos SDRs</div>
+    </div>
+    <div style="background:linear-gradient(135deg,rgba(79,168,109,0.1),rgba(79,168,109,0.03));border:1px solid rgba(79,168,109,0.3);border-radius:4px;padding:16px 20px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;">Pipeline Ponderado</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:800;color:var(--green);line-height:1;">R$1.1M</div>
+      <div style="font-size:11px;color:var(--muted2);margin-top:6px;">Pós DQI × sinais ativos</div>
+    </div>
+    <div style="background:linear-gradient(135deg,rgba(14,165,233,0.1),rgba(14,165,233,0.03));border:1px solid rgba(14,165,233,0.3);border-radius:4px;padding:16px 20px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;">Receita Provável</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:800;color:var(--blue);line-height:1;">R$512k</div>
+      <div style="font-size:11px;color:var(--muted2);margin-top:6px;">Confidence ≥ 70% confirmado</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:16px 20px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;">Confidence Médio</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:800;color:var(--gold);line-height:1;">58%</div>
+      <div style="height:4px;background:var(--border2);border-radius:2px;margin-top:10px;overflow:hidden;"><div style="width:58%;height:100%;background:var(--gold);border-radius:2px;"></div></div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Pipeline Real + Forecast + Gargalos -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;max-width:1200px;margin-bottom:16px;">
+
+    <!-- PIPELINE REAL -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:16px 20px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-bottom:12px;">Pipeline Real</div>
+      <!-- barra empilhada -->
+      <div style="display:flex;height:10px;border-radius:4px;overflow:hidden;margin-bottom:10px;">
+        <div style="width:42%;background:var(--green);" title="Confiável"></div>
+        <div style="width:28%;background:var(--gold);" title="Atenção"></div>
+        <div style="width:30%;background:var(--red);" title="Inflado"></div>
+      </div>
+      <div style="display:flex;gap:10px;font-size:10px;margin-bottom:12px;">
+        <span style="display:flex;align-items:center;gap:4px;color:var(--muted);"><span style="width:8px;height:8px;border-radius:2px;background:var(--green);flex-shrink:0;"></span>Confiável 42%</span>
+        <span style="display:flex;align-items:center;gap:4px;color:var(--muted);"><span style="width:8px;height:8px;border-radius:2px;background:var(--gold);flex-shrink:0;"></span>Atenção 28%</span>
+        <span style="display:flex;align-items:center;gap:4px;color:var(--muted);"><span style="width:8px;height:8px;border-radius:2px;background:var(--red);flex-shrink:0;"></span>Inflado 30%</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;"><span style="color:var(--muted);">Deals baixa qualidade</span><span style="font-weight:700;color:var(--red);">45%</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;"><span style="color:var(--muted);">Sem next step definido</span><span style="font-weight:700;color:var(--red);">38%</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;"><span style="color:var(--muted);">% Confiável</span><span style="font-weight:700;color:var(--green);">42%</span></div>
+      </div>
+    </div>
+
+    <!-- FORECAST -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:16px 20px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-bottom:12px;">Forecast — O Que Fecha</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 10px;background:rgba(79,168,109,0.08);border:1px solid rgba(79,168,109,0.2);border-radius:3px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;"></div>
+          <div style="flex:1;font-size:11px;color:var(--muted);">Alta confiança ≥70%</div>
+          <div style="font-weight:700;color:var(--green);font-size:12px;">8 deals</div>
+          <div style="font-weight:700;color:var(--green);font-size:12px;">R$320k</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 10px;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);border-radius:3px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--gold);flex-shrink:0;"></div>
+          <div style="flex:1;font-size:11px;color:var(--muted);">Média 40–69%</div>
+          <div style="font-weight:700;color:var(--gold);font-size:12px;">12 deals</div>
+          <div style="font-weight:700;color:var(--gold);font-size:12px;">R$192k</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 10px;background:rgba(217,79,79,0.06);border:1px solid rgba(217,79,79,0.15);border-radius:3px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;"></div>
+          <div style="flex:1;font-size:11px;color:var(--muted);">Baixa &lt;40%</div>
+          <div style="font-weight:700;color:var(--red);font-size:12px;">19 deals</div>
+          <div style="font-weight:700;color:var(--red);font-size:12px;">R$378k</div>
+        </div>
+      </div>
+      <!-- top 3 deals em destaque -->
+      <div style="font-size:10px;font-weight:700;color:var(--muted2);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">Top Deals Alta Confiança</div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:4px 0;border-bottom:1px solid var(--border);">
+          <span style="color:var(--white);">Empresa Alpha</span>
+          <span style="color:var(--green);font-weight:600;">R$85k</span>
+          <span style="font-size:10px;background:rgba(79,168,109,0.1);color:var(--green);padding:2px 6px;border-radius:2px;">88%</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:4px 0;border-bottom:1px solid var(--border);">
+          <span style="color:var(--white);">Empresa Beta</span>
+          <span style="color:var(--green);font-weight:600;">R$72k</span>
+          <span style="font-size:10px;background:rgba(79,168,109,0.1);color:var(--green);padding:2px 6px;border-radius:2px;">81%</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:4px 0;">
+          <span style="color:var(--white);">Empresa Gamma</span>
+          <span style="color:var(--green);font-weight:600;">R$63k</span>
+          <span style="font-size:10px;background:rgba(79,168,109,0.1);color:var(--green);padding:2px 6px;border-radius:2px;">74%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- GARGALOS -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:16px 20px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-bottom:12px;">Gargalos — Onde o Funil Quebra</div>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <div style="display:grid;grid-template-columns:100px 48px 52px 1fr;gap:6px;font-size:9px;font-weight:700;color:var(--muted2);letter-spacing:0.06em;text-transform:uppercase;padding:0 6px;margin-bottom:2px;">
+          <span>Etapa</span><span>Conv.</span><span>SLA</span><span>Status</span>
+        </div>
+        <div style="display:grid;grid-template-columns:100px 48px 52px 1fr;gap:6px;align-items:center;padding:7px 8px;background:var(--accent);border-radius:3px;border:1px solid var(--border2);">
+          <span style="font-size:11px;color:var(--white);">Contato→Qualif</span>
+          <span style="font-size:11px;font-weight:700;color:var(--green);">72%</span>
+          <span style="font-size:10px;color:var(--green);">OK</span>
+          <span style="font-size:9px;font-weight:700;color:var(--green);background:rgba(79,168,109,0.1);padding:2px 6px;border-radius:2px;display:inline-block;">🟢 Saudável</span>
+        </div>
+        <div style="display:grid;grid-template-columns:100px 48px 52px 1fr;gap:6px;align-items:center;padding:7px 8px;background:rgba(217,79,79,0.06);border-radius:3px;border:1px solid rgba(217,79,79,0.25);">
+          <span style="font-size:11px;color:var(--white);">Qualif→Proposta</span>
+          <span style="font-size:11px;font-weight:700;color:var(--red);">31%</span>
+          <span style="font-size:10px;color:var(--red);">7d+</span>
+          <span style="font-size:9px;font-weight:700;color:var(--red);background:rgba(217,79,79,0.1);padding:2px 6px;border-radius:2px;display:inline-block;">🔴 Gargalo</span>
+        </div>
+        <div style="display:grid;grid-template-columns:100px 48px 52px 1fr;gap:6px;align-items:center;padding:7px 8px;background:rgba(201,168,76,0.05);border-radius:3px;border:1px solid rgba(201,168,76,0.2);">
+          <span style="font-size:11px;color:var(--white);">Proposta→Fecha</span>
+          <span style="font-size:11px;font-weight:700;color:var(--gold);">55%</span>
+          <span style="font-size:10px;color:var(--gold);">3d+</span>
+          <span style="font-size:9px;font-weight:700;color:var(--gold);background:rgba(201,168,76,0.1);padding:2px 6px;border-radius:2px;display:inline-block;">🟡 Atenção</span>
+        </div>
+        <div style="display:grid;grid-template-columns:100px 48px 52px 1fr;gap:6px;align-items:center;padding:7px 8px;background:var(--accent);border-radius:3px;border:1px solid var(--border2);">
+          <span style="font-size:11px;color:var(--white);">Total Pipeline</span>
+          <span style="font-size:11px;font-weight:700;color:var(--green);">44%</span>
+          <span style="font-size:10px;color:var(--muted);">—</span>
+          <span style="font-size:9px;color:var(--muted2);">23 deals em SLA</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 3: Qualidade + Execução + Risco Futuro -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;max-width:1200px;">
+
+    <!-- QUALIDADE -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:16px 20px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-bottom:12px;">Qualidade — Por Que Quebra</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div style="text-align:center;padding:10px;background:rgba(217,79,79,0.06);border:1px solid rgba(217,79,79,0.15);border-radius:3px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:800;color:var(--red);">62</div>
+          <div style="font-size:9px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.06em;margin-top:3px;">DQI Médio</div>
+        </div>
+        <div style="text-align:center;padding:10px;background:rgba(217,79,79,0.06);border:1px solid rgba(217,79,79,0.15);border-radius:3px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:800;color:var(--red);">28%</div>
+          <div style="font-size:9px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.06em;margin-top:3px;">Sem Decisor</div>
+        </div>
+        <div style="text-align:center;padding:10px;background:rgba(217,79,79,0.06);border:1px solid rgba(217,79,79,0.15);border-radius:3px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:800;color:var(--red);">37%</div>
+          <div style="font-size:9px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.06em;margin-top:3px;">Sem Dor Real</div>
+        </div>
+        <div style="text-align:center;padding:10px;background:rgba(217,79,79,0.06);border:1px solid rgba(217,79,79,0.15);border-radius:3px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:800;color:var(--red);">38%</div>
+          <div style="font-size:9px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.06em;margin-top:3px;">Sem Next Step</div>
+        </div>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:var(--muted2);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">Top Problemas</div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted);">Falta de autoridade</span><span style="color:var(--red);font-weight:600;">41 deals</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted);">Falta de dor declarada</span><span style="color:var(--red);font-weight:600;">55 deals</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0;"><span style="color:var(--muted);">Falta de impacto (R$)</span><span style="color:var(--red);font-weight:600;">92 deals</span></div>
+      </div>
+    </div>
+
+    <!-- EXECUÇÃO -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:16px 20px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-bottom:12px;">Execução — Quem Causa</div>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <div style="display:grid;grid-template-columns:90px 36px 36px 44px 36px;gap:6px;font-size:9px;font-weight:700;color:var(--muted2);letter-spacing:0.06em;text-transform:uppercase;padding:0 6px;margin-bottom:2px;">
+          <span>Operador</span><span>Score</span><span>Conv</span><span>Veloc.</span><span>DQI</span>
+        </div>
+        <div style="display:grid;grid-template-columns:90px 36px 36px 44px 36px;gap:6px;align-items:center;padding:7px 8px;background:rgba(79,168,109,0.06);border:1px solid rgba(79,168,109,0.2);border-radius:3px;">
+          <span style="font-size:11px;color:var(--white);">Mariana S.</span>
+          <span style="font-size:11px;font-weight:700;color:var(--green);">92</span>
+          <span style="font-size:11px;color:var(--green);">68%</span>
+          <span style="font-size:10px;color:var(--green);">4.2d</span>
+          <span style="font-size:11px;font-weight:700;color:var(--green);">87</span>
+        </div>
+        <div style="display:grid;grid-template-columns:90px 36px 36px 44px 36px;gap:6px;align-items:center;padding:7px 8px;background:var(--accent);border:1px solid var(--border2);border-radius:3px;">
+          <span style="font-size:11px;color:var(--white);">Lucas M.</span>
+          <span style="font-size:11px;font-weight:700;color:var(--gold);">76</span>
+          <span style="font-size:11px;color:var(--gold);">51%</span>
+          <span style="font-size:10px;color:var(--gold);">6.1d</span>
+          <span style="font-size:11px;font-weight:700;color:var(--gold);">74</span>
+        </div>
+        <div style="display:grid;grid-template-columns:90px 36px 36px 44px 36px;gap:6px;align-items:center;padding:7px 8px;background:rgba(217,79,79,0.06);border:1px solid rgba(217,79,79,0.25);border-radius:3px;">
+          <span style="font-size:11px;color:var(--white);">Rafael T.</span>
+          <span style="font-size:11px;font-weight:700;color:var(--red);">38</span>
+          <span style="font-size:11px;color:var(--red);">22%</span>
+          <span style="font-size:10px;color:var(--red);">11.4d</span>
+          <span style="font-size:11px;font-weight:700;color:var(--red);">38</span>
+        </div>
+        <div style="display:grid;grid-template-columns:90px 36px 36px 44px 36px;gap:6px;align-items:center;padding:7px 8px;background:rgba(217,79,79,0.04);border:1px solid rgba(217,79,79,0.15);border-radius:3px;">
+          <span style="font-size:11px;color:var(--white);">Ana P.</span>
+          <span style="font-size:11px;font-weight:700;color:var(--red);">41</span>
+          <span style="font-size:11px;color:var(--red);">28%</span>
+          <span style="font-size:10px;color:var(--red);">9.8d</span>
+          <span style="font-size:11px;font-weight:700;color:var(--red);">41</span>
+        </div>
+      </div>
+      <div style="margin-top:10px;padding:8px 12px;background:rgba(217,79,79,0.05);border:1px solid rgba(217,79,79,0.15);border-radius:3px;">
+        <div style="font-size:11px;color:var(--muted);line-height:1.5;"><span style="color:var(--red);font-weight:600;">Rafael + Ana</span> respondem por 63% dos deals de baixa qualidade. Custo oculto estimado: <span style="color:var(--red);font-weight:600;">R$210k</span> em ciclos perdidos.</div>
+      </div>
+    </div>
+
+    <!-- RISCO FUTURO -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:16px 20px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);margin-bottom:12px;">Risco Futuro — Onde Perderemos</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div style="text-align:center;padding:10px;background:rgba(217,79,79,0.06);border:1px solid rgba(217,79,79,0.15);border-radius:3px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:800;color:var(--red);">14</div>
+          <div style="font-size:9px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.06em;margin-top:3px;">Inflados</div>
+        </div>
+        <div style="text-align:center;padding:10px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.15);border-radius:3px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:800;color:var(--gold);">23</div>
+          <div style="font-size:9px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.06em;margin-top:3px;">Sem Avanço</div>
+        </div>
+        <div style="text-align:center;padding:10px;background:rgba(217,79,79,0.06);border:1px solid rgba(217,79,79,0.15);border-radius:3px;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:800;color:var(--red);">9</div>
+          <div style="font-size:9px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.06em;margin-top:3px;">Em Risco</div>
+        </div>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:var(--muted2);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">Top Deals em Risco</div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:5px 8px;background:rgba(217,79,79,0.05);border:1px solid rgba(217,79,79,0.15);border-radius:3px;">
+          <span style="color:var(--white);">Empresa XYZ</span>
+          <span style="color:var(--gold);font-weight:600;">R$85k</span>
+          <span style="font-size:9px;color:var(--red);">STALL 12d</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:5px 8px;background:rgba(217,79,79,0.05);border:1px solid rgba(217,79,79,0.15);border-radius:3px;">
+          <span style="color:var(--white);">Empresa ABC</span>
+          <span style="color:var(--gold);font-weight:600;">R$140k</span>
+          <span style="font-size:9px;color:var(--red);">Sem decisor</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:5px 8px;background:rgba(217,79,79,0.05);border:1px solid rgba(217,79,79,0.15);border-radius:3px;">
+          <span style="color:var(--white);">Empresa DEF</span>
+          <span style="color:var(--gold);font-weight:600;">R$62k</span>
+          <span style="font-size:9px;color:var(--red);">Ghost 9d</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:5px 8px;background:rgba(217,79,79,0.05);border:1px solid rgba(217,79,79,0.15);border-radius:3px;">
+          <span style="color:var(--white);">Empresa GHI</span>
+          <span style="color:var(--gold);font-weight:600;">R$95k</span>
+          <span style="font-size:9px;color:var(--red);">Tier errado</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<!-- 15 COCKPIT -->
 <!-- ────────────────────────────────────────────────────────── -->
 <section id="cockpit" style="background: var(--black);">
-  <div class="slide-num">14 / 16</div>
+  <div class="slide-num">15 / 16</div>
   <div class="eyebrow">Elucy Cockpit</div>
   <h2>O painel de comando<br><span class="gold">do operador.</span></h2>
   <p class="section-desc">
@@ -3001,7 +3256,7 @@
 <section id="closing">
   <div class="hero-bg"></div>
   <div class="hero-grid" style="opacity: 0.15;"></div>
-  <div class="slide-num" style="top: 80px; right: 80px; position: absolute;">15 / 15</div>
+  <div class="slide-num" style="top: 80px; right: 80px; position: absolute;">16 / 16</div>
 
   <div style="position: relative; z-index: 1; text-align: center; max-width: 700px;">
     <div class="closing-logo">ELUCY</div>
@@ -3054,7 +3309,7 @@
 
 <script>
 (function() {
-  const SECTIONS = ['hero','sistema','perfis','frameworks','mcps','skills','sinais','guardrails','como-frameworks','cadencias','features','visao-qualitativa','cro-intelligence','cockpit','closing'];
+  const SECTIONS = ['hero','sistema','perfis','frameworks','mcps','skills','sinais','guardrails','como-frameworks','cadencias','features','visao-qualitativa','cro-intelligence','cro-dashboard','cockpit','closing'];
   let current = 0;
 
   function goTo(idx) {
@@ -3077,10 +3332,10 @@
     document.querySelectorAll('.nav-links a').forEach(a => {
       a.classList.toggle('active', a.dataset.section === SECTIONS[idx]);
     });
-    // update section name label
-    const activeLink = document.querySelector('.nav-links a[data-section="' + SECTIONS[idx] + '"]');
+    // update section name label (data-label is on the li now)
+    const activeLi = document.querySelector('.nav-links a[data-section="' + SECTIONS[idx] + '"]')?.parentElement;
     const nameEl = document.getElementById('navSectionName');
-    if (nameEl && activeLink) nameEl.textContent = activeLink.dataset.label || '';
+    if (nameEl && activeLi) nameEl.textContent = activeLi.dataset.label || '';
     // counter & progress
     document.getElementById('navCounter').textContent = (idx + 1) + ' / ' + SECTIONS.length;
     document.getElementById('progressFill').style.width = ((idx + 1) / SECTIONS.length * 100) + '%';
