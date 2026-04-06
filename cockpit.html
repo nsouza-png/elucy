@@ -4722,822 +4722,361 @@ function quickNote(id){
 }
 
 // ── INTELLIGENCE ENGINE v5 — PERFORMANCE | PIPELINE | QUALITY ─────────
-var _intelCurrentDim='global';
+// ── Sub-tab controller ──
+var _intelActiveTab='performance';
 
-window._intelDim=function(dim,el){
-  _intelCurrentDim=dim;
-  document.querySelectorAll('.intel-dim').forEach(function(c){c.classList.remove('on');});
-  if(el) el.classList.add('on');
-  var perfEl=document.getElementById('perf-report-v3');
-  var intelEl=document.getElementById('intel-content');
-  if(dim==='performance'){
-    if(intelEl) intelEl.style.display='none';
-    if(perfEl){ perfEl.style.display='block'; perfEl.innerHTML='<div style="padding:20px;color:var(--text2)">Calculando Performance Report...</div>'; }
-    if(window.switchPerfPeriod){
-      window.switchPerfPeriod('month');
-    } else if(window.calcPerformanceReportV3){
-      window.calcPerformanceReportV3().then(function(report){
-        if(report && window.renderPerformanceReportV3) window.renderPerformanceReportV3(report);
-      });
-    }
-    return;
-  }
-  if(intelEl) intelEl.style.display='block';
-  if(perfEl) perfEl.style.display='none';
-  renderIntelligence();
+window._setIntelTab=function(name,btn){
+  _intelActiveTab=name;
+  document.querySelectorAll('.sub-tab-btn').forEach(function(b){b.classList.remove('active');b.setAttribute('aria-selected','false');b.tabIndex=-1;});
+  document.querySelectorAll('.sub-tab-panel').forEach(function(p){p.style.display='none';});
+  if(btn){btn.classList.add('active');btn.setAttribute('aria-selected','true');btn.tabIndex=0;}
+  var panel=document.getElementById('sub-tab-'+name);
+  if(panel) panel.style.display='';
+  window._loadIntelTab();
 };
 
-function renderIntelligence(){
-  const map=window._COCKPIT_DEAL_MAP;
-  const ct=document.getElementById('intel-content');
-  const sub=document.getElementById('intel-subtitle');
-  if(!map||!ct) return;
-  const allDeals=Object.values(map);
-  if(!allDeals.length){
-    ct.innerHTML='<div class="intel-empty">Nenhum deal carregado. Sincronize o pipeline primeiro.</div>';
-    return;
+// Keyboard nav for sub-tabs
+document.addEventListener('keydown',function(e){
+  if(!e.target.classList.contains('sub-tab-btn')) return;
+  var tabs=['performance','pipeline','quality'];
+  var idx=tabs.indexOf(e.target.dataset.tab);
+  if(e.key==='ArrowRight'||e.key==='ArrowLeft'){
+    e.preventDefault();
+    var next=e.key==='ArrowRight'?(idx+1)%3:(idx+2)%3;
+    var btn=document.getElementById('tab-'+tabs[next]);
+    if(btn){btn.focus();window._setIntelTab(tabs[next],btn);}
   }
-  const AE=window.AnalyticsEngine;
-  if(!AE){ct.innerHTML='<div class="intel-empty">Analytics Engine não carregado.</div>';return;}
-  const deals=allDeals.filter(d=>{const s=(d.statusDeal||'').toLowerCase();return s!=='perdido'&&s!=='ganho'&&s!=='desqualificado';});
-  if(sub) sub.textContent=deals.length+' deals ativos — '+new Date().toLocaleDateString('pt-BR')+' — dim: '+_intelCurrentDim.toUpperCase();
+});
 
-  ct.innerHTML='<div class="intel-loading">Calculando...</div>';
-  var dim=_intelCurrentDim;
+// ── Period picker ──
+window._setPeriod=function(val,btn){
+  document.querySelectorAll('.rpt-period-btn').forEach(function(b){b.classList.remove('active');});
+  if(btn) btn.classList.add('active');
+  document.getElementById('rpt-period-select').value=val;
+  var custom=document.getElementById('rpt-custom-range');
+  if(custom) custom.style.display=val==='custom'?'inline-flex':'none';
+  if(val!=='custom') window._loadIntelTab();
+};
+
+function _getPeriod(){
+  var sel=(document.getElementById('rpt-period-select')||{}).value||'30d';
+  var now=new Date();
+  if(sel==='custom'){
+    return{start:document.getElementById('rpt-date-start').value,end:document.getElementById('rpt-date-end').value};
+  }
+  var days=sel==='7d'?7:sel==='90d'?90:30;
+  var start=new Date(now);start.setDate(now.getDate()-days);
+  return{start:start.toISOString().slice(0,10),end:now.toISOString().slice(0,10)};
+}
+
+// ── Intel Tab Loader (dispatcher) ──
+window._loadIntelTab=async function(){
+  var tab=_intelActiveTab;
+  var panel=document.getElementById('sub-tab-'+tab);
+  if(!panel) return;
+  panel.innerHTML='<div class="sk sk-card" style="height:400px"><div class="sk-kpi"></div></div>';
+
+  var period=_getPeriod();
+  var qualName=window._resolveQualName?window._resolveQualName():(window._OPERATOR_EMAIL||'');
 
   try{
-    if(dim==='global') _renderGlobal(ct,AE,allDeals,deals);
-    else if(dim==='operator') _renderOperator(ct,AE);
-    else if(dim==='line') _renderLine(ct,AE);
-    else if(dim==='stage') _renderStage(ct,AE);
-    else if(dim==='channel') _renderChannel(ct,AE);
-    else if(dim==='task') _renderTask(ct,AE);
-    else if(dim==='value') _renderValue(ct,AE);
-    else if(dim==='forecast') _renderForecast(ct,allDeals,deals);
-    else if(dim==='framework') _renderFramework(ct,allDeals,deals);
-    else if(dim==='enterprise') _renderEnterprise(ct,deals);
-    else if(dim==='rfv') _renderRFV(ct,deals);
-    else if(dim==='spin') _renderSpinAudit(ct,deals);
-    else if(dim==='advisor') _renderTrustedAdvisor(ct,deals);
-    else if(dim==='bowtie') _renderBowtie(ct,deals);
-  }catch(e){
-    console.warn('[intel] render error for dim='+dim+':',e.message);
-    ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Dados parciais disponíveis — '+deals.length+' deals carregados.<br><span style="font-size:10px;opacity:.6">'+e.message+'</span></div>';
+    if(tab==='performance') await _renderPerformance(panel,period,qualName);
+    else if(tab==='pipeline') await _renderPipeline(panel,period,qualName);
+    else if(tab==='quality') await _renderQuality(panel,period,qualName);
+  }catch(err){
+    panel.innerHTML='<div style="padding:40px;text-align:center;color:var(--red);font-size:.8125rem">Erro ao carregar '+tab+': '+err.message+'</div>';
+    console.error('[Intel v5] '+tab+' error:',err);
   }
+};
+
+// ── Helpers ──
+function _fmtN(n){return n==null?'—':typeof n==='number'?n.toLocaleString('pt-BR'):''+n;}
+function _fmtPct(v){return v==null?'—':Math.round(v*100)+'%';}
+function _fmtMoney(v){return v==null?'—':'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});}
+function _fmtDays(v){return v==null?'—':Math.round(v*10)/10+'d';}
+function _slaClass(val,p60){if(val==null||p60==null) return 'status-ok';return val<=p60?'status-ok':val<=p60*1.3?'status-warn':'status-critical';}
+
+// UX Writer — formata etapa
+function fmtEtapa(e){
+  var map={'novo lead':'MQL','dia 01':'D1','dia 02':'D2','dia 03':'D3','dia 04':'D4','dia 05':'D5','dia 06':'D6','conectados':'Conectado','agendamento':'Agendamento','reagendamento':'Reagendamento','entrevista agendada':'Entrevista'};
+  return map[(e||'').toLowerCase()]||e;
+}
+function fmtRevLine(k){
+  var rl=window.REVENUE_LINES||{};
+  if(rl[k]&&rl[k].label) return rl[k].label;
+  var fb={funil_marketing:'Funil de Marketing',turmas:'Turmas',projetos_eventos:'Projetos & Eventos',social_dm:'Social DM',social_dm_segment_k:'Social DM K',selfcheckout:'Self Checkout',reativacao:'Reativação',expansao:'Expansão',renovacao:'Renovação',field_sales:'Field Sales',aquisicao:'Time de Vendas',g4_tools:'G4 Tools',nao_definido:'Não Definido'};
+  return fb[k]||k;
 }
 
-function _iBar(label,count,max,total,extraStyle){
-  return '<div class="intel-bar-row"><span class="intel-bar-label" title="'+label+'">'+(label.length>24?label.slice(0,24)+'...':label)+'</span><div class="intel-bar-bg"><div class="intel-bar-fill" style="width:'+Math.max(5,count/Math.max(max,1)*100)+'%;'+(extraStyle||'')+'"><span class="intel-bar-v">'+count+'</span></div></div><span class="intel-bar-pct">'+Math.round(count/Math.max(total,1)*100)+'%</span></div>';
-}
-function _iKpi(value,label,color){return '<div class="intel-kpi"><div class="intel-kpi-v"'+(color?' style="color:'+color+'"':'')+'>'+(typeof value==='number'&&value>=1000?fmtBRL(value):value)+'</div><div class="intel-kpi-l">'+label+'</div></div>';}
+// ── DEAD CODE REMOVED: _intelDim, renderIntelligence, _renderGlobal..._renderBowtie, renderSection, renderCard, _iBar, _iKpi (~750 lines) ──
+// Migrado para: 3 tabs (PERFORMANCE|PIPELINE|QUALITY) via _renderPerformance, _renderPipeline, _renderQuality
 
-// ── GLOBAL ──
-function _renderGlobal(ct,AE,allDeals,deals){
-  AE.calcGlobal(30).catch(function(e){console.warn('[intel] calcGlobal error:',e.message);return null;}).then(function(g){
-    if(!g){
-      // Fallback: build minimal global from local deals — NEVER show error
-      var totalAging=deals.reduce(function(s,d){return s+(d._delta||d.delta||0);},0);
-      var avgAging=deals.length>0?Math.round(totalAging/deals.length*10)/10:0;
-      var atRisk=deals.filter(function(d){return (d._delta||d.delta||0)>10;}).length;
-      g={dimension:'global',period:30,overview:{totalDeals:allDeals.length,activeDeals:deals.length,totalValue:deals.reduce(function(s,d){return s+(d.elucyValor||d.revenueRaw||0);},0),operatorScore:0,dqi:0},operator:{scores:{overall:0,qualification:0,handoff:0,winRate:0,speed:0,dqi:0},pipeline:{activeDeals:deals.length,avgAging:avgAging,atRisk:atRisk},metrics:{total:0,fups:0,analyses:0,copies:0,dvl:0,dms:0,notes:0,enrichments:0,uniqueDeals:0},byDay:{}},byLine:{data:{}},byStage:{data:{}},byChannel:{data:{}},byTask:{data:{}}};
-      // Populate byLine/byStage/byChannel from local deals
-      deals.forEach(function(d){
-        if(window.enrichDealContext)window.enrichDealContext(d);
-        var line=d._revLine||d.linhaReceita||d.grupo_de_receita||'Outro';
-        var stage=d.etapa||d._etapa||d.fase||'Outro';
-        var ch=d.canal||d.utm_medium||'Outro';
-        if(!g.byLine.data[line])g.byLine.data[line]={total:0,active:0,won:0,lost:0,winRate:0,avgAging:0,atRisk:0,totalValue:0,byStage:{}};
-        g.byLine.data[line].active++;g.byLine.data[line].total++;g.byLine.data[line].totalValue+=(d.elucyValor||d.revenueRaw||0);
-        if(!g.byStage.data[stage])g.byStage.data[stage]={count:0,avgAging:0,totalValue:0,atRisk:0,byLine:{},byTier:{},order:99};
-        g.byStage.data[stage].count++;g.byStage.data[stage].totalValue+=(d.elucyValor||d.revenueRaw||0);
-        if(!g.byChannel.data[ch])g.byChannel.data[ch]={total:0,active:0,won:0,lost:0,winRate:0,avgAging:0,totalValue:0};
-        g.byChannel.data[ch].active++;g.byChannel.data[ch].total++;
+
+// ── TAB: PERFORMANCE (KR1 — individual) ──
+async function _renderPerformance(ct,period,qualName){
+  var RV4=window.ReportsV4||{};
+  var [dbIndiv,dbLine,dbDt,dtRuntime,macroRows]=await Promise.all([
+    RV4.fetchDatabricksMetrics?RV4.fetchDatabricksMetrics(qualName,period):null,
+    RV4.fetchDatabricksLineBreakdown?RV4.fetchDatabricksLineBreakdown(qualName,period):null,
+    RV4.fetchDatabricksDtByLine?RV4.fetchDatabricksDtByLine(qualName,period):null,
+    RV4.fetchDeltaTRuntime?RV4.fetchDeltaTRuntime(window._OPERATOR_EMAIL):null,
+    RV4.fetchDatabricksMacro?RV4.fetchDatabricksMacro(period):[]
+  ]);
+
+  var m=dbIndiv||{};
+  var bench=macroRows&&macroRows.length?_calcBenchmarks(macroRows):{};
+
+  // Bloco 1: Funil pessoal
+  var funnelStages=[
+    {label:'MQL',val:m.mql||0},{label:'SAL',val:m.sal||0},{label:'Agendamento',val:m.agend||0},
+    {label:'OPP',val:m.opp||0},{label:'Won',val:m.won||0}
+  ];
+  var maxF=Math.max(1,...funnelStages.map(function(s){return s.val;}));
+
+  var html='<div class="perf-section"><div class="perf-section-title">Funil Pessoal</div>';
+  funnelStages.forEach(function(s,i){
+    var pct=Math.round(s.val/maxF*100);
+    var crLabel='';
+    if(i>0&&funnelStages[i-1].val>0){
+      crLabel='<span class="funnel-cr">'+Math.round(s.val/funnelStages[i-1].val*100)+'%</span>';
+    }
+    html+='<div class="funnel-row"><span class="funnel-bar-label">'+s.label+'</span><div class="funnel-bar-track"><div class="funnel-bar-fill" style="width:'+pct+'%"></div></div><span class="funnel-bar-value">'+_fmtN(s.val)+'</span>'+crLabel+'</div>';
+  });
+  html+='</div>';
+
+  // Bloco 2: KPIs financeiros + Engagement Score
+  var ae=window.AnalyticsEngine;
+  var opScore=ae&&ae.calcByOperator?ae.calcByOperator():{};
+  var scores=opScore.scores||{};
+  html+='<div class="perf-kpi-grid">';
+  html+='<div class="perf-kpi"><span class="perf-kpi-label">Receita Won</span><span class="perf-kpi-value">'+_fmtMoney(m.receita_won)+'</span></div>';
+  html+='<div class="perf-kpi"><span class="perf-kpi-label">Ticket M\u00e9dio</span><span class="perf-kpi-value">'+_fmtMoney(m.ticket_medio)+'</span></div>';
+  html+='<div class="perf-kpi"><span class="perf-kpi-label">Pipeline Value</span><span class="perf-kpi-value">'+_fmtMoney(m.pipeline_value)+'</span></div>';
+  html+='<div class="perf-kpi"><span class="perf-kpi-label">Engagement Score</span><span class="perf-kpi-value" style="font-size:1.5rem">'+_fmtN(scores.dqi||scores.overall||0)+'<small>/100</small></span></div>';
+  html+='</div>';
+
+  // Bloco 3: Ranking vs Opera\u00e7\u00e3o (benchmark h\u00edbrido)
+  if(macroRows&&macroRows.length>1){
+    var metrics=[
+      {key:'cr_mql_sal',label:'MQL\u2192SAL%',target:0.50},
+      {key:'cr_sal_opp',label:'SAL\u2192OPP%',target:0.40},
+      {key:'cr_opp_won',label:'OPP\u2192Won%',target:0.30}
+    ];
+    html+='<div class="perf-section"><div class="perf-section-title">Ranking vs Opera\u00e7\u00e3o</div>';
+    html+='<table class="rpt-table"><thead><tr><th>M\u00e9trica</th><th>Voc\u00ea</th><th>Benchmark</th><th>Score</th><th>Status</th></tr></thead><tbody>';
+    metrics.forEach(function(mt){
+      var myVal=m[mt.key]||0;
+      var bm=bench[mt.key]||mt.target;
+      var rel=bm>0?myVal/bm:0;
+      var cls=rel>=1?'status-ok':rel>=0.7?'status-warn':'status-critical';
+      html+='<tr><td>'+mt.label+'</td><td>'+_fmtPct(myVal)+'</td><td>'+_fmtPct(bm)+'</td><td>'+Math.round(rel*100)+'%</td><td><span class="'+cls+'">'+(rel>=1?'Acima':rel>=0.7?'Na m\u00e9dia':'Abaixo')+'</span></td></tr>';
+    });
+    html+='</tbody></table></div>';
+  }
+
+  // Bloco 4: Velocidade pessoal
+  var dtData=m._source==='databricks'?m:dtRuntime;
+  if(dtData){
+    var transitions=[
+      {label:'MQL\u2192SAL',key:'avg_delta_t_sal',slaBase:2},
+      {label:'SAL\u2192Agend',key:'avg_delta_t_agendado',slaBase:5},
+      {label:'Agend\u2192OPP',key:'avg_delta_t_opp',slaBase:7},
+      {label:'Neg\u2192Won',key:'avg_delta_t_ganho',slaBase:14}
+    ];
+    html+='<div class="perf-section"><div class="perf-section-title">Velocidade</div>';
+    html+='<table class="rpt-table"><thead><tr><th>Transi\u00e7\u00e3o</th><th>Seu \u0394t</th><th>SLA Base</th><th>Status</th></tr></thead><tbody>';
+    transitions.forEach(function(t){
+      var val=dtData[t.key];
+      var cls=_slaClass(val,t.slaBase);
+      html+='<tr><td>'+t.label+'</td><td>'+_fmtDays(val)+'</td><td>'+t.slaBase+'d</td><td><span class="'+cls+'">'+( val==null?'':val<=t.slaBase?'\u2713':val<=t.slaBase*1.3?'\u26a0':'\u2717')+'</span></td></tr>';
+    });
+    html+='</tbody></table></div>';
+  }
+
+  // Bloco 5: Breakdown por linha
+  if(dbLine&&dbLine.length){
+    html+='<div class="perf-section"><div class="perf-section-title">Por Linha de Receita</div>';
+    html+='<table class="rpt-table"><thead><tr><th>Linha</th><th>MQL</th><th>Won</th><th>CR%</th><th>Receita</th></tr></thead><tbody>';
+    dbLine.forEach(function(r){
+      html+='<tr><td>'+fmtRevLine(r.name)+'</td><td>'+_fmtN(r.total)+'</td><td>'+_fmtN(r.won)+'</td><td>'+_fmtPct(r.cr_opp||r.winRate)+'</td><td>'+_fmtMoney(r.value)+'</td></tr>';
+    });
+    html+='</tbody></table></div>';
+  }
+
+  var sub=document.getElementById('intel-subtitle');
+  if(sub) sub.textContent=(m.mql||0)+' deals ativos \u2014 '+period.start+' a '+period.end+' \u2014 dim: PERFORMANCE';
+
+  ct.innerHTML=html;
+}
+
+// Benchmark h\u00edbrido: max(media * 0.6, target * 0.4)
+function _calcBenchmarks(macroRows){
+  function bm(key,target){
+    var vals=macroRows.map(function(r){return r[key];}).filter(function(v){return v!=null&&!isNaN(v);});
+    if(!vals.length) return target;
+    var avg=vals.reduce(function(a,b){return a+b;},0)/vals.length;
+    return Math.max(avg*0.6,target*0.4);
+  }
+  return{cr_mql_sal:bm('cr_mql_sal',0.50),cr_sal_opp:bm('cr_sal_opp',0.40),cr_opp_won:bm('cr_opp_won',0.30)};
+}
+
+// ── TAB: PIPELINE (KR2 — opera\u00e7\u00e3o completa) ──
+async function _renderPipeline(ct,period,qualName){
+  var RV4=window.ReportsV4||{};
+  var [macroRows,dbLineMacro]=await Promise.all([
+    RV4.fetchDatabricksMacro?RV4.fetchDatabricksMacro(period):[],
+    RV4.fetchDatabricksLineBreakdown?RV4.fetchDatabricksLineBreakdown(null,period):[]
+  ]);
+
+  var html='';
+
+  // Bloco 1: Funil da opera\u00e7\u00e3o
+  if(macroRows&&macroRows.length){
+    var totals={mql:0,sal:0,opp:0,won:0,lost:0,receita:0};
+    macroRows.forEach(function(r){totals.mql+=(r.cnt_mql||r.mql||0);totals.sal+=(r.cnt_sal||r.sal||0);totals.opp+=(r.cnt_opp||r.opp||0);totals.won+=(r.cnt_won||r.won||0);totals.lost+=(r.cnt_lost||r.lost||0);totals.receita+=(r.receita||0);});
+    var funnelStages=[
+      {label:'MQL',val:totals.mql},{label:'SAL',val:totals.sal},{label:'OPP',val:totals.opp},{label:'Won',val:totals.won}
+    ];
+    var maxF=Math.max(1,...funnelStages.map(function(s){return s.val;}));
+    html+='<div class="perf-section"><div class="perf-section-title">Funil da Opera\u00e7\u00e3o</div>';
+    funnelStages.forEach(function(s,i){
+      var pct=Math.round(s.val/maxF*100);
+      var crLabel='';
+      if(i>0&&funnelStages[i-1].val>0) crLabel='<span class="funnel-cr">'+Math.round(s.val/funnelStages[i-1].val*100)+'%</span>';
+      html+='<div class="funnel-row"><span class="funnel-bar-label">'+s.label+'</span><div class="funnel-bar-track"><div class="funnel-bar-fill" style="width:'+pct+'%"></div></div><span class="funnel-bar-value">'+_fmtN(s.val)+'</span>'+crLabel+'</div>';
+    });
+    html+='<div style="margin-top:12px"><span class="perf-kpi-label">Receita Total</span> <span style="color:var(--accent);font-weight:800;font-size:1.1rem">'+_fmtMoney(totals.receita)+'</span></div>';
+    html+='</div>';
+  }
+
+  // Bloco 2: SDR Leaderboard
+  if(macroRows&&macroRows.length){
+    var myEmail=window._OPERATOR_EMAIL||'';
+    html+='<div class="perf-section"><div class="perf-section-title">SDR Leaderboard</div>';
+    html+='<table class="rpt-table"><thead><tr><th>Qualificador</th><th>MQL</th><th>SAL</th><th>%M\u2192S</th><th>OPP</th><th>%S\u2192O</th><th>Won</th><th>%O\u2192W</th><th>Receita</th></tr></thead><tbody>';
+    var sorted=macroRows.slice().sort(function(a,b){return(b.cnt_opp||b.opp||0)-(a.cnt_opp||a.opp||0);});
+    sorted.forEach(function(r){
+      var name=r.qualificador_name||r.name||'\u2014';
+      var mql=r.cnt_mql||r.mql||0,sal=r.cnt_sal||r.sal||0,opp=r.cnt_opp||r.opp||0,won=r.cnt_won||r.won||0,rec=r.receita||0;
+      var isSelf=name.toLowerCase().indexOf((myEmail.split('@')[0]||'').toLowerCase())>=0||name.toLowerCase().indexOf((qualName||'').toLowerCase())>=0;
+      html+='<tr class="'+(isSelf?'row-self':'')+'"><td>'+name+'</td><td>'+_fmtN(mql)+'</td><td>'+_fmtN(sal)+'</td><td>'+_fmtPct(mql>0?sal/mql:0)+'</td><td>'+_fmtN(opp)+'</td><td>'+_fmtPct(sal>0?opp/sal:0)+'</td><td>'+_fmtN(won)+'</td><td>'+_fmtPct(opp>0?won/opp:0)+'</td><td>'+_fmtMoney(rec)+'</td></tr>';
+    });
+    var tot={mql:0,sal:0,opp:0,won:0,rec:0};
+    sorted.forEach(function(r){tot.mql+=(r.cnt_mql||r.mql||0);tot.sal+=(r.cnt_sal||r.sal||0);tot.opp+=(r.cnt_opp||r.opp||0);tot.won+=(r.cnt_won||r.won||0);tot.rec+=(r.receita||0);});
+    html+='<tr style="font-weight:700;border-top:2px solid var(--border)"><td>TOTAL</td><td>'+_fmtN(tot.mql)+'</td><td>'+_fmtN(tot.sal)+'</td><td>'+_fmtPct(tot.mql>0?tot.sal/tot.mql:0)+'</td><td>'+_fmtN(tot.opp)+'</td><td>'+_fmtPct(tot.sal>0?tot.opp/tot.sal:0)+'</td><td>'+_fmtN(tot.won)+'</td><td>'+_fmtPct(tot.opp>0?tot.won/tot.opp:0)+'</td><td>'+_fmtMoney(tot.rec)+'</td></tr>';
+    html+='</tbody></table></div>';
+  }
+
+  // Bloco 3: Breakdown por linha (macro)
+  if(dbLineMacro&&dbLineMacro.length){
+    html+='<div class="perf-section"><div class="perf-section-title">Por Linha de Receita (Opera\u00e7\u00e3o)</div>';
+    html+='<table class="rpt-table"><thead><tr><th>Linha</th><th>MQL</th><th>Won</th><th>CR%</th><th>Receita</th></tr></thead><tbody>';
+    dbLineMacro.forEach(function(r){
+      html+='<tr><td>'+fmtRevLine(r.name)+'</td><td>'+_fmtN(r.total)+'</td><td>'+_fmtN(r.won)+'</td><td>'+_fmtPct(r.cr_opp||r.winRate)+'</td><td>'+_fmtMoney(r.value)+'</td></tr>';
+    });
+    html+='</tbody></table></div>';
+  }
+
+  if(!html) html='<div style="padding:40px;text-align:center;color:var(--text3);font-size:.8125rem">Sem dados de pipeline para o per\u00edodo selecionado.</div>';
+
+  var sub=document.getElementById('intel-subtitle');
+  if(sub) sub.textContent=(macroRows?macroRows.length:0)+' operadores \u2014 '+period.start+' a '+period.end+' \u2014 dim: PIPELINE';
+
+  ct.innerHTML=html;
+}
+
+// ── TAB: QUALITY (KR3 — intelig\u00eancia qualitativa) ──
+async function _renderQuality(ct,period,qualName){
+  var sb=window._SB;
+  if(!sb){ct.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3)">Supabase n\u00e3o conectado.</div>';return;}
+
+  var [qRes,tRes]=await Promise.all([
+    sb.from('deal_data_quality_runtime').select('operator_email,data_trust_score,completeness_score,consistency_score,recency_score,evidence_score,data_quality_band').then(function(r){return r.data||[];}),
+    sb.from('deal_transition_runtime').select('operator_email,transition_valid,transition_block_reason').then(function(r){return r.data||[];})
+  ]);
+
+  var opMap={};
+  qRes.forEach(function(d){
+    var e=d.operator_email||'unknown';
+    if(!opMap[e]) opMap[e]={email:e,trust:[],comp:[],cons:[],rec:[],evi:[],critical:0,total:0};
+    opMap[e].trust.push(d.data_trust_score||0);
+    opMap[e].comp.push(d.completeness_score||0);
+    opMap[e].cons.push(d.consistency_score||0);
+    opMap[e].rec.push(d.recency_score||0);
+    opMap[e].evi.push(d.evidence_score||0);
+    if(d.data_quality_band==='critical') opMap[e].critical++;
+    opMap[e].total++;
+  });
+
+  var ops=Object.values(opMap).map(function(o){
+    function avg(arr){return arr.length?arr.reduce(function(a,b){return a+b;},0)/arr.length:0;}
+    return{email:o.email,avgTrust:avg(o.trust),avgComp:avg(o.comp),avgCons:avg(o.cons),avgRec:avg(o.rec),avgEvi:avg(o.evi),critical:o.critical,total:o.total};
+  });
+
+  var allTrust=ops.map(function(o){return o.avgTrust;});
+  var mean=allTrust.length?allTrust.reduce(function(a,b){return a+b;},0)/allTrust.length:50;
+  var std=allTrust.length>1?Math.sqrt(allTrust.reduce(function(a,v){return a+Math.pow(v-mean,2);},0)/allTrust.length):10;
+  var thCritical=mean-1.0*std;
+  var thRisk=mean-0.7*std;
+
+  function trustBand(v){return v<thCritical?'critical':v<thRisk?'risk':'ok';}
+  function trustClass(v){var b=trustBand(v);return b==='critical'?'status-critical':b==='risk'?'status-warn':'status-ok';}
+
+  var blockReasons={};
+  var transTotal=0,transReady=0;
+  tRes.forEach(function(d){
+    transTotal++;
+    if(d.transition_valid) transReady++;
+    if(!d.transition_valid&&d.transition_block_reason){
+      (d.transition_block_reason||'').split(',').forEach(function(r){
+        r=r.trim();if(r){blockReasons[r]=(blockReasons[r]||0)+1;}
       });
     }
-    var o=g.operator;var total=deals.length;
-    var buyCount=deals.filter(function(d){return d._signal==='BUY';}).length;
-    var stallCount=deals.filter(function(d){return d._signal==='STALL';}).length;
-    var riskCount=deals.filter(function(d){return d._signal==='RISK';}).length;
-    var irondome=deals.filter(function(d){return (d._delta||d.delta||0)>10;}).length;
-    var totalValor=deals.reduce(function(s,d){return s+(d.elucyValor||0);},0);
-
-    var html='';
-    // Overview KPIs
-    html+=renderSection(1,'Overview',
-      '<div class="intel-kpi-row">'+
-      _iKpi(total,'Deals ativos','var(--accent2)')+
-      _iKpi(o.scores.overall+'/100','Score Operador','var(--accent2)')+
-      _iKpi(o.scores.dqi+'/100','DQI','var(--green)')+
-      _iKpi(fmtBRL(totalValor),'Pipeline ELUCY','var(--accent2)')+
-      _iKpi(o.pipeline.avgAging+'d','Aging médio',o.pipeline.avgAging>5?'var(--red)':o.pipeline.avgAging>3?'var(--yellow)':'var(--green)')+
-      _iKpi(o.pipeline.atRisk,'Em risco','var(--red)')+
-      '</div>');
-
-    // Score breakdown
-    html+=renderSection(2,'Score — 5 Componentes',
-      '<div class="intel-kpi-row">'+
-      _iKpi(o.scores.qualification+'%','Qualificação')+
-      _iKpi(o.scores.handoff+'%','Handoff')+
-      _iKpi(o.scores.winRate+'%','Win Rate')+
-      _iKpi(o.scores.speed+'%','Velocidade')+
-      _iKpi(o.scores.dqi+'%','DQI')+
-      '</div>'+
-      '<div style="font-size:10px;color:var(--text2);margin-top:6px">Score = Qualificação×0.2 + Handoff×0.3 + WinRate×0.3 + Speed×0.1 + DQI×0.1</div>');
-
-    // By Line summary
-    var lineData=g.byLine.data;
-    // funil_marketing é time de geração de demanda — não pertence ao SDR view
-    var lineKeys=Object.keys(lineData).filter(function(k){return k!=='funil_marketing';}).sort(function(a,b){return lineData[b].active-lineData[a].active;});
-    var maxLine=Math.max.apply(null,lineKeys.map(function(k){return lineData[k].active;}).concat([1]));
-    html+=renderSection(3,'Pipeline por Linha de Receita',
-      lineKeys.map(function(k){return _iBar(fmtRevLine(k),lineData[k].active,maxLine,total);}).join(''));
-
-    // By Stage summary
-    var stageData=g.byStage.data;
-    var stageKeys=Object.keys(stageData).sort(function(a,b){return (stageData[a].order||99)-(stageData[b].order||99);});
-    var maxStage=Math.max.apply(null,stageKeys.map(function(k){return stageData[k].count;}).concat([1]));
-    html+=renderSection(4,'Pipeline por Etapa',
-      stageKeys.map(function(k){return _iBar(fmtEtapa(k),stageData[k].count,maxStage,g.overview.totalDeals);}).join(''));
-
-    // Signals — V7 legacy + V8 Signal Engine
-    var sigHtml='<div class="intel-kpi-row">'+
-      _iKpi(buyCount,'BUY','var(--green)')+
-      _iKpi(stallCount,'STALL','var(--yellow)')+
-      _iKpi(riskCount,'RISK','var(--red)')+
-      _iKpi(irondome,'Iron Dome','var(--red)')+
-      '</div>';
-
-    // V8 Signal Engine stats
-    var signalDeals=deals.filter(function(d){return d._signalScore;});
-    if(signalDeals.length){
-      var critCount=signalDeals.filter(function(d){return d._signalScore.risk_level==='critical';}).length;
-      var highCount=signalDeals.filter(function(d){return d._signalScore.risk_level==='high';}).length;
-      var lowCount=signalDeals.filter(function(d){return d._signalScore.risk_level==='low';}).length;
-      var avgSig=signalDeals.reduce(function(s,d){return s+(d._signalScore.signal_total||0);},0)/signalDeals.length;
-      sigHtml+='<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:6px">⚡ Signal Engine V8</div>';
-      sigHtml+='<div class="intel-kpi-row">'+
-        _iKpi(lowCount,'Low Risk','var(--green)')+
-        _iKpi(highCount,'High Risk','var(--yellow)')+
-        _iKpi(critCount,'Críticos','var(--red)')+
-        _iKpi((avgSig>=0?'+':'')+avgSig.toFixed(2),'Signal Médio',avgSig>0?'var(--green)':avgSig<-0.1?'var(--red)':'var(--yellow)')+
-        '</div>';
-      // Alertas automáticos
-      var intelSig={total:signalDeals.length,avg_signal_total:avgSig,critical_count:critCount,high_count:highCount,
-        top_negative_signals:Object.entries(signalDeals.reduce(function(acc,d){(d._signalScore.top_negative_signals||[]).forEach(function(s){acc[s.type]=(acc[s.type]||0)+1;});return acc;},{})
-        ).map(function(e){return {type:e[0],label:(window.SIGNAL_REGISTRY&&window.SIGNAL_REGISTRY[e[0]]?window.SIGNAL_REGISTRY[e[0]].label:e[0]),count:e[1]};}).sort(function(a,b){return b.count-a.count;}).slice(0,5)};
-      var alerts=window.calcSignalAlerts?window.calcSignalAlerts(intelSig):[];
-      if(alerts.length){
-        sigHtml+='<div style="margin-top:8px">';
-        alerts.forEach(function(a){
-          var bg=a.level==='danger'?'var(--rdim)':'var(--ydim)';
-          var bc=a.level==='danger'?'var(--red)':'var(--yellow)';
-          sigHtml+='<div style="background:'+bg+';border:1px solid '+bc+';border-radius:5px;padding:6px 10px;font-size:11px;color:'+bc+';margin-bottom:4px;">! '+a.msg+'</div>';
-        });
-        sigHtml+='</div>';
-      }
-      // Top sinais negativos
-      if(intelSig.top_negative_signals.length){
-        sigHtml+='<div style="margin-top:8px;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Top Sinais Negativos</div>';
-        var maxSigCount=intelSig.top_negative_signals[0]?intelSig.top_negative_signals[0].count:1;
-        intelSig.top_negative_signals.forEach(function(s){
-          sigHtml+=_iBar('− '+s.label,s.count,maxSigCount,signalDeals.length,'background:var(--red)');
-        });
-      }
-      sigHtml+='</div>';
-    }
-
-    html+=renderSection(5,'Sinais & Risk Engine',sigHtml);
-
-    // Activity summary
-    html+=renderSection(6,'Atividade (30d)',
-      '<div class="intel-kpi-row">'+
-      _iKpi(o.metrics.total,'Total ações')+
-      _iKpi(o.metrics.fups,'Follow-ups')+
-      _iKpi(o.metrics.analyses,'Análises')+
-      _iKpi(o.metrics.copies,'Copies')+
-      _iKpi(o.metrics.dvl,'DVL')+
-      _iKpi(o.metrics.dms,'DMs')+
-      _iKpi(o.metrics.notes,'Notas CRM')+
-      _iKpi(o.metrics.uniqueDeals,'Deals tocados')+
-      '</div>');
-
-    ct.innerHTML=html;
   });
-}
-
-// ── OPERATOR ──
-function _renderOperator(ct,AE){
-  AE.calcByOperator(30).catch(function(e){console.warn('[intel] calcByOperator error:',e.message);return null;}).then(function(o){
-    if(!o||!o.scores){
-      var deals=Object.values(window._COCKPIT_DEAL_MAP||{}).filter(function(d){var s=(d.statusDeal||'').toLowerCase();return s!=='perdido'&&s!=='ganho';});
-      var totalAging=deals.reduce(function(s,d){return s+(d._delta||d.delta||0);},0);
-      o={scores:{overall:0,qualification:0,handoff:0,winRate:0,speed:0,dqi:0},pipeline:{activeDeals:deals.length,avgAging:deals.length?Math.round(totalAging/deals.length*10)/10:0,atRisk:deals.filter(function(d){return(d._delta||d.delta||0)>10;}).length},metrics:{total:0,fups:0,analyses:0,copies:0,dvl:0,dms:0,notes:0,enrichments:0,uniqueDeals:0},period:30,byDay:{}};
-    }
-    var html='';
-    // Score
-    html+=renderSection(1,'Score do Operador',
-      '<div style="text-align:center;margin-bottom:14px"><div style="font-size:48px;font-weight:900;color:var(--accent2)">'+o.scores.overall+'</div><div style="font-size:12px;color:var(--text2)">de 100</div></div>'+
-      '<div class="intel-kpi-row">'+
-      _iKpi(o.scores.qualification+'%','Qualificação')+
-      _iKpi(o.scores.handoff+'%','Handoff')+
-      _iKpi(o.scores.winRate+'%','Win Rate')+
-      _iKpi(o.scores.speed+'%','Velocidade')+
-      _iKpi(o.scores.dqi+'%','DQI')+
-      '</div>');
-
-    // Pipeline health
-    html+=renderSection(2,'Saúde do Pipeline',
-      '<div class="intel-kpi-row">'+
-      _iKpi(o.pipeline.activeDeals,'Deals ativos','var(--accent2)')+
-      _iKpi(o.pipeline.avgAging+'d','Aging médio',o.pipeline.avgAging>5?'var(--red)':'var(--green)')+
-      _iKpi(o.pipeline.atRisk,'Em risco','var(--red)')+
-      '</div>');
-
-    // Activity breakdown
-    html+=renderSection(3,'Ações ('+o.period+'d)',
-      '<div class="intel-kpi-row">'+
-      _iKpi(o.metrics.total,'Total')+
-      _iKpi(o.metrics.fups,'FUPs')+
-      _iKpi(o.metrics.analyses,'Análises')+
-      _iKpi(o.metrics.copies,'Copies')+
-      _iKpi(o.metrics.dvl,'DVL')+
-      _iKpi(o.metrics.dms,'DMs')+
-      _iKpi(o.metrics.notes,'Notas')+
-      _iKpi(o.metrics.enrichments,'Enrichments')+
-      '</div>');
-
-    // Activity by day
-    var days=Object.keys(o.byDay).sort();
-    var maxDay=Math.max.apply(null,days.map(function(d){return o.byDay[d];}).concat([1]));
-    if(days.length){
-      html+=renderSection(4,'Atividade por Dia',
-        days.slice(-14).map(function(d){return _iBar(d.slice(5),o.byDay[d],maxDay,o.metrics.total);}).join(''));
-    }
-
-    ct.innerHTML=html;
-  });
-}
-
-// ── LINE ──
-function _renderLine(ct,AE){
-  var rawLine;
-  try{ rawLine=AE.calcByLine(); }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro ao calcular linhas: '+e.message+'</div>'; return; }
-  var data=(rawLine||{data:{}}).data||{};
-  var speed=((function(){try{return AE.calcSpeed();}catch(e){return{data:{}};}})()).data||{};
-  // funil_marketing é geração de demanda (time de mkt) — fora do escopo SDR
-  var keys=Object.keys(data).filter(function(k){return k!=='funil_marketing';}).sort(function(a,b){return data[b].active-data[a].active;});
-  if(!keys.length){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Nenhuma linha de receita identificada. Verifique se os deals possuem grupo_de_receita ou linha_de_receita_vigente.</div>'; return; }
-  var total=keys.reduce(function(s,k){return s+data[k].active;},0);
-  var maxActive=Math.max.apply(null,keys.map(function(k){return data[k].active;}).concat([1]));
+  var brArr=Object.keys(blockReasons).map(function(k){return{reason:k,count:blockReasons[k]};}).sort(function(a,b){return b.count-a.count;});
+  var blocked=transTotal-transReady;
 
   var html='';
-  // Summary bar
-  html+=renderSection(1,'Deals Ativos por Linha',
-    keys.map(function(k){return _iBar(fmtRevLine(k),data[k].active,maxActive,total);}).join(''));
 
-  // Table
-  html+=renderSection(2,'Detalhamento por Linha',
-    '<table class="intel-table"><thead><tr><th>Linha</th><th>Ativos</th><th>Ganhos</th><th>Perdidos</th><th>Win%</th><th>Aging</th><th>Risco</th><th>Valor</th><th>Veloc.</th></tr></thead><tbody>'+
-    keys.map(function(k){
-      var d=data[k];
-      var v=speed[k]?speed[k].avgVelocity:'—';
-      return '<tr><td style="font-weight:600">'+fmtRevLine(k)+'</td><td>'+d.active+'</td><td style="color:var(--green)">'+d.won+'</td><td style="color:var(--red)">'+d.lost+'</td><td>'+d.winRate+'%</td><td>'+d.avgAging+'d</td><td style="color:var(--red)">'+d.atRisk+'</td><td>'+fmtBRL(d.totalValue)+'</td><td>'+v+'</td></tr>';
-    }).join('')+'</tbody></table>');
+  // Bloco 1: KPIs summary
+  html+='<div class="perf-kpi-grid">';
+  html+='<div class="perf-kpi"><span class="perf-kpi-label">Data Trust Score M\u00e9dio</span><span class="perf-kpi-value">'+Math.round(mean)+'<small>/100</small></span></div>';
+  html+='<div class="perf-kpi"><span class="perf-kpi-label">Deals Cr\u00edticos</span><span class="perf-kpi-value" style="background:linear-gradient(135deg,#ef4444,#f87171);-webkit-background-clip:text;-webkit-text-fill-color:transparent">'+ops.reduce(function(a,o){return a+o.critical;},0)+'</span></div>';
+  html+='<div class="perf-kpi"><span class="perf-kpi-label">% Prontos p/ Avan\u00e7ar</span><span class="perf-kpi-value" style="background:linear-gradient(135deg,#56e5a9,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent">'+(transTotal>0?Math.round(transReady/transTotal*100):0)+'%</span></div>';
+  html+='</div>';
 
-  // DQI by line (async)
-  AE.calcDQI(30).catch(function(e){console.warn('[intel] calcDQI error:',e.message);return{data:{}};}).then(function(dqi){
-    if(!dqi||!dqi.data) dqi={data:{}};
-    var dqiData=dqi.data;
-    var dqiKeys=Object.keys(dqiData).sort(function(a,b){return dqiData[b].avgDQI-dqiData[a].avgDQI;});
-    if(dqiKeys.length){
-      var dqiHtml=renderSection(3,'DQI por Linha',
-        '<div class="intel-kpi-row">'+dqiKeys.filter(function(k){return k!=='funil_marketing';}).map(function(k){return _iKpi(dqiData[k].avgDQI,fmtRevLine(k)+' ('+dqiData[k].deals+'d)',dqiData[k].avgDQI>=60?'var(--green)':dqiData[k].avgDQI>=30?'var(--yellow)':'var(--red)');}).join('')+'</div>');
-      ct.innerHTML+=dqiHtml;
-    }
-  });
-
-  ct.innerHTML=html;
-}
-
-// ── STAGE ──
-function _renderStage(ct,AE){
-  var rawStage;
-  try{ rawStage=AE.calcByStage(); }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro ao calcular etapas: '+e.message+'</div>'; return; }
-  var data=(rawStage||{data:{}}).data||{};
-  var keys=Object.keys(data).sort(function(a,b){return (data[a].order||99)-(data[b].order||99);});
-  var total=keys.reduce(function(s,k){return s+data[k].count;},0);
-  var maxCount=Math.max.apply(null,keys.map(function(k){return data[k].count;}).concat([1]));
-
-  var html='';
-  // Funnel
-  html+=renderSection(1,'Funil por Etapa',
-    keys.map(function(k){return _iBar(fmtEtapa(k),data[k].count,maxCount,total);}).join(''));
-
-  // Table
-  html+=renderSection(2,'Detalhamento por Etapa',
-    '<table class="intel-table"><thead><tr><th>Etapa</th><th>Deals</th><th>Aging</th><th>Valor</th><th>Risco</th></tr></thead><tbody>'+
-    keys.map(function(k){
-      var d=data[k];
-      return '<tr><td style="font-weight:600">'+fmtEtapa(k)+'</td><td>'+d.count+'</td><td>'+d.avgAging+'d</td><td>'+fmtBRL(d.totalValue)+'</td><td style="color:var(--red)">'+d.atRisk+'</td></tr>';
-    }).join('')+'</tbody></table>');
-
-  // Tier distribution per stage
-  html+=renderSection(3,'Tier por Etapa',
-    '<div class="intel-grid">'+keys.filter(function(k){return Object.keys(data[k].byTier).length>0;}).map(function(k){
-      var tiers=data[k].byTier;
-      var tierKeys=Object.keys(tiers).sort(function(a,b){return tiers[b]-tiers[a];});
-      var maxT=Math.max.apply(null,tierKeys.map(function(t){return tiers[t];}).concat([1]));
-      return renderCard(fmtEtapa(k),tierKeys.map(function(t){return _iBar(t.toUpperCase(),tiers[t],maxT,data[k].count,t==='diamond'?'background:linear-gradient(90deg,#f59e0b,#fbbf24)':'');}).join(''));
-    }).join('')+'</div>');
-
-  ct.innerHTML=html;
-}
-
-// ── CHANNEL ──
-function _renderChannel(ct,AE){
-  var rawChannel;
-  try{ rawChannel=AE.calcByChannel(); }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro ao calcular canais: '+e.message+'</div>'; return; }
-  var data=(rawChannel||{data:{}}).data||{};
-  var keys=Object.keys(data).sort(function(a,b){return data[b].active-data[a].active;});
-  var total=keys.reduce(function(s,k){return s+data[k].active;},0);
-  var maxActive=Math.max.apply(null,keys.map(function(k){return data[k].active;}).concat([1]));
-
-  var html='';
-  html+=renderSection(1,'Deals por Canal',
-    keys.map(function(k){return _iBar(k,data[k].active,maxActive,total);}).join(''));
-
-  html+=renderSection(2,'Detalhamento por Canal',
-    '<table class="intel-table"><thead><tr><th>Canal</th><th>Ativos</th><th>Ganhos</th><th>Perdidos</th><th>Win%</th><th>Aging</th><th>Valor</th></tr></thead><tbody>'+
-    keys.map(function(k){
-      var d=data[k];
-      return '<tr><td style="font-weight:600">'+k+'</td><td>'+d.active+'</td><td style="color:var(--green)">'+d.won+'</td><td style="color:var(--red)">'+d.lost+'</td><td>'+d.winRate+'%</td><td>'+d.avgAging+'d</td><td>'+fmtBRL(d.totalValue)+'</td></tr>';
-    }).join('')+'</tbody></table>');
-
-  ct.innerHTML=html;
-}
-
-// ── TASK ──
-function _renderTask(ct,AE){
-  var rawTask;
-  try{ rawTask=AE.calcByTask(); }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro ao calcular tasks: '+e.message+'</div>'; return; }
-  var data=(rawTask||{data:{}}).data||{};
-  var keys=Object.keys(data).sort(function(a,b){return data[b].count-data[a].count;});
-  var totalTasks=keys.reduce(function(s,k){return s+data[k].count;},0);
-  var maxCount=Math.max.apply(null,keys.map(function(k){return data[k].count;}).concat([1]));
-
-  var html='';
-  html+=renderSection(1,'Distribuição de Tasks — '+totalTasks+' total',
-    keys.map(function(k){return _iBar(data[k].label||k,data[k].count,maxCount,totalTasks);}).join(''));
-
-  html+=renderSection(2,'Prioridade por Tipo',
-    '<table class="intel-table"><thead><tr><th>Tipo</th><th>Total</th><th>Critical</th><th>High</th><th>Urgência</th></tr></thead><tbody>'+
-    keys.map(function(k){
-      var d=data[k];
-      return '<tr><td style="font-weight:600">'+(d.label||k)+'</td><td>'+d.count+'</td><td style="color:var(--red)">'+d.critical+'</td><td style="color:var(--yellow)">'+d.high+'</td><td>'+d.avgUrgency+'</td></tr>';
-    }).join('')+'</tbody></table>');
-
-  ct.innerHTML=html;
-}
-
-// ── VALUE ──
-function _renderValue(ct,AE){
-  var data;
-  try{ data=AE.calcValue(); }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro ao calcular valores: '+e.message+'</div>'; return; }
-  if(!data||data.totalActive===0){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Nenhum deal ativo com valor calculado.</div>'; return; }
-  var html='';
-
-  // Total
-  html+=renderSection(1,'Pipeline Total',
-    '<div class="intel-kpi-row">'+
-    _iKpi(fmtBRL(data.totalValue),'Valor total','var(--accent2)')+
-    _iKpi(data.totalActive,'Deals ativos')+
-    _iKpi(data.totalActive>0?fmtBRL(Math.round(data.totalValue/data.totalActive)):'R$ 0','Ticket médio','var(--green)')+
-    '</div>');
-
-  // By Line
-  var lineKeys=Object.keys(data.byLine).sort(function(a,b){return data.byLine[b].total-data.byLine[a].total;});
-  var maxLineVal=Math.max.apply(null,lineKeys.map(function(k){return data.byLine[k].total;}).concat([1]));
-  html+=renderSection(2,'Valor por Linha',
-    lineKeys.map(function(k){
-      var v=data.byLine[k];
-      return '<div class="intel-bar-row"><span class="intel-bar-label" title="'+fmtRevLine(k)+'">'+fmtRevLine(k)+'</span><div class="intel-bar-bg"><div class="intel-bar-fill" style="width:'+Math.max(5,v.total/maxLineVal*100)+'%;background:linear-gradient(90deg,rgba(34,197,94,0.4),rgba(34,197,94,0.7))"><span class="intel-bar-v">'+fmtBRL(v.total)+'</span></div></div><span class="intel-bar-pct">'+v.count+' deals</span></div>';
-    }).join(''));
-
-  // By Stage
-  var stageKeys=Object.keys(data.byStage).sort(function(a,b){return data.byStage[b].total-data.byStage[a].total;});
-  var maxStageVal=Math.max.apply(null,stageKeys.map(function(k){return data.byStage[k].total;}).concat([1]));
-  html+=renderSection(3,'Valor por Etapa',
-    stageKeys.map(function(k){
-      var v=data.byStage[k];
-      return '<div class="intel-bar-row"><span class="intel-bar-label">'+fmtEtapa(k)+'</span><div class="intel-bar-bg"><div class="intel-bar-fill" style="width:'+Math.max(5,v.total/maxStageVal*100)+'%;background:linear-gradient(90deg,rgba(245,158,11,0.4),rgba(245,158,11,0.7))"><span class="intel-bar-v">'+fmtBRL(v.total)+'</span></div></div><span class="intel-bar-pct">'+v.count+' deals</span></div>';
-    }).join(''));
-
-  // By Tier
-  var tierKeys=Object.keys(data.byTier).sort(function(a,b){return data.byTier[b].total-data.byTier[a].total;});
-  html+=renderSection(4,'Valor por Tier',
-    '<div class="intel-kpi-row">'+tierKeys.map(function(k){
-      var v=data.byTier[k];
-      return _iKpi(fmtBRL(v.total),k.toUpperCase()+' ('+v.count+')',k==='diamond'?'#f59e0b':k==='gold'?'#fbbf24':'var(--text)');
-    }).join('')+'</div>');
-
-  ct.innerHTML=html;
-}
-
-// ── Forecast Intelligence Tab ─────────────────────────────────────────
-function _renderForecast(ct,allDeals,deals){
-  try{
-  var html='';
-  // KPIs gerais
-  var scored=deals.filter(function(d){return d._forecastV6&&d._forecastV6.score!=null;});
-  if(!scored.length){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Nenhum deal com forecast calculado. Os scores sao gerados apos o enrich do pipeline.</div>'; return; }
-  var avgScore=scored.length?Math.round(scored.reduce(function(s,d){return s+d._forecastV6.score;},0)/scored.length*100):0;
-  var avgConf=scored.length?Math.round(scored.reduce(function(s,d){return s+(d._forecastV6.confidence||0);},0)/scored.length*100):0;
-  var highProb=scored.filter(function(d){return d._forecastV6.score>=0.7;}).length;
-  var medProb=scored.filter(function(d){return d._forecastV6.score>=0.4&&d._forecastV6.score<0.7;}).length;
-  var lowProb=scored.filter(function(d){return d._forecastV6.score<0.4;}).length;
-  var totalWeighted=scored.reduce(function(s,d){return s+(d._forecastV6.score*(d.revenueRaw||0));},0);
-  html+=renderSection(1,'Forecast do Pipeline',
-    '<div class="intel-kpi-row">'+
-    _iKpi(avgScore+'%','Score médio','var(--accent2)')+
-    _iKpi(avgConf+'%','Confiança média','var(--green)')+
-    _iKpi(scored.length,'Deals scored')+
-    _iKpi(fmtBRL(Math.round(totalWeighted)),'Pipeline ponderado','var(--gold)')+
-    '</div>');
-  // Distribuição por faixa
-  html+=renderSection(2,'Distribuição por Probabilidade',
-    '<div class="intel-kpi-row">'+
-    _iKpi(highProb,'Alta (≥70%)','var(--green)')+
-    _iKpi(medProb,'Média (40-69%)','var(--yellow)')+
-    _iKpi(lowProb,'Baixa (<40%)','var(--red)')+
-    '</div>');
-  // Top 10 deals por score
-  var sorted=scored.slice().sort(function(a,b){return b._forecastV6.score-a._forecastV6.score;}).slice(0,10);
-  html+=renderSection(3,'Top Deals por Score',
-    '<table class="intel-table"><thead><tr><th>Deal</th><th>Linha</th><th>Score</th><th>Conf.</th><th>Valor</th></tr></thead><tbody>'+
-    sorted.map(function(d){
-      var s=Math.round(d._forecastV6.score*100);
-      var c=Math.round((d._forecastV6.confidence||0)*100);
-      var col=s>=70?'var(--green)':s>=40?'var(--yellow)':'var(--red)';
-      return '<tr><td>'+_escHtml(d.nome||'—')+'</td><td style="font-size:10px;color:var(--text2)">'+_escHtml(_fmtLinha(d.linhaReceita||d.linha_de_receita_vigente||''))+'</td><td style="color:'+col+';font-weight:700">'+s+'%</td><td style="color:var(--text2)">'+c+'%</td><td style="color:var(--green)">'+fmtBRL(d.revenueRaw)+'</td></tr>';
-    }).join('')+'</tbody></table>');
-  // Score por fase
-  var byFase={};
-  scored.forEach(function(d){var f=d.fase||d.fase_atual_no_processo||'—';if(!byFase[f])byFase[f]={sum:0,cnt:0};byFase[f].sum+=d._forecastV6.score;byFase[f].cnt++;});
-  var faseKeys=Object.keys(byFase).sort(function(a,b){return byFase[b].sum/byFase[b].cnt-byFase[a].sum/byFase[a].cnt;});
-  var maxFase=1;
-  html+=renderSection(4,'Score Médio por Fase',
-    faseKeys.map(function(f){
-      var avg=Math.round(byFase[f].sum/byFase[f].cnt*100);
-      var col=avg>=70?'rgba(48,209,88,0.5)':avg>=40?'rgba(255,214,10,0.5)':'rgba(255,69,58,0.5)';
-      return _iBar(f+' ('+byFase[f].cnt+'d)',avg,100,100,'background:'+col);
-    }).join(''));
-  ct.innerHTML=html;
-  }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro no forecast: '+e.message+'</div>'; }
-}
-
-// ── Framework Intelligence Tab ────────────────────────────────────────
-function _renderFramework(ct,allDeals,deals){
-  try{
-  var html='';
-  // Deals com framework extractions
-  var withFw=deals.filter(function(d){return d._frameworkRuntime&&d._frameworkRuntime.qualitative_score!=null;});
-  var withoutFw=deals.filter(function(d){return !d._frameworkRuntime||d._frameworkRuntime.qualitative_score==null;});
-  var avgQs=withFw.length?Math.round(withFw.reduce(function(s,d){return s+d._frameworkRuntime.qualitative_score;},0)/withFw.length*100):0;
-  var avgCov=withFw.length?Math.round(withFw.reduce(function(s,d){return s+(d._frameworkRuntime.coverage_pct||0);},0)/withFw.length):0;
-  var gapCount=withFw.filter(function(d){return d._frameworkRuntime.qualitative_score<0.6;}).length;
-  html+=renderSection(1,'Cobertura Framework',
-    '<div class="intel-kpi-row">'+
-    _iKpi(withFw.length,'Deals analisados','var(--accent2)')+
-    _iKpi(withoutFw.length,'Sem extração','var(--text2)')+
-    _iKpi(avgQs+'%','Score qualitativo médio',avgQs>=70?'var(--green)':avgQs>=50?'var(--yellow)':'var(--red)')+
-    _iKpi(avgCov+'%','Cobertura média','var(--green)')+
-    '</div>');
-  // Gaps críticos (score < 60%)
-  var gapDeals=withFw.filter(function(d){return d._frameworkRuntime.qualitative_score<0.6;}).sort(function(a,b){return a._frameworkRuntime.qualitative_score-b._frameworkRuntime.qualitative_score;}).slice(0,8);
-  html+=renderSection(2,'Gaps Críticos (Score < 60%)',
-    gapDeals.length?
-    '<table class="intel-table"><thead><tr><th>Deal</th><th>Framework</th><th>Score Q.</th><th>Cobertura</th><th>Próx. Ação</th></tr></thead><tbody>'+
-    gapDeals.map(function(d){
-      var fw=d._frameworkRuntime;
-      var s=Math.round(fw.qualitative_score*100);
-      var c=Math.round((fw.coverage_pct||0));
-      return '<tr><td>'+_escHtml(d.nome||'—')+'</td><td style="font-size:10px;color:var(--clay)">'+_escHtml(d._framework||'—')+'</td><td style="color:var(--red);font-weight:700">'+s+'%</td><td>'+c+'%</td><td style="font-size:10px;color:var(--text2)">'+_escHtml(d._nextAction||'—')+'</td></tr>';
-    }).join('')+'</tbody></table>'
-    :'<div style="padding:12px;color:var(--green);font-size:12px">Nenhum gap crítico identificado.</div>');
-  // Distribuição de scores qualitativos
-  var buckets={'Excelente (≥80%)':0,'Bom (60-79%)':0,'Gap (40-59%)':0,'Crítico (<40%)':0};
-  withFw.forEach(function(d){
-    var s=d._frameworkRuntime.qualitative_score*100;
-    if(s>=80) buckets['Excelente (≥80%)']++;
-    else if(s>=60) buckets['Bom (60-79%)']++;
-    else if(s>=40) buckets['Gap (40-59%)']++;
-    else buckets['Crítico (<40%)']++;
-  });
-  var maxBk=Math.max.apply(null,Object.values(buckets).concat([1]));
-  html+=renderSection(3,'Distribuição de Score Qualitativo',
-    Object.keys(buckets).map(function(k){
-      var colors={'Excelente (≥80%)':'rgba(48,209,88,0.5)','Bom (60-79%)':'rgba(245,158,11,0.5)','Gap (40-59%)':'rgba(255,214,10,0.5)','Crítico (<40%)':'rgba(255,69,58,0.5)'};
-      return _iBar(k,buckets[k],maxBk,withFw.length||1,'background:'+colors[k]);
-    }).join(''));
-  // Top deals por score qualitativo
-  var topFw=withFw.slice().sort(function(a,b){return b._frameworkRuntime.qualitative_score-a._frameworkRuntime.qualitative_score;}).slice(0,8);
-  html+=renderSection(4,'Top Deals por Score Qualitativo',
-    '<table class="intel-table"><thead><tr><th>Deal</th><th>Framework</th><th>Score Q.</th><th>Cob.</th><th>Valor</th></tr></thead><tbody>'+
-    topFw.map(function(d){
-      var fw=d._frameworkRuntime;
-      var s=Math.round(fw.qualitative_score*100);
-      var col=s>=70?'var(--green)':s>=50?'var(--yellow)':'var(--red)';
-      return '<tr><td>'+_escHtml(d.nome||'—')+'</td><td style="font-size:10px;color:var(--clay)">'+_escHtml(d._framework||'—')+'</td><td style="color:'+col+';font-weight:700">'+s+'%</td><td style="color:var(--text2)">'+Math.round(fw.coverage_pct||0)+'%</td><td style="color:var(--green)">'+fmtBRL(d.revenueRaw)+'</td></tr>';
-    }).join('')+'</tbody></table>');
-  ct.innerHTML=html;
-  }catch(e){ ct.innerHTML='<div class="intel-empty" style="color:var(--text2)">Erro no framework: '+e.message+'</div>'; }
-}
-
-// ── ENTERPRISE (L23) ──
-function _renderEnterprise(ct,deals){
-  var html='';
-  var entDeals=deals.filter(function(d){return d._enterpriseScore&&d._enterpriseScore.is_enterprise;});
-  var stdDeals=deals.length-entDeals.length;
-  var totalEVS=entDeals.reduce(function(s,d){return s+(d._enterpriseScore.evs||0);},0);
-  var avgEVS=entDeals.length?Math.round(totalEVS/entDeals.length*10)/10:0;
-  var totalValue=entDeals.reduce(function(s,d){return s+(d._oppValue||0);},0);
-  var bands={platinum:0,gold:0,silver:0,qualifying:0};
-  entDeals.forEach(function(d){var b=d._enterpriseScore.band||'qualifying';bands[b]=(bands[b]||0)+1;});
-
-  html+=renderSection(1,'Enterprise Pipeline (5M+)',
-    '<div class="intel-kpi-row">'+
-    _iKpi(entDeals.length,'Deals Enterprise','var(--green)')+
-    _iKpi(stdDeals,'Standard','var(--text2)')+
-    _iKpi(avgEVS,'EVS Médio','var(--accent2)')+
-    _iKpi(fmtBRL(totalValue),'Valor Total','var(--green)')+
-    '</div>');
-
-  var maxBand=Math.max.apply(null,Object.values(bands).concat([1]));
-  html+=renderSection(2,'Distribuição por Band',
-    _iBar('Platinum',bands.platinum,maxBand,entDeals.length||1,'background:linear-gradient(90deg,#e5e4e2,#d4d4d4)')+
-    _iBar('Gold',bands.gold,maxBand,entDeals.length||1,'background:linear-gradient(90deg,#ffd700,#daa520)')+
-    _iBar('Silver',bands.silver,maxBand,entDeals.length||1,'background:linear-gradient(90deg,#c0c0c0,#a8a8a8)')+
-    _iBar('Qualifying',bands.qualifying,maxBand,entDeals.length||1,'background:linear-gradient(90deg,var(--accent),var(--accent2))'));
-
-  // Top Enterprise deals
-  var topEnt=entDeals.slice().sort(function(a,b){return (b._enterpriseScore.evs||0)-(a._enterpriseScore.evs||0);}).slice(0,8);
-  html+=renderSection(3,'Top Deals Enterprise (por EVS)',
-    '<table class="intel-table"><thead><tr><th>Deal</th><th>Empresa</th><th>EVS</th><th>Band</th><th>Valor</th></tr></thead><tbody>'+
-    topEnt.map(function(d){
-      var es=d._enterpriseScore;
-      var col=es.evs>=80?'var(--green)':es.evs>=60?'var(--yellow)':'var(--red)';
-      return '<tr><td>'+_escHtml(d.nome||'—')+'</td><td style="font-size:10px;color:var(--text2)">'+_escHtml(d.empresa||'—')+'</td><td style="color:'+col+';font-weight:700">'+es.evs+'</td><td style="font-size:10px;text-transform:uppercase">'+es.band+'</td><td style="color:var(--green)">'+fmtBRL(d._oppValue||0)+'</td></tr>';
-    }).join('')+'</tbody></table>');
-
-  ct.innerHTML=html;
-}
-
-// ── RFV (L27) ──
-function _renderRFV(ct,deals){
-  var html='';
-  var portfolio=window.calcRFVPortfolio?window.calcRFVPortfolio(deals):null;
-  if(!portfolio){ct.innerHTML='<div class="intel-empty">RFV Engine não carregado.</div>';return;}
-
-  var clusters=['champion','loyal','potential_loyal','at_risk','hibernating','new_customer'];
-  var clusterLabels={champion:'Campeões',loyal:'Fiéis',potential_loyal:'Potenciais Fiéis',at_risk:'Em Risco',hibernating:'Hibernando',new_customer:'Novos'};
-  var clusterColors={champion:'var(--green)',loyal:'var(--accent)',potential_loyal:'var(--accent2)',at_risk:'var(--yellow)',hibernating:'var(--red)',new_customer:'var(--text2)'};
-  var health=portfolio._summary?portfolio._summary.health_score:0;
-  var healthCol=health>=1.5?'var(--green)':health>=0.5?'var(--yellow)':'var(--red)';
-
-  html+=renderSection(1,'Saúde da Carteira (RFV)',
-    '<div class="intel-kpi-row">'+
-    _iKpi(portfolio._summary?portfolio._summary.total_deals:0,'Total Deals','var(--text)')+
-    _iKpi(health.toFixed(2),'Health Score',healthCol)+
-    _iKpi(portfolio.champion?portfolio.champion.count:0,'Campeões','var(--green)')+
-    _iKpi(portfolio.at_risk?portfolio.at_risk.count:0,'Em Risco','var(--red)')+
-    '</div>');
-
-  var maxCl=Math.max.apply(null,clusters.map(function(k){return portfolio[k]?portfolio[k].count:0;}).concat([1]));
-  html+=renderSection(2,'Distribuição por Cluster',
-    clusters.map(function(k){
-      var cl=portfolio[k]||{count:0};
-      return _iBar(clusterLabels[k]+' ('+cl.count+')',cl.count,maxCl,deals.length||1,'background:'+clusterColors[k]);
-    }).join(''));
-
-  // Value distribution
-  html+=renderSection(3,'Valor por Cluster',
-    '<table class="intel-table"><thead><tr><th>Cluster</th><th>Deals</th><th>% Deals</th><th>Valor</th><th>% Valor</th><th>Aging Médio</th></tr></thead><tbody>'+
-    clusters.map(function(k){
-      var cl=portfolio[k]||{count:0,pct:0,value:0,value_pct:0,avg_aging:0};
-      return '<tr><td style="color:'+clusterColors[k]+';font-weight:700">'+clusterLabels[k]+'</td><td>'+cl.count+'</td><td>'+cl.pct+'%</td><td style="color:var(--green)">'+fmtBRL(cl.value)+'</td><td>'+cl.value_pct+'%</td><td>'+cl.avg_aging+'d</td></tr>';
-    }).join('')+'</tbody></table>');
-
-  ct.innerHTML=html;
-}
-
-// ── SPIN AUDIT (L26) ──
-function _renderSpinAudit(ct,deals){
-  var html='';
-  var spinDeals=deals.filter(function(d){return d._spinAudit&&d._spinAudit.applicable;});
-  var nonSpin=deals.length-spinDeals.length;
-  var avgScore=spinDeals.length?Math.round(spinDeals.reduce(function(s,d){return s+d._spinAudit.score;},0)/spinDeals.length*100):0;
-  var premature=spinDeals.filter(function(d){return d._spinAudit.premature_solution;}).length;
-
-  // Advance vs Continuation
-  var advances=deals.filter(function(d){return d._advanceState&&d._advanceState.is_advance;}).length;
-  var continuations=deals.filter(function(d){return d._advanceState&&d._advanceState.is_continuation;}).length;
-  var neutral=deals.length-advances-continuations;
-
-  // Objection landscape
-  var objMap={price:0,timing:0,authority:0,technical:0,unknown:0};
-  var totalObj=0,resolvedObj=0;
-  deals.forEach(function(d){(d._objections||[]).forEach(function(o){objMap[o.type||'unknown']++;totalObj++;if(o.resolved)resolvedObj++;});});
-
-  html+=renderSection(1,'SPIN Compliance',
-    '<div class="intel-kpi-row">'+
-    _iKpi(spinDeals.length,'Deals SPIN','var(--accent2)')+
-    _iKpi(avgScore+'%','Score Médio',avgScore>=70?'var(--green)':avgScore>=50?'var(--yellow)':'var(--red)')+
-    _iKpi(premature,'Solução Prematura','var(--red)')+
-    _iKpi(nonSpin,'Não-SPIN','var(--text2)')+
-    '</div>');
-
-  // Ratio médio S/P/I/N
-  if(spinDeals.length){
-    var avgS=Math.round(spinDeals.reduce(function(s,d){return s+d._spinAudit.situation_ratio;},0)/spinDeals.length*100);
-    var avgP=Math.round(spinDeals.reduce(function(s,d){return s+d._spinAudit.problem_ratio;},0)/spinDeals.length*100);
-    var avgI=Math.round(spinDeals.reduce(function(s,d){return s+d._spinAudit.implication_ratio;},0)/spinDeals.length*100);
-    var avgN=Math.round(spinDeals.reduce(function(s,d){return s+d._spinAudit.need_payoff_ratio;},0)/spinDeals.length*100);
-    var maxR=Math.max(avgS,avgP,avgI,avgN,1);
-    html+=renderSection(2,'Proporção S/P/I/N (Ideal: S=15% P=25% I=35% N=25%)',
-      _iBar('Situação '+avgS+'% (ideal 15%)',avgS,maxR,100,'background:'+(avgS>30?'var(--red)':'var(--accent)'))+
-      _iBar('Problema '+avgP+'% (ideal 25%)',avgP,maxR,100,'background:var(--yellow)')+
-      _iBar('Implicação '+avgI+'% (ideal 35%)',avgI,maxR,100,'background:var(--green)')+
-      _iBar('Necessidade '+avgN+'% (ideal 25%)',avgN,maxR,100,'background:var(--accent2)'));
-  }
-
-  html+=renderSection(3,'Avanço vs Continuação',
-    '<div class="intel-kpi-row">'+
-    _iKpi(advances,'Avanços Reais','var(--green)')+
-    _iKpi(continuations,'Continuações','var(--yellow)')+
-    _iKpi(neutral,'Neutro','var(--text2)')+
-    _iKpi(totalObj>0?Math.round(resolvedObj/totalObj*100)+'%':'—','Resolução Objeções',resolvedObj/Math.max(totalObj,1)>=0.5?'var(--green)':'var(--red)')+
-    '</div>');
-
-  if(totalObj>0){
-    var maxObj=Math.max.apply(null,Object.values(objMap).concat([1]));
-    var objLabels={price:'Preço',timing:'Timing',authority:'Autoridade',technical:'Técnica',unknown:'Outro'};
-    html+=renderSection(4,'Mapa de Objeções ('+totalObj+' total, '+resolvedObj+' resolvidas)',
-      Object.keys(objMap).map(function(k){
-        return _iBar(objLabels[k],objMap[k],maxObj,totalObj,'background:'+(k==='price'?'var(--red)':k==='authority'?'var(--yellow)':k==='timing'?'var(--accent2)':'var(--text2)'));
-      }).join(''));
-  }
-
-  ct.innerHTML=html;
-}
-
-// ── TRUSTED ADVISOR (L24) ──
-function _renderTrustedAdvisor(ct,deals){
-  var html='';
-  var taDeals=deals.filter(function(d){return d._trustedAdvisor&&d._trustedAdvisor.score>0;});
-  if(!taDeals.length){ct.innerHTML='<div class="intel-empty">Nenhum deal com Trusted Advisor Score calculado.</div>';return;}
-
-  var avgScore=Math.round(taDeals.reduce(function(s,d){return s+d._trustedAdvisor.score;},0)/taDeals.length*100);
-  var avgMaister=Math.round(taDeals.reduce(function(s,d){return s+d._trustedAdvisor.maister_score;},0)/taDeals.length*100);
-  var avgObjRes=Math.round(taDeals.reduce(function(s,d){return s+d._trustedAdvisor.objection_resistance;},0)/taDeals.length*100);
-
-  var levels={trusted_advisor:0,expert:0,vendor:0,commodity:0};
-  taDeals.forEach(function(d){var l=d._trustedAdvisor.level||'commodity';levels[l]=(levels[l]||0)+1;});
-
-  html+=renderSection(1,'Trusted Advisor Score (Maister + Objeções)',
-    '<div class="intel-kpi-row">'+
-    _iKpi(avgScore+'%','Score Combinado',avgScore>=70?'var(--green)':avgScore>=50?'var(--yellow)':'var(--red)')+
-    _iKpi(avgMaister+'%','Maister Score','var(--accent2)')+
-    _iKpi(avgObjRes+'%','Resiliência Objeções',avgObjRes>=60?'var(--green)':'var(--red)')+
-    _iKpi(taDeals.length,'Deals Analisados','var(--text)')+
-    '</div>');
-
-  var maxLvl=Math.max.apply(null,Object.values(levels).concat([1]));
-  var lvlLabels={trusted_advisor:'Trusted Advisor',expert:'Expert',vendor:'Vendor',commodity:'Commodity'};
-  var lvlColors={trusted_advisor:'var(--green)',expert:'var(--accent)',vendor:'var(--yellow)',commodity:'var(--red)'};
-  html+=renderSection(2,'Distribuição de Nível',
-    Object.keys(levels).map(function(k){
-      return _iBar(lvlLabels[k],levels[k],maxLvl,taDeals.length,'background:'+lvlColors[k]);
-    }).join(''));
-
-  // Maister Components médios
-  var avgC=Math.round(taDeals.reduce(function(s,d){return s+d._trustedAdvisor.components.credibility;},0)/taDeals.length*100);
-  var avgR=Math.round(taDeals.reduce(function(s,d){return s+d._trustedAdvisor.components.reliability;},0)/taDeals.length*100);
-  var avgI=Math.round(taDeals.reduce(function(s,d){return s+d._trustedAdvisor.components.intimacy;},0)/taDeals.length*100);
-  var avgSO=Math.round(taDeals.reduce(function(s,d){return s+d._trustedAdvisor.components.self_orientation;},0)/taDeals.length*100);
-  var maxComp=Math.max(avgC,avgR,avgI,avgSO,1);
-  html+=renderSection(3,'Componentes Maister (Trust = (C+R+I) / SO)',
-    _iBar('Credibilidade '+avgC+'%',avgC,100,100,'background:var(--green)')+
-    _iBar('Confiabilidade '+avgR+'%',avgR,100,100,'background:var(--accent)')+
-    _iBar('Intimidade '+avgI+'%',avgI,100,100,'background:var(--accent2)')+
-    _iBar('Self-Orientation '+avgSO+'% (menor=melhor)',avgSO,100,100,'background:'+(avgSO<=30?'var(--green)':avgSO<=50?'var(--yellow)':'var(--red)')));
-
-  // Top deals by TA score
-  var topTA=taDeals.slice().sort(function(a,b){return b._trustedAdvisor.score-a._trustedAdvisor.score;}).slice(0,8);
-  html+=renderSection(4,'Top Deals por Trusted Advisor',
-    '<table class="intel-table"><thead><tr><th>Deal</th><th>Score</th><th>Level</th><th>Maister</th><th>Obj. Res.</th></tr></thead><tbody>'+
-    topTA.map(function(d){
-      var ta=d._trustedAdvisor;
-      var col=ta.score>=0.70?'var(--green)':ta.score>=0.50?'var(--yellow)':'var(--red)';
-      return '<tr><td>'+_escHtml(d.nome||'—')+'</td><td style="color:'+col+';font-weight:700">'+Math.round(ta.score*100)+'%</td><td style="font-size:10px;text-transform:uppercase">'+ta.level+'</td><td>'+Math.round(ta.maister_score*100)+'%</td><td>'+Math.round(ta.objection_resistance*100)+'%</td></tr>';
-    }).join('')+'</tbody></table>');
-
-  ct.innerHTML=html;
-}
-
-function renderSection(num,title,content){
-  return `<div class="intel-section">
-    <div class="intel-section-title"><span class="intel-section-num">${num}</span>${title}</div>
-    ${content}
-  </div>`;
-}
-
-function renderCard(title,content){
-  return `<div class="intel-card"><div class="intel-title">${title}</div>${content}</div>`;
-}
-
-// ── RF·1: Bowtie Intelligence View ───────────────────────────────────
-function _renderBowtie(ct,deals){
-  // Enriquece bowtieLeg se ainda não feito
-  deals.forEach(function(d){if(!d._bowtieLeg&&window.calcBowtiegLeg) d._bowtieLeg=window.calcBowtiegLeg(d);});
-
-  var legs={ACQ:[],RET:[],EXP:[],null_leg:[]};
-  deals.forEach(function(d){
-    var l=d._bowtieLeg||null;
-    if(l==='ACQ') legs.ACQ.push(d);
-    else if(l==='RET') legs.RET.push(d);
-    else if(l==='EXP') legs.EXP.push(d);
-    else legs.null_leg.push(d);
-  });
-
-  var total=deals.length||1;
-  var acqPct=Math.round(legs.ACQ.length/total*100);
-  var retPct=Math.round(legs.RET.length/total*100);
-  var expPct=Math.round(legs.EXP.length/total*100);
-
-  // Valor por perna
-  function sumVal(arr){return arr.reduce(function(s,d){return s+(Number(d._oppValue||d.revenueRaw)||0);},0);}
-  var acqVal=sumVal(legs.ACQ), retVal=sumVal(legs.RET), expVal=sumVal(legs.EXP);
-
-  // Aging médio por perna
-  function avgAging(arr){return arr.length?Math.round(arr.reduce(function(s,d){return s+(d._delta||d.delta||0);},0)/arr.length*10)/10:0;}
-
-  var html='';
-
-  // Funil Bowtie visual
-  html+=renderSection(1,'Funil Bowtie — Aquisição → Retenção → Expansão',
-    `<div style="display:flex;gap:0;border-radius:10px;overflow:hidden;margin-top:6px;border:1px solid var(--border)">
-      <div style="flex:${Math.max(legs.ACQ.length,1)};background:rgba(14,165,233,.12);border-right:1px solid var(--border);padding:14px;text-align:center">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent2);margin-bottom:4px">ACQ</div>
-        <div style="font-size:24px;font-weight:900;color:var(--accent2)">${legs.ACQ.length}</div>
-        <div style="font-size:10px;color:var(--text2)">${acqPct}% · ${fmtBRL(acqVal)}</div>
-        <div style="font-size:9px;color:var(--text3);margin-top:2px">Aging ~${avgAging(legs.ACQ)}d</div>
-      </div>
-      <div style="flex:${Math.max(legs.RET.length,1)};background:rgba(217,119,6,.10);border-right:1px solid var(--border);padding:14px;text-align:center">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#fbbf24;margin-bottom:4px">RET</div>
-        <div style="font-size:24px;font-weight:900;color:#fbbf24">${legs.RET.length}</div>
-        <div style="font-size:10px;color:var(--text2)">${retPct}% · ${fmtBRL(retVal)}</div>
-        <div style="font-size:9px;color:var(--text3);margin-top:2px">Aging ~${avgAging(legs.RET)}d</div>
-      </div>
-      <div style="flex:${Math.max(legs.EXP.length,1)};background:rgba(16,185,129,.10);padding:14px;text-align:center">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--green);margin-bottom:4px">EXP</div>
-        <div style="font-size:24px;font-weight:900;color:var(--green)">${legs.EXP.length}</div>
-        <div style="font-size:10px;color:var(--text2)">${expPct}% · ${fmtBRL(expVal)}</div>
-        <div style="font-size:9px;color:var(--text3);margin-top:2px">Aging ~${avgAging(legs.EXP)}d</div>
-      </div>
-    </div>
-    <div style="font-size:10px;color:var(--text2);margin-top:8px;padding:8px 10px;background:var(--bg3);border-radius:6px;border:1px solid var(--border)">
-      <b style="color:var(--text)">Diagnóstico:</b>
-      ${acqPct>75?' Pipeline concentrado em Aquisição — <span style="color:var(--amber2)">risco de fluxo de caixa sem base de renovação</span>.':''}
-      ${expPct>40?' Alta concentração em Expansão — <span style="color:var(--green)">modelo Bowtie saudável</span>.':''}
-      ${retPct<10&&total>10?' Base de Retenção frágil — <span style="color:var(--red)">churn potencial não monitorado</span>.':''}
-      ${(acqPct<=75&&expPct<=40&&(retPct>=10||total<=10))?' Distribuição balanceada — <span style="color:var(--green)">arquitetura de receita dentro do esperado</span>.':''}
-    </div>`
-  );
-
-  // Top deals por perna
-  var legConfig=[
-    {key:'ACQ',deals:legs.ACQ,color:'var(--accent2)',label:'Aquisição'},
-    {key:'RET',deals:legs.RET,color:'#fbbf24',label:'Retenção'},
-    {key:'EXP',deals:legs.EXP,color:'var(--green)',label:'Expansão'}
-  ];
-  var tableRows='';
-  legConfig.forEach(function(lc){
-    lc.deals.slice(0,6).forEach(function(d){
-      var fc=d._forecastV6&&d._forecastV6.score!=null?Math.round(d._forecastV6.score*100)+'%':'—';
-      tableRows+='<tr><td><span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;background:rgba(255,255,255,.06);color:'+lc.color+'">'+lc.key+'</span></td>';
-      tableRows+='<td style="font-weight:600">'+_escHtml(d.nome||'—')+'</td>';
-      tableRows+='<td>'+_escHtml(d.grupo_de_receita||d.linhaReceita||d._revLine||'—')+'</td>';
-      tableRows+='<td>'+_escHtml(d.etapa||d.etapa_atual_no_pipeline||'—')+'</td>';
-      tableRows+='<td>'+fc+'</td>';
-      tableRows+='<td>'+(d._delta||d.delta||0)+'d</td></tr>';
+  // Bloco 2: Top block reasons
+  if(brArr.length){
+    html+='<div class="perf-section"><div class="perf-section-title">Top Causas de Bloqueio</div>';
+    html+='<table class="rpt-table"><thead><tr><th>Motivo</th><th>Count</th><th>% dos Bloqueados</th></tr></thead><tbody>';
+    brArr.slice(0,8).forEach(function(b){
+      html+='<tr><td>'+b.reason.replace(/_/g,' ')+'</td><td>'+b.count+'</td><td>'+_fmtPct(blocked>0?b.count/blocked:0)+'</td></tr>';
     });
-  });
+    html+='</tbody></table></div>';
+  }
 
-  html+=renderSection(2,'Deals por Perna do Bowtie',
-    '<table class="intel-table"><thead><tr><th>Perna</th><th>Deal</th><th>Linha</th><th>Etapa</th><th>Forecast</th><th>Aging</th></tr></thead><tbody>'+tableRows+'</tbody></table>');
+  // Bloco 3: Qualidade por operador
+  if(ops.length){
+    ops.sort(function(a,b){return b.avgTrust-a.avgTrust;});
+    var myEmail=window._OPERATOR_EMAIL||'';
+    html+='<div class="perf-section"><div class="perf-section-title">Qualidade por Operador</div>';
+    html+='<table class="rpt-table"><thead><tr><th>Operador</th><th>Trust</th><th>Completeness</th><th>Consistency</th><th>Recency</th><th>Evidence</th><th>Band</th><th>Cr\u00edticos</th></tr></thead><tbody>';
+    ops.forEach(function(o){
+      var isSelf=o.email===myEmail;
+      var band=trustBand(o.avgTrust);
+      html+='<tr class="'+(isSelf?'row-self':'')+'"><td>'+(o.email.split('@')[0])+'</td><td>'+Math.round(o.avgTrust)+'</td><td>'+Math.round(o.avgComp)+'</td><td>'+Math.round(o.avgCons)+'</td><td>'+Math.round(o.avgRec)+'</td><td>'+Math.round(o.avgEvi)+'</td><td><span class="'+trustClass(o.avgTrust)+'">'+band+'</span></td><td>'+o.critical+'</td></tr>';
+    });
+    html+='</tbody></table></div>';
+  }
+
+  if(!html) html='<div style="padding:40px;text-align:center;color:var(--text3)">Sem dados de qualidade dispon\u00edveis.</div>';
+
+  var sub=document.getElementById('intel-subtitle');
+  if(sub) sub.textContent=qRes.length+' deals analisados \u2014 threshold cr\u00edtico: <'+Math.round(thCritical)+' \u2014 dim: QUALITY';
 
   ct.innerHTML=html;
 }
+
 
 // ── RF·4: Forecast Explainability ────────────────────────────────────
 window.toggleForecastExplain=function(id,btn){

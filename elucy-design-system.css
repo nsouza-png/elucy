@@ -554,7 +554,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 .deal-list{flex:1;overflow-y:auto;padding:8px}
 
-.di{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;margin-bottom:6px;cursor:pointer;transition:.2s;border-left:3px solid transparent}
+.di{background:var(--glass);border:1px solid var(--border2);border-radius:var(--r2);padding:12px 14px;margin-bottom:6px;cursor:pointer;transition:.2s;border-left:3px solid transparent;border-top:2px solid var(--accent-brand)}
 
 .di:hover{border-color:var(--border2);background:var(--bg4);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.25)}
 
@@ -986,7 +986,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 .tasks-list{display:flex;flex-direction:column;gap:12px}
 
-.task-card{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px;transition:.15s}
+.task-card{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;background:var(--glass);border:1px solid var(--border2);border-radius:var(--r2);padding:14px;transition:.15s;border-top:2px solid var(--accent-brand)}
 
 .task-card:hover{border-color:var(--accent);background:var(--bg3);transform:translateY(-1px);box-shadow:0 4px 16px rgba(245,158,11,.08)}
 
@@ -1317,7 +1317,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 /* Intelligence dashboard */
 .intel-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
 
-.intel-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:15px;overflow:hidden}
+.intel-card{background:var(--glass);border:1px solid var(--border2);border-radius:var(--r-card);padding:15px;overflow:hidden;transition:.2s ease}
+.intel-card:hover{border-color:var(--aborder);box-shadow:0 0 20px rgba(245,158,11,.06)}
 
 .intel-card.full{grid-column:1/-1}
 
@@ -1331,6 +1332,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 /* Intel KPI values — gradient text (Brand Book §04) */
 .intel-kpi-v{font-family:var(--font-display);font-size:20px;font-weight:800;line-height:1.2;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+/* Semantic status overrides — green/red/warn KPIs */
+.intel-kpi-v.kpi-status-ok{background:none;-webkit-text-fill-color:var(--green);color:var(--green)}
+.intel-kpi-v.kpi-status-err{background:none;-webkit-text-fill-color:var(--red);color:var(--red)}
+.intel-kpi-v.kpi-status-warn{background:none;-webkit-text-fill-color:var(--accent3);color:var(--accent3)}
 
 .intel-kpi-l{font-family:var(--font-body);font-size:10px;font-weight:500;color:var(--text2);margin-top:2px}
 
@@ -1565,7 +1570,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 .pb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
 
-.pb-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:all .2s}
+.pb-card{background:var(--glass);border:1px solid var(--border2);border-radius:var(--r-card);padding:14px;cursor:pointer;transition:all .2s;border-top:2px solid var(--accent-brand)}
 
 .pb-card:hover{border-color:var(--pb-color);background:var(--bg4)}
 
@@ -2964,9 +2969,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 .chat-msg{max-width:72%;padding:9px 13px;border-radius:18px;font-size:13px;line-height:1.45;word-wrap:break-word}
 
-.chat-msg.out{background:var(--accent);color:#000;border-bottom-right-radius:4px}
+.chat-msg.out{background:var(--gradient-brand);color:#0a0a0a;border-bottom-right-radius:4px;font-weight:500}
 
-.chat-msg.in{background:var(--bg3);color:var(--text);border-bottom-left-radius:4px}
+.chat-msg.in{background:var(--glass);border:1px solid var(--border2);color:var(--text);border-bottom-left-radius:4px}
 
 .chat-msg.blocked{background:var(--red);color:#fff;opacity:.7}
 

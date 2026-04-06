@@ -65,15 +65,19 @@
     } catch (e) { return null; }
   }
 
-  // Busca métricas agregadas do mês do funil_comercial para o qualificador
-  async function fetchDatabricksMetrics(qualName) {
+  // Helper: resolve date range from period object or fallback to current month
+  function _resolveDates(period) {
+    if (period && period.start && period.end) return { start: period.start, end: period.end };
+    var ms = _monthStart();
+    var d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + 1);
+    return { start: ms, end: d.toISOString().slice(0, 10) };
+  }
+
+  // Busca métricas agregadas do funil_comercial para o qualificador (com período dinâmico)
+  async function fetchDatabricksMetrics(qualName, period) {
     var qn = qualName || _qualName();
     if (!qn) return null;
-    var monthStart = _monthStart();
-    var nextMonth = (function() {
-      var d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + 1);
-      return d.toISOString().slice(0, 10);
-    })();
+    var dt = _resolveDates(period);
 
     var sql = `
       SELECT
@@ -93,8 +97,8 @@
         ROUND(SUM(CASE WHEN event = 'Oportunidade' THEN valor_da_oportunidade END), 0)     AS pipeline_value
       FROM production.diamond.funil_comercial
       WHERE qualificador_name = '${qn}'
-        AND event_timestamp >= CAST('${monthStart} 00:00:00' AS TIMESTAMP)
-        AND event_timestamp <  CAST('${nextMonth} 00:00:00' AS TIMESTAMP)
+        AND event_timestamp >= CAST('${dt.start} 00:00:00' AS TIMESTAMP)
+        AND event_timestamp <  CAST('${dt.end} 00:00:00' AS TIMESTAMP)
     `;
 
     var rows = await _dbQuery(sql.trim());
@@ -139,14 +143,10 @@
     };
   }
 
-  async function fetchDatabricksLineBreakdown(qualName) {
+  async function fetchDatabricksLineBreakdown(qualName, period) {
     var qn = qualName || _qualName();
-    if (!qn) return null;
-    var monthStart = _monthStart();
-    var nextMonth = (function() {
-      var d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + 1);
-      return d.toISOString().slice(0, 10);
-    })();
+    var dt = _resolveDates(period);
+    var whereClause = qn ? "WHERE qualificador_name = '" + qn + "'" : "WHERE qualificador_name IS NOT NULL";
     var sql = `
       SELECT
         COALESCE(linha_de_receita_vigente, 'Não Definido') AS linha,
@@ -157,9 +157,9 @@
         COUNT(DISTINCT CASE WHEN event = 'Perdido' THEN deal_id END)      AS lost,
         ROUND(SUM(CASE WHEN event = 'Ganho' THEN revenue END), 0)         AS receita
       FROM production.diamond.funil_comercial
-      WHERE qualificador_name = '${qn}'
-        AND event_timestamp >= CAST('${monthStart} 00:00:00' AS TIMESTAMP)
-        AND event_timestamp <  CAST('${nextMonth} 00:00:00' AS TIMESTAMP)
+      ${whereClause}
+        AND event_timestamp >= CAST('${dt.start} 00:00:00' AS TIMESTAMP)
+        AND event_timestamp <  CAST('${dt.end} 00:00:00' AS TIMESTAMP)
       GROUP BY 1
       ORDER BY mql DESC
       LIMIT 20
@@ -183,14 +183,10 @@
     }).filter(function(r) { return r.total > 0; });
   }
 
-  async function fetchDatabricksDtByLine(qualName) {
+  async function fetchDatabricksDtByLine(qualName, period) {
     var qn = qualName || _qualName();
     if (!qn) return null;
-    var monthStart = _monthStart();
-    var nextMonth = (function() {
-      var d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + 1);
-      return d.toISOString().slice(0, 10);
-    })();
+    var dt = _resolveDates(period);
     var sql = `
       SELECT
         COALESCE(linha_de_receita_vigente, 'Não Definido') AS linha,
@@ -201,8 +197,8 @@
         ROUND(AVG(CASE WHEN event = 'Ganho'        AND delta_t > 0 AND delta_t < 365 THEN delta_t END), 1) AS dt_negoc_ganho
       FROM production.diamond.funil_comercial
       WHERE qualificador_name = '${qn}'
-        AND event_timestamp >= CAST('${monthStart} 00:00:00' AS TIMESTAMP)
-        AND event_timestamp <  CAST('${nextMonth} 00:00:00' AS TIMESTAMP)
+        AND event_timestamp >= CAST('${dt.start} 00:00:00' AS TIMESTAMP)
+        AND event_timestamp <  CAST('${dt.end} 00:00:00' AS TIMESTAMP)
       GROUP BY 1
       HAVING mql >= 3
       ORDER BY mql DESC
@@ -210,6 +206,43 @@
     `;
     var rows = await _dbQuery(sql.trim());
     return rows;
+  }
+
+  // NOVO: Query macro — todos os operadores, sem filtro individual (STEP 3)
+  async function fetchDatabricksMacro(period) {
+    var dt = _resolveDates(period);
+    var sql = `
+      SELECT
+        qualificador_name,
+        COUNT(DISTINCT CASE WHEN event = 'MQL'          THEN deal_id END) AS cnt_mql,
+        COUNT(DISTINCT CASE WHEN event = 'SAL'          THEN deal_id END) AS cnt_sal,
+        COUNT(DISTINCT CASE WHEN event = 'Oportunidade' THEN deal_id END) AS cnt_opp,
+        COUNT(DISTINCT CASE WHEN event = 'Ganho'        THEN deal_id END) AS cnt_won,
+        COUNT(DISTINCT CASE WHEN event = 'Perdido'      THEN deal_id END) AS cnt_lost,
+        ROUND(SUM(CASE WHEN event = 'Ganho' THEN revenue END), 0)         AS receita
+      FROM production.diamond.funil_comercial
+      WHERE qualificador_name IS NOT NULL
+        AND event_timestamp >= CAST('${dt.start} 00:00:00' AS TIMESTAMP)
+        AND event_timestamp <  CAST('${dt.end} 00:00:00' AS TIMESTAMP)
+      GROUP BY qualificador_name
+      ORDER BY cnt_opp DESC
+    `;
+    var rows = await _dbQuery(sql.trim());
+    if (!rows) return [];
+    return rows.map(function(r) {
+      return {
+        qualificador_name: r.qualificador_name,
+        cnt_mql: parseInt(r.cnt_mql || 0, 10),
+        cnt_sal: parseInt(r.cnt_sal || 0, 10),
+        cnt_opp: parseInt(r.cnt_opp || 0, 10),
+        cnt_won: parseInt(r.cnt_won || 0, 10),
+        cnt_lost: parseInt(r.cnt_lost || 0, 10),
+        receita: parseFloat(r.receita || 0),
+        cr_mql_sal: parseInt(r.cnt_mql || 0, 10) ? _pct(parseInt(r.cnt_sal || 0, 10), parseInt(r.cnt_mql || 0, 10)) / 100 : 0,
+        cr_sal_opp: parseInt(r.cnt_sal || 0, 10) ? _pct(parseInt(r.cnt_opp || 0, 10), parseInt(r.cnt_sal || 0, 10)) / 100 : 0,
+        cr_opp_won: parseInt(r.cnt_opp || 0, 10) ? _pct(parseInt(r.cnt_won || 0, 10), parseInt(r.cnt_opp || 0, 10)) / 100 : 0
+      };
+    });
   }
 
   // ============================================================================
@@ -887,6 +920,7 @@
     fetchDatabricksMetrics: fetchDatabricksMetrics,
     fetchDatabricksLineBreakdown: fetchDatabricksLineBreakdown,
     fetchDatabricksDtByLine: fetchDatabricksDtByLine,
+    fetchDatabricksMacro: fetchDatabricksMacro,
     calcFunnel: calcFunnel,
     calcDailyVolume: calcDailyVolume,
     calcEfficiencyByQualifier: calcEfficiencyByQualifier,

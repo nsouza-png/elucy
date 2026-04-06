@@ -1128,13 +1128,13 @@ function renderTaskRecommendation(deals){
   }).length;
   var stalledCount = deals.filter(function(d){return (d._aging||0)>30;}).length;
   metricsEl.innerHTML = [
-    {label:'Deals na fila', value:deals.length, color:'var(--text)'},
-    {label:'Kill Switch', value:killCount, color:'var(--red)'},
-    {label:'Prontos p/ Handoff', value:handoffCount, color:'var(--green)'},
+    {label:'Deals na fila', value:deals.length, color:''},
+    {label:'Kill Switch', value:killCount, color:'-webkit-text-fill-color:var(--red);color:var(--red);background:none'},
+    {label:'Prontos p/ Handoff', value:handoffCount, color:'-webkit-text-fill-color:var(--green);color:var(--green);background:none'},
   ].map(function(m){
     return '<div class="kpi" style="padding:10px">'
       + '<div class="kpi-l">'+m.label+'</div>'
-      + '<div class="kpi-v" style="font-size:22px;color:'+m.color+'">'+m.value+'</div>'
+      + '<div class="kpi-v" style="font-size:22px'+(m.color?';'+m.color:'')+'">'+m.value+'</div>'
       + '</div>';
   }).join('');
 }
@@ -2703,10 +2703,10 @@ async function renderHome(){
   html += '<div class="home-block">'
     + '<div class="home-block-title">Meu Desempenho <span style="font-size:9px;color:var(--text2);font-weight:400">Score V9</span></div>'
     + '<div class="home-perf-grid">'
-    + '<div class="home-perf-kpi"><div class="home-perf-v" id="home-score">--</div><div class="home-perf-l">Score V9</div></div>'
-    + '<div class="home-perf-kpi"><div class="home-perf-v" id="home-streak">--</div><div class="home-perf-l">Streak</div></div>'
-    + '<div class="home-perf-kpi"><div class="home-perf-v">'+allDeals.length+'</div><div class="home-perf-l">Ativos</div></div>'
-    + '<div class="home-perf-kpi"><div class="home-perf-v">'+atRisk.length+'</div><div class="home-perf-l">Em Risco</div></div>'
+    + '<div class="home-perf-kpi"><div class="home-perf-v stat-value" id="home-score">--</div><div class="home-perf-l">Score V9</div></div>'
+    + '<div class="home-perf-kpi"><div class="home-perf-v stat-value" id="home-streak">--</div><div class="home-perf-l">Streak</div></div>'
+    + '<div class="home-perf-kpi"><div class="home-perf-v stat-value">'+allDeals.length+'</div><div class="home-perf-l">Ativos</div></div>'
+    + '<div class="home-perf-kpi"><div class="home-perf-v stat-value">'+atRisk.length+'</div><div class="home-perf-l">Em Risco</div></div>'
     + '</div>'
     + '<div id="home-score-breakdown" style="margin-top:8px"></div>'
     + '</div>';
@@ -2732,8 +2732,8 @@ async function renderHome(){
       + '<button class="home-fm-btn" onclick="window.toggleOppList(this)">Detalhar ▾</button>'
       + '</div>'
       + '<div style="display:flex;align-items:baseline;gap:10px;margin:8px 0 4px">'
-      + '<span style="font-size:32px;font-weight:700;color:'+oppStatus+'">'+oppActual+'</span>'
-      + '<span style="color:var(--text2);font-size:13px">/ '+oppTarget+' meta mensal</span>'
+      + '<span class="stat-value" style="font-size:32px">'+oppActual+'</span>'
+      + '<span style="color:var(--text2);font-size:13px">/ '+oppTarget+' meta mensal <span style="color:'+oppStatus+';font-size:11px">'+oppLabel+'</span></span>'
       + '</div>'
       + '<div class="meta-bar-bg" style="margin-bottom:6px"><div class="meta-bar-fill'+(oppPctBar>=100?' done':'')+'" style="width:'+oppPctBar+'%;background:'+oppStatus+'"></div></div>'
       + '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)">'
