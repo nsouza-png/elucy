@@ -3264,45 +3264,39 @@ async function callIntelligenceAPI(dealData, requestType, extraContext){
   const sb = getSB();
   if(!sb) throw new Error('Supabase não inicializado. Recarregue a página.');
 
-  // Strategy: try 3 JWT sources in order of reliability
+  // Get JWT — try all sources with detailed logging
   let jwt = null;
+  let jwtSource = '';
 
-  // Source 1: window._ELUCY_SESSION (set by onAuthStateChange — most reliable)
-  if(window._ELUCY_SESSION && window._ELUCY_SESSION.access_token){
-    jwt = window._ELUCY_SESSION.access_token;
-    // Check if near expiry and refresh
-    if(window._ELUCY_SESSION.expires_at){
-      const expiresIn = window._ELUCY_SESSION.expires_at * 1000 - Date.now();
-      if(expiresIn < 600000){ // less than 10min
-        try {
-          const r = await sb.auth.refreshSession();
-          if(r.data && r.data.session){
-            window._ELUCY_SESSION = r.data.session;
-            jwt = r.data.session.access_token;
-          }
-        } catch(e) {}
-      }
+  // Source 1: getSession (Supabase JS manages refresh internally)
+  try {
+    const r = await sb.auth.getSession();
+    console.log('[ELUCY-AUTH] getSession result:', r.data && r.data.session ? 'OK (expires_at='+r.data.session.expires_at+')' : 'NULL');
+    if(r.data && r.data.session && r.data.session.access_token){
+      jwt = r.data.session.access_token;
+      jwtSource = 'getSession';
     }
+  } catch(e) { console.warn('[ELUCY-AUTH] getSession error:', e); }
+
+  // Source 2: window._ELUCY_SESSION (from onAuthStateChange)
+  if(!jwt && window._ELUCY_SESSION && window._ELUCY_SESSION.access_token){
+    jwt = window._ELUCY_SESSION.access_token;
+    jwtSource = '_ELUCY_SESSION';
+    console.log('[ELUCY-AUTH] Using _ELUCY_SESSION');
   }
 
-  // Source 2: sb.auth.getSession()
+  // Source 3: window.ELUCY_JWT (legacy)
+  if(!jwt && window.ELUCY_JWT){
+    jwt = window.ELUCY_JWT;
+    jwtSource = 'ELUCY_JWT';
+    console.log('[ELUCY-AUTH] Using legacy ELUCY_JWT');
+  }
+
+  console.log('[ELUCY-AUTH] Final JWT:', jwt ? 'OK ('+jwtSource+', '+jwt.slice(0,20)+'...)' : 'NULL');
+
   if(!jwt){
-    try {
-      const r = await sb.auth.getSession();
-      if(r.data && r.data.session){
-        jwt = r.data.session.access_token;
-        window._ELUCY_SESSION = r.data.session;
-      }
-    } catch(e) {}
+    throw new Error('Sessão expirada. Faça logout e login novamente. (Debug: getSession=null, _ELUCY_SESSION='+(window._ELUCY_SESSION?'exists':'null')+', ELUCY_JWT='+(window.ELUCY_JWT?'exists':'null')+')');
   }
-
-  // Source 3: window.ELUCY_JWT (legacy, set in showCockpit + onAuthStateChange)
-  if(!jwt && window.ELUCY_JWT) jwt = window.ELUCY_JWT;
-
-  if(!jwt){
-    throw new Error('Sessão expirada. Faça logout e login novamente.');
-  }
-  console.log('callIntelligenceAPI: JWT ok, type=', requestType);
 
   // Carrega histórico completo para enriquecer contexto
   const history = await loadDealFullHistory(dealData.deal_id);
