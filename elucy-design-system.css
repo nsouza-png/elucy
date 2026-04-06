@@ -2096,15 +2096,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 
 .t-gray{color:var(--text2)}
 
-.t-buy{color:var(--green)}
+.t-gray{background:var(--bg3);border-color:var(--border);color:var(--text2)}
 
-.t-risk{color:var(--red);border-color:rgba(239,68,68,.25)}
+.t-buy{background:var(--gdim);border-color:rgba(86,229,169,.20);color:var(--green)}
 
-.t-stall{color:var(--accent)}
+.t-risk{background:var(--rdim);border-color:rgba(239,68,68,.20);color:var(--red)}
 
-.t-champ{color:var(--blue)}
+.t-stall{background:rgba(252,211,77,.10);border-color:rgba(252,211,77,.20);color:var(--yellow)}
 
-.t-acc{color:var(--accent)}
+.t-champ{background:var(--bdim);border-color:rgba(137,206,255,.20);color:var(--blue)}
+
+.t-acc{background:var(--adim);border-color:var(--aborder);color:var(--accent)}
 
 .tgv{font-family:var(--font-body);font-size:var(--fs-h1);font-weight:var(--fw-xbold)}
 
@@ -2366,9 +2368,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .hist-copy-btn:hover{border-color:var(--accent);color:var(--accent2);background:var(--adim)}
 
 /* WhatsApp conversation panel */
-.wa-conv-btn{padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--green);color:var(--green);background:transparent;transition:.15s;display:inline-flex;align-items:center;gap:4px}
+.wa-conv-btn{padding:6px 14px;border-radius:var(--r);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border2);color:var(--text);background:transparent;transition:all .25s ease;display:inline-flex;align-items:center;gap:4px;min-height:44px}
 
-.wa-conv-btn:hover{background:var(--gdim);color:#4ade80}
+.wa-conv-btn:hover{border-color:var(--aborder);background:rgba(245,158,11,.04);color:var(--accent)}
 
 .wa-conv-btn.btn-on{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important;box-shadow:0 2px 8px rgba(74,222,128,.25)}
 
