@@ -58,6 +58,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+    overflow: visible; /* permite tooltip vazar para baixo */
   }
 
   .nav-logo {
@@ -100,29 +101,33 @@
     transform: scale(1.5);
   }
 
-  /* Tooltip com nome da secao — no li, nao no a */
+  /* Tooltip com nome da secao — aparece ABAIXO do nav (nav esta no topo) */
   .nav-links li::after {
     content: attr(data-label);
     position: absolute;
-    bottom: calc(100% + 10px);
+    top: calc(100% + 12px);
     left: 50%;
     transform: translateX(-50%);
     background: rgba(14,20,27,0.97);
-    border: 1px solid var(--border2);
+    border: 1px solid var(--gold);
     color: var(--white);
     font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
+    font-weight: 700;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     white-space: nowrap;
-    padding: 5px 10px;
-    border-radius: 3px;
+    padding: 6px 12px;
+    border-radius: 4px;
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.15s;
-    z-index: 200;
+    transition: opacity 0.2s, transform 0.2s;
+    transform: translateX(-50%) translateY(-4px);
+    z-index: 9999;
   }
-  .nav-links li:hover::after { opacity: 1; }
+  .nav-links li:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 
   /* ── SECTIONS ── */
   section {
