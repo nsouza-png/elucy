@@ -23,10 +23,10 @@
     --accent:     #1A1A1A;
     --red:        #D94F4F;
     --green:      #4FA86D;
-    --blue:       #4F82D9;
+    --blue:       #0ea5e9;
     --titan:      #C9A84C;
-    --builder:    #4F82D9;
-    --executor:   #7B5EA7;
+    --builder:    #fbbf24;
+    --executor:   #d97706;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -316,8 +316,8 @@
     margin-bottom: 20px;
   }
   .badge-titan { background: rgba(201,168,76,0.15); color: var(--titan); }
-  .badge-builder { background: rgba(79,130,217,0.15); color: var(--builder); }
-  .badge-executor { background: rgba(123,94,167,0.15); color: var(--executor); }
+  .badge-builder { background: rgba(251,191,36,0.15); color: var(--builder); }
+  .badge-executor { background: rgba(217,119,6,0.15); color: var(--executor); }
 
   .tier-revenue {
     font-family: 'Space Grotesk', sans-serif;
@@ -354,8 +354,8 @@
     margin-bottom: 20px;
   }
   .fw-challenger { background: rgba(201,168,76,0.12); color: var(--gold); border: 1px solid rgba(201,168,76,0.3); }
-  .fw-spiced { background: rgba(79,130,217,0.12); color: var(--builder); border: 1px solid rgba(79,130,217,0.3); }
-  .fw-spin { background: rgba(123,94,167,0.12); color: var(--executor); border: 1px solid rgba(123,94,167,0.3); }
+  .fw-spiced { background: rgba(251,191,36,0.12); color: var(--builder); border: 1px solid rgba(251,191,36,0.3); }
+  .fw-spin { background: rgba(217,119,6,0.12); color: var(--executor); border: 1px solid rgba(217,119,6,0.3); }
 
   .tier-list {
     list-style: none;
@@ -436,8 +436,8 @@
     flex-shrink: 0;
   }
   .icon-gold { background: rgba(201,168,76,0.12); }
-  .icon-blue { background: rgba(79,130,217,0.12); }
-  .icon-purple { background: rgba(123,94,167,0.12); }
+  .icon-blue { background: rgba(251,191,36,0.12); }
+  .icon-purple { background: rgba(217,119,6,0.12); }
 
   .fw-letter {
     display: flex;
@@ -626,9 +626,9 @@
     flex-shrink: 0;
   }
   .tag-data { background: rgba(201,168,76,0.1); color: var(--gold); }
-  .tag-mcp { background: rgba(79,130,217,0.1); color: var(--builder); }
+  .tag-mcp { background: rgba(251,191,36,0.1); color: var(--builder); }
   .tag-skill { background: rgba(79,168,109,0.1); color: var(--green); }
-  .tag-memory { background: rgba(123,94,167,0.1); color: var(--executor); }
+  .tag-memory { background: rgba(217,119,6,0.1); color: var(--executor); }
 
   /* ── GUARDRAILS ── */
   .guardrail-list {
@@ -1137,7 +1137,7 @@
           <div class="tm-label">Conv. Inbound</div>
         </div>
       </div>
-      <div class="block-rule" style="margin-top: 16px; border-left-color: var(--builder); background: rgba(79,130,217,0.04); border-color: rgba(79,130,217,0.2);">
+      <div class="block-rule" style="margin-top: 16px; border-left-color: var(--builder); background: rgba(251,191,36,0.04); border-color: rgba(251,191,36,0.2);">
         <div class="block-icon">⚡</div>
         <div class="block-text" style="color: var(--builder);">Speed to Lead &lt; 5min. Cada minuto reduz conversao.</div>
       </div>
@@ -1168,7 +1168,7 @@
           <div class="tm-label">Multi-thread</div>
         </div>
       </div>
-      <div class="block-rule" style="margin-top: 16px; border-left-color: var(--executor); background: rgba(123,94,167,0.04); border-color: rgba(123,94,167,0.2);">
+      <div class="block-rule" style="margin-top: 16px; border-left-color: var(--executor); background: rgba(217,119,6,0.04); border-color: rgba(217,119,6,0.2);">
         <div class="block-icon">🔗</div>
         <div class="block-text" style="color: var(--executor);">Multi-thread ativado automaticamente. Objetivo: chegar ao CEO.</div>
       </div>
@@ -1279,7 +1279,7 @@
           <div class="fw-desc"><strong>Need-Payoff</strong> — Armar o Executor com argumento para vender internamente ao CEO.</div>
         </div>
       </div>
-      <div style="margin-top: 16px; padding: 14px; background: rgba(123,94,167,0.05); border-radius: 3px; border: 1px solid rgba(123,94,167,0.15);">
+      <div style="margin-top: 16px; padding: 14px; background: rgba(217,119,6,0.05); border-radius: 3px; border: 1px solid rgba(217,119,6,0.15);">
         <p style="font-size: 12px; color: var(--muted); line-height: 1.6; margin: 0;">Champion Selling: transformar o Executor em aliado que vende a solucao internamente. Fornecer materiais prontos para a reuniao com o CEO.</p>
       </div>
     </div>
@@ -1495,11 +1495,11 @@
       <div style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">Principio de Design</div>
       <p style="font-size:13px;color:var(--muted);line-height:1.6;margin:0;">Nenhuma skill aceita input ambiguo. Todas exigem deal_id, email ou empresa antes de executar. O DVL Gate e sempre o primeiro passo — sem contexto confirmado, sem output.</p>
     </div>
-    <div style="flex:1;padding:20px 24px;background:rgba(79,130,217,0.06);border:1px solid rgba(79,130,217,0.2);border-radius:4px;">
+    <div style="flex:1;padding:20px 24px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:4px;">
       <div style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--builder);margin-bottom:8px;">Multi-Role</div>
       <p style="font-size:13px;color:var(--muted);line-height:1.6;margin:0;">As mesmas skills operam para SDR, Closer, CS, CX e Account Manager. O sistema detecta o role automaticamente via contexto e adapta o output — tom, profundidade e proximo passo.</p>
     </div>
-    <div style="flex:1;padding:20px 24px;background:rgba(123,94,167,0.06);border:1px solid rgba(123,94,167,0.2);border-radius:4px;">
+    <div style="flex:1;padding:20px 24px;background:rgba(217,119,6,0.06);border:1px solid rgba(217,119,6,0.2);border-radius:4px;">
       <div style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--executor);margin-bottom:8px;">Sem Alucinacao</div>
       <p style="font-size:13px;color:var(--muted);line-height:1.6;margin:0;">Todas as skills consultam o output-schema.md antes de gerar qualquer texto para lead ou CRM. Campos sem dado real = [NAO DECLARADO]. Proibido inventar contexto, urgencia ou escassez.</p>
     </div>

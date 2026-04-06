@@ -1803,7 +1803,7 @@ function renderPlaybooks(){
       steps:['S — Situation Questions: Entender contexto atual','P — Problem Questions: Identificar problemas explicitos','I — Implication Questions: Amplificar consequencias do problema','N — Need-Payoff Questions: Lead verbaliza o valor da solucao','Champion Mapping: Identificar aliado interno','Champion Arming: Equipar champion com argumentos'],
       when:'Executor persona, deals com multiplos stakeholders, ciclos longos.',
       rules:'Combinar SPIN com Champion Selling. Identificar champion antes de propor reuniao.'},
-    {id:'social_dm',title:'Social DM Playbook',persona:'Todos',desc:'Pipeline de DM com cadencia 5-touch. CQL generator + WhatsApp deep link.',icon:'💬',color:'#8b5cf6',
+    {id:'social_dm',title:'Social DM Playbook',persona:'Todos',desc:'Pipeline de DM com cadencia 5-touch. CQL generator + WhatsApp deep link.',icon:'💬',color:'#f59e0b',
       steps:['Touch 1 — Follow + Story reaction (aquecimento)','Touch 2 — DM leve com contexto pessoal','Touch 3 — Conteudo de valor (case/insight)','Touch 4 — Pergunta direta sobre dor','Touch 5 — CTA para conversa (WhatsApp/call)'],
       when:'Leads com Instagram ativo, prospeccao social, reengajamento via DM.',
       rules:'Conta founder (Tallis/Nardon/Alfredo) define tom. NUNCA mencionar G4 ou produto na DM. Tom pessoal.'},
@@ -2973,6 +2973,123 @@ function openSettings(section){
 .sg-dqi-bar{height:6px;border-radius:3px;background:var(--border);overflow:hidden;margin-top:6px}
 .sg-dqi-fill{height:100%;border-radius:3px;background:var(--green);transition:width .4s}
 @media(max-width:640px){#settings-panel{flex-direction:column;max-height:96vh}#settings-nav{width:100%;min-width:0;flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid var(--border)}#settings-nav-status{display:none}#settings-body{padding:14px}}
+/* ── COLLAPSIBLE DEAL CARD ── */
+.deal-actions-toggle{display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--t2);cursor:pointer;transition:all .2s ease}.deal-actions-toggle:hover{border-color:var(--accent);color:var(--accent)}.deal-actions-toggle .tgl-chevron{transition:transform .25s ease;display:inline-block}.deal-actions-toggle.open .tgl-chevron{transform:rotate(180deg)}.deal-actions-advanced{display:flex;align-items:center;gap:9px;flex-wrap:wrap;overflow:hidden;max-height:0;opacity:0;transition:max-height .3s ease,opacity .25s ease,margin .2s ease;margin-top:0}.deal-actions-advanced.show{max-height:120px;opacity:1;margin-top:8px}
+/* ── CHAT V2 — Textual Revenue Brain (Apple HIG dark) ── */
+.chat-app{display:flex;height:calc(100vh - 56px);gap:0;background:var(--bg)}
+.chat-panel-left{width:300px;min-width:260px;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.chat-panel-center{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.chat-panel-right{width:280px;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;background:var(--bg);padding:0}
+/* Inbox */
+.chat-inbox-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px;border-bottom:1px solid var(--border)}
+.chat-inbox-title{font-size:15px;font-weight:700;letter-spacing:-.3px}
+.chat-btn-new{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.chat-btn-new:hover{border-color:var(--accent);color:var(--accent)}
+.chat-inbox-search{padding:8px 12px}
+.chat-search-input{width:100%;padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;outline:none;transition:border-color .15s}
+.chat-search-input:focus{border-color:var(--accent)}
+.chat-inbox-filters{display:flex;gap:4px;padding:4px 12px 8px}
+.chat-filter{padding:4px 10px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+.chat-filter.on{background:var(--accent);color:#000;border-color:var(--accent)}
+.chat-filter:hover:not(.on){border-color:var(--accent);color:var(--accent)}
+.chat-conv-list{flex:1;overflow-y:auto}
+.chat-inbox-stats{padding:8px 12px;border-top:1px solid var(--border);font-size:10px;color:var(--text3);display:flex;gap:12px}
+/* Conversation items */
+.chat-conv{padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.04);display:flex;gap:10px;align-items:center;transition:background .12s}
+.chat-conv:hover{background:var(--bg2)}
+.chat-conv.active{background:var(--bg3)}
+.chat-conv.sla-warn{border-left:3px solid var(--yellow)}
+.chat-conv.sla-crit{border-left:3px solid var(--red)}
+.chat-conv-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.chat-conv-av.wa{background:#25d366;color:#fff}
+.chat-conv-av.ig{background:linear-gradient(135deg,#f09433,#dc2743,#bc1888);color:#fff}
+.chat-conv-body{flex:1;min-width:0}
+.chat-conv-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-conv-preview{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.chat-conv-meta{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
+.chat-conv-time{font-size:10px;color:var(--text3)}
+.chat-conv-badge{background:var(--accent);color:#000;font-size:9px;font-weight:700;border-radius:10px;padding:1px 6px;min-width:16px;text-align:center}
+.chat-conv-bucket{font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px}
+.chat-conv-bucket.b4{background:var(--red);color:#fff}
+.chat-conv-bucket.b3{background:var(--yellow);color:#000}
+.chat-conv-bucket.b2{background:var(--accent);color:#000}
+.chat-conv-bucket.b1{background:var(--bg3);color:var(--text2)}
+/* Header */
+.chat-header{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);min-height:52px}
+.chat-back-btn{display:none;background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;padding:4px}
+.chat-header-info{flex:1;min-width:0}
+.chat-header-name{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-header-meta{font-size:11px;color:var(--text2);margin-top:1px}
+.chat-header-tags{display:flex;gap:4px;flex-wrap:wrap}
+.chat-btn-icon{background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:all .15s}
+.chat-btn-icon:hover{border-color:var(--accent);color:var(--accent)}
+/* SLA Bar */
+.chat-sla-bar{display:flex;align-items:center;gap:8px;padding:6px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:relative;overflow:hidden}
+.chat-sla-icon{font-size:14px}
+.chat-sla-text{font-size:11px;font-weight:600;flex:1}
+.chat-sla-timer{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+.chat-sla-fill{position:absolute;bottom:0;left:0;height:2px;background:var(--green);transition:width 1s linear}
+.chat-sla-bar.warn .chat-sla-fill{background:var(--yellow)}
+.chat-sla-bar.crit .chat-sla-fill{background:var(--red)}
+.chat-sla-bar.crit .chat-sla-timer{color:var(--red)}
+/* Thread */
+.chat-thread{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:6px}
+.chat-date-sep{text-align:center;font-size:10px;color:var(--text3);padding:8px 0;font-weight:600}
+.chat-msg-row{display:flex;flex-direction:column}
+.chat-msg-row.out{align-items:flex-end}
+.chat-msg-row.in{align-items:flex-start}
+.chat-msg{max-width:72%;padding:9px 13px;border-radius:18px;font-size:13px;line-height:1.45;word-wrap:break-word}
+.chat-msg.out{background:var(--accent);color:#000;border-bottom-right-radius:4px}
+.chat-msg.in{background:var(--bg3);color:var(--text);border-bottom-left-radius:4px}
+.chat-msg.blocked{background:var(--red);color:#fff;opacity:.7}
+.chat-msg-footer{font-size:10px;color:var(--text3);margin-top:2px;display:flex;gap:4px;align-items:center}
+.chat-msg-status{font-size:10px}
+/* Analysis Bar */
+.chat-analysis{display:flex;flex-wrap:wrap;gap:5px;padding:8px 16px;border-top:1px solid var(--border);background:var(--bg)}
+.chat-tag{padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.3px}
+.chat-tag.ok{background:rgba(52,199,89,.15);color:var(--green)}
+.chat-tag.warn{background:rgba(255,204,0,.15);color:var(--yellow)}
+.chat-tag.danger{background:rgba(255,69,58,.15);color:var(--red)}
+.chat-tag.info{background:rgba(245,158,11,.15);color:var(--accent)}
+/* Suggestion */
+.chat-suggestion{padding:8px 16px;border-top:1px solid var(--border);border-left:3px solid var(--accent);background:var(--bg2);font-size:12px;color:var(--text);line-height:1.4;cursor:pointer;transition:background .12s}
+.chat-suggestion:hover{background:var(--bg3)}
+/* Input */
+.chat-input-wrap{padding:10px 16px;border-top:1px solid var(--border);background:var(--bg)}
+.chat-input-row{display:flex;gap:8px;align-items:flex-end}
+.chat-textarea{flex:1;resize:none;padding:10px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;max-height:120px;overflow-y:auto;outline:none;transition:border-color .15s;font-family:inherit}
+.chat-textarea:focus{border-color:var(--accent)}
+.chat-btn-send{border-radius:50%;width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;background:var(--accent);color:#000;border:none;font-size:16px;cursor:pointer;transition:opacity .15s;flex-shrink:0}
+.chat-btn-send:hover{opacity:.85}
+.chat-input-actions{display:flex;gap:6px;margin-top:6px;align-items:center}
+.chat-btn-action{padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+.chat-btn-action:hover{border-color:var(--accent);color:var(--accent)}
+.chat-impact-badge{margin-left:auto;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(52,199,89,.15);color:var(--green)}
+.chat-typing{font-size:11px;color:var(--accent);margin-left:auto}
+/* Deal Context Sidebar */
+.chat-ctx-header{display:flex;align-items:center;justify-content:space-between;padding:14px 14px 10px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700}
+.chat-ctx-section{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.04)}
+.chat-ctx-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:3px}
+.chat-ctx-value{font-size:13px;font-weight:600}
+.chat-ctx-sub{font-size:11px;color:var(--text2);margin-top:1px}
+.chat-ctx-signals{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.chat-ctx-intel{font-size:11px;color:var(--text2);margin-top:4px}
+.chat-ctx-actions{padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+/* Responsive */
+@media(max-width:768px){.chat-panel-left{width:100%!important;min-width:0!important}.chat-panel-center{display:none!important}.chat-panel-right{display:none!important}.chat-app.chat-open .chat-panel-left{display:none!important}.chat-app.chat-open .chat-panel-center{display:flex!important}.chat-back-btn{display:block!important}}
+/* ── Blueprint Pre-Vendas ── */
+.bp-period-bar{display:flex;align-items:center;gap:4px;padding:10px 0 8px;border-bottom:1px solid var(--border);margin-bottom:10px;flex-wrap:wrap}
+.bp-period-btn{padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit}
+.bp-period-btn:hover{border-color:var(--accent);color:var(--accent)}
+.bp-period-btn.on{background:var(--accent);color:#000;border-color:var(--accent)}
+.bp-period-sep{display:inline-block;width:1px;height:16px;background:var(--border);margin:0 4px}
+.bp-date-input{padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:11px;font-family:inherit;outline:none}
+.bp-date-input:focus{border-color:var(--accent)}
+.bp-subtab-nav{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:14px}
+.bp-stab{padding:10px 20px;background:transparent;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--text2);font-size:11px;font-weight:700;letter-spacing:.06em;cursor:pointer;transition:all .15s;font-family:inherit}
+.bp-stab:hover{color:var(--text)}
+.bp-stab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.bp-panel{padding:0}
 </style>
 <div id="settings-panel">
   <div id="settings-nav">
@@ -6144,7 +6261,7 @@ function _renderValue(ct,AE){
   html+=renderSection(4,'Valor por Tier',
     '<div class="intel-kpi-row">'+tierKeys.map(function(k){
       var v=data.byTier[k];
-      return _iKpi(fmtBRL(v.total),k.toUpperCase()+' ('+v.count+')',k==='diamond'?'#f59e0b':k==='gold'?'#a78bfa':'var(--text)');
+      return _iKpi(fmtBRL(v.total),k.toUpperCase()+' ('+v.count+')',k==='diamond'?'#f59e0b':k==='gold'?'#fbbf24':'var(--text)');
     }).join('')+'</div>');
 
   ct.innerHTML=html;
@@ -6494,14 +6611,14 @@ function _renderBowtie(ct,deals){
   html+=renderSection(1,'Funil Bowtie — Aquisição → Retenção → Expansão',
     `<div style="display:flex;gap:0;border-radius:10px;overflow:hidden;margin-top:6px;border:1px solid var(--border)">
       <div style="flex:${Math.max(legs.ACQ.length,1)};background:rgba(14,165,233,.12);border-right:1px solid var(--border);padding:14px;text-align:center">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--blue2);margin-bottom:4px">ACQ</div>
-        <div style="font-size:24px;font-weight:900;color:var(--blue2)">${legs.ACQ.length}</div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent2);margin-bottom:4px">ACQ</div>
+        <div style="font-size:24px;font-weight:900;color:var(--accent2)">${legs.ACQ.length}</div>
         <div style="font-size:10px;color:var(--text2)">${acqPct}% · ${fmtBRL(acqVal)}</div>
         <div style="font-size:9px;color:var(--text3);margin-top:2px">Aging ~${avgAging(legs.ACQ)}d</div>
       </div>
-      <div style="flex:${Math.max(legs.RET.length,1)};background:rgba(139,92,246,.10);border-right:1px solid var(--border);padding:14px;text-align:center">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#a78bfa;margin-bottom:4px">RET</div>
-        <div style="font-size:24px;font-weight:900;color:#a78bfa">${legs.RET.length}</div>
+      <div style="flex:${Math.max(legs.RET.length,1)};background:rgba(217,119,6,.10);border-right:1px solid var(--border);padding:14px;text-align:center">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#fbbf24;margin-bottom:4px">RET</div>
+        <div style="font-size:24px;font-weight:900;color:#fbbf24">${legs.RET.length}</div>
         <div style="font-size:10px;color:var(--text2)">${retPct}% · ${fmtBRL(retVal)}</div>
         <div style="font-size:9px;color:var(--text3);margin-top:2px">Aging ~${avgAging(legs.RET)}d</div>
       </div>
@@ -6523,8 +6640,8 @@ function _renderBowtie(ct,deals){
 
   // Top deals por perna
   var legConfig=[
-    {key:'ACQ',deals:legs.ACQ,color:'var(--blue2)',label:'Aquisição'},
-    {key:'RET',deals:legs.RET,color:'#a78bfa',label:'Retenção'},
+    {key:'ACQ',deals:legs.ACQ,color:'var(--accent2)',label:'Aquisição'},
+    {key:'RET',deals:legs.RET,color:'#fbbf24',label:'Retenção'},
     {key:'EXP',deals:legs.EXP,color:'var(--green)',label:'Expansão'}
   ];
   var tableRows='';
@@ -6569,7 +6686,7 @@ window.toggleForecastExplain=function(id,btn){
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--amber);margin-bottom:10px">Forecast Explainability — Audit Trail</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
       <div>
-        <div style="font-size:9px;font-weight:700;color:var(--blue2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Quantitativo</div>
+        <div style="font-size:9px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Quantitativo</div>
         ${[['Stage Prob',q.stage_prob],['Aging Factor',q.aging_factor],['Velocity',q.velocity_factor],['Engagement',q.engagement_factor]].map(function(p){return `<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:var(--text2)">${p[0]}<span style="color:var(--text);font-weight:600">${pct(p[1])}</span></div>`;}).join('')}
       </div>
       <div>

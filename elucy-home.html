@@ -15,7 +15,7 @@
   /* Apple Design System — Dark */
   --bg:#000;--bg2:#0a0a0a;--bg3:#1c1c1e;--bg4:#2c2c2e;
   --surface:rgba(28,28,30,.65);--surface-elevated:rgba(44,44,46,.55);
-  --border:rgba(255,255,255,.06);--border2:rgba(255,255,255,.12);--border-focus:rgba(10,132,255,.5);
+  --border:rgba(255,255,255,.06);--border2:rgba(255,255,255,.12);--border-focus:rgba(245,158,11,.5);
   --accent:#f59e0b;--accent2:#fbbf24;--accent-glow:rgba(245,158,11,.12);
   --green:#30d158;--yellow:#ffd60a;--red:#ff453a;
   --text:#f5f5f7;--text2:#86868b;--text3:#48484a;
@@ -61,19 +61,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
 /* ── TOPBAR ──────────────────────────────────────────────── */
 .topbar{height:52px;display:flex;align-items:center;padding:0 var(--sp-6);border-bottom:1px solid var(--border);background:rgba(0,0,0,.5);-webkit-backdrop-filter:var(--blur-md);backdrop-filter:var(--blur-md);flex-shrink:0;position:sticky;top:0;z-index:10;transition:background var(--dur-normal) var(--ease-smooth)}
 .logo{display:flex;align-items:center;gap:var(--sp-3)}
-.logo-mark{width:28px;height:28px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;color:#fff;letter-spacing:1px;box-shadow:0 2px 8px rgba(10,132,255,.25)}
+.logo-mark{width:28px;height:28px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;color:#fff;letter-spacing:1px;box-shadow:0 2px 8px rgba(245,158,11,.25)}
 .logo-text{font-size:15px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase}
-.logo-badge{background:var(--accent);color:#fff;font-size:8px;font-weight:700;padding:2px 7px;border-radius:5px;letter-spacing:1px;margin-left:2px;box-shadow:0 1px 4px rgba(10,132,255,.3)}
+.logo-badge{background:var(--accent);color:#fff;font-size:8px;font-weight:700;padding:2px 7px;border-radius:5px;letter-spacing:1px;margin-left:2px;box-shadow:0 1px 4px rgba(245,158,11,.3)}
 .topbar-right{margin-left:auto;display:flex;align-items:center;gap:var(--sp-4)}
 .top-link{font-size:12px;color:var(--text2);text-decoration:none;font-weight:500;transition:color var(--dur-fast) var(--ease-smooth);cursor:pointer;letter-spacing:.02em}
 .top-link:hover{color:var(--text)}
-.btn-cockpit{padding:7px 18px;border-radius:var(--r-pill);background:var(--accent);color:#fff;font-size:12px;font-weight:600;border:none;cursor:pointer;font-family:inherit;transition:all var(--dur-fast) var(--ease-smooth);text-decoration:none;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(10,132,255,.2);letter-spacing:.02em}
-.btn-cockpit:hover{background:#3395ff;box-shadow:0 4px 20px rgba(10,132,255,.35);transform:translateY(-1px)}
+.btn-cockpit{padding:7px 18px;border-radius:var(--r-pill);background:var(--accent);color:#fff;font-size:12px;font-weight:600;border:none;cursor:pointer;font-family:inherit;transition:all var(--dur-fast) var(--ease-smooth);text-decoration:none;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(245,158,11,.2);letter-spacing:.02em}
+.btn-cockpit:hover{background:#fbbf24;box-shadow:0 4px 20px rgba(245,158,11,.35);transform:translateY(-1px)}
 .btn-cockpit:active{transform:scale(.97)}
 
 /* ── HERO — Apple iPhone-style ───────────────────────────── */
 .hero{padding:var(--sp-12) var(--sp-6) var(--sp-8);text-align:center;max-width:860px;margin:0 auto;scroll-snap-align:start}
-.hero-eyebrow{display:inline-flex;align-items:center;gap:var(--sp-2);padding:6px 18px;border-radius:var(--r-pill);border:1px solid var(--border2);background:rgba(10,132,255,.05);margin-bottom:var(--sp-6);font-size:11px;font-weight:600;color:var(--accent2);letter-spacing:.5px;-webkit-backdrop-filter:var(--blur-sm);backdrop-filter:var(--blur-sm)}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:var(--sp-2);padding:6px 18px;border-radius:var(--r-pill);border:1px solid var(--border2);background:rgba(245,158,11,.05);margin-bottom:var(--sp-6);font-size:11px;font-weight:600;color:var(--accent2);letter-spacing:.5px;-webkit-backdrop-filter:var(--blur-sm);backdrop-filter:var(--blur-sm)}
 .hero-eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 .hero h1{font-size:52px;font-weight:900;line-height:1.06;letter-spacing:-1.5px;margin-bottom:var(--sp-5);background:linear-gradient(135deg,#fff 20%,rgba(255,255,255,.85) 40%,var(--accent2) 75%,var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:heroIn var(--dur-slow) var(--ease-out)}
@@ -81,8 +81,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
 .hero-sub{font-size:18px;color:var(--text2);line-height:1.65;max-width:620px;margin:0 auto var(--sp-7);font-weight:400;animation:heroIn .5s var(--ease-out) .1s both}
 .hero-sub strong{color:var(--text);font-weight:600}
 .hero-ctas{display:flex;gap:var(--sp-3);justify-content:center;flex-wrap:wrap;animation:heroIn .5s var(--ease-out) .2s both}
-.btn-primary{padding:14px var(--sp-6);border-radius:var(--r);background:var(--accent);color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:all var(--dur-fast) var(--ease-smooth);display:inline-flex;align-items:center;gap:8px;text-decoration:none;box-shadow:0 2px 12px rgba(10,132,255,.25);letter-spacing:.02em}
-.btn-primary:hover{background:#3395ff;box-shadow:0 6px 28px rgba(10,132,255,.4);transform:translateY(-2px)}
+.btn-primary{padding:14px var(--sp-6);border-radius:var(--r);background:var(--accent);color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:all var(--dur-fast) var(--ease-smooth);display:inline-flex;align-items:center;gap:8px;text-decoration:none;box-shadow:0 2px 12px rgba(245,158,11,.25);letter-spacing:.02em}
+.btn-primary:hover{background:#fbbf24;box-shadow:0 6px 28px rgba(245,158,11,.4);transform:translateY(-2px)}
 .btn-primary:active{transform:scale(.97)}
 .btn-secondary{padding:14px var(--sp-6);border-radius:var(--r);background:rgba(255,255,255,.04);color:var(--text);font-size:15px;font-weight:600;border:1px solid var(--border2);cursor:pointer;font-family:inherit;transition:all var(--dur-fast) var(--ease-smooth);text-decoration:none;-webkit-backdrop-filter:var(--blur-sm);backdrop-filter:var(--blur-sm)}
 .btn-secondary:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2);transform:translateY(-1px)}
@@ -105,16 +105,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
 .pillars-title{text-align:center;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:2.5px;margin-bottom:var(--sp-5)}
 .pillars-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-4)}
 .pillar{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:var(--sp-5);transition:all var(--dur-normal) var(--ease-smooth);position:relative;-webkit-backdrop-filter:var(--blur-sm);backdrop-filter:var(--blur-sm)}
-.pillar:hover{border-color:rgba(10,132,255,.18);background:var(--surface-elevated);transform:translateY(-3px);box-shadow:var(--shadow-md)}
+.pillar:hover{border-color:rgba(245,158,11,.18);background:var(--surface-elevated);transform:translateY(-3px);box-shadow:var(--shadow-md)}
 .pillar-icon{width:44px;height:44px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;margin-bottom:var(--sp-4);font-size:22px}
-.pillar-icon.conv{background:rgba(10,132,255,.08);border:1px solid rgba(10,132,255,.18)}
+.pillar-icon.conv{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.18)}
 .pillar-icon.fore{background:rgba(48,209,88,.06);border:1px solid rgba(48,209,88,.12)}
 .pillar-icon.rev{background:rgba(255,214,10,.06);border:1px solid rgba(255,214,10,.12)}
 .pillar h3{font-size:16px;font-weight:700;margin-bottom:var(--sp-2);letter-spacing:-.2px}
 .pillar p{font-size:13px;color:var(--text2);line-height:1.65}
 .pillar-tags{display:flex;gap:var(--sp-1);flex-wrap:wrap;margin-top:var(--sp-4)}
 .pillar-tag{font-size:9px;font-weight:700;padding:3px 10px;border-radius:6px;letter-spacing:.5px;text-transform:uppercase}
-.pillar-tag.blue{background:rgba(10,132,255,.08);color:var(--accent2);border:1px solid rgba(10,132,255,.18)}
+.pillar-tag.blue{background:rgba(245,158,11,.08);color:var(--accent2);border:1px solid rgba(245,158,11,.18)}
 .pillar-tag.green{background:rgba(48,209,88,.06);color:var(--green);border:1px solid rgba(48,209,88,.12)}
 .pillar-tag.gold{background:rgba(255,214,10,.06);color:var(--yellow);border:1px solid rgba(255,214,10,.12)}
 
@@ -128,7 +128,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
 .engine-layers{display:flex;flex-direction:column;gap:var(--sp-2)}
 .engine-layer{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-2) var(--sp-3);background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:var(--r);transition:all var(--dur-fast) var(--ease-smooth)}
 .engine-layer:hover{background:rgba(255,255,255,.04);border-color:var(--border2);transform:translateX(4px)}
-.layer-num{font-size:9px;font-weight:800;color:var(--accent);background:rgba(10,132,255,.08);padding:4px 8px;border-radius:6px;letter-spacing:1px;min-width:32px;text-align:center}
+.layer-num{font-size:9px;font-weight:800;color:var(--accent);background:rgba(245,158,11,.08);padding:4px 8px;border-radius:6px;letter-spacing:1px;min-width:32px;text-align:center}
 .layer-name{font-size:12px;font-weight:600;color:var(--text)}
 .layer-desc{font-size:11px;color:var(--text3);margin-left:auto}
 .engine-right{width:280px;flex-shrink:0}
@@ -332,7 +332,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font
               <circle cx="80" cy="80" r="70" fill="none" stroke="url(#ring-grad)" stroke-width="12" stroke-dasharray="395" stroke-dashoffset="40" stroke-linecap="round" transform="rotate(-90 80 80)">
                 <animate attributeName="stroke-dashoffset" from="440" to="40" dur="1.2s" fill="freeze" calcMode="spline" keySplines=".4 0 .2 1"/>
               </circle>
-              <defs><linearGradient id="ring-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0a84ff"/><stop offset="50%" stop-color="#5ac8fa"/><stop offset="100%" stop-color="#30d158"/></linearGradient></defs>
+              <defs><linearGradient id="ring-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f59e0b"/><stop offset="50%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#fcd34d"/></linearGradient></defs>
             </svg>
             <div class="viz-ring-center">
               <div class="viz-ring-val">25</div>

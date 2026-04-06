@@ -974,7 +974,7 @@ var TASK_QUEUES = [
   { slug:'all',              label:'Todas as Filas',    color:'' },
   { slug:'cadencia',         label:'Cadência Ativa',    color:'var(--accent2)' },
   { slug:'follow_up',        label:'FUP',               color:'var(--text)' },
-  { slug:'social_dm',        label:'DM',                color:'#a78bfa' },
+  { slug:'social_dm',        label:'DM',                color:'#fbbf24' },
   { slug:'handoff_prep',     label:'Handoff',           color:'var(--green)' },
   { slug:'reativacao',       label:'Reativação',        color:'var(--yellow)' },
   { slug:'no_show_recovery', label:'No-Show',           color:'var(--red)' },
@@ -5924,8 +5924,8 @@ async function renderPerformanceReportV3(report, containerId){
 
     // E2 — Efficiency
     var e2 = tes.e2_efficiency;
-    html += '<div style="padding:14px;border:1px solid var(--border);border-radius:10px;border-top:3px solid var(--blue2);background:var(--bg3)">';
-    html += '<div style="font-size:22px;font-weight:900;color:var(--blue2)">'+(e2.tasks_per_deal||0)+'<span style="font-size:11px;font-weight:500;color:var(--text2)"> tasks/deal</span></div>';
+    html += '<div style="padding:14px;border:1px solid var(--border);border-radius:10px;border-top:3px solid var(--accent2);background:var(--bg3)">';
+    html += '<div style="font-size:22px;font-weight:900;color:var(--accent2)">'+(e2.tasks_per_deal||0)+'<span style="font-size:11px;font-weight:500;color:var(--text2)"> tasks/deal</span></div>';
     html += '<div style="font-size:11px;font-weight:700;margin-top:2px">Efficiency</div>';
     html += '<div style="font-size:10px;color:var(--text2);margin-top:6px;line-height:1.8">';
     html += '<div class="tg-row"><span class="t-label">Tasks concluídas</span><span class="tgv">'+(e2.tasks_completed||0)+'</span></div>';
