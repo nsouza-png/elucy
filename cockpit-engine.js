@@ -265,12 +265,12 @@ async function saveOperatorSettings(settings){
 window.saveOperatorSettings = saveOperatorSettings;
 
 const FOCUS_MODES = {
-  velocidade:   { label:'Velocidade',    priority:['follow_up','social_dm','agendamento'], icon:'zap' },
-  qualificacao: { label:'Qualificacao',  priority:['requalificacao','dvl_review','note_completion'], icon:'target' },
-  handoff:      { label:'Handoff',       priority:['handoff_prep','dvl_review','note_completion'], icon:'handshake' },
-  reativacao:   { label:'Reativacao',    priority:['reativacao','no_show_recovery','follow_up'], icon:'refresh' },
-  social_dm:    { label:'Social DM',     priority:['social_dm','follow_up','agendamento'], icon:'chat' },
-  alta_performance: { label:'Alta Performance', priority:['follow_up','handoff_prep','qualificacao'], icon:'trophy' }
+  velocidade:   { label:'Velocidade',    priority:['cadence','follow_up','social_dm','agendamento'], icon:'zap' },
+  qualificacao: { label:'Qualificacao',  priority:['cadence','requalificacao','dvl_review','note_completion'], icon:'target' },
+  handoff:      { label:'Handoff',       priority:['cadence','handoff_prep','dvl_review','note_completion'], icon:'handshake' },
+  reativacao:   { label:'Reativacao',    priority:['cadence','reativacao','no_show_recovery','follow_up'], icon:'refresh' },
+  social_dm:    { label:'Social DM',     priority:['cadence','social_dm','follow_up','agendamento'], icon:'chat' },
+  alta_performance: { label:'Alta Performance', priority:['cadence','follow_up','handoff_prep','qualificacao'], icon:'trophy' }
 };
 window.FOCUS_MODES = FOCUS_MODES;
 
@@ -601,6 +601,56 @@ function enrichDealContext(deal){
 window.enrichDealContext = enrichDealContext;
 
 function deriveNextAction(deal){
+  // ── CADENCE-FIRST: se deal tem cadência ativa, próximo step vira a next action ──
+  var dealId = deal.id||deal.contact_id||deal.deal_id||'';
+  var enrollment = window._cadenceEnrollments && window._cadenceEnrollments[dealId];
+  if(enrollment && enrollment.status==='active'){
+    var cadence = (window.DEFAULT_CADENCES||[]).find(function(c){return c.id===enrollment.cadenceId;});
+    if(cadence && cadence.steps && cadence.steps.length){
+      var today = new Date().toISOString().slice(0,10);
+      var startDate = new Date(enrollment.startDate);
+      var todayDate = new Date(today);
+      var daysSinceStart = Math.floor((todayDate-startDate)/(1000*60*60*24))+1;
+      // Encontra próximo step pendente (não concluído E dia <= hoje)
+      var nextStep = null; var nextStepIdx = -1;
+      for(var i=0;i<cadence.steps.length;i++){
+        if((enrollment.completedSteps||[]).indexOf(i)>=0) continue;
+        if(cadence.steps[i].day <= daysSinceStart){ nextStep=cadence.steps[i]; nextStepIdx=i; break; }
+      }
+      // Se não tem step atrasado/hoje, pega o próximo futuro
+      if(!nextStep){
+        for(var j=0;j<cadence.steps.length;j++){
+          if((enrollment.completedSteps||[]).indexOf(j)>=0) continue;
+          nextStep=cadence.steps[j]; nextStepIdx=j; break;
+        }
+      }
+      if(nextStep){
+        var ch = CADENCE_CHANNELS[nextStep.channel]||CADENCE_CHANNELS.tarefa;
+        var isOverdue = nextStep.day < daysSinceStart;
+        var completedCount = (enrollment.completedSteps||[]).length;
+        return {
+          type: 'cadence',
+          label: ch.label+': '+nextStep.action,
+          priority: isOverdue ? 'critical' : 'high',
+          cadence: {
+            templateName: cadence.name,
+            templateId: cadence.id,
+            stepIndex: nextStepIdx,
+            totalSteps: cadence.steps.length,
+            completedSteps: completedCount,
+            channel: nextStep.channel,
+            channelLabel: ch.label,
+            action: nextStep.action,
+            day: nextStep.day,
+            daysSinceStart: daysSinceStart,
+            isOverdue: isOverdue
+          }
+        };
+      }
+    }
+  }
+
+  // ── FALLBACK: lógica original para deals sem cadência ativa ──
   var aging = deal._aging || calcAgingRisk(deal);
   var etapa = (deal.etapa||deal._etapa||'').toLowerCase();
   var signal = deal._signal||'';
@@ -621,6 +671,7 @@ function deriveNextAction(deal){
 // ==================================================================
 
 var TASK_TYPES = {
+  cadence:         { label:'Cadência',         icon:'bolt',   color:'accent2' },
   follow_up:       { label:'Follow-Up',       icon:'msg',    color:'accent' },
   requalificacao:  { label:'Requalificacao',   icon:'target', color:'yellow' },
   agendamento:     { label:'Agendamento',      icon:'cal',    color:'green' },
@@ -717,12 +768,16 @@ function buildTaskQueue(filterType, filterRevLine, filterFase, filterCiclo, filt
       }
     }
 
-    // Cadence tasks are now injected by getCadenceTasks() via buildTaskQueue override
+    // deriveNextAction() is cadence-first: deals with active cadence get type='cadence'
     var action = d._nextAction;
     if(!action) return;
     if(filterType && action.type !== filterType) return;
     var priorityIdx = priorityOrder.indexOf(action.type);
     var sortPriority = priorityIdx >= 0 ? priorityIdx : 99;
+    // Cadence tasks get highest priority (sortPriority 0 if overdue, 1 if on time)
+    if(action.type==='cadence' && action.cadence){
+      sortPriority = action.cadence.isOverdue ? 0 : 1;
+    }
     tasks.push({
       id: id,
       deal: d,
@@ -731,7 +786,8 @@ function buildTaskQueue(filterType, filterRevLine, filterFase, filterCiclo, filt
       priority: action.priority,
       sortPriority: sortPriority,
       urgency: d._urgency||0,
-      aging: d._aging
+      aging: d._aging,
+      cadence: action.cadence||null
     });
   });
 
@@ -973,10 +1029,10 @@ function buildQueueCounts(){
   queue.forEach(function(t){
     var type = t.taskType||'follow_up';
     counts.all++;
-    if(counts[type]!==undefined) counts[type]++;
-    else counts[type]=1;
-    // Conta cadência separadamente se deal tem enrollment ativo
-    if(t.cadence) counts.cadencia = (counts.cadencia||0)+1;
+    // type='cadence' mapeia para slug 'cadencia' na fila
+    var countKey = type==='cadence' ? 'cadencia' : type;
+    if(counts[countKey]!==undefined) counts[countKey]++;
+    else counts[countKey]=1;
   });
   return counts;
 }
@@ -1000,16 +1056,11 @@ function matchFocusMode(deal, mode){
 
 function matchQueue(deal, queue){
   if(!queue||queue==='all') return true;
-  var dealId = deal.id||deal.contact_id||deal.deal_id||'';
-  // Cadência: verifica enrollment ativo diretamente
-  if(queue==='cadencia'){
-    return !!(window._cadenceEnrollments && window._cadenceEnrollments[dealId] &&
-      !window._cadenceEnrollments[dealId].paused &&
-      !window._cadenceEnrollments[dealId].completed);
-  }
-  // Match by deal's next action type
   var action = deal._nextAction;
   if(!action) return false;
+  // Cadência: match por type 'cadence' (deriveNextAction agora retorna type='cadence')
+  if(queue==='cadencia') return action.type === 'cadence';
+  // Outros: match direto
   return action.type === queue;
 }
 
@@ -1132,14 +1183,9 @@ function renderTaskCardFromItem(t, idx){
   var aging    = d.delta||0;
   var ks       = d._transitionRuntime&&d._transitionRuntime.hard_blocks&&d._transitionRuntime.hard_blocks.length>0;
 
-  var taskTypeLabels = {
-    follow_up:'FUP', social_dm:'DM', handoff_prep:'Handoff',
-    reativacao:'Reativação', no_show_recovery:'No-Show',
-    framework_gap:'Framework Gap', authority_confirmation:'Autoridade',
-    pain_quantification:'Quantificar Dor', cadence:'Cadência'
-  };
-  var taskLabel = taskTypeLabels[taskType]||taskType;
-  var taskColor = taskType==='follow_up'?'task-c-accent':taskType==='social_dm'?'task-c-text2':taskType==='handoff_prep'?'task-c-green':taskType==='reativacao'?'task-c-yellow':taskType==='no_show_recovery'?'task-c-red':'task-c-text2';
+  var cfg = TASK_TYPES[taskType]||TASK_TYPES.follow_up;
+  var taskLabel = cfg.label;
+  var taskColor = 'task-c-'+(cfg.color||'text2');
   var agingClass = aging>40?'task-aging-critical':aging>20?'task-aging-high':'task-aging-medium';
   var deltaColor = aging>=40?'var(--red)':aging>=20?'var(--yellow)':'var(--text2)';
 
@@ -1159,9 +1205,29 @@ function renderTaskCardFromItem(t, idx){
   // id para texOpen — usa a chave do map (t.id)
   var queueId = _escHtml(String(t.id||idx));
 
-  var cadBadge = t.cadence ? '<span class="tag" style="font-size:9px;color:var(--accent2)">⚡ '+_escHtml(t.cadence.templateName||'Cadência')+'</span>' : '';
+  // ── Cadence context from deriveNextAction ──
+  var cadCtx = (d._nextAction && d._nextAction.cadence) ? d._nextAction.cadence : (t.cadence||null);
+  var hasCadence = !!cadCtx;
+  var cadBadge = '';
+  var cadStripHtml = '';
+  if(hasCadence){
+    var chColors = {whatsapp:'var(--green)',ligacao:'var(--accent)',instagram:'var(--clay)',linkedin:'var(--accent2)',tarefa:'var(--text2)'};
+    var chColor = chColors[cadCtx.channel]||'var(--text2)';
+    var chIcons = {whatsapp:'💬',ligacao:'📞',instagram:'📸',linkedin:'🔗',tarefa:'📋'};
+    var chIcon = chIcons[cadCtx.channel]||'📋';
+    var stepProg = (cadCtx.completedSteps||0)+'/'+(cadCtx.totalSteps||0);
+    var overdueTag = cadCtx.isOverdue ? '<span style="color:var(--red);font-size:9px;font-weight:700;margin-left:6px">ATRASADO</span>' : '';
+    cadBadge = '<span class="tag" style="font-size:9px;color:var(--accent2);border-color:var(--accent2)">⚡ '+_escHtml(cadCtx.templateName||'Cadência')+' ('+stepProg+')</span>';
+    cadStripHtml = '<div class="task-cad-strip" style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin:6px 0 4px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);border-radius:6px;font-size:11px">'
+      + '<span style="font-size:14px">'+chIcon+'</span>'
+      + '<span style="color:'+chColor+';font-weight:700">'+_escHtml(cadCtx.channelLabel||'')+'</span>'
+      + '<span style="color:var(--text2)">D'+(cadCtx.day||'?')+'</span>'
+      + '<span style="color:var(--text);flex:1">'+_escHtml(cadCtx.action||'')+'</span>'
+      + overdueTag
+    + '</div>';
+  }
 
-  return '<div class="task-card" data-task-idx="'+idx+'" data-qid="'+queueId+'" style="cursor:pointer" onclick="window.texOpen('+idx+')">'
+  return '<div class="task-card'+(hasCadence?' task-card-cad':'')+'" data-task-idx="'+idx+'" data-qid="'+queueId+'" style="cursor:pointer" onclick="window.texOpen('+idx+')">'
     + '<div class="task-card-main">'
       + '<div class="task-card-top">'
         + '<span class="task-type-badge '+taskColor+'">'+taskLabel+'</span>'
@@ -1172,6 +1238,7 @@ function renderTaskCardFromItem(t, idx){
       + '</div>'
       + '<h3 class="task-card-title">'+_escHtml(nome)+'</h3>'
       + '<div class="task-card-sub">'+_escHtml(empresa+(cargo?' · '+cargo:''))+'</div>'
+      + cadStripHtml
       + '<div style="display:flex;gap:10px;font-size:11px;color:var(--text2);margin:4px 0 8px">'
         + (etapa?'<span>'+_escHtml(_fmtEtapa(etapa))+'</span>':'')
         + (fase?'<span>'+_escHtml(fase)+'</span>':'')
@@ -1179,7 +1246,8 @@ function renderTaskCardFromItem(t, idx){
       + '</div>'
       + '<div class="task-card-nba">→ '+_escHtml(String(nba))+'</div>'
       + '<div class="task-actions">'
-        + '<button class="task-btn is-primary" onclick="event.stopPropagation();window.texOpen('+idx+')">Executar →</button>'
+        + '<button class="task-btn is-primary" onclick="event.stopPropagation();window.texOpen('+idx+')">'+(hasCadence?'Executar Step →':'Executar →')+'</button>'
+        + (hasCadence?'<button class="task-btn" onclick="event.stopPropagation();window.completeCadenceStep&&window.completeCadenceStep(\''+queueId+'\','+(cadCtx.stepIndex||0)+');window.rerenderTasks()">✓ Concluir Step</button>':'')
         + '<button class="task-btn" onclick="event.stopPropagation();window.taskQuickAction&&window.taskQuickAction(\''+queueId+'\',\'fup\')">Gerar FUP</button>'
         + '<button class="task-btn" onclick="event.stopPropagation();window.taskQuickAction&&window.taskQuickAction(\''+queueId+'\',\'analyze\')">Analisar</button>'
       + '</div>'
@@ -1286,16 +1354,14 @@ function renderTasksV2(){
   var filterCiclo = (document.getElementById('tf-ciclo')||{}).value||null;
   var filterTier  = (document.getElementById('tf-tier')||{}).value||null;
 
-  // Monta fila via buildTaskQueue — mesmo formato que texOpen usa
-  // 'cadencia' não é um taskType — passa null e filtra depois
+  // Monta fila via buildTaskQueue — cadence agora é taskType nativo
   var queueSlug = ELUCY_TASKS_STATE.queue;
-  var filterType = (queueSlug !== 'all' && queueSlug !== 'cadencia') ? queueSlug : null;
-  var queue = buildTaskQueue(filterType, null, filterFase||null, filterCiclo||null, null);
-
-  // Filtro fila cadência — mantém só deals com enrollment ativo
-  if(queueSlug === 'cadencia'){
-    queue = queue.filter(function(t){ return !!t.cadence; });
+  var filterType = null;
+  if(queueSlug !== 'all'){
+    // 'cadencia' slug → 'cadence' taskType (deriveNextAction retorna type='cadence')
+    filterType = queueSlug === 'cadencia' ? 'cadence' : queueSlug;
   }
+  var queue = buildTaskQueue(filterType, null, filterFase||null, filterCiclo||null, null);
 
   // Filtro de tier (não suportado nativamente pelo buildTaskQueue)
   if(filterTier){
@@ -3595,22 +3661,8 @@ function getCadenceTasks(){
 }
 window.getCadenceTasks = getCadenceTasks;
 
-// Inject cadence tasks into buildTaskQueue
-var _origBuildTaskQueue = buildTaskQueue;
-buildTaskQueue = function(filterType, filterRevLine, filterFase, filterCiclo, filterSmart){
-  var tasks = _origBuildTaskQueue(filterType, filterRevLine, filterFase, filterCiclo, filterSmart);
-  // Add cadence tasks
-  var cadTasks = getCadenceTasks();
-  if(filterType && filterType!=='cadence') return tasks; // non-cadence filter active
-  cadTasks.forEach(function(ct){ tasks.push(ct); });
-  // Re-sort by priority
-  tasks.sort(function(a,b){
-    if(a.sortPriority !== b.sortPriority) return a.sortPriority - b.sortPriority;
-    return (b.urgency||0) - (a.urgency||0);
-  });
-  return tasks;
-};
-window.buildTaskQueue = buildTaskQueue;
+// Cadence tasks are now integrated directly via deriveNextAction() cadence-first logic.
+// No need for separate injection — deals with active cadences get type='cadence' automatically.
 
 // Render cadence enrollment modal for a deal
 function renderCadenceModal(dealId){
