@@ -1677,7 +1677,10 @@ function showCockpit(user){
   window.ELUCY_SUPABASE_URL=SUPABASE_URL;
   const _sb_session=getSB();
   if(_sb_session) _sb_session.auth.getSession().then(function(r){
-    if(r.data&&r.data.session) window.ELUCY_JWT=r.data.session.access_token;
+    if(r.data&&r.data.session){
+      window.ELUCY_JWT=r.data.session.access_token;
+      window._ELUCY_SESSION=r.data.session;
+    }
   });
   // Governança: seta operador no localStorage a partir do auth (modo remoto)
   if(window.IS_REMOTE && user.email){
@@ -1908,6 +1911,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(session&&session.user) checkApproval(session.user);
       // Atualiza JWT para Transition UI em token refresh
       if(session&&session.access_token) window.ELUCY_JWT=session.access_token;
+      if(session) window._ELUCY_SESSION=session;
     });
   } else {
     // Modo local (G4 OS): carrega cockpit-data.js diretamente
@@ -2310,8 +2314,15 @@ function _checkLLMHealth(){
   var okIcon='<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> ';
   (async function(){
     try{
-      await sb.auth.refreshSession();
-      var session=(await sb.auth.getSession()).data.session;
+      var session=window._ELUCY_SESSION||null;
+      if(!session){
+        var r=await sb.auth.getSession();
+        session=r.data&&r.data.session;
+      }
+      if(!session && window.ELUCY_JWT){
+        // Fallback: use raw JWT
+        session={access_token:window.ELUCY_JWT};
+      }
       if(!session){el.innerHTML='<span style="color:var(--amber)">Sessão expirada — faça login novamente</span>';return;}
       var url=window.ELUCY_INFERENCE_URL||'https://tnbbsjvzwleeoqnxtafp.supabase.co/functions/v1/elucy-inference';
       var resp=await fetch(url,{
@@ -3253,29 +3264,45 @@ async function callIntelligenceAPI(dealData, requestType, extraContext){
   const sb = getSB();
   if(!sb) throw new Error('Supabase não inicializado. Recarregue a página.');
 
-  // Get current session — Supabase JS auto-refreshes if token is near expiry
-  let session = null;
-  try {
-    const r = await sb.auth.getSession();
-    session = r.data && r.data.session;
-  } catch(e) { console.warn('getSession failed:', e); }
+  // Strategy: try 3 JWT sources in order of reliability
+  let jwt = null;
 
-  // If session exists but token might be stale (>50min old), force refresh
-  if(session && session.expires_at){
-    const expiresIn = session.expires_at * 1000 - Date.now();
-    if(expiresIn < 600000){ // less than 10min left
-      try {
-        const r2 = await sb.auth.refreshSession();
-        if(r2.data && r2.data.session) session = r2.data.session;
-      } catch(e) { console.warn('refreshSession failed:', e); }
+  // Source 1: window._ELUCY_SESSION (set by onAuthStateChange — most reliable)
+  if(window._ELUCY_SESSION && window._ELUCY_SESSION.access_token){
+    jwt = window._ELUCY_SESSION.access_token;
+    // Check if near expiry and refresh
+    if(window._ELUCY_SESSION.expires_at){
+      const expiresIn = window._ELUCY_SESSION.expires_at * 1000 - Date.now();
+      if(expiresIn < 600000){ // less than 10min
+        try {
+          const r = await sb.auth.refreshSession();
+          if(r.data && r.data.session){
+            window._ELUCY_SESSION = r.data.session;
+            jwt = r.data.session.access_token;
+          }
+        } catch(e) {}
+      }
     }
   }
 
-  const jwt = session ? session.access_token : null;
+  // Source 2: sb.auth.getSession()
+  if(!jwt){
+    try {
+      const r = await sb.auth.getSession();
+      if(r.data && r.data.session){
+        jwt = r.data.session.access_token;
+        window._ELUCY_SESSION = r.data.session;
+      }
+    } catch(e) {}
+  }
+
+  // Source 3: window.ELUCY_JWT (legacy, set in showCockpit + onAuthStateChange)
+  if(!jwt && window.ELUCY_JWT) jwt = window.ELUCY_JWT;
+
   if(!jwt){
     throw new Error('Sessão expirada. Faça logout e login novamente.');
   }
-  console.log('callIntelligenceAPI: JWT obtained, expires_at=', session.expires_at, 'type=', requestType);
+  console.log('callIntelligenceAPI: JWT ok, type=', requestType);
 
   // Carrega histórico completo para enriquecer contexto
   const history = await loadDealFullHistory(dealData.deal_id);
