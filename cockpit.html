@@ -481,35 +481,42 @@ window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false'
       </div>
     </div>
     <div class="screen" id="screen-intelligence">
-      <div class="mb-lg">
-        <div class="section-title">Inteligência Operacional</div>
-        <div class="section-sub" id="intel-subtitle">Análise automática do pipeline — carregue deals para ativar</div>
-      </div>
-      <div class="intel-dims" id="intel-dims">
-        <div class="intel-dims-core">
-          <span class="intel-dim on" onclick="window._intelDim('global',this)">Global</span>
-          <span class="intel-dim" onclick="window._intelDim('operator',this)">Operador</span>
-          <span class="intel-dim" onclick="window._intelDim('line',this)">Linha</span>
-          <span class="intel-dim" onclick="window._intelDim('stage',this)">Etapa</span>
-          <span class="intel-dim" onclick="window._intelDim('channel',this)">Canal</span>
-          <span class="intel-dim" onclick="window._intelDim('task',this)">Tasks</span>
-          <span class="intel-dim" onclick="window._intelDim('value',this)">Valor</span>
+      <!-- Header + Period Picker -->
+      <div class="intel-header">
+        <div>
+          <div class="section-title">Inteligência Operacional</div>
+          <div class="section-sub" id="intel-subtitle">Análise automática do pipeline — carregue deals para ativar</div>
         </div>
-        <div class="intel-dims-adv">
-          <span class="intel-dim intel-dim-forecast" onclick="window._intelDim('forecast',this)">Forecast</span>
-          <span class="intel-dim intel-dim-framework" onclick="window._intelDim('framework',this)">Framework</span>
-          <span class="intel-dim intel-dim-performance" onclick="window._intelDim('performance',this)">Performance V3</span>
-          <span class="intel-dim intel-dim-enterprise" onclick="window._intelDim('enterprise',this)">Enterprise</span>
-          <span class="intel-dim intel-dim-rfv" onclick="window._intelDim('rfv',this)">RFV</span>
-          <span class="intel-dim intel-dim-spin" onclick="window._intelDim('spin',this)">SPIN Audit</span>
-          <span class="intel-dim intel-dim-advisor" onclick="window._intelDim('advisor',this)">Trusted Advisor</span>
-          <span class="intel-dim intel-dim-bowtie" onclick="window._intelDim('bowtie',this)">⊞ Bowtie</span>
+        <div class="rpt-period-bar">
+          <button class="rpt-period-btn active" data-period="30d" onclick="window._setPeriod('30d',this)">30d</button>
+          <button class="rpt-period-btn" data-period="7d" onclick="window._setPeriod('7d',this)">7d</button>
+          <button class="rpt-period-btn" data-period="90d" onclick="window._setPeriod('90d',this)">90d</button>
+          <button class="rpt-period-btn" data-period="custom" onclick="window._setPeriod('custom',this)">Custom</button>
+          <input type="hidden" id="rpt-period-select" value="30d">
+          <span id="rpt-custom-range" style="display:none">
+            <input type="date" id="rpt-date-start" class="rpt-date-input">
+            <span style="color:var(--text3);font-size:.75rem">→</span>
+            <input type="date" id="rpt-date-end" class="rpt-date-input">
+            <button class="rpt-period-btn" onclick="window._loadIntelTab()">Aplicar</button>
+          </span>
         </div>
       </div>
-      <div id="intel-content">
-        <div class="intel-empty">Carregue o pipeline para visualizar a análise de inteligência.</div>
+      <!-- Sub-tab Nav: PERFORMANCE | PIPELINE | QUALITY -->
+      <div class="sub-tab-nav" role="tablist" aria-label="Dimensões de inteligência">
+        <button class="sub-tab-btn active" role="tab" aria-selected="true" tabindex="0" data-tab="performance" onclick="window._setIntelTab('performance',this)" id="tab-performance" aria-controls="sub-tab-performance">PERFORMANCE</button>
+        <button class="sub-tab-btn" role="tab" aria-selected="false" tabindex="-1" data-tab="pipeline" onclick="window._setIntelTab('pipeline',this)" id="tab-pipeline" aria-controls="sub-tab-pipeline">PIPELINE</button>
+        <button class="sub-tab-btn" role="tab" aria-selected="false" tabindex="-1" data-tab="quality" onclick="window._setIntelTab('quality',this)" id="tab-quality" aria-controls="sub-tab-quality">QUALITY</button>
       </div>
-      <div id="perf-report-v3" class="hidden"></div>
+      <!-- Tab Panels -->
+      <div id="sub-tab-performance" class="sub-tab-panel" role="tabpanel" aria-labelledby="tab-performance">
+        <div class="sk sk-card" style="height:400px"><div class="sk-kpi"></div></div>
+      </div>
+      <div id="sub-tab-pipeline" class="sub-tab-panel" role="tabpanel" aria-labelledby="tab-pipeline" style="display:none">
+        <div class="sk sk-card" style="height:400px"><div class="sk-kpi"></div></div>
+      </div>
+      <div id="sub-tab-quality" class="sub-tab-panel" role="tabpanel" aria-labelledby="tab-quality" style="display:none">
+        <div class="sk sk-card" style="height:400px"><div class="sk-kpi"></div></div>
+      </div>
     </div>
     <div class="screen" id="screen-playbooks">
       <div id="pb-root"><div class="loading-text">Carregando Playbooks...</div></div>
