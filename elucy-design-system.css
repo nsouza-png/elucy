@@ -332,10 +332,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);height:
 .bs{background:transparent;color:var(--text);border:1px solid var(--border2)}
 .bs:hover{border-color:var(--aborder);background:rgba(245,158,11,.04)}
 
-.bs{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
-
-.bs:hover{border-color:var(--border2);background:var(--bg4)}
-
 .bsuc{background:var(--gdim);color:var(--green);border:1px solid var(--green)}
 
 .bsuc:hover{background:var(--green);color:#fff}
