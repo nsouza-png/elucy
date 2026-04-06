@@ -4829,13 +4829,17 @@ function fmtRevLine(k){
 // ── TAB: PERFORMANCE (KR1 — individual) ──
 async function _renderPerformance(ct,period,qualName,opEmail){
   var RV4=window.ReportsV4||{};
-  var [dbIndiv,dbLine,dbDt,dtRuntime,macroRows]=await Promise.all([
+  var [dbIndiv,dbLine,dbDt,dtRuntime,macroRows,p60Stages]=await Promise.all([
     RV4.fetchDatabricksMetrics?RV4.fetchDatabricksMetrics(qualName,period):null,
     RV4.fetchDatabricksLineBreakdown?RV4.fetchDatabricksLineBreakdown(qualName,period):null,
     RV4.fetchDatabricksDtByLine?RV4.fetchDatabricksDtByLine(qualName,period):null,
     RV4.fetchDeltaTRuntime?RV4.fetchDeltaTRuntime(opEmail):null,
-    RV4.fetchDatabricksMacro?RV4.fetchDatabricksMacro(period):[]
+    RV4.fetchDatabricksMacro?RV4.fetchDatabricksMacro(period):[],
+    RV4.fetchDatabricksP60ByStage?RV4.fetchDatabricksP60ByStage(period):[]
   ]);
+  // Build p60 lookup map: stage -> p60 days
+  var p60Map={};
+  (p60Stages||[]).forEach(function(r){p60Map[r.stage]=r.p60;});
 
   var m=dbIndiv||{};
   var bench=macroRows&&macroRows.length?_calcBenchmarks(macroRows):{};
@@ -4893,19 +4897,23 @@ async function _renderPerformance(ct,period,qualName,opEmail){
   var dtData=m._source==='databricks'?m:dtRuntime;
   if(dtData){
     var transitions=[
-      {label:'MQL\u2192SAL',key:'dt_mql_sal',slaBase:2},
-      {label:'SAL\u2192Agend',key:'dt_agendado',slaBase:5},
-      {label:'Agend\u2192OPP',key:'dt_agendado_oportunidade',slaBase:7},
-      {label:'Neg\u2192Won',key:'dt_negociacao_ganho',slaBase:14}
+      {label:'MQL\u2192SAL',key:'dt_mql_sal',slaFallback:2,p60Key:'SAL'},
+      {label:'SAL\u2192Agend',key:'dt_agendado',slaFallback:5,p60Key:'Agendado'},
+      {label:'Agend\u2192OPP',key:'dt_agendado_oportunidade',slaFallback:7,p60Key:'Oportunidade'},
+      {label:'Neg\u2192Won',key:'dt_negociacao_ganho',slaFallback:14,p60Key:'Ganho'}
     ];
+    var hasP60=p60Map&&Object.keys(p60Map).length>0;
     html+='<div class="perf-section"><div class="perf-section-title">Velocidade</div>';
-    html+='<table class="rpt-table"><thead><tr><th>Transi\u00e7\u00e3o</th><th>Seu \u0394t</th><th>SLA Base</th><th>Status</th></tr></thead><tbody>';
+    html+='<table class="rpt-table"><thead><tr><th>Transi\u00e7\u00e3o</th><th>Seu \u0394t</th><th>'+(hasP60?'p60 Opera\u00e7\u00e3o':'SLA Base')+'</th><th>Status</th></tr></thead><tbody>';
     transitions.forEach(function(t){
       var val=dtData[t.key];
-      var cls=_slaClass(val,t.slaBase);
-      html+='<tr><td>'+t.label+'</td><td>'+_fmtDays(val)+'</td><td>'+t.slaBase+'d</td><td><span class="'+cls+'">'+( val==null?'':val<=t.slaBase?'\u2713':val<=t.slaBase*1.3?'\u26a0':'\u2717')+'</span></td></tr>';
+      var sla=p60Map[t.p60Key]||t.slaFallback;
+      var cls=_slaClass(val,sla);
+      html+='<tr><td>'+t.label+'</td><td>'+_fmtDays(val)+'</td><td>'+(typeof sla==='number'?sla.toFixed(1):sla)+'d</td><td><span class="'+cls+'">'+( val==null?'':val<=sla?'\u2713':val<=sla*1.3?'\u26a0':'\u2717')+'</span></td></tr>';
     });
-    html+='</tbody></table></div>';
+    html+='</tbody></table>';
+    if(hasP60) html+='<div class="sg-note" style="margin-top:4px">p60 = benchmark din\u00e2mico da opera\u00e7\u00e3o (60\u00ba percentil)</div>';
+    html+='</div>';
   }
 
   // Bloco 5: Breakdown por linha
@@ -4992,6 +5000,27 @@ async function _renderPipeline(ct,period,qualName,opEmail){
       html+='<tr><td>'+fmtRevLine(r.name)+'</td><td>'+_fmtN(r.total)+'</td><td>'+_fmtN(r.won)+'</td><td>'+_fmtPct(cr)+'</td><td>'+_fmtMoney(r.value)+'</td></tr>';
     });
     html+='</tbody></table></div>';
+  }
+
+  // Bloco 4: Gargalos SLA — p60 por etapa
+  var p60Data=RV4.fetchDatabricksP60ByStage?await RV4.fetchDatabricksP60ByStage(period):[];
+  if(p60Data&&p60Data.length){
+    var slaTargets={'SAL':3,'Agendado':5,'Oportunidade':7,'Ganho':14};
+    var stageLabels={'SAL':'MQL→SAL','Agendado':'SAL→Agendado','Oportunidade':'Agend→OPP','Ganho':'OPP→Won'};
+    html+='<div class="perf-section"><div class="perf-section-title">Gargalos SLA — p60 por Etapa</div>';
+    html+='<table class="rpt-table"><thead><tr><th>Transição</th><th>p60 (dias)</th><th>Média (dias)</th><th>SLA Target</th><th>Status</th><th>Deals</th></tr></thead><tbody>';
+    p60Data.forEach(function(r){
+      var target=slaTargets[r.stage]||7;
+      var label=stageLabels[r.stage]||r.stage;
+      var ratio=r.p60/target;
+      var cls=ratio>1.5?'status-critical':ratio>1?'status-warn':'status-ok';
+      var status=ratio>1.5?'Gargalo':ratio>1?'Atenção':'OK';
+      var barPct=Math.min(100,Math.round(r.p60/Math.max(target*2,r.p60)*100));
+      html+='<tr><td>'+label+'</td><td><div style="display:flex;align-items:center;gap:8px"><div class="funnel-bar-track" style="width:80px;height:6px"><div class="funnel-bar-fill '+cls+'" style="width:'+barPct+'%"></div></div><strong>'+r.p60.toFixed(1)+'d</strong></div></td><td>'+r.avg.toFixed(1)+'d</td><td>'+target+'d</td><td><span class="'+cls+'">'+status+'</span></td><td>'+_fmtN(r.count)+'</td></tr>';
+    });
+    html+='</tbody></table>';
+    html+='<div class="sg-note" style="margin-top:6px">p60 = 60% dos deals completam a transição neste prazo. Gargalo = p60 > 1.5× SLA target.</div>';
+    html+='</div>';
   }
 
   if(!html) html='<div style="padding:40px;text-align:center;color:var(--text3);font-size:.8125rem">Sem dados de pipeline para o per\u00edodo selecionado.</div>';

@@ -226,6 +226,30 @@
     return rows;
   }
 
+  // P60 por etapa — PERCENTILE_CONT(0.6) do delta_t agrupado por event
+  async function fetchDatabricksP60ByStage(period) {
+    var dt = _resolveDates(period);
+    var sql = `
+      SELECT
+        event AS stage,
+        ROUND(PERCENTILE_CONT(0.6) WITHIN GROUP (ORDER BY delta_t), 1) AS p60_days,
+        ROUND(AVG(delta_t), 1) AS avg_days,
+        COUNT(*) AS deal_count
+      FROM production.diamond.funil_comercial
+      WHERE delta_t > 0 AND delta_t < 365
+        AND event IN ('SAL','Agendado','Oportunidade','Ganho')
+        AND event_timestamp >= CAST('${dt.start} 00:00:00' AS TIMESTAMP)
+        AND event_timestamp <  CAST('${dt.end} 00:00:00' AS TIMESTAMP)
+      GROUP BY event
+      ORDER BY CASE event WHEN 'SAL' THEN 1 WHEN 'Agendado' THEN 2 WHEN 'Oportunidade' THEN 3 WHEN 'Ganho' THEN 4 END
+    `;
+    var rows = await _dbQuery(sql.trim());
+    if (!rows) return [];
+    return rows.map(function(r) {
+      return { stage: r.stage, p60: parseFloat(r.p60_days || 0), avg: parseFloat(r.avg_days || 0), count: parseInt(r.deal_count || 0, 10) };
+    });
+  }
+
   // NOVO: Query macro — todos os operadores, sem filtro individual (STEP 3)
   async function fetchDatabricksMacro(period) {
     var dt = _resolveDates(period);
@@ -939,6 +963,7 @@
     fetchDatabricksLineBreakdown: fetchDatabricksLineBreakdown,
     fetchDatabricksDtByLine: fetchDatabricksDtByLine,
     fetchDatabricksMacro: fetchDatabricksMacro,
+    fetchDatabricksP60ByStage: fetchDatabricksP60ByStage,
     calcFunnel: calcFunnel,
     calcDailyVolume: calcDailyVolume,
     calcEfficiencyByQualifier: calcEfficiencyByQualifier,
