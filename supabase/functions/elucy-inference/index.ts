@@ -16,7 +16,7 @@ const CORS = {
 // eluci-core = 15k tokens (mandatory), demais priorizados por impacto no output
 const MCP_MAP: Record<string, string[]> = {
   analyze: ['eluci-core','mece-intelligence','signals','behavior','output-schema'],
-  copy: ['eluci-core','blde','fip','sdr-social-dm','playbook-sdr','signals','output-schema'],
+  copy: ['eluci-core','blde','fip','sdr-social-dm','playbook-sdr','signals','behavior','output-schema'],
   note: ['eluci-core','output-schema'],
   business_analysis: ['eluci-core','mece-intelligence','strategy'],
   dm_copy: ['eluci-core','sdr-social-dm','fip','blde','behavior','playbook-sdr','signals'],
@@ -25,7 +25,7 @@ const MCP_MAP: Record<string, string[]> = {
   batch_classify: ['eluci-core','signals','output-schema'],
   competitive: ['eluci-core','mece-intelligence','strategy'],
   rt_assist: ['eluci-core','blde','fip','sdr-social-dm','output-schema'],
-  downsell: ['eluci-core','mece-intelligence','output-schema'],
+  downsell: ['eluci-core','mece-intelligence','guardrails','output-schema'],
   conv_enrichment: ['eluci-core','signals','behavior','output-schema'],
 }
 
@@ -70,7 +70,7 @@ async function loadMCPs(supabaseUrl: string, serviceKey: string): Promise<Record
       _mcpCacheTs = Date.now()
       return result
     }
-  } catch (_) { /* fall through */ }
+  } catch (e) { console.warn('MCP load from storage failed:', (e as Error).message) }
 
   // Attempt 2: mcps table in database
   try {
@@ -82,7 +82,7 @@ async function loadMCPs(supabaseUrl: string, serviceKey: string): Promise<Record
       _mcpCacheTs = Date.now()
       return result
     }
-  } catch (_) { /* fall through */ }
+  } catch (e) { console.warn('MCP load from DB failed:', (e as Error).message) }
 
   // Attempt 3: fetch from GitHub Pages (public)
   try {
@@ -97,8 +97,9 @@ async function loadMCPs(supabaseUrl: string, serviceKey: string): Promise<Record
       _mcpCacheTs = Date.now()
       return result
     }
-  } catch (_) { /* fall through */ }
+  } catch (e) { console.warn('MCP load from GitHub Pages failed:', (e as Error).message) }
 
+  console.error('All MCP load attempts failed — returning empty')
   return {}
 }
 
@@ -134,17 +135,18 @@ Deno.serve(async (req) => {
 
     // Validate user
     const { data: { user }, error: userErr } = await sbUser.auth.getUser()
-    if (userErr || !user) {
+    if (userErr || !user || !user.email) {
       return new Response(JSON.stringify({ error: 'Invalid token' }), {
         status: 401, headers: { ...CORS, 'Content-Type': 'application/json' },
       })
     }
+    const userEmail = user.email
 
     // Check operator approval
     const { data: operator } = await sbAdmin
       .from('operators')
       .select('approved, qualificador_name, name, role')
-      .eq('email', user.email!)
+      .eq('email', userEmail)
       .maybeSingle()
 
     if (!operator?.approved) {
@@ -154,7 +156,7 @@ Deno.serve(async (req) => {
     }
 
     // ── 2. Rate limit ──
-    if (!checkRateLimit(user.email!)) {
+    if (!checkRateLimit(userEmail)) {
       return new Response(JSON.stringify({
         error: 'Rate limit exceeded',
         message: 'Maximo 8 requests por minuto. Aguarde alguns segundos.',
@@ -197,18 +199,20 @@ Deno.serve(async (req) => {
     const slugs = MCP_MAP[request_type] || MCP_MAP.analyze
 
     // System messages: each MCP as a separate block with cache_control
-    // The LAST system block gets cache_control — Anthropic caches the prefix
+    // cache_control on eluci-core (mandatory, stable, 15k tokens) — caches the biggest prefix
+    // Also cache_control on last MCP block to cache the full MCP set
     const systemBlocks: any[] = []
+    const lastMcpIdx = slugs.length - 1
 
     slugs.forEach((slug, idx) => {
       const content = mcps[slug]
-      if (!content) return
+      if (!content) { console.warn(`MCP slug "${slug}" not found for ${request_type}`); return }
       const block: any = {
         type: 'text',
         text: `<document name="${slug}">\n${content}\n</document>`,
       }
-      // Apply cache_control to last MCP block — this caches ALL preceding system content
-      if (idx === slugs.length - 1) {
+      // Cache eluci-core (stable, biggest block) AND last MCP (full prefix)
+      if (slug === 'eluci-core' || idx === lastMcpIdx) {
         block.cache_control = { type: 'ephemeral' }
       }
       systemBlocks.push(block)
@@ -217,7 +221,7 @@ Deno.serve(async (req) => {
     // Add operator context as final system block (NOT cached — changes per operator)
     systemBlocks.push({
       type: 'text',
-      text: `OPERADOR: ${operator.name || user.email} | Role: ${operator.role || 'sdr'} | Qualificador: ${operator.qualificador_name || 'N/A'}`,
+      text: `OPERADOR: ${operator.name || userEmail} | Role: ${operator.role || 'sdr'} | Qualificador: ${operator.qualificador_name || 'N/A'}`,
     })
 
     // User message: use legacy pre-built message if available, otherwise assemble from parts
@@ -270,7 +274,7 @@ Deno.serve(async (req) => {
     // ── 6. Save response to cockpit_responses ──
     try {
       await sbAdmin.from('cockpit_responses').insert({
-        operator_id: user.email,
+        operator_id: userEmail,
         deal_id: deal_id || 'unknown',
         request_type,
         output: text,

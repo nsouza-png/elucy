@@ -3230,16 +3230,28 @@ async function callIntelligenceAPI(dealData, requestType, extraContext){
   };
   if(jwt) headers['Authorization'] = 'Bearer ' + jwt;
 
-  const resp = await fetch(inferenceUrl, {
-    method: 'POST',
-    headers: headers,
-    body: JSON.stringify({
-      requestType: requestType,
-      userMessage: userMsg,
-      model: model,
-      dealId: dealData.deal_id || null
-    })
-  });
+  // 45s timeout — edge function + Claude API combined
+  const controller = new AbortController();
+  const timeoutId = setTimeout(()=>controller.abort(), 45000);
+  let resp;
+  try {
+    resp = await fetch(inferenceUrl, {
+      method: 'POST',
+      headers: headers,
+      signal: controller.signal,
+      body: JSON.stringify({
+        requestType: requestType,
+        userMessage: userMsg,
+        model: model,
+        dealId: dealData.deal_id || null
+      })
+    });
+  } catch(fetchErr) {
+    clearTimeout(timeoutId);
+    if(fetchErr.name==='AbortError') throw new Error('Timeout: Elucy nao respondeu em 45s');
+    throw fetchErr;
+  }
+  clearTimeout(timeoutId);
   if(!resp.ok){
     const errBody = await resp.text().catch(()=>'');
     throw new Error('Elucy Inference ' + resp.status + ': ' + errBody.slice(0,200));
@@ -3341,7 +3353,15 @@ function parseCopyOutput(raw){
   return {wa, crm, full: raw};
 }
 
+const _pendingCopyRequests = new Set();
 async function requestElucyCopy(deal_id, dealData, targetId, canal){
+  // Double-tap protection
+  if(_pendingCopyRequests.has(targetId)){
+    showSyncToast('warn','Copy já está sendo gerada para este deal...');
+    return;
+  }
+  _pendingCopyRequests.add(targetId);
+
   const copyEl=document.getElementById('co-'+targetId);
   if(copyEl){
     const wa=document.getElementById('ct-'+targetId+'-wa');
@@ -3350,7 +3370,7 @@ async function requestElucyCopy(deal_id, dealData, targetId, canal){
 
   const sb=getSB();
   const email=_currentUser&&_currentUser.email;
-  if(!sb||!email) return;
+  if(!sb||!email){ _pendingCopyRequests.delete(targetId); return; }
 
   // ── Intelligence API (Edge Function) — único path ──
   try {
@@ -3367,8 +3387,8 @@ async function requestElucyCopy(deal_id, dealData, targetId, canal){
       const coEl = document.getElementById('co-'+targetId);
       if(coEl) coEl.style.display='block';
       logActivity('copy_generated', deal_id, {canal: canal||'WhatsApp'});
-      // saveAPIResponse removido — edge function elucy-inference ja salva em cockpit_responses
       logDealInteraction(deal_id, 'copy', output, {canal: canal||'WhatsApp'});
+      _pendingCopyRequests.delete(targetId);
       return;
     }
     throw new Error('Resposta vazia da API');
@@ -3382,6 +3402,7 @@ async function requestElucyCopy(deal_id, dealData, targetId, canal){
     var coReset=document.getElementById('co-'+targetId);
     var btnReset=coReset&&coReset.querySelector('button.bp[disabled]');
     if(btnReset){btnReset.textContent='Gerar Copy via ELUCY';btnReset.disabled=false;}
+    _pendingCopyRequests.delete(targetId);
   }
 }
 
