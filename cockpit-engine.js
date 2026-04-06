@@ -1007,7 +1007,10 @@ function matchQueue(deal, queue){
       !window._cadenceEnrollments[dealId].paused &&
       !window._cadenceEnrollments[dealId].completed);
   }
-  return false; // outros slugs — buildTaskQueue já filtra por filterType
+  // Match by deal's next action type
+  var action = deal._nextAction;
+  if(!action) return false;
+  return action.type === queue;
 }
 
 function getFilteredTaskDeals(){
@@ -1262,7 +1265,7 @@ function renderTaskListFromQueue(queue){
   var el = document.getElementById('tasks-list');
   if(!el) return;
   if(!queue||!queue.length){
-    el.innerHTML = '<div class="task-empty">Nenhuma tarefa para o modo e fila selecionados.</div>';
+    el.innerHTML = '<div class="task-empty"><div style="font-size:28px;margin-bottom:12px;opacity:.4">✓</div><div style="font-size:14px;font-weight:600;margin-bottom:6px">Fila limpa</div><div style="font-size:12px;color:var(--text2)">Nenhuma tarefa pendente para o modo e fila selecionados.</div></div>';
     return;
   }
   el.innerHTML = queue.map(function(t, idx){ return renderTaskCardFromItem(t, idx); }).join('');
