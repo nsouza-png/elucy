@@ -3176,5 +3176,10 @@ button,.ntab,.fchip,.qa-btn,.task-btn,.home-fm-btn{min-height:44px;min-width:44p
 .tab-count,.logo-badge-ent{min-height:unset;min-width:unset}
 
 /* Shimmer loading — amber brand (brand book §05) */
-@keyframes shimmer{0%{background-position:-200px 0}100%{background-position:200px 0}}
-.sk{background:linear-gradient(90deg,var(--bg3) 25%,var(--bg4) 50%,var(--bg3) 75%);background-size:400px 100%;animation:shimmer 1.4s infinite linear}
+/* ── Icon System (Brand Book v1.0 §7) ── */
+svg{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;transition:stroke .2s ease}
+.ntab svg,.sidebar svg,button svg{pointer-events:none}
+button:hover svg,.ntab:hover svg,a:hover svg{stroke:var(--accent)}
+button:active svg,.ntab.on svg{stroke:var(--accent-brand,#f59e0b)}
+.ico-brand{fill:currentColor;stroke:none}
+.ico-brand:hover{transform:scale(1.08);transition:transform .2s ease}
