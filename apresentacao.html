@@ -52,38 +52,46 @@
     background: rgba(14,20,27,0.92);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
-    padding: 0 40px;
-    height: 60px;
+    padding: 0 24px;
+    height: 56px;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 16px;
   }
 
   .nav-logo {
     font-family: var(--font-display);
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     letter-spacing: 0.08em;
     color: var(--gold);
     text-transform: uppercase;
+    flex-shrink: 0;
   }
 
   .nav-links {
     display: flex;
-    gap: 32px;
+    gap: 4px;
     list-style: none;
+    flex-wrap: nowrap;
+    overflow: hidden;
   }
 
   .nav-links a {
     color: var(--muted);
     text-decoration: none;
-    font-size: 13px;
-    font-weight: 500;
-    letter-spacing: 0.04em;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     transition: color 0.2s;
+    padding: 4px 8px;
+    border-radius: 3px;
+    white-space: nowrap;
   }
-  .nav-links a:hover { color: var(--gold); }
+  .nav-links a:hover { color: var(--gold); background: rgba(201,168,76,0.06); }
+  .nav-links a.active { color: var(--gold); }
 
   /* ── SECTIONS ── */
   section {
@@ -891,7 +899,7 @@
   /* ── PROGRESS BAR ── */
   .nav-progress {
     position: fixed;
-    top: 60px; left: 0; right: 0;
+    top: 56px; left: 0; right: 0;
     height: 2px;
     background: var(--border);
     z-index: 99;
