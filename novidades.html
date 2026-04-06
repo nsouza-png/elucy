@@ -158,6 +158,140 @@ footer{border-top:1px solid var(--border);padding:24px 32px;text-align:center;po
   </div>
 
   <!-- ══════════════════════════════════════════════════════
+       RELEASE — 06 ABR 2026
+  ══════════════════════════════════════════════════════ -->
+  <div class="release anim d1">
+    <div class="release-meta">
+      <span class="release-date">Domingo, 06 de Abril de 2026</span>
+      <span class="release-bar"></span>
+      <span class="release-version">v12.0</span>
+    </div>
+    <h2 class="release-title">Pipeline Engine + Cadence DB-Driven + Intelligence Fix</h2>
+    <p class="release-sub">Transição de deals com gates server-side, cadências migradas de código hardcoded para banco de dados, edge function de inferência corrigida e polish visual na interface.</p>
+
+    <div class="feature-list">
+
+      <!-- FEATURE — Pipeline Transition Engine D2 -->
+      <div class="feature anim d2">
+        <div class="feature-top">
+          <div class="feature-icon amber">⚡</div>
+          <div class="feature-meta">
+            <div class="feature-name">Pipeline Transition Engine (D2)</div>
+            <div class="feature-category">Core · Pipeline</div>
+          </div>
+        </div>
+        <div class="feature-why">
+          O cockpit era um viewer passivo — mostrava deals mas não podia transicioná-los entre etapas. Agora o operador move deals com <b>gates obrigatórios</b>, kill switches e audit trail completo, tudo validado server-side.
+        </div>
+        <div class="feature-section">
+          <div class="feature-section-label">O que mudou</div>
+          <div class="feature-bullets">
+            <div class="feature-bullet"><b>transition-ui.js</b> — botão "Avançar Etapa" com modal de gates e confirmação</div>
+            <div class="feature-bullet"><b>transition-validator</b> — edge function com 11 gates e 5 kill switches (server-side)</div>
+            <div class="feature-bullet"><b>Grafo configurável</b> — transições permitidas armazenadas no banco, não hardcoded</div>
+            <div class="feature-bullet"><b>Audit trail</b> — toda transição registrada com operador, timestamp e evidência</div>
+          </div>
+        </div>
+        <div class="feature-tags">
+          <span class="ftag amber">PIPELINE</span>
+          <span class="ftag amber">GATES</span>
+          <span class="ftag red">KILL SWITCHES</span>
+          <span class="ftag blue">EDGE FUNCTION</span>
+        </div>
+      </div>
+
+      <!-- FEATURE — Cadence System Fase 1 -->
+      <div class="feature green-line anim d2">
+        <div class="feature-top">
+          <div class="feature-icon green">🔄</div>
+          <div class="feature-meta">
+            <div class="feature-name">Cadence System — Templates DB-Driven</div>
+            <div class="feature-category">Core · Cadência</div>
+          </div>
+        </div>
+        <div class="feature-why">
+          As cadências de follow-up estavam hardcoded no JavaScript — qualquer mudança exigia deploy. Agora os templates vivem no Supabase e são <b>editáveis sem deploy</b>, com suporte a persona e tier do deal.
+        </div>
+        <div class="feature-section green">
+          <div class="feature-section-label">O que mudou</div>
+          <div class="feature-bullets">
+            <div class="feature-bullet"><b>Código legado removido</b> — 250+ linhas de templates hardcoded substituídos por query ao banco</div>
+            <div class="feature-bullet"><b>5 cadências seed</b> — Titan Hot, Titan Warm, Builder Standard, Builder Express, Executor Intensive</div>
+            <div class="feature-bullet"><b>Canal email eliminado</b> — cadências agora usam WhatsApp, Ligação, Instagram, LinkedIn e Tarefa</div>
+            <div class="feature-bullet"><b>Init chain sequencial</b> — templates carregam primeiro, depois enrollments e steps</div>
+            <div class="feature-bullet"><b>Dialer queues</b> — tabela pronta para filas inteligentes de ligação (Fase 3)</div>
+            <div class="feature-bullet"><b>WA Templates</b> — catálogo de 5 templates WhatsApp para envio automatizado (Fase 2)</div>
+          </div>
+        </div>
+        <div class="feature-tags">
+          <span class="ftag green">CADÊNCIA</span>
+          <span class="ftag green">DB-DRIVEN</span>
+          <span class="ftag blue">SUPABASE</span>
+          <span class="ftag amber">5 FASES</span>
+        </div>
+      </div>
+
+      <!-- FEATURE — Elucy Inference Fix -->
+      <div class="feature red-line anim d3">
+        <div class="feature-top">
+          <div class="feature-icon red">🔧</div>
+          <div class="feature-meta">
+            <div class="feature-name">Elucy Inference — Payload Fix</div>
+            <div class="feature-category">Bug Fix · Edge Function</div>
+          </div>
+        </div>
+        <div class="feature-why">
+          O ELUCI Report e Análise de Mercado retornavam erro 400 — o frontend enviava campos com nomes diferentes do esperado pela edge function. <b>Agora aceita ambos os formatos</b> sem breaking change.
+        </div>
+        <div class="feature-section">
+          <div class="feature-section-label">Correções</div>
+          <div class="feature-bullets">
+            <div class="feature-bullet"><b>requestType → request_type</b> — edge function agora aceita ambos</div>
+            <div class="feature-bullet"><b>userMessage fallback</b> — mensagem pré-montada usada quando campos separados ausentes</div>
+            <div class="feature-bullet"><b>dealId → deal_id</b> — mapeamento bidirecional sem breaking change</div>
+          </div>
+        </div>
+        <div class="feature-tags">
+          <span class="ftag red">BUG FIX</span>
+          <span class="ftag blue">EDGE FUNCTION</span>
+          <span class="ftag amber">INFERENCE</span>
+        </div>
+      </div>
+
+      <!-- FEATURE — UX Quick Wins -->
+      <div class="feature blue-line anim d3">
+        <div class="feature-top">
+          <div class="feature-icon blue">✨</div>
+          <div class="feature-meta">
+            <div class="feature-name">UX Polish — Brand Compliance + Quick Wins</div>
+            <div class="feature-category">Design · Cockpit</div>
+          </div>
+        </div>
+        <div class="feature-why">
+          Auditoria visual contra o Brand Book v1.0 revelou inconsistências nos botões, inputs e labels. Aplicados 7 fixes de compliance + 3 quick wins de usabilidade.
+        </div>
+        <div class="feature-section blue">
+          <div class="feature-section-label">Melhorias</div>
+          <div class="feature-bullets">
+            <div class="feature-bullet"><b>Inline styles removidos</b> — botões do deal card migrados para classes CSS</div>
+            <div class="feature-bullet"><b>Tags pill-shape</b> — border-radius full + inline-flex alignment</div>
+            <div class="feature-bullet"><b>Duplicata CSS .bs</b> — regra duplicada removida do design system</div>
+            <div class="feature-bullet"><b>Título duplicado removido</b> — "Histórico de Interações" aparecia 2x</div>
+            <div class="feature-bullet"><b>Input de correção</b> — borda mais visível + amber glow no foco</div>
+            <div class="feature-bullet"><b>"Editável" com affordance</b> — agora é pill badge com tooltip</div>
+          </div>
+        </div>
+        <div class="feature-tags">
+          <span class="ftag blue">BRAND BOOK</span>
+          <span class="ftag blue">CSS CLEANUP</span>
+          <span class="ftag green">UX</span>
+        </div>
+      </div>
+
+    </div><!-- /feature-list -->
+  </div><!-- /release -->
+
+  <!-- ══════════════════════════════════════════════════════
        RELEASE — 29 MAR 2026
   ══════════════════════════════════════════════════════ -->
   <div class="release anim d1">
