@@ -3375,6 +3375,13 @@ async function requestElucyCopy(deal_id, dealData, targetId, canal){
   } catch(apiErr) {
     console.error('Intelligence API erro:', apiErr.message);
     showSyncToast('err','Erro ao gerar copy: '+apiErr.message);
+    // Reset placeholder para nao ficar preso em "ELUCY gerando copy..."
+    const waReset = document.getElementById('ct-'+targetId+'-wa');
+    if(waReset) waReset.textContent = 'Erro ao gerar copy. Tente novamente.';
+    // Re-enable button
+    var coReset=document.getElementById('co-'+targetId);
+    var btnReset=coReset&&coReset.querySelector('button.bp[disabled]');
+    if(btnReset){btnReset.textContent='Gerar Copy via ELUCY';btnReset.disabled=false;}
   }
 }
 
@@ -4375,8 +4382,9 @@ function injectElucyCopy(targetId, copyWA, copyCRM){
   if(wa&&copyWA) wa.innerText=copyWA;
   if(crm&&copyCRM) crm.innerText=copyCRM;
   if(co) co.style.display='block';
-  // Re-enable generate button
-  var btn=document.querySelector('#co-'+targetId)&&document.querySelector('button.bp[disabled]');
+  // Re-enable generate button (scoped to this targetId)
+  var co2=document.getElementById('co-'+targetId);
+  var btn=co2&&co2.querySelector('button.bp[disabled]');
   if(btn){btn.textContent='Gerar Copy via ELUCY';btn.disabled=false;}
 }
 
