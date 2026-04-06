@@ -217,11 +217,24 @@ Deno.serve(async (req) => {
       systemBlocks.push(block)
     })
 
-    // Add operator context as final system block (NOT cached — changes per operator)
+    // Add operator context (NOT cached — changes per operator)
     systemBlocks.push({
       type: 'text',
       text: `OPERADOR: ${operator.name || userEmail} | Role: ${operator.role || 'sdr'} | Qualificador: ${operator.qualificador_name || 'N/A'}`,
     })
+
+    // Output format enforcer — last system block, overrides any MCP formatting
+    const OUTPUT_FORMATS: Record<string, string> = {
+      copy: 'INSTRUÇÃO FINAL OBRIGATÓRIA: Responda APENAS com a copy pronta. Use EXATAMENTE este formato:\n\nVERSÃO WHATSAPP:\n(mensagem pronta para colar no WhatsApp — sem markdown, sem análise, sem headers internos, tom humano e direto)\n\nNOTA CRM:\n(nota curta: ação + próximo passo + DQI)\n\nNÃO inclua diagnóstico, análise, SOURCE_ROUTING, DVL_GATE, estratégia ou qualquer backstage. O operador vai copiar e colar direto.',
+      dm_copy: 'INSTRUÇÃO FINAL OBRIGATÓRIA: Responda APENAS com a DM pronta. Use EXATAMENTE este formato:\n\nDM PRONTO PARA COLAR:\n(texto da DM direto — sem formatação, sem headers, copiar e colar no Instagram)\n\nNOTA CRM:\n(nota curta para CRM)\n\nNÃO inclua análise, diagnóstico ou backstage.',
+      note: 'INSTRUÇÃO FINAL OBRIGATÓRIA: Responda APENAS com a nota de qualificação CRM no formato canônico do output-schema.',
+    }
+    if (OUTPUT_FORMATS[request_type]) {
+      systemBlocks.push({
+        type: 'text',
+        text: OUTPUT_FORMATS[request_type],
+      })
+    }
 
     // User message: use legacy pre-built message if available, otherwise assemble from parts
     const userMessage = legacyUserMessage || [
