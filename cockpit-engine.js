@@ -3705,7 +3705,6 @@ window.completeCadenceStep = completeCadenceStep;
 window.cancelCadenceEnrollment = cancelCadenceEnrollment;
 
 // Init cadences after operator loads
-var _origBoot = window._bootEngine;
 
 // ==================================================================
 // LAYER 9 — RUNTIME SYNC
