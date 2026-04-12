@@ -8365,19 +8365,21 @@ console.log('[cockpit-engine v11.1] 27-Layer Architecture loaded — L19-L22 Qua
   let _chatSearchQuery = '';
   let _allConversations = [];
 
-  function _getSb(){ return window._supabase || window.supabaseClient; }
+  function _getSb(){ return (typeof getSB==='function'?getSB():null) || window._supabase || window.supabaseClient; }
 
   async function _chatApiCall(body){
     const sb = _getSb();
     if(!sb) throw new Error('Supabase not initialized');
     const { data:{ session } } = await sb.auth.getSession();
     if(!session) throw new Error('Not logged in');
-    const resp = await fetch(window.SUPABASE_URL+'/functions/v1/chat-proxy', {
+    const url = (typeof SUPABASE_URL!=='undefined'?SUPABASE_URL:window.SUPABASE_URL)||window.ELUCY_SUPABASE_URL;
+    const anon = (typeof SUPABASE_ANON!=='undefined'?SUPABASE_ANON:window.SUPABASE_ANON_KEY)||'';
+    const resp = await fetch(url+'/functions/v1/chat-proxy', {
       method:'POST',
       headers:{
         'Content-Type':'application/json',
         'Authorization':'Bearer '+session.access_token,
-        'apikey': window.SUPABASE_ANON_KEY
+        'apikey': anon
       },
       body: JSON.stringify(body)
     });
