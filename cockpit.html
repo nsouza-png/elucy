@@ -29,6 +29,8 @@ window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false'
 <link rel="stylesheet" href="elucy-design-system.css">
 <style>
 /* Runtime overrides only — main styles in elucy-design-system.css */
+.di-highlight{outline:2px solid #f59e0b;outline-offset:-2px;border-radius:8px;animation:pulse-amber .8s ease-in-out 2}
+@keyframes pulse-amber{0%,100%{outline-color:#f59e0b}50%{outline-color:transparent}}
 </style>
 </head>
 <body>
@@ -77,6 +79,7 @@ window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false'
     <button class="ntab" role="tab" aria-selected="false" aria-controls="screen-prevendas" onclick="setScreen('prevendas',this)">Pre-Vendas</button>
     <button class="ntab" role="tab" aria-selected="false" aria-controls="screen-intelligence" onclick="setScreen('intelligence',this)">Intel</button>
     <button class="ntab" role="tab" aria-selected="false" aria-controls="screen-playbooks" onclick="setScreen('playbooks',this)">Playbooks</button>
+    <button class="ntab" role="tab" aria-selected="false" aria-controls="screen-chat" onclick="setScreen('chat',this)">Chat <span class="chat-unread-badge" id="chat-unread-badge" style="display:none"></span></button>
   </nav>
   <div class="tbr">
     <span id="sync-dot" class="sync-dot sync-dot-ok" title="Sincronizado"></span>
@@ -140,7 +143,7 @@ window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false'
       </div>
     </div>
     <div class="sb-search">
-      <input class="srch" id="srch-input" placeholder="Buscar lead..." oninput="applyFilters()">
+      <input class="srch" id="srch-input" placeholder="Buscar lead ou deal ID..." oninput="applyFilters()">
     </div>
     <!-- ── FILTROS V2: Accordion + chips scrolláveis ──────────────────── -->
     <div class="fv2-header" onclick="window._toggleFilterPanel()">
@@ -523,6 +526,106 @@ window.ELUCY_API_ENABLED = localStorage.getItem('elucy_api_enabled') !== 'false'
     <div class="screen" id="screen-playbooks">
       <div id="pb-root"><div class="loading-text">Carregando Playbooks...</div></div>
     </div>
+
+    <!-- ── SCREEN: CHAT — WhatsApp Nativo via Evolution API ── -->
+    <div class="screen" id="screen-chat">
+      <div style="display:flex;height:calc(100vh - 56px);overflow:hidden">
+
+        <!-- LEFT PANEL: Conversations list -->
+        <div id="chat-left-panel" style="width:340px;min-width:280px;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--bg)">
+
+          <!-- Header with status + connect button -->
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+            <span id="chat-wa-status" style="width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0" title="Desconectado"></span>
+            <span style="font-weight:600;font-size:14px;flex:1">WhatsApp</span>
+            <button onclick="window._chatSetup()" style="background:var(--amber);color:#000;border:none;border-radius:6px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer" id="chat-connect-btn">Conectar</button>
+          </div>
+
+          <!-- Search -->
+          <div style="padding:8px 12px">
+            <input type="text" id="chat-search" placeholder="Buscar conversa..." oninput="window._chatFilter(this.value)"
+              style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;outline:none" />
+          </div>
+
+          <!-- Channel filter -->
+          <div style="padding:0 12px 8px;display:flex;gap:4px">
+            <button class="chat-ch-btn chat-ch-active" data-channel="all" onclick="window._chatChannelFilter('all',this)" style="padding:4px 10px;border-radius:12px;border:1px solid var(--border);background:var(--amber);color:#000;font-size:11px;font-weight:600;cursor:pointer">Todos</button>
+            <button class="chat-ch-btn" data-channel="whatsapp" onclick="window._chatChannelFilter('whatsapp',this)" style="padding:4px 10px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:11px;cursor:pointer">WhatsApp</button>
+            <button class="chat-ch-btn" data-channel="instagram" onclick="window._chatChannelFilter('instagram',this)" style="padding:4px 10px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:11px;cursor:pointer">Instagram</button>
+          </div>
+
+          <!-- Conversations list -->
+          <div id="chat-conversations" style="flex:1;overflow-y:auto;padding:0">
+            <div style="padding:40px 16px;text-align:center;color:var(--text2);font-size:13px">
+              Conecte o WhatsApp para ver suas conversas.
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT PANEL: Thread messages -->
+        <div id="chat-right-panel" style="flex:1;display:flex;flex-direction:column;background:var(--bg2)">
+
+          <!-- Thread header -->
+          <div id="chat-thread-header" style="padding:12px 16px;border-bottom:1px solid var(--border);display:none;align-items:center;gap:12px;background:var(--bg)">
+            <div style="width:36px;height:36px;border-radius:50%;background:var(--amber);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#000" id="chat-thread-avatar">?</div>
+            <div style="flex:1">
+              <div style="font-weight:600;font-size:14px" id="chat-thread-name">—</div>
+              <div style="font-size:11px;color:var(--text2)" id="chat-thread-phone">—</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span id="chat-thread-deal" style="font-size:11px;color:var(--amber);cursor:pointer;display:none" onclick="window._chatOpenDeal()">Ver Deal</span>
+              <button onclick="window._chatLinkDeal()" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;color:var(--text2);cursor:pointer">Vincular Deal</button>
+            </div>
+          </div>
+
+          <!-- Messages area -->
+          <div id="chat-messages-area" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:4px">
+            <div style="margin:auto;text-align:center;color:var(--text2);font-size:13px;padding:40px">
+              Selecione uma conversa para ver as mensagens.
+            </div>
+          </div>
+
+          <!-- Input area -->
+          <div id="chat-input-area" style="padding:12px 16px;border-top:1px solid var(--border);display:none;gap:8px;align-items:flex-end;background:var(--bg)">
+            <textarea id="chat-input" rows="1" placeholder="Digite uma mensagem..."
+              style="flex:1;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit;resize:none;max-height:120px;outline:none;line-height:1.4"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();window._chatSend()}"
+              oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+            <button onclick="window._chatSend()" id="chat-send-btn"
+              style="background:var(--amber);color:#000;border:none;border-radius:10px;padding:10px 16px;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap">
+              Enviar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- QR CODE MODAL -->
+      <div id="chat-qr-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:var(--bg);border-radius:16px;padding:32px;max-width:400px;width:90%;text-align:center">
+          <div style="font-weight:700;font-size:18px;margin-bottom:8px">Conectar WhatsApp</div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:20px">Escaneie o QR Code com seu WhatsApp para conectar.</div>
+          <div id="chat-qr-container" style="background:#fff;border-radius:12px;padding:16px;display:inline-block;min-height:256px;min-width:256px;display:flex;align-items:center;justify-content:center">
+            <div style="color:#666;font-size:13px" id="chat-qr-status">Gerando QR Code...</div>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:8px;justify-content:center">
+            <button onclick="window._chatRefreshQR()" style="background:transparent;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;color:var(--text)">Gerar Novo QR</button>
+            <button onclick="document.getElementById('chat-qr-modal').style.display='none'" style="background:var(--amber);color:#000;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer">Fechar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- LINK DEAL MODAL -->
+      <div id="chat-deal-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);align-items:center;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
+        <div style="background:var(--bg);border-radius:16px;padding:24px;max-width:400px;width:90%">
+          <div style="font-weight:700;font-size:16px;margin-bottom:12px">Vincular ao Deal</div>
+          <input type="text" id="chat-deal-search" placeholder="Buscar deal por nome ou empresa..." oninput="window._chatSearchDeals(this.value)"
+            style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;outline:none;margin-bottom:8px" />
+          <div id="chat-deal-results" style="max-height:250px;overflow-y:auto"></div>
+          <button onclick="document.getElementById('chat-deal-modal').style.display='none'" style="margin-top:12px;background:transparent;border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;color:var(--text);width:100%">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
 <!-- ── SCREEN: DM WAR ROOM — REMOVIDO (touchpoint lógica migrada para CSE engine) -->
 <div class="screen" id="screen-dm" style="display:none!important">
   <div class="dm-center" style="position:relative">
@@ -823,7 +926,7 @@ function setScreen(n,el,skipHash){
   document.querySelectorAll('#ct > .screen').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.ntab').forEach(t=>{t.classList.remove('on');t.setAttribute('aria-selected','false');});
   var ct=document.getElementById('ct'); if(ct) ct.scrollTop=0;
-  const screenMap={home:'screen-home',pipeline:'screen-pipeline',tasks:'screen-tasks',reports:'screen-reports',prevendas:'screen-prevendas',intelligence:'screen-intelligence',playbooks:'screen-playbooks',dm:'screen-dm'};
+  const screenMap={home:'screen-home',pipeline:'screen-pipeline',tasks:'screen-tasks',reports:'screen-reports',prevendas:'screen-prevendas',intelligence:'screen-intelligence',playbooks:'screen-playbooks',chat:'screen-chat',dm:'screen-dm'};
   const validScreens=Object.keys(screenMap);
   const name=validScreens.includes(n)?n:'home';
   const target=document.getElementById(screenMap[name]);
@@ -831,7 +934,7 @@ function setScreen(n,el,skipHash){
   if(el){ el.classList.add('on'); el.setAttribute('aria-selected','true'); }
   else {
     const tabs=document.querySelectorAll('.ntab');
-    const tabMap={home:0,pipeline:1,tasks:2,reports:3,prevendas:4,intelligence:5,playbooks:6};
+    const tabMap={home:0,pipeline:1,tasks:2,reports:3,prevendas:4,intelligence:5,playbooks:6,chat:7};
     const idx=tabMap[name]!=null?tabMap[name]:0;
     if(tabs[idx]){ tabs[idx].classList.add('on'); tabs[idx].setAttribute('aria-selected','true'); }
   }
@@ -842,11 +945,12 @@ function setScreen(n,el,skipHash){
   if(name==='reports') loadReportsScreen();
   if(name==='prevendas' && window.ReportsV4) window.ReportsV4.renderReportsV4('screen-reports-v4');
   if(name==='playbooks') renderPlaybooks();
+  if(name==='chat' && window._chatInit) window._chatInit();
 }
 // Hash routing — abre a seção correta ao carregar URL direta ou navegar pelo histórico
 function _routeFromHash(){
   const hash=(location.hash||'').replace('#','').toLowerCase().trim();
-  const valid=['home','pipeline','tasks','reports','prevendas','intelligence','playbooks','dm'];
+  const valid=['home','pipeline','tasks','reports','prevendas','intelligence','playbooks','chat','dm'];
   setScreen(valid.includes(hash)?hash:'home',null,true);
 }
 window.addEventListener('hashchange',_routeFromHash);
@@ -1418,6 +1522,7 @@ function urgClass(u){
 }
 
 function applyFilters(){
+  document.querySelectorAll('.di-highlight').forEach(el=>el.classList.remove('di-highlight'));
   const q=(document.getElementById('srch-input')||{}).value||'';
   const ql=q.toLowerCase();
   const fFase=ACTIVE_FILTERS.fase;
@@ -1438,9 +1543,15 @@ function applyFilters(){
     const id=di.id.replace('di-','');
     const deal=map[id];
     if(!deal){di.style.display='none';return;}
-    // texto search
-    const txt=(di.textContent||'').toLowerCase();
-    if(ql&&!txt.includes(ql)){di.style.display='none';return;}
+    // texto search — busca por nome, empresa, cargo, deal_id, etc.
+    const dealId=(deal.deal_id||'').toString();
+    const isIdSearch=ql&&/^\d{5,}$/.test(ql.trim());
+    if(isIdSearch){
+      if(!dealId.includes(ql.trim())){di.style.display='none';return;}
+    } else {
+      const txt=(di.textContent||'').toLowerCase();
+      if(ql&&!txt.includes(ql)){di.style.display='none';return;}
+    }
     // filtro fase (qualificação) — DIM 2
     if(fFase!=='todos'){
       const fase=(deal._fase||deal.fase||deal.fase_atual_no_processo||'').toLowerCase();
@@ -1506,6 +1617,16 @@ function applyFilters(){
     }
   });
   visible.forEach(({el})=>list.appendChild(el));
+
+  // Auto-select: se busca por ID encontrou exatamente 1 deal, abre automaticamente
+  const qlCheck=(document.getElementById('srch-input')||{}).value||'';
+  if(/^\d{5,}$/.test(qlCheck.trim())&&visible.length===1){
+    const match=visible[0];
+    if(match.deal&&match.id){
+      match.el.classList.add('di-highlight');
+      selectLiveDeal(match.id,match.deal);
+    }
+  }
 }
 
 function filterDeals(q){applyFilters();}
@@ -2800,19 +2921,19 @@ function renderLiveDeals(rows,cols){
     const canal=resolveCanal(canalMkt,utm);
     // Valor da oportunidade (time de dados)
     const revenueRaw=parseFloat(g(row,'revenue'))||0;
-    const temp=calcTemp(row);
-    const tc=tempClass(temp);
+    const temp=parseInt(g(row,'computed_temp'))||calcTemp(row);
+    const tc=g(row,'computed_temp_class')||tempClass(temp);
     const tl=tempLabel(temp);
     const cc=canalClass(canal);
     const dd=dDay(delta);
     const slaRisk=delta>7;
     const irondome=delta>10;
-    // Aging band (Doc44 canonical)
-    const agingBand=delta<=2?'fresh':delta<=5?'normal':delta<=10?'aging':'critical';
+    // Aging band (Doc44 canonical) — backend first, fallback local
+    const agingBand=g(row,'computed_aging_band')||(delta<=2?'fresh':delta<=5?'normal':delta<=10?'aging':'critical');
     const classes='di'+(slaRisk?' sla':'')+(irondome?' dome':'');
 
-    // Valor ELUCY — calculado por SPICED: tier + cargo + etapa + delta + event_skipped
-    const elucyValor=calcElucyValor({tier,cargo,etapa,delta,skipped:String(g(row,'event_skipped')).toLowerCase()==='true'});
+    // Valor ELUCY — backend first, fallback SPICED: tier + cargo + etapa + delta + event_skipped
+    const elucyValor=parseFloat(g(row,'computed_elucy_valor'))||calcElucyValor({tier,cargo,etapa,delta,skipped:String(g(row,'event_skipped')).toLowerCase()==='true'});
     // Forecast delta: divergência entre modelo de dados e modelo Elucy
     const forecastDelta=revenueRaw>0?elucyValor-revenueRaw:null;
     const createdAtCrm=g(row,'created_at_crm')||g(row,'created_at')||'';
@@ -2845,10 +2966,10 @@ function renderLiveDeals(rows,cols){
     // Timeline Intelligence
     if(window.calcTimelineIntelligence) dealObj._timeline=window.calcTimelineIntelligence(dealObj);
     // Sinal automático
-    const signal=calcSignal(dealObj);
+    const signal=g(row,'computed_signal')||calcSignal(dealObj);
     dealObj._signal=signal;
     // Urgency score
-    const urgency=calcUrgency(dealObj);
+    const urgency=parseInt(g(row,'computed_urgency'))||calcUrgency(dealObj);
     dealObj._urgency=urgency;
     const uc=urgClass(urgency);
 

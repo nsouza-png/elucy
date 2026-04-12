@@ -180,6 +180,29 @@ Deno.serve(async (req) => {
       })
     }
 
+    // 3.5 Fetch WhatsApp chat history for deal context enrichment
+    let chatHistoryBlock = ''
+    const contextDealId = deal_id || deal_data?.deal_id
+    if (contextDealId) {
+      try {
+        const { data: chatMsgs } = await sbAdmin
+          .from('chat_messages')
+          .select('direction, body, contact_name, sent_at')
+          .eq('deal_id', contextDealId)
+          .order('created_at', { ascending: false })
+          .limit(15)
+
+        if (chatMsgs && chatMsgs.length > 0) {
+          const formatted = chatMsgs.reverse().map((m: any) => {
+            const sender = m.direction === 'inbound' ? (m.contact_name || 'LEAD') : 'OPERADOR'
+            const ts = m.sent_at ? new Date(m.sent_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : ''
+            return `[${ts}] ${sender}: ${(m.body || '').slice(0, 200)}`
+          }).join('\n')
+          chatHistoryBlock = `\n\nHISTORICO WHATSAPP RECENTE (${chatMsgs.length} msgs):\n${formatted}`
+        }
+      } catch (e) { console.warn('[analyze-deal] Chat context fetch failed:', (e as Error).message) }
+    }
+
     // 4. Monta o prompt com os dados do deal
     // SEC-05: Sanitize deal_data fields to prevent prompt injection
     const sanitize = (v: any): string => {
@@ -237,7 +260,7 @@ OPERADOR: ${operator.name || user.email} | Role: ${operator.role || 'sdr'}`
         messages: [
           {
             role: 'user',
-            content: `${dealContext}\n\n---\n\nINSTRUCAO: ${instruction}`,
+            content: `${dealContext}${chatHistoryBlock}\n\n---\n\nINSTRUCAO: ${instruction}`,
           },
         ],
       }),

@@ -236,12 +236,35 @@ Deno.serve(async (req) => {
       })
     }
 
+    // ── 4.5 Fetch WhatsApp chat history for deal context (if deal_id present) ──
+    let chatContextBlock = ''
+    if (deal_id) {
+      try {
+        const { data: chatMsgs } = await sbAdmin
+          .from('chat_messages')
+          .select('direction, body, contact_name, sent_at')
+          .eq('deal_id', deal_id)
+          .order('created_at', { ascending: false })
+          .limit(20)
+
+        if (chatMsgs && chatMsgs.length > 0) {
+          const formatted = chatMsgs.reverse().map((m: any) => {
+            const sender = m.direction === 'inbound' ? (m.contact_name || 'LEAD') : 'OPERADOR'
+            const ts = m.sent_at ? new Date(m.sent_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : ''
+            return `[${ts}] ${sender}: ${(m.body || '').slice(0, 300)}`
+          }).join('\n')
+          chatContextBlock = `\n\n[HISTORICO_WHATSAPP_RECENTE]\n${formatted}`
+        }
+      } catch (e) { console.warn('[elucy-inference] Chat context fetch failed:', (e as Error).message) }
+    }
+
     // User message: use legacy pre-built message if available, otherwise assemble from parts
     const userMessage = legacyUserMessage || [
       deal_context,
       history,
       prompt,
       extra_context ? `\nCONTEXTO EXTRA: ${extra_context}` : '',
+      chatContextBlock,
     ].filter(Boolean).join('\n\n')
 
     // ── 5. Call Claude API with prompt caching ──
