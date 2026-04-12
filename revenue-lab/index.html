@@ -153,7 +153,8 @@
     .chart-container { padding: 20px; }
     .bar-chart { display: flex; flex-direction: column; gap: 8px; }
     .bar-row { display: flex; align-items: center; gap: 12px; }
-    .bar-label { width: 140px; font-size: 12px; color: var(--text-dim); text-align: right; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bar-label { width: 180px; min-width: 100px; font-size: 12px; color: var(--text-dim); text-align: right; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: default; }
+    .bar-label:hover { color: var(--silver); overflow: visible; position: relative; z-index: 2; background: var(--navy); padding: 2px 6px; border-radius: 4px; }
     .bar-track { flex: 1; height: 22px; background: rgba(255,255,255,0.04); border-radius: 4px; position: relative; overflow: hidden; }
     .bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; display: flex; align-items: center; padding-left: 8px; }
     .bar-fill.won { background: linear-gradient(90deg, var(--golden) 0%, var(--golden-light) 100%); }
@@ -195,8 +196,21 @@
     }
 
     /* ── RESPONSIVE ──────────────────────────────────────────── */
-    @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } .two-col, .three-col { grid-template-columns: 1fr; } }
-    @media (max-width: 600px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } .container { padding: 16px; } }
+    @media (max-width: 1100px) {
+      .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+      .two-col, .three-col { grid-template-columns: 1fr; }
+      .funnel-step .label { position: static; width: auto; text-align: center; font-size: 10px; display: block; margin-top: 2px; }
+      .funnel-step .conv { position: static; width: auto; text-align: center; font-size: 10px; }
+      .funnel-step { flex-direction: column; height: auto; padding: 8px 12px; }
+      .bar-label { width: 120px; min-width: 80px; }
+    }
+    @media (max-width: 600px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .container { padding: 16px; }
+      .header { flex-direction: column; gap: 8px; padding: 16px; }
+      .nav { padding: 0 16px; }
+      .bar-label { width: 80px; min-width: 60px; font-size: 10px; }
+    }
   </style>
 </head>
 <body>
@@ -211,6 +225,15 @@
       <span class="badge">Growth Ops</span>
     </div>
     <div class="header-right">
+      <select id="periodSelect" style="background:var(--scaling);border:1px solid rgba(255,255,255,0.1);color:var(--text);padding:6px 12px;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;">
+        <option value="all">Todos os periodos</option>
+        <option value="2025">2025</option>
+        <option value="2026">2026</option>
+        <option value="2025-H1">2025 H1 (Jan-Jun)</option>
+        <option value="2025-H2">2025 H2 (Jul-Dez)</option>
+        <option value="2026-Q1">2026 Q1 (Jan-Mar)</option>
+        <option value="2026-Q2">2026 Q2 (Abr-Jun)</option>
+      </select>
       <span class="period" id="dataPeriod">Carregando...</span>
     </div>
   </div>
@@ -245,6 +268,7 @@
 
 let DATA = null;
 let currentTab = 'overview';
+let periodFilter = 'all'; // 'all', '2025', '2026', '2026-Q1', '2026-Q2'
 
 // ── UTILS ──
 function fmt(val) {
@@ -296,6 +320,26 @@ function sumField(rows, field) {
   return rows.reduce((s, r) => s + (parseFloat(r[field]) || 0), 0);
 }
 
+// ── PERIOD FILTER ──
+function filterByPeriod(rows) {
+  if (periodFilter === 'all') return rows;
+  return rows.filter(r => {
+    const m = r.mes || '';
+    if (periodFilter === '2025') return m.startsWith('2025');
+    if (periodFilter === '2026') return m.startsWith('2026');
+    if (periodFilter === '2025-H1') return m >= '2025-01' && m <= '2025-06';
+    if (periodFilter === '2025-H2') return m >= '2025-07' && m <= '2025-12';
+    if (periodFilter === '2026-Q1') return m >= '2026-01' && m <= '2026-03';
+    if (periodFilter === '2026-Q2') return m >= '2026-04' && m <= '2026-06';
+    return true;
+  });
+}
+
+document.getElementById('periodSelect').addEventListener('change', e => {
+  periodFilter = e.target.value;
+  render();
+});
+
 // ── NAV ──
 document.getElementById('nav').addEventListener('click', e => {
   if (e.target.tagName !== 'BUTTON') return;
@@ -322,11 +366,12 @@ function render() {
 
 // ── OVERVIEW ──
 function renderOverview() {
-  const rows = toRows(DATA.queries.funil_por_linha);
+  const allRows = toRows(DATA.queries.funil_por_linha);
+  const rows = filterByPeriod(allRows);
   const totalLeads = sumField(rows, 'total_deals');
   const totalWons = sumField(rows, 'wons');
   const totalPerdidos = sumField(rows, 'perdidos');
-  const totalAberto = totalLeads - totalWons - totalPerdidos;
+  const totalAberto = Math.max(0, totalLeads - totalWons - totalPerdidos);
   const totalReceita = sumField(rows, 'receita_won');
   const totalPipeline = sumField(rows, 'valor_total_pipeline');
   const winRate = totalWons / (totalWons + totalPerdidos) || 0;
@@ -335,6 +380,21 @@ function renderOverview() {
   // Aggregate by month
   const byMonth = groupBy(rows, 'mes');
   const months = Object.keys(byMonth).sort();
+
+  // MoM deltas (last 2 months in filtered set)
+  let deltaReceita = null, deltaWR = null, deltaTicket = null;
+  if (months.length >= 2) {
+    const cur = byMonth[months[months.length - 1]];
+    const prev = byMonth[months[months.length - 2]];
+    const curR = sumField(cur, 'receita_won'), prevR = sumField(prev, 'receita_won');
+    const curW = sumField(cur, 'wons'), prevW = sumField(prev, 'wons');
+    const curP = sumField(cur, 'perdidos'), prevP = sumField(prev, 'perdidos');
+    deltaReceita = prevR > 0 ? (curR - prevR) / prevR : null;
+    const curWR = curW / (curW + curP) || 0, prevWR = prevW / (prevW + prevP) || 0;
+    deltaWR = prevWR > 0 ? (curWR - prevWR) / prevWR : null;
+    const curT = curW > 0 ? curR / curW : 0, prevT = prevW > 0 ? prevR / prevW : 0;
+    deltaTicket = prevT > 0 ? (curT - prevT) / prevT : null;
+  }
 
   let monthRows = months.map(m => {
     const mr = byMonth[m];
@@ -359,7 +419,8 @@ function renderOverview() {
       <div class="kpi-card highlight">
         <div class="kpi-label">Receita Won</div>
         <div class="kpi-value">${fmt(totalReceita)}</div>
-        <div class="kpi-sub">2025 + 2026</div>
+        <div class="kpi-sub">${periodFilter === 'all' ? '2025 + 2026' : periodFilter}</div>
+        ${deltaReceita !== null ? `<div class="kpi-delta ${deltaReceita >= 0 ? 'up' : 'down'}">${deltaReceita >= 0 ? '+' : ''}${(deltaReceita*100).toFixed(1)}% MoM</div>` : ''}
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Total Leads</div>
@@ -375,11 +436,13 @@ function renderOverview() {
         <div class="kpi-label">Win Rate</div>
         <div class="kpi-value">${(winRate*100).toFixed(1)}%</div>
         <div class="kpi-sub">wons / (wons + perdidos)</div>
+        ${deltaWR !== null ? `<div class="kpi-delta ${deltaWR >= 0 ? 'up' : 'down'}">${deltaWR >= 0 ? '+' : ''}${(deltaWR*100).toFixed(1)}% MoM</div>` : ''}
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Ticket Medio</div>
         <div class="kpi-value">${fmt(ticketMedio)}</div>
         <div class="kpi-sub">receita / wons</div>
+        ${deltaTicket !== null ? `<div class="kpi-delta ${deltaTicket >= 0 ? 'up' : 'down'}">${deltaTicket >= 0 ? '+' : ''}${(deltaTicket*100).toFixed(1)}% MoM</div>` : ''}
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Pipeline Total</div>
@@ -456,7 +519,7 @@ function renderOverview() {
 
 // ── GENERIC DIMENSION VIEW ──
 function renderByDimension(queryKey, dimKey, dimLabel) {
-  const rows = toRows(DATA.queries[queryKey]);
+  const rows = filterByPeriod(toRows(DATA.queries[queryKey]));
   if (!rows.length) return '<div class="loading"><div class="loading-text">Sem dados para esta dimensao</div></div>';
 
   const byDim = groupBy(rows, dimKey);
@@ -540,13 +603,13 @@ function renderByDimension(queryKey, dimKey, dimLabel) {
 
 // ── CHURN VIEW ──
 function renderChurn() {
-  const rows = toRows(DATA.queries.churn_motivos);
+  const rows = filterByPeriod(toRows(DATA.queries.churn_motivos));
   if (!rows.length) return '<div class="loading"><div class="loading-text">Sem dados de churn</div></div>';
 
   const byMotivo = groupBy(rows, 'motivo_lost');
   let motivoSummary = Object.entries(byMotivo).map(([motivo, mRows]) => ({
     motivo,
-    deals: sumField(mRows, 'deals_perdidos'),
+    deals: sumField(mRows, 'total_deals_perdidos'),
     receita: sumField(mRows, 'receita_perdida'),
   })).sort((a, b) => b.deals - a.deals);
 
@@ -559,7 +622,7 @@ function renderChurn() {
   const months = Object.keys(byMonth).sort();
   const monthChurn = months.map(m => ({
     mes: m,
-    deals: sumField(byMonth[m], 'deals_perdidos'),
+    deals: sumField(byMonth[m], 'total_deals_perdidos'),
     receita: sumField(byMonth[m], 'receita_perdida'),
   }));
   const maxMDeals = Math.max(...monthChurn.map(m => m.deals));
@@ -651,12 +714,14 @@ function renderChurn() {
 
 // ── GAV VIEW ──
 function renderGAV() {
-  const rows = toRows(DATA.queries.gav_meta_realizado);
+  const allRows = toRows(DATA.queries.gav_meta_realizado);
+  const rows = filterByPeriod(allRows);
   if (!rows.length) return '<div class="loading"><div class="loading-text">Sem dados GAV</div></div>';
 
   const realizadoRows = rows.filter(r => r.event === 'realizado' && r.canal);
   const metaRows = rows.filter(r => r.event === 'meta canais' && r.canal);
 
+  // By Canal (acumulado)
   const byCanal = {};
   realizadoRows.forEach(r => {
     if (!byCanal[r.canal]) byCanal[r.canal] = { realizado: 0, meta: 0 };
@@ -673,6 +738,21 @@ function renderGAV() {
 
   const totalR = gavSummary.reduce((s, g) => s + g.realizado, 0);
   const totalM = gavSummary.reduce((s, g) => s + g.meta, 0);
+
+  // By Month (breakdown mensal)
+  const byMonth = {};
+  realizadoRows.forEach(r => {
+    if (!byMonth[r.mes]) byMonth[r.mes] = { realizado: 0, meta: 0 };
+    byMonth[r.mes].realizado += parseFloat(r.realizado) || 0;
+  });
+  metaRows.forEach(r => {
+    if (!byMonth[r.mes]) byMonth[r.mes] = { realizado: 0, meta: 0 };
+    byMonth[r.mes].meta += parseFloat(r.meta_canais) || 0;
+  });
+  const monthGAV = Object.entries(byMonth).sort(([a],[b]) => a.localeCompare(b)).map(([mes, v]) => ({
+    mes, ...v, pct: v.meta > 0 ? v.realizado / v.meta : null
+  }));
+  const maxMonth = Math.max(...monthGAV.map(m => Math.max(m.realizado, m.meta)));
 
   return `
     <div class="kpi-grid" style="grid-template-columns: repeat(3,1fr)">
@@ -691,7 +771,42 @@ function renderGAV() {
     </div>
 
     <div class="section">
-      <div class="section-header"><h2>Realizado vs Meta por Canal — 2026</h2></div>
+      <div class="section-header"><h2>Evolucao Mensal — Realizado vs Meta</h2></div>
+      <div class="chart-container">
+        <div class="bar-chart">
+          ${monthGAV.map(m => {
+            const pctR = maxMonth > 0 ? (m.realizado / maxMonth * 100) : 0;
+            const pctM = maxMonth > 0 ? (m.meta / maxMonth * 100) : 0;
+            return `
+              <div style="margin-bottom:8px">
+                <div class="bar-row">
+                  <div class="bar-label">${m.mes} <small style="color:var(--golden)">Real</small></div>
+                  <div class="bar-track">
+                    <div class="bar-fill won" style="width:${pctR}%">
+                      <span class="bar-value">${fmt(m.realizado)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="bar-row" style="margin-top:2px">
+                  <div class="bar-label"><small style="color:var(--text-dim)">Meta</small></div>
+                  <div class="bar-track">
+                    <div class="bar-fill open" style="width:${pctM}%">
+                      <span class="bar-value" style="color:var(--text)">${fmt(m.meta)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div style="text-align:right;font-size:11px;margin-top:2px;padding-right:14px">
+                  ${m.pct !== null ? pctBadge(m.pct) : '<span class="badge-yellow">Sem meta</span>'}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><h2>Realizado vs Meta por Canal</h2></div>
       <div class="table-scroll">
         <table class="data-table">
           <thead><tr>
