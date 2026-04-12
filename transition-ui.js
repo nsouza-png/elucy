@@ -73,6 +73,7 @@ const KILL_SWITCH_LABELS = {
   spiced_lock_titan: 'Use a abordagem Challenger para este perfil de empresa',
   tier_mismatch: 'Este produto nao esta disponivel para o porte desta empresa',
   no_motivo_lost: 'Selecione o motivo da perda antes de confirmar',
+  undefined_revenue_line: 'Defina o produto vendido antes de concluir esta venda',
   framework_violation: 'Ajuste a abordagem ao perfil do lead',
   pseudo_champion: 'Confirme que o contato tem poder de decisao real'
 };

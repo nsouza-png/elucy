@@ -346,7 +346,7 @@ var FRAMEWORK_MAP = { titan:'Challenger', builder:'SPICED', executor:'SPIN+Champ
 var KILL_SWITCHES = {
   titan_challenger_only:true, builder_spiced:true, executor_spin:true,
   tier2_block_imersao_presencial:true, ceo_mei_downgrade_authority:true,
-  dqi_over_revenue:true, black_box_protocol:true
+  dqi_over_revenue:true, black_box_protocol:true, undefined_revenue_line:true
 };
 window.KILL_SWITCHES = KILL_SWITCHES;
 
@@ -8348,5 +8348,481 @@ async function runIntelligenceDAG(){
 window.runIntelligenceDAG = runIntelligenceDAG;
 
 console.log('[cockpit-engine v11.1] 27-Layer Architecture loaded — L19-L22 Quality + L23 Enterprise + L24 Trusted Advisor + L25 Strategic + L26 SPIN Audit + L27 RFV Portfolio');
+
+// ═══════════════════════════════════════════════════════════════════
+// CHAT ENGINE — WhatsApp Nativo via Evolution API
+// ═══════════════════════════════════════════════════════════════════
+
+(function initChatEngine(){
+  let _chatInitialized = false;
+  let _chatCurrentThread = null;
+  let _chatCurrentPhone = null;
+  let _chatCurrentDealId = null;
+  let _chatInstanceName = null;
+  let _chatRealtimeSub = null;
+  let _chatStatusPoll = null;
+  let _chatChannelFilter = 'all';
+  let _chatSearchQuery = '';
+  let _allConversations = [];
+
+  function _getSb(){ return window._supabase || window.supabaseClient; }
+
+  async function _chatApiCall(body){
+    const sb = _getSb();
+    if(!sb) throw new Error('Supabase not initialized');
+    const { data:{ session } } = await sb.auth.getSession();
+    if(!session) throw new Error('Not logged in');
+    const resp = await fetch(window.SUPABASE_URL+'/functions/v1/chat-proxy', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':'Bearer '+session.access_token,
+        'apikey': window.SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify(body)
+    });
+    return resp.json();
+  }
+
+  // ── Init ──
+  window._chatInit = async function(){
+    if(_chatInitialized) {
+      _loadConversations();
+      return;
+    }
+    _chatInitialized = true;
+    await _checkInstance();
+    await _loadConversations();
+    _subscribeChatRealtime();
+    _startStatusPoll();
+  };
+
+  // ── Check if operator has an Evolution instance ──
+  async function _checkInstance(){
+    const sb = _getSb();
+    if(!sb) return;
+    const user = (await sb.auth.getUser())?.data?.user;
+    if(!user) return;
+    const { data } = await sb.from('evolution_instances')
+      .select('instance_name, status, qr_code')
+      .eq('operator_email', user.email)
+      .order('created_at',{ascending:false})
+      .limit(1)
+      .maybeSingle();
+
+    if(data){
+      _chatInstanceName = data.instance_name;
+      _updateStatusIndicator(data.status);
+      if(data.status === 'connected'){
+        document.getElementById('chat-connect-btn').textContent = 'Reconectar';
+      }
+    }
+  }
+
+  function _updateStatusIndicator(status){
+    const dot = document.getElementById('chat-wa-status');
+    const btn = document.getElementById('chat-connect-btn');
+    if(!dot) return;
+    if(status === 'connected'){
+      dot.style.background = 'var(--green, #22c55e)';
+      dot.title = 'Conectado';
+      if(btn) btn.textContent = 'Reconectar';
+    } else if(status === 'qr_pending'){
+      dot.style.background = 'var(--yellow, #eab308)';
+      dot.title = 'Aguardando QR...';
+    } else {
+      dot.style.background = 'var(--red, #ef4444)';
+      dot.title = 'Desconectado';
+      if(btn) btn.textContent = 'Conectar';
+    }
+  }
+
+  // ── Setup / QR Code flow ──
+  window._chatSetup = async function(){
+    const modal = document.getElementById('chat-qr-modal');
+    modal.style.display = 'flex';
+    const statusEl = document.getElementById('chat-qr-status');
+    const container = document.getElementById('chat-qr-container');
+    statusEl.textContent = 'Criando instancia...';
+
+    try {
+      let result;
+      if(_chatInstanceName){
+        result = await _chatApiCall({ provider:'evolution', action:'qr', instance_name:_chatInstanceName });
+      } else {
+        result = await _chatApiCall({ provider:'evolution', action:'create_instance' });
+        if(result.instance_name) _chatInstanceName = result.instance_name;
+      }
+
+      if(result.qr_code){
+        container.innerHTML = '<img src="'+result.qr_code+'" style="width:256px;height:256px;image-rendering:pixelated" />';
+      } else if(result.error){
+        statusEl.textContent = 'Erro: '+result.error;
+      } else {
+        statusEl.textContent = 'QR nao disponivel. Tente novamente.';
+      }
+    } catch(err){
+      statusEl.textContent = 'Erro: '+err.message;
+    }
+  };
+
+  window._chatRefreshQR = async function(){
+    if(!_chatInstanceName) return window._chatSetup();
+    const container = document.getElementById('chat-qr-container');
+    const statusEl = document.getElementById('chat-qr-status');
+    container.innerHTML = '';
+    container.appendChild(statusEl);
+    statusEl.textContent = 'Gerando novo QR...';
+    try {
+      const result = await _chatApiCall({ provider:'evolution', action:'qr', instance_name:_chatInstanceName });
+      if(result.qr_code){
+        container.innerHTML = '<img src="'+result.qr_code+'" style="width:256px;height:256px;image-rendering:pixelated" />';
+      } else {
+        statusEl.textContent = 'QR nao disponivel.';
+      }
+    } catch(err){
+      statusEl.textContent = 'Erro: '+err.message;
+    }
+  };
+
+  // ── Load conversations ──
+  async function _loadConversations(){
+    const sb = _getSb();
+    if(!sb) return;
+    const { data, error } = await sb.from('chat_conversations')
+      .select('*')
+      .order('last_message_at', { ascending: false })
+      .limit(100);
+
+    if(error){ console.error('[Chat] Load conversations error:', error.message); return; }
+    _allConversations = data || [];
+    _renderConversations();
+  }
+
+  function _renderConversations(){
+    const container = document.getElementById('chat-conversations');
+    if(!container) return;
+
+    let filtered = _allConversations;
+    if(_chatChannelFilter !== 'all'){
+      filtered = filtered.filter(c => c.channel === _chatChannelFilter);
+    }
+    if(_chatSearchQuery){
+      const q = _chatSearchQuery.toLowerCase();
+      filtered = filtered.filter(c =>
+        (c.contact_name||'').toLowerCase().includes(q) ||
+        (c.contact_phone||'').includes(q) ||
+        (c.last_message_preview||'').toLowerCase().includes(q)
+      );
+    }
+
+    if(filtered.length === 0){
+      container.innerHTML = '<div style="padding:40px 16px;text-align:center;color:var(--text2);font-size:13px">Nenhuma conversa encontrada.</div>';
+      return;
+    }
+
+    container.innerHTML = filtered.map(c => {
+      const name = c.contact_name || c.contact_phone || 'Desconhecido';
+      const initial = (name[0]||'?').toUpperCase();
+      const preview = (c.last_message_preview||'').slice(0,50);
+      const time = c.last_message_at ? _formatTime(c.last_message_at) : '';
+      const isActive = c.thread_id === _chatCurrentThread;
+      const unread = c.unread_count > 0 ? '<span style="background:var(--amber);color:#000;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700">'+c.unread_count+'</span>' : '';
+      const dirIcon = c.last_message_direction === 'outbound' ? '<span style="color:var(--text2);font-size:10px">↗ </span>' : '';
+      const chBadge = c.channel === 'instagram' ? '<span style="font-size:9px;color:#E1306C">IG</span>' : '';
+
+      return '<div onclick="window._chatOpenThread(\''+c.thread_id+'\',\''+c.contact_phone+'\',\''+(_escHtml(c.contact_name||''))+'\',\''+(c.deal_id||'')+'\')" style="padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center;'+(isActive?'background:var(--bg2)':'')+'">'
+        + '<div style="width:36px;height:36px;border-radius:50%;background:var(--amber);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#000;flex-shrink:0">'+initial+'</div>'
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_escHtml(name)+' '+chBadge+'</span><span style="font-size:10px;color:var(--text2);flex-shrink:0">'+time+'</span></div>'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px"><span style="font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+dirIcon+_escHtml(preview)+'</span>'+unread+'</div>'
+        + '</div></div>';
+    }).join('');
+  }
+
+  function _escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function _formatTime(iso){
+    const d = new Date(iso);
+    const now = new Date();
+    const diff = now - d;
+    if(diff < 60000) return 'agora';
+    if(diff < 3600000) return Math.floor(diff/60000)+'min';
+    if(diff < 86400000) return d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+  }
+
+  // ── Channel filter ──
+  window._chatChannelFilter = function(ch, el){
+    _chatChannelFilter = ch;
+    document.querySelectorAll('.chat-ch-btn').forEach(b=>{
+      b.style.background = 'transparent';
+      b.style.color = 'var(--text2)';
+      b.classList.remove('chat-ch-active');
+    });
+    if(el){ el.style.background='var(--amber)'; el.style.color='#000'; el.classList.add('chat-ch-active'); }
+    _renderConversations();
+  };
+
+  window._chatFilter = function(q){
+    _chatSearchQuery = q;
+    _renderConversations();
+  };
+
+  // ── Open thread ──
+  window._chatOpenThread = async function(threadId, phone, contactName, dealId){
+    _chatCurrentThread = threadId;
+    _chatCurrentPhone = phone;
+    _chatCurrentDealId = dealId || null;
+
+    // Update header
+    const header = document.getElementById('chat-thread-header');
+    header.style.display = 'flex';
+    document.getElementById('chat-thread-name').textContent = contactName || phone;
+    document.getElementById('chat-thread-phone').textContent = phone ? '+'+phone : '';
+    document.getElementById('chat-thread-avatar').textContent = ((contactName||phone||'?')[0]).toUpperCase();
+
+    const dealBadge = document.getElementById('chat-thread-deal');
+    if(dealId){ dealBadge.style.display='inline'; dealBadge.textContent='Deal: '+dealId; }
+    else { dealBadge.style.display='none'; }
+
+    // Show input
+    document.getElementById('chat-input-area').style.display = 'flex';
+
+    // Load messages
+    await _loadThread(threadId);
+    _renderConversations(); // highlight active
+  };
+
+  async function _loadThread(threadId){
+    const sb = _getSb();
+    if(!sb) return;
+    const { data, error } = await sb.from('chat_messages')
+      .select('*')
+      .eq('thread_id', threadId)
+      .order('created_at', { ascending: true })
+      .limit(200);
+
+    if(error){ console.error('[Chat] Load thread error:', error.message); return; }
+    _renderMessages(data || []);
+  }
+
+  function _renderMessages(messages){
+    const area = document.getElementById('chat-messages-area');
+    if(!area) return;
+
+    if(messages.length === 0){
+      area.innerHTML = '<div style="margin:auto;text-align:center;color:var(--text2);font-size:13px;padding:40px">Nenhuma mensagem nesta conversa.</div>';
+      return;
+    }
+
+    let lastDate = '';
+    area.innerHTML = messages.map(m => {
+      const isOut = m.direction === 'outbound';
+      const time = m.sent_at ? new Date(m.sent_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '';
+      const msgDate = m.sent_at ? new Date(m.sent_at).toLocaleDateString('pt-BR') : '';
+      let dateSep = '';
+      if(msgDate !== lastDate){
+        lastDate = msgDate;
+        dateSep = '<div style="text-align:center;padding:8px 0;font-size:11px;color:var(--text2)">'+msgDate+'</div>';
+      }
+
+      const statusIcon = m.status === 'failed' ? ' <span style="color:var(--red)">✗</span>' :
+                          m.status === 'read' ? ' <span style="color:#53bdeb">✓✓</span>' :
+                          m.status === 'delivered' ? ' <span style="color:var(--text2)">✓✓</span>' :
+                          isOut ? ' <span style="color:var(--text2)">✓</span>' : '';
+
+      let mediaHtml = '';
+      if(m.media_type === 'image' && m.media_url){
+        mediaHtml = '<img src="'+_escHtml(m.media_url)+'" style="max-width:200px;border-radius:8px;margin-bottom:4px" /><br>';
+      } else if(m.media_type === 'audio'){
+        mediaHtml = '<div style="font-size:11px;color:var(--text2);margin-bottom:4px">🎵 Audio</div>';
+      } else if(m.media_type === 'document'){
+        mediaHtml = '<div style="font-size:11px;color:var(--text2);margin-bottom:4px">📎 Documento</div>';
+      } else if(m.media_type === 'video'){
+        mediaHtml = '<div style="font-size:11px;color:var(--text2);margin-bottom:4px">🎬 Video</div>';
+      }
+
+      return dateSep + '<div style="display:flex;justify-content:'+(isOut?'flex-end':'flex-start')+';padding:2px 0">'
+        + '<div style="max-width:70%;padding:8px 12px;border-radius:12px;'
+        + (isOut ? 'background:var(--amber);color:#000;border-bottom-right-radius:4px' : 'background:var(--bg);border:1px solid var(--border);border-bottom-left-radius:4px')
+        + ';font-size:13px;line-height:1.4;word-break:break-word">'
+        + mediaHtml
+        + _escHtml(m.body||'')
+        + '<div style="font-size:10px;margin-top:4px;text-align:right;opacity:.7">'+time+statusIcon+'</div>'
+        + '</div></div>';
+    }).join('');
+
+    area.scrollTop = area.scrollHeight;
+  }
+
+  // ── Send message ──
+  window._chatSend = async function(){
+    const input = document.getElementById('chat-input');
+    const body = (input.value||'').trim();
+    if(!body || !_chatCurrentThread) return;
+
+    const btn = document.getElementById('chat-send-btn');
+    btn.disabled = true;
+    btn.textContent = '...';
+    input.value = '';
+    input.style.height = 'auto';
+
+    try {
+      await _chatApiCall({
+        provider: 'evolution',
+        action: 'send',
+        instance_name: _chatInstanceName,
+        contact_phone: _chatCurrentPhone,
+        body: body,
+        deal_id: _chatCurrentDealId,
+        contact_name: document.getElementById('chat-thread-name').textContent
+      });
+    } catch(err){
+      console.error('[Chat] Send error:', err.message);
+      if(window.showSyncToast) window.showSyncToast('error','Erro ao enviar: '+err.message);
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Enviar';
+  };
+
+  // ── Realtime subscription ──
+  function _subscribeChatRealtime(){
+    const sb = _getSb();
+    if(!sb || _chatRealtimeSub) return;
+
+    _chatRealtimeSub = sb.channel('chat-realtime')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_messages'
+      }, payload => {
+        const msg = payload.new;
+        // If viewing this thread, append message
+        if(msg.thread_id === _chatCurrentThread){
+          const area = document.getElementById('chat-messages-area');
+          if(area){
+            const placeholder = area.querySelector('div[style*="margin:auto"]');
+            if(placeholder) area.innerHTML = '';
+            _appendSingleMessage(area, msg);
+            area.scrollTop = area.scrollHeight;
+          }
+        }
+        // Refresh conversations list
+        _loadConversations();
+        // Update unread badge
+        _updateUnreadBadge();
+      })
+      .subscribe();
+  }
+
+  function _appendSingleMessage(area, m){
+    const isOut = m.direction === 'outbound';
+    const time = m.sent_at ? new Date(m.sent_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '';
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;justify-content:'+(isOut?'flex-end':'flex-start')+';padding:2px 0';
+    div.innerHTML = '<div style="max-width:70%;padding:8px 12px;border-radius:12px;'
+      + (isOut ? 'background:var(--amber);color:#000;border-bottom-right-radius:4px' : 'background:var(--bg);border:1px solid var(--border);border-bottom-left-radius:4px')
+      + ';font-size:13px;line-height:1.4;word-break:break-word">'
+      + _escHtml(m.body||'')
+      + '<div style="font-size:10px;margin-top:4px;text-align:right;opacity:.7">'+time+'</div>'
+      + '</div>';
+    area.appendChild(div);
+  }
+
+  async function _updateUnreadBadge(){
+    const sb = _getSb();
+    if(!sb) return;
+    const { count } = await sb.from('chat_messages')
+      .select('id', { count:'exact', head:true })
+      .eq('direction','inbound')
+      .eq('status','sent');
+    const badge = document.getElementById('chat-unread-badge');
+    if(badge){
+      if(count > 0){ badge.textContent = count > 99 ? '99+' : count; badge.style.display = 'inline'; }
+      else { badge.style.display = 'none'; }
+    }
+  }
+
+  // ── Status polling ──
+  function _startStatusPoll(){
+    if(_chatStatusPoll) return;
+    _chatStatusPoll = setInterval(async ()=>{
+      if(!_chatInstanceName) return;
+      try {
+        const result = await _chatApiCall({ provider:'evolution', action:'status', instance_name:_chatInstanceName });
+        if(result.state){
+          let status = 'disconnected';
+          if(result.state === 'open') status = 'connected';
+          else if(result.state === 'connecting') status = 'qr_pending';
+          _updateStatusIndicator(status);
+          // If connected and QR modal open, close it
+          if(status === 'connected'){
+            const modal = document.getElementById('chat-qr-modal');
+            if(modal && modal.style.display === 'flex') modal.style.display = 'none';
+          }
+        }
+      } catch(_){}
+    }, 10000);
+  }
+
+  // ── Link deal to chat ──
+  window._chatLinkDeal = function(){
+    const modal = document.getElementById('chat-deal-modal');
+    modal.style.display = 'flex';
+    document.getElementById('chat-deal-search').value = '';
+    document.getElementById('chat-deal-results').innerHTML = '<div style="padding:12px;color:var(--text2);font-size:13px">Digite para buscar deals...</div>';
+  };
+
+  window._chatSearchDeals = function(q){
+    const resultsEl = document.getElementById('chat-deal-results');
+    if(!q || q.length < 2){ resultsEl.innerHTML = '<div style="padding:12px;color:var(--text2);font-size:13px">Digite para buscar...</div>'; return; }
+    const deals = window._allDeals || [];
+    const filtered = deals.filter(d =>
+      (d.dealname||'').toLowerCase().includes(q.toLowerCase()) ||
+      (d.empresa||'').toLowerCase().includes(q.toLowerCase())
+    ).slice(0,10);
+
+    if(filtered.length === 0){ resultsEl.innerHTML = '<div style="padding:12px;color:var(--text2);font-size:13px">Nenhum deal encontrado.</div>'; return; }
+
+    resultsEl.innerHTML = filtered.map(d =>
+      '<div onclick="window._chatSelectDeal(\''+d.dealId+'\')" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;hover:background:var(--bg2)">'
+      + '<div style="font-weight:600">'+_escHtml(d.dealname||'Sem nome')+'</div>'
+      + '<div style="font-size:11px;color:var(--text2)">'+_escHtml(d.empresa||'')+'</div>'
+      + '</div>'
+    ).join('');
+  };
+
+  window._chatSelectDeal = async function(dealId){
+    if(!_chatCurrentThread) return;
+    const sb = _getSb();
+    if(!sb) return;
+
+    // Update all messages in this thread
+    await sb.from('chat_messages')
+      .update({ deal_id: dealId })
+      .eq('thread_id', _chatCurrentThread);
+
+    _chatCurrentDealId = dealId;
+    const dealBadge = document.getElementById('chat-thread-deal');
+    dealBadge.style.display = 'inline';
+    dealBadge.textContent = 'Deal: '+dealId;
+
+    document.getElementById('chat-deal-modal').style.display = 'none';
+    if(window.showSyncToast) window.showSyncToast('ok','Deal vinculado ao chat!');
+    _loadConversations();
+  };
+
+  window._chatOpenDeal = function(){
+    if(!_chatCurrentDealId) return;
+    setScreen('pipeline');
+    setTimeout(()=>{
+      if(window.openDealCard) window.openDealCard(_chatCurrentDealId);
+    }, 300);
+  };
+
+  console.log('[ChatEngine] WhatsApp Nativo via Evolution API loaded');
+})();
 
 })();

@@ -298,6 +298,25 @@ function evaluateKillSwitches(
     })
   }
 
+  // KS-06: undefined_revenue_line — blocks transition to Won stages without classified revenue line
+  const wonStages = ['Ganho', 'Contrato assinado', 'Contrato Assinado', 'Assinado']
+  if (wonStages.includes(toStage)) {
+    const grupoReceita = String(deal.grupo_de_receita ?? '').trim()
+    const linhaReceitaVal = String(deal.linha_de_receita_vigente ?? '').trim()
+    const isUndefined = !grupoReceita ||
+      grupoReceita.toLowerCase().includes('não definido') ||
+      grupoReceita.toLowerCase().includes('nao definido')
+    const hasNoLinha = !linhaReceitaVal
+
+    if (isUndefined && hasNoLinha) {
+      results.push({
+        name: 'undefined_revenue_line',
+        blocked: true,
+        detail: 'Defina o produto vendido antes de concluir. Qual linha de receita se aplica a este negocio?',
+      })
+    }
+  }
+
   return results
 }
 
