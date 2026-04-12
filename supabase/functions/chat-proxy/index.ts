@@ -274,21 +274,7 @@ serve(async (req: Request) => {
     }
 
     const operatorEmail = user.email || '';
-
-    // Check operator approval
     const sbAdmin = createClient(supabaseUrl, serviceRoleKey);
-    const { data: opData } = await sbAdmin
-      .from('operators')
-      .select('status')
-      .eq('email', operatorEmail)
-      .single();
-
-    if (!opData || opData.status !== 'approved') {
-      return new Response(JSON.stringify({ error: 'Operator not approved' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
 
     // Rate limit
     if (!checkRateLimit(operatorEmail)) {
