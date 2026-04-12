@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>G4 Revenue Intelligence — Showroom</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ══════════════════════════════════════════════════════════════
+       G4 REVENUE INTELLIGENCE — DESIGN SYSTEM (Elucy Brandbook)
+       ══════════════════════════════════════════════════════════════ */
+    :root {
+      --navy: #001F35;
+      --navy-light: #0a2d47;
+      --maue: #184460;
+      --scaling: #031B26;
+      --scaling-deep: #020f17;
+      --golden: #B9915B;
+      --golden-light: #d4ad74;
+      --golden-dim: rgba(185, 145, 91, 0.15);
+      --silver: #F5F4F3;
+      --silver-dim: rgba(245, 244, 243, 0.08);
+      --white: #ffffff;
+      --text: #d4d4d4;
+      --text-dim: #7a8a96;
+      --green: #2d8a4e;
+      --green-bg: rgba(45, 138, 78, 0.12);
+      --green-glow: rgba(45, 138, 78, 0.25);
+      --yellow: #d69e2e;
+      --yellow-bg: rgba(214, 158, 46, 0.12);
+      --red: #c53030;
+      --red-bg: rgba(197, 48, 48, 0.12);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --radius-xs: 4px;
+      /* Session colors */
+      --session-aquisicao: #2d8a4e;
+      --session-aquisicao-bg: rgba(45, 138, 78, 0.10);
+      --session-expansao: #B9915B;
+      --session-expansao-bg: rgba(185, 145, 91, 0.10);
+      --session-retencao: #d69e2e;
+      --session-retencao-bg: rgba(214, 158, 46, 0.10);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--scaling);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── HEADER ──────────────────────────────────────────────────── */
+    .header {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--scaling-deep) 100%);
+      border-bottom: 1px solid var(--golden-dim);
+      padding: 18px 32px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+    .header-left { display: flex; align-items: center; gap: 16px; }
+    .header-logo {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: var(--golden-dim); display: flex; align-items: center;
+      justify-content: center; font-weight: 800; color: var(--golden);
+      font-size: 14px; letter-spacing: -0.5px;
+    }
+    .header-title {
+      font-size: 16px; font-weight: 700; color: var(--golden);
+      letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .header-subtitle { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
+    .header-right { display: flex; align-items: center; gap: 14px; }
+    .live-badge {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--green-bg); border: 1px solid rgba(45,138,78,0.3);
+      padding: 5px 12px; border-radius: 20px; font-size: 11px;
+      font-weight: 600; color: var(--green); text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .live-dot {
+      width: 7px; height: 7px; background: var(--green);
+      border-radius: 50%; animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--green-glow); }
+      50% { opacity: 0.7; box-shadow: 0 0 0 6px transparent; }
+    }
+    .refresh-timer {
+      font-size: 11px; color: var(--text-dim);
+      background: var(--silver-dim); padding: 5px 12px;
+      border-radius: var(--radius-sm); font-variant-numeric: tabular-nums;
+    }
+    .article-count {
+      font-size: 11px; color: var(--text-dim);
+    }
+
+    /* ── TICKER ──────────────────────────────────────────────────── */
+    .ticker-wrap {
+      background: var(--scaling-deep);
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      overflow: hidden; white-space: nowrap; padding: 8px 0;
+    }
+    .ticker {
+      display: inline-block; animation: ticker-scroll 60s linear infinite;
+      padding-left: 100%;
+    }
+    .ticker:hover { animation-play-state: paused; }
+    .ticker-item {
+      display: inline-block; padding: 0 40px; font-size: 12px;
+      color: var(--text-dim); cursor: default;
+    }
+    .ticker-item .dot {
+      display: inline-block; width: 5px; height: 5px;
+      border-radius: 50%; margin-right: 8px; vertical-align: middle;
+    }
+    .ticker-item .time { color: var(--text-dim); opacity: 0.6; margin-left: 8px; font-size: 10px; }
+    .ticker-item:hover { color: var(--silver); }
+    @keyframes ticker-scroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
+    }
+
+    /* ── NAVIGATION ──────────────────────────────────────────────── */
+    .nav {
+      background: var(--navy);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      padding: 0 32px; display: flex; gap: 0;
+    }
+    .nav button {
+      background: none; border: none; color: var(--text-dim);
+      font-size: 13px; padding: 14px 24px; cursor: pointer;
+      font-weight: 600; border-bottom: 2px solid transparent;
+      transition: all 0.25s ease; white-space: nowrap;
+      display: flex; align-items: center; gap: 8px;
+      font-family: inherit;
+    }
+    .nav button:hover { color: var(--silver); background: var(--silver-dim); }
+    .nav button.active { border-bottom-color: var(--golden); }
+    .nav button.active[data-session="all"] { color: var(--golden); }
+    .nav button.active[data-session="aquisicao"] { color: var(--session-aquisicao); border-bottom-color: var(--session-aquisicao); }
+    .nav button.active[data-session="expansao"] { color: var(--session-expansao); border-bottom-color: var(--session-expansao); }
+    .nav button.active[data-session="retencao"] { color: var(--session-retencao); border-bottom-color: var(--session-retencao); }
+    .nav .count-badge {
+      font-size: 10px; padding: 2px 7px; border-radius: 10px;
+      background: var(--silver-dim); color: var(--text-dim);
+      font-weight: 700;
+    }
+    .nav button.active .count-badge { background: var(--golden-dim); color: var(--golden); }
+    .nav button.active[data-session="aquisicao"] .count-badge { background: var(--session-aquisicao-bg); color: var(--session-aquisicao); }
+    .nav button.active[data-session="expansao"] .count-badge { background: var(--session-expansao-bg); color: var(--session-expansao); }
+    .nav button.active[data-session="retencao"] .count-badge { background: var(--session-retencao-bg); color: var(--session-retencao); }
+
+    /* ── MAIN LAYOUT ─────────────────────────────────────────────── */
+    .main {
+      max-width: 1440px; margin: 0 auto;
+      display: grid; grid-template-columns: 1fr 280px;
+      gap: 24px; padding: 24px 32px;
+    }
+
+    /* ── CARDS GRID ──────────────────────────────────────────────── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 16px;
+    }
+
+    /* ── NEWS CARD ───────────────────────────────────────────────── */
+    .news-card {
+      background: var(--navy);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius);
+      padding: 20px;
+      display: flex; flex-direction: column; gap: 12px;
+      transition: all 0.25s ease;
+      cursor: pointer; position: relative;
+      overflow: hidden;
+    }
+    .news-card::before {
+      content: ''; position: absolute; top: 0; left: 0;
+      width: 3px; height: 100%; border-radius: 3px 0 0 3px;
+    }
+    .news-card[data-session="aquisicao"]::before { background: var(--session-aquisicao); }
+    .news-card[data-session="expansao"]::before { background: var(--session-expansao); }
+    .news-card[data-session="retencao"]::before { background: var(--session-retencao); }
+    .news-card:hover {
+      border-color: rgba(255,255,255,0.12);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .news-card.featured {
+      grid-column: span 2;
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+      border-color: var(--golden-dim);
+    }
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .card-session-badge {
+      font-size: 9px; font-weight: 700; padding: 3px 8px;
+      border-radius: 10px; text-transform: uppercase;
+      letter-spacing: 0.06em; white-space: nowrap; flex-shrink: 0;
+    }
+    .card-session-badge[data-session="aquisicao"] { background: var(--session-aquisicao-bg); color: var(--session-aquisicao); }
+    .card-session-badge[data-session="expansao"] { background: var(--session-expansao-bg); color: var(--session-expansao); }
+    .card-session-badge[data-session="retencao"] { background: var(--session-retencao-bg); color: var(--session-retencao); }
+    .card-subcategory {
+      font-size: 10px; color: var(--text-dim); font-weight: 500;
+    }
+    .card-title {
+      font-size: 15px; font-weight: 700; color: var(--silver);
+      line-height: 1.4; display: -webkit-box;
+      -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .news-card:hover .card-title { color: var(--white); }
+    .card-description {
+      font-size: 13px; color: var(--text-dim); line-height: 1.5;
+      display: -webkit-box; -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .news-card.featured .card-description { -webkit-line-clamp: 4; }
+    .card-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: auto; padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,0.04);
+    }
+    .card-source {
+      font-size: 11px; color: var(--text-dim); font-weight: 500;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .card-source .source-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--golden-dim);
+    }
+    .card-time {
+      font-size: 11px; color: var(--text-dim); opacity: 0.7;
+      font-variant-numeric: tabular-nums;
+    }
+    .card-link {
+      font-size: 11px; color: var(--golden); font-weight: 600;
+      text-decoration: none; opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .news-card:hover .card-link { opacity: 1; }
+
+    /* ── SIDEBAR ──────────────────────────────────────────────────── */
+    .sidebar { display: flex; flex-direction: column; gap: 16px; }
+    .sidebar-card {
+      background: var(--navy);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .sidebar-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 11px; font-weight: 700; color: var(--golden);
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .sidebar-body { padding: 12px 16px; }
+
+    /* Trending Tags */
+    .trending-list { display: flex; flex-direction: column; gap: 6px; }
+    .trending-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 6px 0; font-size: 13px;
+    }
+    .trending-rank {
+      font-size: 10px; font-weight: 700; color: var(--text-dim);
+      width: 18px; text-align: right;
+    }
+    .trending-tag { color: var(--silver); font-weight: 600; flex: 1; }
+    .trending-bar {
+      width: 60px; height: 4px; background: rgba(255,255,255,0.06);
+      border-radius: 2px; overflow: hidden;
+    }
+    .trending-bar-fill {
+      height: 100%; border-radius: 2px;
+      background: linear-gradient(90deg, var(--golden) 0%, var(--golden-light) 100%);
+      transition: width 0.6s ease;
+    }
+
+    /* Pulse Stats */
+    .pulse-stat {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .pulse-stat:last-child { border-bottom: none; }
+    .pulse-label { font-size: 12px; color: var(--text-dim); }
+    .pulse-value { font-size: 14px; font-weight: 700; color: var(--silver); font-variant-numeric: tabular-nums; }
+
+    /* Session distribution */
+    .session-dist { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+    .dist-row { display: flex; align-items: center; gap: 8px; }
+    .dist-label { font-size: 11px; width: 75px; color: var(--text-dim); font-weight: 500; }
+    .dist-bar {
+      flex: 1; height: 6px; background: rgba(255,255,255,0.06);
+      border-radius: 3px; overflow: hidden;
+    }
+    .dist-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+    .dist-bar-fill.aquisicao { background: var(--session-aquisicao); }
+    .dist-bar-fill.expansao { background: var(--session-expansao); }
+    .dist-bar-fill.retencao { background: var(--session-retencao); }
+    .dist-count { font-size: 11px; color: var(--text-dim); width: 24px; text-align: right; font-weight: 600; }
+
+    /* ── LOADING ──────────────────────────────────────────────────── */
+    .loading {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; min-height: 400px; gap: 16px;
+      grid-column: 1 / -1;
+    }
+    .loading-spinner {
+      width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1);
+      border-top-color: var(--golden); border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 14px; color: var(--text-dim); }
+
+    /* ── FOOTER ──────────────────────────────────────────────────── */
+    .footer {
+      text-align: center; padding: 24px 32px; color: var(--text-dim);
+      font-size: 11px; border-top: 1px solid rgba(255,255,255,0.04);
+      max-width: 1440px; margin: 20px auto 0;
+    }
+    .footer a { color: var(--golden); text-decoration: none; }
+
+    /* ── EMPTY STATE ──────────────────────────────────────────────── */
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; min-height: 300px; gap: 12px;
+      color: var(--text-dim); grid-column: 1 / -1;
+    }
+    .empty-icon { font-size: 48px; opacity: 0.3; }
+    .empty-text { font-size: 14px; }
+
+    /* ── RESPONSIVE ──────────────────────────────────────────────── */
+    @media (max-width: 1100px) {
+      .main { grid-template-columns: 1fr; }
+      .sidebar { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .news-card.featured { grid-column: span 1; }
+    }
+    @media (max-width: 768px) {
+      .header { padding: 14px 16px; flex-wrap: wrap; gap: 8px; }
+      .nav { padding: 0 16px; overflow-x: auto; }
+      .nav button { padding: 12px 16px; font-size: 12px; }
+      .main { padding: 16px; gap: 16px; }
+      .cards-grid { grid-template-columns: 1fr; }
+      .sidebar { grid-template-columns: 1fr; }
+      .ticker-wrap { display: none; }
+    }
+    @media (max-width: 480px) {
+      .header-title { font-size: 13px; }
+      .header-right { gap: 8px; }
+      .refresh-timer, .article-count { display: none; }
+    }
+
+    /* ── ANIMATIONS ──────────────────────────────────────────────── */
+    .news-card { animation: fadeInUp 0.4s ease both; }
+    .news-card:nth-child(1) { animation-delay: 0s; }
+    .news-card:nth-child(2) { animation-delay: 0.05s; }
+    .news-card:nth-child(3) { animation-delay: 0.1s; }
+    .news-card:nth-child(4) { animation-delay: 0.15s; }
+    .news-card:nth-child(5) { animation-delay: 0.2s; }
+    .news-card:nth-child(6) { animation-delay: 0.25s; }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* refresh flash */
+    .refresh-flash {
+      position: fixed; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--golden), var(--golden-light), var(--golden));
+      z-index: 200; animation: flash-bar 1.5s ease-out forwards;
+    }
+    @keyframes flash-bar {
+      0% { opacity: 1; transform: scaleX(0); transform-origin: left; }
+      50% { opacity: 1; transform: scaleX(1); }
+      100% { opacity: 0; transform: scaleX(1); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <div class="header-logo">G4</div>
+      <div>
+        <div class="header-title">Revenue Intelligence</div>
+        <div class="header-subtitle">GTM Engineering &middot; RevOps &middot; Arquitetura de Receita</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="live-badge"><div class="live-dot"></div> Live</div>
+      <div class="refresh-timer" id="refreshTimer">3x ao dia</div>
+      <div class="article-count" id="articleCount">—</div>
+    </div>
+  </div>
+
+  <!-- TICKER -->
+  <div class="ticker-wrap">
+    <div class="ticker" id="ticker">
+      <span class="ticker-item">Carregando noticias...</span>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <div class="nav" id="nav" role="tablist">
+    <button class="active" data-session="all" role="tab" aria-selected="true">
+      Todos <span class="count-badge" id="countAll">—</span>
+    </button>
+    <button data-session="aquisicao" role="tab" aria-selected="false">
+      Aquisicao <span class="count-badge" id="countAquisicao">—</span>
+    </button>
+    <button data-session="expansao" role="tab" aria-selected="false">
+      Expansao <span class="count-badge" id="countExpansao">—</span>
+    </button>
+    <button data-session="retencao" role="tab" aria-selected="false">
+      Retencao <span class="count-badge" id="countRetencao">—</span>
+    </button>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="cards-grid" id="cardsGrid">
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Carregando inteligencia de receita...</div>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <!-- Trending -->
+      <div class="sidebar-card">
+        <div class="sidebar-header">Trending Topics</div>
+        <div class="sidebar-body">
+          <div class="trending-list" id="trendingList">
+            <div class="trending-item"><span class="trending-tag" style="color:var(--text-dim)">Carregando...</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pulse -->
+      <div class="sidebar-card">
+        <div class="sidebar-header">Pulse</div>
+        <div class="sidebar-body">
+          <div class="pulse-stat">
+            <span class="pulse-label">Total Artigos</span>
+            <span class="pulse-value" id="pulseTotal">—</span>
+          </div>
+          <div class="pulse-stat">
+            <span class="pulse-label">Fontes Ativas</span>
+            <span class="pulse-value" id="pulseSources">—</span>
+          </div>
+          <div class="pulse-stat">
+            <span class="pulse-label">Refresh</span>
+            <span class="pulse-value">3x/dia</span>
+          </div>
+          <div class="pulse-stat">
+            <span class="pulse-label">Ultimo Update</span>
+            <span class="pulse-value" id="pulseLastUpdate">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Distribution -->
+      <div class="sidebar-card">
+        <div class="sidebar-header">Cobertura do Funil</div>
+        <div class="sidebar-body">
+          <div class="session-dist" id="sessionDist"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    G4 Educacao &mdash; Revenue Intelligence Portal &mdash; Growth Ops
+    <br>Fontes: Currents API, GNews, The News API, RSS Feeds &mdash;
+    <span id="footerUpdate">—</span>
+  </div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// G4 REVENUE INTELLIGENCE — ENGINE
+// ══════════════════════════════════════════════════════════════════
+
+let DATA = null;
+let currentSession = 'all';
+// Refresh schedule: 08:00, 13:00, 19:00 BRT
+const REFRESH_HOURS = [8, 13, 19];
+let refreshInterval = null;
+
+// ── TIME UTILS ──────────────────────────────────────────────────
+
+function timeAgo(isoDate) {
+  if (!isoDate) return '';
+  const now = new Date();
+  const then = new Date(isoDate);
+  const diffMs = now - then;
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'agora';
+  if (diffMin < 60) return diffMin + 'm';
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return diffH + 'h';
+  const diffD = Math.floor(diffH / 24);
+  return diffD + 'd';
+}
+
+function formatTime(isoDate) {
+  if (!isoDate) return '—';
+  try {
+    const d = new Date(isoDate);
+    return d.toLocaleString('pt-BR', {
+      day: '2-digit', month: '2-digit',
+      hour: '2-digit', minute: '2-digit',
+    });
+  } catch { return '—'; }
+}
+
+// ── DATA FETCH ──────────────────────────────────────────────────
+
+async function fetchData() {
+  try {
+    const resp = await fetch('news-data.json?t=' + Date.now());
+    const newData = await resp.json();
+
+    // Check if data actually changed
+    const changed = !DATA || newData.generated_at !== DATA.generated_at;
+    DATA = newData;
+
+    if (changed) {
+      showRefreshFlash();
+    }
+
+    render();
+  } catch (e) {
+    console.error('Fetch error:', e);
+    if (!DATA) {
+      document.getElementById('cardsGrid').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">&#9888;</div>
+          <div class="empty-text">Erro ao carregar dados. Execute collector.py primeiro.</div>
+        </div>
+      `;
+    }
+  }
+}
+
+function showRefreshFlash() {
+  const el = document.createElement('div');
+  el.className = 'refresh-flash';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1600);
+}
+
+// ── NAV ──────────────────────────────────────────────────────────
+
+document.getElementById('nav').addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  document.querySelectorAll('.nav button').forEach(b => {
+    b.classList.remove('active');
+    b.setAttribute('aria-selected', 'false');
+  });
+  btn.classList.add('active');
+  btn.setAttribute('aria-selected', 'true');
+  currentSession = btn.dataset.session;
+  render();
+});
+
+// ── RENDER ───────────────────────────────────────────────────────
+
+function render() {
+  if (!DATA) return;
+
+  const articles = DATA.articles || [];
+  const counts = DATA.session_counts || {};
+  const trending = DATA.trending || [];
+
+  // Update nav counts
+  document.getElementById('countAll').textContent = articles.length;
+  document.getElementById('countAquisicao').textContent = counts.aquisicao || 0;
+  document.getElementById('countExpansao').textContent = counts.expansao || 0;
+  document.getElementById('countRetencao').textContent = counts.retencao || 0;
+
+  // Filter
+  const filtered = currentSession === 'all'
+    ? articles
+    : articles.filter(a => a.session === currentSession);
+
+  // Render cards
+  renderCards(filtered);
+
+  // Render ticker
+  renderTicker(articles.slice(0, 12));
+
+  // Render sidebar
+  renderTrending(trending);
+  renderPulse();
+  renderDistribution(counts, articles.length);
+
+  // Header stats
+  document.getElementById('articleCount').textContent = articles.length + ' artigos';
+}
+
+function renderCards(articles) {
+  const grid = document.getElementById('cardsGrid');
+
+  if (!articles.length) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">&#128269;</div>
+        <div class="empty-text">Nenhum artigo nesta sessao</div>
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = articles.map((a, i) => {
+    const isFeatured = i === 0 && currentSession === 'all';
+    const sessionLabel = {
+      aquisicao: 'Aquisicao',
+      expansao: 'Expansao',
+      retencao: 'Retencao',
+    }[a.session] || 'Geral';
+
+    return `
+      <article class="news-card${isFeatured ? ' featured' : ''}"
+               data-session="${a.session}"
+               onclick="window.open('${escapeHtml(a.url)}', '_blank')">
+        <div class="card-header">
+          <span class="card-subcategory">${escapeHtml(a.subcategory || '')}</span>
+          <span class="card-session-badge" data-session="${a.session}">${sessionLabel}</span>
+        </div>
+        <div class="card-title">${escapeHtml(a.title)}</div>
+        <div class="card-description">${escapeHtml(a.description || '')}</div>
+        <div class="card-footer">
+          <span class="card-source">
+            <span class="source-dot"></span>
+            ${escapeHtml(a.source || 'Unknown')}
+          </span>
+          <span class="card-time">${timeAgo(a.published_at)}</span>
+          <span class="card-link">Ler &rarr;</span>
+        </div>
+      </article>
+    `;
+  }).join('');
+}
+
+function renderTicker(articles) {
+  const ticker = document.getElementById('ticker');
+  const sessionColors = {
+    aquisicao: 'var(--session-aquisicao)',
+    expansao: 'var(--session-expansao)',
+    retencao: 'var(--session-retencao)',
+  };
+
+  ticker.innerHTML = articles.map(a => `
+    <span class="ticker-item">
+      <span class="dot" style="background:${sessionColors[a.session] || 'var(--golden)'}"></span>
+      ${escapeHtml(a.title.substring(0, 80))}${a.title.length > 80 ? '...' : ''}
+      <span class="time">${timeAgo(a.published_at)}</span>
+    </span>
+  `).join('');
+}
+
+function renderTrending(trending) {
+  const list = document.getElementById('trendingList');
+  if (!trending.length) {
+    list.innerHTML = '<div class="trending-item"><span class="trending-tag" style="color:var(--text-dim)">Sem dados</span></div>';
+    return;
+  }
+  const maxCount = Math.max(...trending.map(t => t.count));
+  list.innerHTML = trending.map((t, i) => `
+    <div class="trending-item">
+      <span class="trending-rank">${i + 1}</span>
+      <span class="trending-tag">#${t.tag}</span>
+      <div class="trending-bar">
+        <div class="trending-bar-fill" style="width:${(t.count / maxCount * 100).toFixed(0)}%"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderPulse() {
+  document.getElementById('pulseTotal').textContent = DATA.total_articles || 0;
+  document.getElementById('pulseSources').textContent = (DATA.sources_active || []).length;
+  document.getElementById('pulseLastUpdate').textContent = formatTime(DATA.generated_at);
+  document.getElementById('footerUpdate').textContent = 'Atualizado: ' + formatTime(DATA.generated_at);
+}
+
+function renderDistribution(counts, total) {
+  const dist = document.getElementById('sessionDist');
+  if (!total) { dist.innerHTML = ''; return; }
+
+  const sessions = [
+    { key: 'aquisicao', label: 'Aquisicao', count: counts.aquisicao || 0 },
+    { key: 'expansao', label: 'Expansao', count: counts.expansao || 0 },
+    { key: 'retencao', label: 'Retencao', count: counts.retencao || 0 },
+  ];
+
+  dist.innerHTML = sessions.map(s => `
+    <div class="dist-row">
+      <span class="dist-label">${s.label}</span>
+      <div class="dist-bar">
+        <div class="dist-bar-fill ${s.key}" style="width:${(s.count / total * 100).toFixed(0)}%"></div>
+      </div>
+      <span class="dist-count">${s.count}</span>
+    </div>
+  `).join('');
+}
+
+// ── NEXT UPDATE DISPLAY ──────────────────────────────────────────
+
+function getNextRefresh() {
+  const now = new Date();
+  const h = now.getHours();
+  for (const rh of REFRESH_HOURS) {
+    if (h < rh) return rh + ':00';
+  }
+  return REFRESH_HOURS[0] + ':00 (amanha)';
+}
+
+function updateRefreshDisplay() {
+  document.getElementById('refreshTimer').textContent =
+    'Proximo: ' + getNextRefresh();
+}
+
+// ── SECURITY ─────────────────────────────────────────────────────
+
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ── INIT ─────────────────────────────────────────────────────────
+
+async function init() {
+  await fetchData();
+  updateRefreshDisplay();
+  // Check for new data every 10 min (lightweight — just reads static JSON)
+  refreshInterval = setInterval(fetchData, 10 * 60 * 1000);
+  // Update display every minute
+  setInterval(updateRefreshDisplay, 60 * 1000);
+}
+
+init();
+</script>
+</body>
+</html>
