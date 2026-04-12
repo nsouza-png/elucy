@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>G4 Revenue Intelligence — Showroom</title>
+  <title>G4 Revenue Intelligence — Painel de Inteligencia</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -389,12 +389,12 @@
     <div class="header-left">
       <div class="header-logo">G4</div>
       <div>
-        <div class="header-title">Revenue Intelligence</div>
-        <div class="header-subtitle">GTM Engineering &middot; RevOps &middot; Arquitetura de Receita</div>
+        <div class="header-title">Inteligencia de Receita</div>
+        <div class="header-subtitle">Engenharia GTM &middot; RevOps &middot; Arquitetura de Receita</div>
       </div>
     </div>
     <div class="header-right">
-      <div class="live-badge"><div class="live-dot"></div> Live</div>
+      <div class="live-badge"><div class="live-dot"></div> Ao Vivo</div>
       <div class="refresh-timer" id="refreshTimer">3x ao dia</div>
       <div class="article-count" id="articleCount">—</div>
     </div>
@@ -403,14 +403,14 @@
   <!-- TICKER -->
   <div class="ticker-wrap">
     <div class="ticker" id="ticker">
-      <span class="ticker-item">Carregando noticias...</span>
+      <span class="ticker-item">Carregando ultimas noticias...</span>
     </div>
   </div>
 
   <!-- NAV -->
   <div class="nav" id="nav" role="tablist">
     <button class="active" data-session="all" role="tab" aria-selected="true">
-      Todos <span class="count-badge" id="countAll">—</span>
+      Todas <span class="count-badge" id="countAll">—</span>
     </button>
     <button data-session="aquisicao" role="tab" aria-selected="false">
       Aquisicao <span class="count-badge" id="countAquisicao">—</span>
@@ -435,7 +435,7 @@
     <div class="sidebar">
       <!-- Trending -->
       <div class="sidebar-card">
-        <div class="sidebar-header">Trending Topics</div>
+        <div class="sidebar-header">Temas em Alta</div>
         <div class="sidebar-body">
           <div class="trending-list" id="trendingList">
             <div class="trending-item"><span class="trending-tag" style="color:var(--text-dim)">Carregando...</span></div>
@@ -445,7 +445,7 @@
 
       <!-- Pulse -->
       <div class="sidebar-card">
-        <div class="sidebar-header">Pulse</div>
+        <div class="sidebar-header">Painel</div>
         <div class="sidebar-body">
           <div class="pulse-stat">
             <span class="pulse-label">Total Artigos</span>
@@ -460,7 +460,7 @@
             <span class="pulse-value">3x/dia</span>
           </div>
           <div class="pulse-stat">
-            <span class="pulse-label">Ultimo Update</span>
+            <span class="pulse-label">Ultima Atualizacao</span>
             <span class="pulse-value" id="pulseLastUpdate">—</span>
           </div>
         </div>
@@ -478,7 +478,7 @@
 
   <!-- FOOTER -->
   <div class="footer">
-    G4 Educacao &mdash; Revenue Intelligence Portal &mdash; Growth Ops
+    G4 Educacao &mdash; Portal de Inteligencia de Receita &mdash; Growth Ops
     <br>Fontes: Currents API, GNews, The News API, RSS Feeds &mdash;
     <span id="footerUpdate">—</span>
   </div>
@@ -503,11 +503,12 @@ function timeAgo(isoDate) {
   const diffMs = now - then;
   const diffMin = Math.floor(diffMs / 60000);
   if (diffMin < 1) return 'agora';
-  if (diffMin < 60) return diffMin + 'm';
+  if (diffMin < 60) return diffMin + ' min';
   const diffH = Math.floor(diffMin / 60);
   if (diffH < 24) return diffH + 'h';
   const diffD = Math.floor(diffH / 24);
-  return diffD + 'd';
+  if (diffD === 1) return 'ontem';
+  return diffD + ' dias';
 }
 
 function formatTime(isoDate) {
@@ -543,7 +544,7 @@ async function fetchData() {
       document.getElementById('cardsGrid').innerHTML = `
         <div class="empty-state">
           <div class="empty-icon">&#9888;</div>
-          <div class="empty-text">Erro ao carregar dados. Execute collector.py primeiro.</div>
+          <div class="empty-text">Erro ao carregar dados. Execute o collector.py primeiro.</div>
         </div>
       `;
     }
@@ -607,6 +608,27 @@ function render() {
   document.getElementById('articleCount').textContent = articles.length + ' artigos';
 }
 
+function translateSubcategory(sub) {
+  const map = {
+    'GTM Engineering & Estrategia': 'Engenharia GTM e Estrategia',
+    'Demand Generation & Growth': 'Geracao de Demanda e Crescimento',
+    'AI-Powered Prospecting & Sinais': 'Prospeccao com IA e Sinais',
+    'Outbound & Cold Outreach': 'Outbound e Abordagem Fria',
+    'Marketing Ops & Attribution': 'Operacoes de Marketing e Atribuicao',
+    'Sales Engineering & Demo Tech': 'Engenharia de Vendas e Demos',
+    'Revenue Architecture & Deal Desk': 'Arquitetura de Receita e Deal Desk',
+    'Product-Led Growth & Upsell': 'Crescimento por Produto e Upsell',
+    'Pricing & Packaging Intelligence': 'Inteligencia de Precos e Pacotes',
+    'Cross-sell & Account Expansion': 'Cross-sell e Expansao de Contas',
+    'Customer Success & Health Scoring': 'Sucesso do Cliente e Health Score',
+    'Churn Prevention & Win-back': 'Prevencao de Churn e Recuperacao',
+    'NRR & Expansion Revenue': 'NRR e Receita de Expansao',
+    'Voice of Customer & Feedback Loops': 'Voz do Cliente e Feedback',
+    'Renewal Ops & Lifecycle': 'Renovacoes e Ciclo de Vida',
+  };
+  return map[sub] || sub;
+}
+
 function renderCards(articles) {
   const grid = document.getElementById('cardsGrid');
 
@@ -614,7 +636,7 @@ function renderCards(articles) {
     grid.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">&#128269;</div>
-        <div class="empty-text">Nenhum artigo nesta sessao</div>
+        <div class="empty-text">Nenhuma noticia nesta categoria</div>
       </div>
     `;
     return;
@@ -627,13 +649,14 @@ function renderCards(articles) {
       expansao: 'Expansao',
       retencao: 'Retencao',
     }[a.session] || 'Geral';
+    const subcatPtBR = translateSubcategory(a.subcategory || '');
 
     return `
       <article class="news-card${isFeatured ? ' featured' : ''}"
                data-session="${a.session}"
                onclick="window.open('${escapeHtml(a.url)}', '_blank')">
         <div class="card-header">
-          <span class="card-subcategory">${escapeHtml(a.subcategory || '')}</span>
+          <span class="card-subcategory">${escapeHtml(subcatPtBR)}</span>
           <span class="card-session-badge" data-session="${a.session}">${sessionLabel}</span>
         </div>
         <div class="card-title">${escapeHtml(a.title)}</div>
@@ -641,10 +664,10 @@ function renderCards(articles) {
         <div class="card-footer">
           <span class="card-source">
             <span class="source-dot"></span>
-            ${escapeHtml(a.source || 'Unknown')}
+            ${escapeHtml(a.source || 'Desconhecido')}
           </span>
           <span class="card-time">${timeAgo(a.published_at)}</span>
-          <span class="card-link">Ler &rarr;</span>
+          <span class="card-link">Ler artigo &rarr;</span>
         </div>
       </article>
     `;
@@ -671,7 +694,7 @@ function renderTicker(articles) {
 function renderTrending(trending) {
   const list = document.getElementById('trendingList');
   if (!trending.length) {
-    list.innerHTML = '<div class="trending-item"><span class="trending-tag" style="color:var(--text-dim)">Sem dados</span></div>';
+    list.innerHTML = '<div class="trending-item"><span class="trending-tag" style="color:var(--text-dim)">Sem dados ainda</span></div>';
     return;
   }
   const maxCount = Math.max(...trending.map(t => t.count));
@@ -690,7 +713,7 @@ function renderPulse() {
   document.getElementById('pulseTotal').textContent = DATA.total_articles || 0;
   document.getElementById('pulseSources').textContent = (DATA.sources_active || []).length;
   document.getElementById('pulseLastUpdate').textContent = formatTime(DATA.generated_at);
-  document.getElementById('footerUpdate').textContent = 'Atualizado: ' + formatTime(DATA.generated_at);
+  document.getElementById('footerUpdate').textContent = 'Atualizado em ' + formatTime(DATA.generated_at);
 }
 
 function renderDistribution(counts, total) {
@@ -727,7 +750,7 @@ function getNextRefresh() {
 
 function updateRefreshDisplay() {
   document.getElementById('refreshTimer').textContent =
-    'Proximo: ' + getNextRefresh();
+    'Proxima: ' + getNextRefresh();
 }
 
 // ── SECURITY ─────────────────────────────────────────────────────
