@@ -243,7 +243,8 @@
     <button class="active" data-tab="overview">Overview</button>
     <button data-tab="linha">Por Linha de Receita</button>
     <button data-tab="closer">Por Closer</button>
-    <button data-tab="canal">Por Canal</button>
+    <button data-tab="canal">Por Canal (Derivado)</button>
+    <button data-tab="fonte">Por Fonte (UTM)</button>
     <button data-tab="tier">Por Tier</button>
     <button data-tab="churn">Churn & Perdas</button>
     <button data-tab="gav">GAV vs Meta</button>
@@ -357,7 +358,8 @@ function render() {
     case 'overview': c.innerHTML = renderOverview(); break;
     case 'linha': c.innerHTML = renderByDimension('funil_por_linha', 'linha_de_receita_vigente', 'Linha de Receita'); break;
     case 'closer': c.innerHTML = renderByDimension('funil_por_closer', 'proprietario_name', 'Closer'); break;
-    case 'canal': c.innerHTML = renderByDimension('funil_por_canal', 'canal', 'Canal de Marketing'); break;
+    case 'canal': c.innerHTML = renderByDimension('funil_canal_derivado', 'canal', 'Canal (Derivado)'); break;
+    case 'fonte': c.innerHTML = renderByDimension('funil_por_fonte', 'fonte', 'Fonte (UTM Source)'); break;
     case 'tier': c.innerHTML = renderByDimension('funil_por_tier', 'tier', 'Tier'); break;
     case 'churn': c.innerHTML = renderChurn(); break;
     case 'gav': c.innerHTML = renderGAV(); break;
