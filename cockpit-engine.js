@@ -8413,27 +8413,38 @@ console.log('[cockpit-engine v11.1] 27-Layer Architecture loaded — L19-L22 Qua
     if(data){
       _chatInstanceName = data.instance_name;
       _updateStatusIndicator(data.status);
-      if(data.status === 'connected'){
-        document.getElementById('chat-connect-btn').textContent = 'Reconectar';
-      }
     }
   }
 
   function _updateStatusIndicator(status){
+    // Chat tab small dot
     const dot = document.getElementById('chat-wa-status');
-    const btn = document.getElementById('chat-connect-btn');
+    if(dot){
+      if(status === 'connected'){ dot.style.background = 'var(--green, #22c55e)'; dot.title = 'WhatsApp: Conectado'; }
+      else if(status === 'qr_pending'){ dot.style.background = 'var(--yellow, #eab308)'; dot.title = 'WhatsApp: Aguardando QR...'; }
+      else { dot.style.background = 'var(--red, #ef4444)'; dot.title = 'WhatsApp: Desconectado'; }
+    }
+    // Settings panel sync
+    _updateSettingsWaStatus(status);
+  }
+
+  function _updateSettingsWaStatus(status){
+    const dot = document.getElementById('settings-wa-dot');
+    const btn = document.getElementById('settings-wa-connect-btn');
+    const text = document.getElementById('settings-wa-status-text');
     if(!dot) return;
     if(status === 'connected'){
       dot.style.background = 'var(--green, #22c55e)';
-      dot.title = 'Conectado';
-      if(btn) btn.textContent = 'Reconectar';
+      if(btn){ btn.textContent = 'Reconectar'; btn.classList.add('connected'); }
+      if(text) text.textContent = 'Conectado — mensagens ativas na tab Chat';
     } else if(status === 'qr_pending'){
       dot.style.background = 'var(--yellow, #eab308)';
-      dot.title = 'Aguardando QR...';
+      if(btn) btn.textContent = 'Ver QR';
+      if(text) text.textContent = 'Aguardando escaneamento do QR Code...';
     } else {
       dot.style.background = 'var(--red, #ef4444)';
-      dot.title = 'Desconectado';
-      if(btn) btn.textContent = 'Conectar';
+      if(btn){ btn.textContent = 'Conectar'; btn.classList.remove('connected'); }
+      if(text) text.textContent = 'Escaneie o QR Code para conectar seu numero';
     }
   }
 
@@ -8822,7 +8833,22 @@ console.log('[cockpit-engine v11.1] 27-Layer Architecture loaded — L19-L22 Qua
     }, 300);
   };
 
-  console.log('[ChatEngine] WhatsApp Nativo via Evolution API loaded');
+  // ── Settings: WhatsApp setup (opens QR from Configurações) ──
+  window._settingsWaSetup = async function(){
+    // Close settings modal if open
+    const settingsModal = document.getElementById('settings-modal');
+    if(settingsModal) settingsModal.style.display = 'none';
+    // Use same QR setup flow
+    await window._chatSetup();
+  };
+
+  // ── Open Settings → Conexões & Canais ──
+  window._openSettingsConexoes = function(){
+    if(typeof openSettings === 'function') openSettings('conexoes');
+    else if(typeof window.openSettings === 'function') window.openSettings('conexoes');
+  };
+
+  console.log('[ChatEngine] Multi-channel Chat + WhatsApp Nativo loaded');
 })();
 
 })();
